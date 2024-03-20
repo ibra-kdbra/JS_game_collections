@@ -1,5 +1,6 @@
 export class InputHandler {
-    constructor() {
+    constructor(game) {
+      this.game = game;
       this.keys = [];
       this.touchY = '';
       this.touchThreshold = 30;
@@ -13,8 +14,7 @@ export class InputHandler {
           this.keys.indexOf(e.key) === -1
         ) {
           this.keys.push(e.key);
-        }else if(e.key === "Enter" && gameOver) restartGame();
-        console.log(e.key, this.keys);
+        }else if(e.key === 'd') this.game.debug = !this.game.debug;
 
       });
       window.addEventListener("keyup", (e) => {
@@ -27,8 +27,9 @@ export class InputHandler {
         ) {
           this.keys.splice(this.keys.indexOf(e.key), 1);
         }
-        console.log(e.key, this.keys);
+        1
       });
+
       window.addEventListener('touchstart', e=>{
         this.touchY = e.changedTouches[0].pageY;
       });
