@@ -25,16 +25,7 @@ The game supports both keyboard and swipe-based controls, making it easy to play
 
 The game automatically saves the player's progress, allowing them to continue where they left off even if they close their browser or navigate away from the page.
 
-## Getting Started
-
-To play the game, simply visit the GitHub Pages site at https://ibra-kdbra.github.io/Puzzle-2048/. Use the arrow keys or swipe gestures to move the tiles around the game board and combine them to reach the target number of 2048.
-
 ## Credits
 
 - Game logic and design based on the original 2048 game by Gabriele Cirulli: https://github.com/gabrielecirulli/2048
-- HTML/CSS framework: https://getbootstrap.com/
 - Icons: https://fontawesome.com/
-
-## Conclusion
-
-This implementation of the 2048 puzzle game is a great example of how JavaScript and HTML/CSS can be used to create simple and engaging games for the web. By exploring the code in this repository, you can learn how to create responsive and interactive user interfaces, handle user input, and implement game logic using JavaScript.
