@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This project is all about creating games using pure JavaScript, HTML, and CSS. No libraries, no frameworks, just good old Vanilla JS. This approach provides a great way to learn the fundamentals of web development and the core JavaScript language.
+This project is all about creating games using pure JavaScript, HTML, and CSS. No libraries, no frameworks, just good old Vanilla JS.
 
 ## Why Vanilla JS?
 
@@ -28,8 +28,4 @@ Here are the steps to create a game:
 
 ## Future Directions
 
-As you get more comfortable with JavaScript, HTML, and CSS, you can start to explore more complex game development concepts. You might want to look into game physics, AI, or multiplayer functionality. The sky's the limit!
-
-## Conclusion
-
-Creating games with Vanilla JS, HTML, and CSS can be a fun and rewarding experience. Not only does it help you learn important programming concepts, but you also end up with a game that you can share with your friends. So why wait? Start your game development journey today!
+As you get more comfortable with JavaScript, HTML, and CSS, you can start to explore more complex game development concepts.
