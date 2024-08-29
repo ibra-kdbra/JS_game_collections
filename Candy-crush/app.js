@@ -95,6 +95,27 @@ function moveIntoSquareBelow() {
   }
 }
 
+///Checking for Matches
+//for row of Four
+function checkRowForFour() {
+  for (i = 0; i < 60; i ++) {
+    let rowOfFour = [i, i+1, i+2, i+3]
+    let decidedColor = squares[i].style.backgroundImage
+    const isBlank = squares[i].style.backgroundImage === ''
+
+    const notValid = [5, 6, 7, 13, 14, 15, 21, 22, 23, 29, 30, 31, 37, 38, 39, 45, 46, 47, 53, 54, 55]
+    if (notValid.includes(i)) continue
+
+    if(rowOfFour.every(index => squares[index].style.backgroundImage === decidedColor && !isBlank)) {
+      score += 4
+      scoreDisplay.innerHTML = score
+      rowOfFour.forEach(index => {
+      squares[index].style.backgroundImage = ''
+      })
+    }
+  }
+}
+checkRowForFour()
 
 // Checks carried out indefintely - Add Button to clear interval for best practise, or clear on game over/game won. If you have this indefinite check you can get rid of calling the check functions above.
 window.setInterval(function(){
