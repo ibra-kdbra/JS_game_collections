@@ -117,6 +117,25 @@ function checkRowForFour() {
 }
 checkRowForFour()
 
+
+//for column of Four
+function checkColumnForFour() {
+  for (i = 0; i < 39; i ++) {
+    let columnOfFour = [i, i+width, i+width*2, i+width*3]
+    let decidedColor = squares[i].style.backgroundImage
+    const isBlank = squares[i].style.backgroundImage === ''
+
+    if(columnOfFour.every(index => squares[index].style.backgroundImage === decidedColor && !isBlank)) {
+      score += 4
+      scoreDisplay.innerHTML = score
+      columnOfFour.forEach(index => {
+      squares[index].style.backgroundImage = ''
+      })
+    }
+  }
+}
+checkColumnForFour()
+
 // Checks carried out indefintely - Add Button to clear interval for best practise, or clear on game over/game won. If you have this indefinite check you can get rid of calling the check functions above.
 window.setInterval(function(){
     checkRowForFour()
