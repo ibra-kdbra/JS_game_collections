@@ -79,6 +79,22 @@ function dragEnd() {
     } else  squares[squareIdBeingDragged].style.backgroundImage = colorBeingDragged
 }
 
+//drop candies once some have been cleared
+function moveIntoSquareBelow() {
+  for (i = 0; i < 55; i ++) {
+      if(squares[i + width].style.backgroundImage === '') {
+          squares[i + width].style.backgroundImage = squares[i].style.backgroundImage
+          squares[i].style.backgroundImage = ''
+          const firstRow = [0, 1, 2, 3, 4, 5, 6, 7]
+          const isFirstRow = firstRow.includes(i)
+          if (isFirstRow && (squares[i].style.backgroundImage === '')) {
+            let randomColor = Math.floor(Math.random() * candyColors.length)
+            squares[i].style.backgroundImage = candyColors[randomColor]
+          }
+      }
+  }
+}
+
 
 // Checks carried out indefintely - Add Button to clear interval for best practise, or clear on game over/game won. If you have this indefinite check you can get rid of calling the check functions above.
 window.setInterval(function(){
