@@ -1,4 +1,4 @@
-# candy-crush
+# Candy Crush
 
 A Game inspired by Candy Crush - Built for learning purposes.
 
