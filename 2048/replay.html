@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>2048 with mind</title>
+
+    <link href="style/main.css" rel="stylesheet" type="text/css">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="meta/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+
+    <meta name="viewport" content="width=425, initial-scale=1.0">
+    <meta name="description" content="The 2048 game with AI players">
+
+    <script type="text/javascript" defer src="js/keyboard_input_manager.js"></script>
+    <script type="text/javascript" defer src="js/html_actuator.js"></script>
+    <script type="text/javascript" defer src="js/grid.js"></script>
+    <script type="text/javascript" defer src="js/tile.js"></script>
+    <script type="text/javascript" defer src="js/local_storage_manager.js"></script>
+    <script type="text/javascript" defer src="js/game_manager.js"></script>
+    <script type="text/javascript" defer src="js/replay.js"></script>
+</head>
+<body>
+<div class="container">
+    <div class="heading">
+        <h1 class="title">2048 mind</h1>
+        <div class="scores-container">
+            <div class="score-container hidden">0</div>
+            <div class="best-container hidden">0</div>
+        </div>
+    </div>
+
+    <div class="above-game">
+        <p class="game-intro">
+            This is a game replay tool.<br>
+            Paste the game record into the box and use the arrow keys to move forward and backward.<br>
+            Click <a href="index.html">here</a> to return to the real game.
+        </p>
+        <a class="restart-button hidden">New Game</a>
+    </div>
+
+
+    <div id="gameRecordDisplay"></div>
+
+    <div class="game-container">
+        <div class="game-message">
+            <p></p>
+            <div class="lower">
+                <a class="keep-playing-button">Keep going</a>
+                <a class="retry-button">Try again</a>
+            </div>
+        </div>
+
+        <div class="grid-container">
+            <div class="grid-row">
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+            </div>
+            <div class="grid-row">
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+            </div>
+            <div class="grid-row">
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+            </div>
+            <div class="grid-row">
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+            </div>
+        </div>
+
+        <div class="tile-container">
+
+        </div>
+    </div>
+    <div id="replayControls">
+        <a id="skipToStartButton" class="game-record-control"> <<< </a>
+        <a id="jumpBackButton" class="game-record-control"> << </a>
+        <a id="goBackButton" class="game-record-control"> < </a>
+        <div id="gameRecordContainer">
+            <label id="gameRecordLabel" for="gameRecord">Game Record</label>
+            <br>
+            <textarea id="gameRecord">abuauBu</textarea>
+        </div>
+        <a id="goForwardButton" class="game-record-control"> > </a>
+        <a id="jumpForwardButton" class="game-record-control"> >> </a>
+        <a id="skipToEndButton" class="game-record-control"> >>> </a>
+    </div>
+
+    <hr>
+    <p class="game-explanation">
+        The game record format has two types of entries.
+        The first type denotes where a new tile has been placed.
+        Each board position is assigned a letter from A to P.
+        If the letter in the record is lowercase, the new tile is a 2.
+        Otherwise it's a 4.
+        The second type of entry is either "u", "r", "d", or "l", representing the move made by the player.
+    </p>
+    <hr>
+    <p>
+        Replay tool and record format created by ibra-kdbra.
+        <br>
+        Game mechanics from the <a href="https://play2048.co/" target="_blank">original 2048 game</a>.
+    </p>
+</div>
+</body>
+</html>

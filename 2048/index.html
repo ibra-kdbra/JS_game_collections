@@ -21,7 +21,7 @@
     <script type="text/javascript" defer src="js/local_storage_manager.js"></script>
     <script type="text/javascript" defer src="js/game_manager.js"></script>
     <script type="text/javascript" defer src="js/main.js"></script>
-    <script type="text/javascript" defer src="js/editor.js"></script>
+    <script type="text/javascript" defer src="js/index.js"></script>
 </head>
 <body>
 <div class="container">
@@ -29,17 +29,12 @@
         <h1 class="title">2048 mind</h1>
         <div class="scores-container">
             <div class="score-container">0</div>
-            <div class="best-container hidden">0</div>
+            <div class="best-container">0</div>
         </div>
     </div>
 
     <div class="above-game">
-        <p class="game-intro">
-            This is a board editor for testing the AIs.<br>
-            Left click to add/increase a tile and right click to remove/decrease a tile.<br>
-            Be warned that the AI's code doesn't always handle the 65536 tile properly.<br>
-            Click <a href="index.html">here</a> to return to the real game.
-        </p>
+        <p class="game-intro">Join the numbers and get to the <strong>2048 tile!</strong></p>
         <a class="restart-button">New Game</a>
     </div>
 
@@ -87,14 +82,14 @@
     <div id="controlsContainer">
         <div>
             <h2>AI Player</h2>
-            <input type="radio" id="aiOn" name="ai_player">
+            <input type="radio" id="aiOn" name="ai_player" checked>
             <label for="aiOn">On</label>
-            <input type="radio" id="aiOff" name="ai_player" checked>
+            <input type="radio" id="aiOff" name="ai_player">
             <label for="aiOff">Off</label>
             <br>
             <br>
             <label for="pauseTime">Pause time between moves (in milliseconds): </label>
-            <input type="number" id="pauseTime" min="0" max="10000" value="200" required>
+            <input type="number" id="pauseTime" min="0" max="10000" value="50" required>
             <br>
             <small>This is a <i>minimum</i> pause time, and the AI might spend more time thinking than this value.</small>
             <br>
@@ -198,6 +193,10 @@
         <strong class="important">How to play:</strong> Pick a strategy for the AI to use.
         You can also turn off the AI and use your <strong>arrow keys</strong> to move the tiles.
         Press <strong>R</strong> to restart.
+    </p>
+    <hr>
+    <p>
+        Click <a href="/editor.html">here</a> for page where you can edit the board to test the AI.
     </p>
     <hr>
     <p>
