@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Showcase</title>
+  <link rel="icon" type="image/svg+xml" href="video_game.svg">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Background Animation */
+    body {
+      overflow: hidden;
+      position: relative;
+      min-height: 100vh;
+    }
+
+    /* Gradient animation keyframes */
+    @keyframes gradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* Animated Background Style */
+    .animated-bg {
+      background: linear-gradient(270deg, #000000, #5e239d, #000000); /* Purple and black gradient */
+      background-size: 800% 800%;
+      animation: gradient 25s ease infinite; /* Slower animation */
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+  </style>
+</head>
+<body class="bg-black text-white font-sans">
+
+  <!-- Animated Background -->
+  <div class="animated-bg"></div>
+
+  <!-- Main Container -->
+  <div class="container mx-auto p-8 flex flex-col items-center justify-center min-h-screen">
+    <div class="flex items-center justify-between w-full max-w-4xl mb-8">
+      <h1 class="text-4xl md:text-5xl font-bold text-purple-400 mr-2">Game Lab</h1>
+      <a href="https://github.com/ibra-kdbra/JS_game_collections" target="_blank" class="flex items-center ml-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.54 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.73-.01-1.43-2.1.46-2.55-1.01-2.55-1.01-.34-.85-.82-1.08-.82-1.08-.67-.46.05-.45.05-.45.74.05 1.13.76 1.13.76.66 1.12 1.73.79 2.15.6.07-.48.26-.79.48-.97-1.77-.2-3.63-.89-3.63-3.96 0-.87.31-1.58.82-2.14-.08-.2-.35-1.02.07-2.12 0 0 .67-.21 2.2.82A7.93 7.93 0 018 2.5c.68.003 1.37.093 2 .27 1.53-1.03 2.2-.82 2.2-.82.42 1.1.15 1.92.07 2.12.51.56.82 1.27.82 2.14 0 3.08-1.86 3.76-3.63 3.96.26.22.49.66.49 1.33 0 .96-.01 1.73-.01 1.97 0 .21.15.46.55.38C13.71 14.54 16 11.54 16 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+      </a>
+    </div>
+    <p class="text-lg text-gray-300 mb-10 text-center">
+      Explore my collection of JavaScript and HTML games. Click any game to start playing!
+    </p>
+
+    <!-- Game Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-4xl">
+      <!-- Card for Game 2048 -->
+      <div class="bg-purple-900 rounded-lg overflow-hidden shadow-lg transition-transform transform hover:scale-105 cursor-pointer">
+        <a href="./2048/index.html" target="_blank">
+          <img src="./2048/meta/apple-touch-icon.png" alt="2048" class="w-full h-48 object-cover">
+          <div class="p-5">
+            <h2 class="text-xl font-bold text-purple-200 mb-3">2048</h2>
+            <p class="text-gray-300">Challenge yourself with the classic tile-merging puzzle.</p>
+          </div>
+        </a>
+      </div>
+      
+      <!-- Card for Finished Sprite Game -->
+      <div class="bg-purple-900 rounded-lg overflow-hidden shadow-lg transition-transform transform hover:scale-105 cursor-pointer">
+        <a href="./Sprites_Games/ninth_project/index.html" target="_blank">
+          <img src="./Sprites_Games/ninth_project/images/captured.png" alt="Sprite Game" class="w-full h-48 object-cover">
+          <div class="p-5">
+            <h2 class="text-xl font-bold text-purple-200 mb-3">Sprite Game</h2>
+            <p class="text-gray-300">Challenge yourself with the classic tile-merging puzzle.</p>
+          </div>
+        </a>
+      </div>
+
+      <!-- Card for Flow Fields: Simple -->
+      <div class="bg-purple-900 rounded-lg overflow-hidden shadow-lg transition-transform transform hover:scale-105 cursor-pointer">
+        <a href="./Flow_fields/Simple/index.html" target="_blank">
+          <img src="./Flow_fields/Simple/captured.png" alt="Flow Fields Simple" class="w-full h-48 object-cover">
+          <div class="p-5">
+            <h2 class="text-xl font-bold text-purple-200 mb-3">Flow Fields (Simple)</h2>
+            <p class="text-gray-300">Experiment with flow fields in this creative game.</p>
+          </div>
+        </a>
+      </div>
+
+      <!-- Card for Tetris -->
+      <div class="bg-purple-900 rounded-lg overflow-hidden shadow-lg transition-transform transform hover:scale-105 cursor-pointer">
+        <a href="./Tetris/index.html" target="_blank">
+          <img src="./Tetris/images/Tetris Game.gif" alt="Tetris" class="w-full h-48 object-cover">
+          <div class="p-5">
+            <h2 class="text-xl font-bold text-purple-200 mb-3">Tetris</h2>
+            <p class="text-gray-300">Challenge yourself with the classic tetris game.</p>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-12 text-gray-500 text-sm">
+      Made by <a class="text-purple-400" href="https://github.com/ibra-kdbra">ibra-kdbra</a>
+    </footer>
+  </div>
+
+</body>
+</html>
