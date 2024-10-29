@@ -4,15 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Work Lab</title>
-  <!-- <link rel="icon" type="image/svg+xml" href="/assets/video_game.svg"> -->
   <link rel="icon" type="image/png" href="/assets/video_game.png">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* Background Animation */
     body {
-      overflow: hidden;
       position: relative;
-      min-height: 100vh;
+      min-height: 100vh; /* Ensure it takes at least the full height of the viewport */
+    }
+
+    /* Smooth Scrolling */
+    html {
+      scroll-behavior: smooth;
     }
 
     /* Gradient animation keyframes */
@@ -27,7 +30,7 @@
       background: linear-gradient(270deg, #000000, #5e239d, #000000); /* Purple and black gradient */
       background-size: 800% 800%;
       animation: gradient 25s ease infinite; /* Slower animation */
-      position: absolute;
+      position: fixed; /* Change from absolute to fixed */
       top: 0;
       left: 0;
       width: 100%;
@@ -85,7 +88,7 @@
           <img src="./Flow_fields/Simple/captured.png" alt="Flow Fields Simple" class="w-full h-48 object-cover">
           <div class="p-5">
             <h2 class="text-xl font-bold text-purple-200 mb-3">Flow Fields (Simple)</h2>
-            <br class="text-gray-300">Experiment with flow fields in this creative game. <br> Press D to debug</p>
+            <p class="text-gray-300">Experiment with flow fields in this creative game. <br> Press D to debug</p>
           </div>
         </a>
       </div>
@@ -114,10 +117,9 @@
     </div>
 
     <!-- Footer -->
-    <footer class="mt-12 text-gray-500 text-sm">
+    <footer class="mt-10 text-gray-500 text-sm">
       Made by <a class="text-purple-400" href="https://github.com/ibra-kdbra">ibra-kdbra</a>
     </footer>
   </div>
-
 </body>
 </html>
