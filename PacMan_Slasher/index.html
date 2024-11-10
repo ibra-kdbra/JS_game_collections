@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PacMan Slicer</title>
+    <link rel="stylesheet" type="text/css" href="./css/index.css">
+</head>
+<body>
+
+  <canvas id="map" class="noselect"></canvas>
+  <canvas id="act" class="noselect"></canvas>
+  <canvas id="txt" class="noselect"></canvas>
+
+  <div id='scoreBlock' class="scores hidden">
+    <span class="noselect">Score : </span>
+    <span id='score'>0</span>
+  </div>
+
+  <div id='text' class="textBlock noselect"></div>
+
+  <div id='start' class="startButton noselect hidden" tabindex="0">
+    Start
+  </div>
+
+  <div id='credits' class="textBlock">by <a href="https://github/ibra-kdbra">ibra-kdbra</a></div>
+
+<script type="text/javascript" src="./js/vendor/howler.min.js"></script>
+
+<script type="text/javascript" src="./js/preloader.js"></script>
+<script type="text/javascript" src="./js/gesture.js"></script>
+<script type="text/javascript" src="./js/sprites.js"></script>
+<script type="text/javascript" src="./js/game.js"></script>
+</body>
+</html>
