@@ -1,0 +1,27 @@
+body {
+    position: relative;
+    min-height: 100vh;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @keyframes gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .animated-bg {
+    background: linear-gradient(270deg, #000000, #5e239d, #000000);
+    background-size: 800% 800%;
+    animation: gradient 25s ease infinite;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+  }
+
