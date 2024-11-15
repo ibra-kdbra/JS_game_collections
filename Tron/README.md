@@ -2,13 +2,13 @@
 
 Remake of the classic arcade game that involves maneuvering a 'light cycle' in an arena against an opponent.Game can be played against a computer or with two players.
 
-![Intro](./docs/intro.png)
+![Intro](./imgs/intro.png)
 
 
 
 
 
-![End](./docs/game_end.png)
+![End](./imgs/game_end.png)
 
 ## Game Architecture and Logic
 
