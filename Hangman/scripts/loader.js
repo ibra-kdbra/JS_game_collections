@@ -102,19 +102,19 @@ const handleLoadComplete = (id, item) => {
 };
 const loadData = () => {
 	let queue = new createjs.LoadQueue(false);
-	queue.loadFile({ id: "sky", src: "/Hangman/images/sky.png" });
-	queue.loadFile({ id: "city", src: "/Hangman/images/city.png" });
-	queue.loadFile({ id: "right", src: "/Hangman/images/right.png" });
-	queue.loadFile({ id: "left", src: "/Hangman/images/left.png" });
-	queue.loadFile({ id: "mid", src: "/Hangman/images/middle.png" });
-	queue.loadFile({ id: "mountains", src: "/Hangman/images/mountains.png" });
-	queue.loadFile({ id: "correct", src: "/Hangman/audio/correct.mp3" });
-	queue.loadFile({ id: "wrong", src: "/Hangman/audio/wrong.mp3" });
-	queue.loadFile({ id: "win", src: "/Hangman/audio/win.mp3" });
-	queue.loadFile({ id: "lose", src: "/Hangman/audio/lose.mp3" });
-	queue.loadFile({ id: "rotate", src: "/Hangman/audio/rotate.mp3" });
-	queue.loadFile({ id: "pullup", src: "/Hangman/audio/pullup.mp3" });
-	queue.loadFile({ id: "hang", src: "/Hangman/audio/hang.mp3" });
+	queue.loadFile({ id: "sky", src: "./images/sky.png" });
+	queue.loadFile({ id: "city", src: "./images/city.png" });
+	queue.loadFile({ id: "right", src: "./images/right.png" });
+	queue.loadFile({ id: "left", src: "./images/left.png" });
+	queue.loadFile({ id: "mid", src: "./images/middle.png" });
+	queue.loadFile({ id: "mountains", src: "./images/mountains.png" });
+	queue.loadFile({ id: "correct", src: "./audio/correct.mp3" });
+	queue.loadFile({ id: "wrong", src: "./audio/wrong.mp3" });
+	queue.loadFile({ id: "win", src: "./audio/win.mp3" });
+	queue.loadFile({ id: "lose", src: "./audio/lose.mp3" });
+	queue.loadFile({ id: "rotate", src: "./audio/rotate.mp3" });
+	queue.loadFile({ id: "pullup", src: "./audio/pullup.mp3" });
+	queue.loadFile({ id: "hang", src: "./audio/hang.mp3" });
 	queue.on("fileload", (event) => {
 		if (event.item.id === "sky") {
 			handleLoadComplete(event.item.id, queue.getResult("sky").src);
