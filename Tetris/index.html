@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tetris</title>
+  
+  <!-- Add a favicon (logo icon) -->
+  <link rel="icon" type="image/x-icon" href="./imgs/tetris.ico">
+
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Background image styling -->
+  <style>
+    body {
+      background-image: url('./imgs/water_leave_drops.jpg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+    }
+  </style>
+</head>
+<body>
+  <div id="content">
+    <!-- Left Panel -->
+    <section id="d" class="panel">
+      <h3>Hold</h3>
+      <div id="a">
+        <canvas id="hold"></canvas>
+      </div>
+      <ul id="replay" style="display: none;">
+        <li><a href="#" onclick="replay(-1)">Prev</a></li>
+        <li><a href="#" onclick="replay()">Play/Pause</a></li>
+        <li><a href="#" onclick="replay(1)">Next</a></li>
+      </ul>
+      <table id="stats">
+        <tr>
+          <td id="line">0</td>
+          <th>Line</th>
+        </tr>
+        <tr>
+          <td id="piece">0</td>
+          <th>Piece</th>
+        </tr>
+        <tr>
+          <th id="time" colspan="2">00:00.00</th>
+        </tr>
+      </table>
+    </section>
+
+    <!-- Main Game Area -->
+    <main id="b" class="panel">
+      <canvas id="bgStack"></canvas>
+      <canvas id="stack"></canvas>
+      <canvas id="active"></canvas>
+      <p id="msg"></p>
+
+      <!-- Main Menu -->
+      <nav class="menu on">
+        <h1>Tetr.js</h1>
+        <ul>
+          <li><a href="#" onclick="init(0)">Play Sprint</a></li>
+          <li><a href="#" onclick="init(3)">Play Dig Race</a></li>
+          <li><a href="#" onclick="menu(2)"><i class="icon-controls"></i>Controls</a></li>
+          <li><a href="#" onclick="menu(1)"><i class="icon-cog"></i>Settings</a></li>
+        </ul>
+      </nav>
+
+      <!-- Settings Menu -->
+      <div class="menu">
+        <h2>Settings</h2>
+        <div id="settings"></div>
+        <div class="clear">
+          <a class="button" href="#" onclick="menu(0)">Done</a>
+        </div>
+      </div>
+
+      <!-- Controls Menu -->
+      <div class="menu">
+        <h2>Controls</h2>
+        <p>Click on the control you want to change, then press any key.</p>
+        <table id="controls">
+          <tr><th>Move Left:</th><td id="moveLeft">←</td></tr>
+          <tr><th>Move Right:</th><td id="moveRight">→</td></tr>
+          <tr><th>Move Down:</th><td id="moveDown">↓</td></tr>
+          <tr><th>Hard Drop:</th><td id="hardDrop">Space</td></tr>
+          <tr><th>Hold:</th><td id="holdPiece">C</td></tr>
+          <tr><th>Spin Right:</th><td id="rotRight">X</td></tr>
+          <tr><th>Spin Left:</th><td id="rotLeft">Z</td></tr>
+          <tr><th>Spin 180:</th><td id="rot180">Shift</td></tr>
+          <tr><th>Retry:</th><td id="retry">R</td></tr>
+          <tr><th>Pause:</th><td id="pause">Esc</td></tr>
+        </table>
+        <div class="clear">
+          <a class="button" href="#" onclick="menu(0)">Done</a>
+        </div>
+      </div>
+
+      <!-- Game Over Menu -->
+      <nav id="go" class="menu">
+        <ul>
+          <li><a href="#" onclick="init(gametype)">Retry</a></li>
+          <li><a href="#" onclick="init('replay')">Watch Replay</a></li>
+          <li><a href="#" onclick="menu(0)">Main Menu</a></li>
+        </ul>
+      </nav>
+
+      <!-- Pause Menu -->
+      <nav id="pause" class="menu">
+        <ul>
+          <li><a href="#" onclick="unpause()">Return</a></li>
+          <li><a href="#" onclick="init(gametype)">Retry</a></li>
+          <li><a href="#" onclick="menu(0)">Main Menu</a></li>
+        </ul>
+      </nav>
+    </main>
+
+    <!-- Right Panel -->
+    <section id="c" class="panel">
+      <h3>Next</h3>
+      <canvas id="preview"></canvas>
+    </section>
+  </div>
+
+  <canvas id="sprite"></canvas>
+
+  <!-- Scripts -->
+  <script src="./scripts/tetris.js"></script>
+  <script src="./scripts/piece.js"></script>
+  <script src="./scripts/stack.js"></script>
+  <script src="./scripts/hold.js"></script>
+  <script src="./scripts/preview.js"></script>
+  <script src="./scripts/menu.js"></script>
+  <!-- <script src="./scripts/bg.js"></script> -->
+  <script>
+    _gaq = [['_setAccount', 'UA-30472693-1'], ['_trackPageview']];
+    (function (d) {
+      var g = d.createElement('script'), s = d.scripts[0];
+      g.src = '//www.google-analytics.com/ga.js';
+      s.parentNode.insertBefore(g, s);
+    })(document);
+  </script>
+</body>
+</html>
