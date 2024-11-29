@@ -375,7 +375,7 @@ li.letter {
 	width: 35px;
 	margin-right: 5%;
 	margin-top: 1%;
-	background-image: url(/Hangman/images/icons/home.png);
+	background-image: url(../images/icons/home.png);
 	background-color: transparent;
 	border: none;
 	background-size: contain;
@@ -396,10 +396,10 @@ li.letter {
 	background-repeat: no-repeat;
 	opacity: 0.6;
 	transition: opacity 100ms linear;
-	background-image: url(/Hangman/images/icons/audio-on.png);
+	background-image: url(../images/icons/audio-on.png);
 }
 .home-container .sound-button.disabled {
-	background-image: url(/Hangman/images/icons/audio-off.png);
+	background-image: url(../images/icons/audio-off.png);
 }
 .home-container .home-button:hover,
 .home-container .sound-button:hover {
@@ -785,7 +785,7 @@ li.letter {
 	content: "";
 	height: 40%;
 	width: 40%;
-	background-image: url("/Hangman/images/icons/reload.png");
+	background-image: url("../images/icons/reload.png");
 	background-size: contain;
 	background-repeat: no-repeat;
 	background-position: center;
@@ -802,7 +802,7 @@ li.letter {
 	content: "";
 	height: 40%;
 	width: 40%;
-	background-image: url("/Hangman/images/icons/menu-button.png");
+	background-image: url("../images/icons/menu-button.png");
 	background-size: contain;
 	background-repeat: no-repeat;
 	background-position: center;
@@ -903,7 +903,7 @@ li.letter {
 		z-index: 10;
 		animation: slide 1.3s infinite;
 		filter: drop-shadow(0 0 4px white) brightness(0) invert(1);
-		background-image: url(/Hangman/images/icons/cursor.png);
+		background-image: url(../images/icons/cursor.png);
 		background-size: contain;
 		background-repeat: no-repeat;
 		transform: translateX(100%);
@@ -919,9 +919,6 @@ li.letter {
 	}
 	.letter span {
 		padding-bottom: 3%;
-	}
-	.next-button {
-		display: none;
 	}
 	.modal-content {
 		height: 70%;
@@ -993,7 +990,7 @@ li.letter {
 		z-index: 10;
 		animation: slide 1.3s infinite;
 		filter: drop-shadow(0 0 4px white) brightness(0) invert(1);
-		background-image: url(/Hangman/images/icons/cursor.png);
+		background-image: url(../images/icons/cursor.png);
 		background-size: contain;
 		background-repeat: no-repeat;
 		transform: translateX(100%);
@@ -1019,9 +1016,6 @@ li.letter {
 	}
 	li.letter {
 		font-size: 1.1rem;
-	}
-	.next-button {
-		display: none;
 	}
 	.modal-content {
 		height: 70%;
@@ -1092,7 +1086,7 @@ li.letter {
 		z-index: 10;
 		animation: slide 1.3s infinite;
 		filter: drop-shadow(0 0 4px white) brightness(0) invert(1);
-		background-image: url(/Hangman/images/icons/cursor.png);
+		background-image: url(../images/icons/cursor.png);
 		background-size: contain;
 		background-repeat: no-repeat;
 		transform: translateX(100%);
@@ -1136,9 +1130,6 @@ li.letter {
 	.letter span {
 		padding-bottom: 1%;
 	}
-	.next-button {
-		display: none;
-	}
 	.nav-bar {
 		padding: 5px;
 	}
@@ -1180,7 +1171,7 @@ li.letter {
 	}
 	.score-container .guesses-left::before {
 		content: "";
-		background-image: url("/Hangman/images/icons/refresh.png");
+		background-image: url("../images/icons/refresh.png");
 		background-size: contain;
 		background-repeat: no-repeat;
 		opacity: 0.8;
@@ -1192,7 +1183,7 @@ li.letter {
 	}
 	.score-container .score::before {
 		content: "";
-		background-image: url("/Hangman/images/icons/trophy.png");
+		background-image: url("../images/icons/trophy.png");
 		background-size: contain;
 		background-repeat: no-repeat;
 		opacity: 0.8;
@@ -1202,9 +1193,9 @@ li.letter {
 		align-items: center;
 		margin-right: 10px;
 	}
-	.score-container .best-score::before {
+	.score-container .best-score {
 		content: "";
-		background-image: url("/Hangman/images/icons/star.png");
+		background-image: url("../images/icons/star.png");
 		background-size: contain;
 		background-repeat: no-repeat;
 		opacity: 0.8;
@@ -1291,7 +1282,7 @@ li.letter {
 		z-index: 10;
 		animation: slide 1.3s infinite;
 		filter: drop-shadow(0 0 4px white) brightness(0) invert(1);
-		background-image: url(/Hangman/images/icons/cursor.png);
+		background-image: url(../images/icons/cursor.png);
 		background-size: contain;
 		background-repeat: no-repeat;
 		transform: translateX(100%);
@@ -1374,9 +1365,6 @@ li.letter {
 	.letter span {
 		padding-bottom: 1%;
 	}
-	.next-button {
-		display: none;
-	}
 	.nav-bar {
 		padding: 5px;
 	}
@@ -1419,7 +1407,7 @@ li.letter {
 	}
 	.score-container .guesses-left::before {
 		content: "";
-		background-image: url("/Hangman/images/icons/refresh.png");
+		background-image: url("../images/icons/refresh.png");
 		background-size: contain;
 		background-repeat: no-repeat;
 		opacity: 0.8;
@@ -1431,7 +1419,7 @@ li.letter {
 	}
 	.score-container .score::before {
 		content: "";
-		background-image: url("/Hangman/images/icons/trophy.png");
+		background-image: url("../images/icons/trophy.png");
 		background-size: contain;
 		background-repeat: no-repeat;
 		opacity: 0.8;
@@ -1443,7 +1431,7 @@ li.letter {
 	}
 	.score-container .best-score::before {
 		content: "";
-		background-image: url("/Hangman/images/icons/star.png");
+		background-image: url("../images/icons/star.png");
 		background-size: contain;
 		background-repeat: no-repeat;
 		opacity: 0.8;
