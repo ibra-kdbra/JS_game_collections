@@ -14,7 +14,7 @@ body {
   }
 
   .animated-bg {
-    background: linear-gradient(270deg, #000000, #5e239d, #000000);
+    background: linear-gradient(270deg,#16054e,#5e239d);
     background-size: 800% 800%;
     animation: gradient 25s ease infinite;
     position: fixed;
@@ -23,5 +23,6 @@ body {
     width: 100%;
     height: 100%;
     z-index: -1;
-  }
+}
+
 
