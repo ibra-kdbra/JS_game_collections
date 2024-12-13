@@ -1,0 +1,106 @@
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animated-bg {
+  background: linear-gradient(270deg,#16054e,#5e239d);
+  background-size: 800% 800%;
+  animation: gradient 25s ease infinite;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
+
+  body {
+    overflow-y: hidden;
+  }
+
+  .horizontal-scroll {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  position: relative;
+  max-width: 100%;
+  padding-bottom: 10px;
+  margin-bottom: 1rem;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  justify-content: flex-start;
+}
+
+.horizontal-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.horizontal-scroll > * {
+  flex: 0 0 auto;
+  position: relative;
+  width: auto;
+  max-width: 275px;
+}
+
+
+  .scroll-button {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: transparent;
+    border: 2px solid transparent;
+    padding: 10px;
+    cursor: pointer;
+    z-index: 10;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .scroll-button.left {
+    left: -5%;
+  }
+
+  .scroll-button.right {
+    right: -5%;
+  }
+
+  .scroll-button i {
+    font-size: 2rem;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .game-card {
+    width: 20rem;
+    transition: transform 0.3s ease-in-out;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  }
+
+  footer {
+    position: relative;
+    margin-top: 2rem;
+    text-align: center;
+    color: #aaa;
+    visibility: visible;
+    margin-bottom: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .scroll-button {
+      display: none;
+    }
+
+    .horizontal-scroll {
+      touch-action: none;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .game-card {
+      width: 12rem;
+    }
+  }
