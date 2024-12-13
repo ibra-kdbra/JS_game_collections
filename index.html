@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Work Lab</title>
+    <title>JS Lab</title>
     <!-- Icons -->
-    <link href="./assets/video_game.ico" rel="icon" type="image/x-icon" />
-    <link href="./assets/video_game.svg" rel="icon" type="image/svg+xml" />
-    <link href="./assets/video_game.png" rel="icon" type="image/png" />
-    <link rel="stylesheet" href="./assets/style.css" />
+    <link href="./assets/icons/video_game.ico" rel="icon" type="image/x-icon" />
+    <link href="./assets/icons//video_game.svg" rel="icon" type="image/svg+xml" />
+    <link href="./assets/icons//video_game.png" rel="icon" type="image/png" />
+    <link rel="stylesheet" href="./assets/css/style.css" />
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
-  <body class="bg-black text-white font-sans">
+  <body class="bg-black text-white font-sans" id="main">
     <div class="animated-bg"></div>
 
     <div class="container mx-auto p-8 flex flex-col items-center justify-center min-h-screen">
@@ -20,7 +20,7 @@
           Game Lab
         </h1>
         <a href="https://github.com/ibra-kdbra/JS_game_collections" target="_blank" class="flex items-center ml-4">
-          <img src="./assets/github-icon.svg" alt="GitHub Icon" class="h-8 w-8" />
+          <img src="./assets/icons/github-icon.svg" alt="GitHub Icon" class="h-8 w-8" />
         </a>
       </header>
 
@@ -39,106 +39,6 @@
         Made by <a class="text-purple-400" href="https://github.com/ibra-kdbra">ibra-kdbra</a>
       </footer>
     </div>
-
-    <!-- Generate Game Cards -->
-    <script>
-      const games = [
-        {
-          link: "./2048/index.html",
-          imgSrc: "./2048/meta/apple-touch-icon.png",
-          title: "2048 with AI",
-          description: "Challenge yourself with the classic tile-merging puzzle. It has a built-in AI player, with some fantastic algorithms."
-        },
-        {
-          link: "./Sprites_Games/ninth_project/index.html",
-          imgSrc: "./Sprites_Games/ninth_project/images/captured.png",
-          title: "Sprite Game",
-          description: "Explore adventure with this sprite-based game."
-        },
-        {
-          link: "./Hangman/index.html",
-          imgSrc: "./Hangman/images/captured.png",
-          title: "Hangman",
-          description: "Classic Hangman game with multiple options, wonderful game play."
-        },
-        {
-          link: "./Flow_fields/Simple/index.html",
-          imgSrc: "./Flow_fields/Simple/captured.png",
-          title: "Flow Fields (Simple)",
-          description: "Experiment with flow fields in this creative game. Press D to debug."
-        },
-        {
-          link: "./Flow_fields/Text_Fields/index.html",
-          imgSrc: "./Flow_fields/Text_Fields/captured.png",
-          title: "Text Fields",
-          description: "Experiment with flow fields in this creative game. Press D to debug."
-        },
-        {
-          link: "./Flow_fields/Experimental_math/index.html",
-          imgSrc: "./Flow_fields/Experimental_math/captured.png",
-          title: "Experimental Math",
-          description: "Low-level math with flow fields."
-        },
-        {
-          link: "./Flow_fields/Adaptive/index.html",
-          imgSrc: "./Flow_fields/Adaptive/images/result3.png",
-          title: "Adaptive Fields",
-          description: "Try multiple variations with adaptive flow fields."
-        },
-        {
-          link: "./PacMan_Slasher/index.html",
-          imgSrc: "./PacMan_Slasher/img/screen.png",
-          title: "PacMan Slasher",
-          description: "Defeat a pacman by drawing its symbol anywhere."
-        },
-        {
-          link: "./Tron/index.html",
-          imgSrc: "./Tron/imgs/intro.png",
-          title: "Tron",
-          description: "Remake of the classic arcade game that involves maneuvering a 'light cycle' in an arena against an opponent."
-        },
-        {
-          link: "./Tetris/index.html",
-          imgSrc: "./Tetris/imgs/captured.png",
-          title: "Tetris",
-          description: "The original Tetris game, with a few enhancements, many options included."
-        },
-        {
-          link: "./MoonLDR/index.html",
-          imgSrc: "./MoonLDR/images/normal.png",
-          title: "MoonLDR",
-          description: "Fun landing ship on ground game, it's a classic based on Lunar Lander"
-        },
-      ];
-
-      document.addEventListener("DOMContentLoaded", () => {
-        const container = document.getElementById("game-cards-container");
-
-        games.forEach((game) => {
-          const card = document.createElement("div");
-          card.classList.add(
-            "bg-purple-900",
-            "rounded-lg",
-            "overflow-hidden",
-            "shadow-lg",
-            "transition-transform",
-            "transform",
-            "hover:scale-105",
-            "cursor-pointer"
-          );
-
-          card.innerHTML = `
-            <a href="${game.link}" target="_blank">
-              <img src="${game.imgSrc}" alt="${game.title}" class="w-full h-48 object-cover">
-              <div class="p-5">
-                <h2 class="text-xl font-bold text-purple-200 mb-3">${game.title}</h2>
-                <p class="text-gray-300">${game.description}</p>
-              </div>
-            </a>
-          `;
-          container.appendChild(card);
-        });
-      });
-    </script>
+    <script type="module" src="./assets/js/script.js"></script>
   </body>
 </html>
