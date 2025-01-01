@@ -1,10 +1,8 @@
-/* Lock scroll and hide */
 html, body {
     overflow: hidden;
     height: 100%;
 }
 
-/* General Reset */
 * {
     margin: 0;
     padding: 0;
@@ -15,7 +13,6 @@ canvas {
     background-color: black;
 }
 
-/* Form Center Styling */
 .form-center {
     position: absolute;
     top: 10%;
@@ -28,7 +25,6 @@ canvas {
     gap: 10px;
 }
 
-/* Input Field Styling */
 .input-field {
     padding: 10px;
     border: 2px solid transparent;
@@ -44,7 +40,6 @@ canvas {
     border-color: #730D9E;
 }
 
-/* Button Styling */
 .button-style {
     padding: 10px 20px;
     background-color: #333;
@@ -60,7 +55,6 @@ canvas {
     transform: scale(1.05);
 }
 
-/* Top-Right Button Styling */
 .top-right-button {
     position: absolute;
     top: 10px;
@@ -81,7 +75,6 @@ canvas {
     transform: scale(1.05);
 }
 
-/* Responsive Adjustments */
 @media (max-width: 768px) {
     .input-field {
         width: 80%;
@@ -91,3 +84,4 @@ canvas {
         top: 15%;
     }
 }
+
