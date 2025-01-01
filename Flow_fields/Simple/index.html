@@ -3,11 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flow fields</title>
+    <title>Flow Fields</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <canvas id="canvas1"></canvas>
+
+    <!-- Color Input Form -->
+    <button id="toggleColorButton" class="top-right-button">Colors</button>
+    <form id="colorForm" class="form-center" style="display: none;">
+        <input id="colorInput" type="text" placeholder="Enter 4 colors (e.g., #FF5733,#33FF57,#3357FF,#FF33A1)" class="input-field">
+        <button id="applyColors" type="button" class="button-style">Apply Colors</button>
+    </form>
 
     <script src="script.js"></script>
 </body>
