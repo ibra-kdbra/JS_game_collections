@@ -78,6 +78,7 @@ class Effect {
         this.curve = 5;
         this.zoom = 0.12;
         this.debug = true;
+        this.lastTouchTime = 0;
         this.init();
 
         window.addEventListener('keydown', (e) => {
@@ -85,6 +86,15 @@ class Effect {
         });
 
         window.addEventListener('resize', () => this.resize(window.innerWidth, window.innerHeight));
+
+        // Add double-tap listener for touchscreens
+        window.addEventListener('touchstart', (e) => {
+            const currentTime = new Date().getTime();
+            if (currentTime - this.lastTouchTime < 300) {
+                this.debug = !this.debug;
+            }
+            this.lastTouchTime = currentTime;
+        });
     }
 
     init() {
