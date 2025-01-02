@@ -1,14 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flow fields</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Text Fields</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
     <canvas id="canvas1"></canvas>
+    <div id="cornerButton" class="corner-button"></div>
+    <div id="optionsPanel" class="options-panel">
+      <h2>Options</h2>
+      <label for="textInput">Display Text:</label><br />
+      <input id="textInput" type="text" placeholder="Enter text" /><br /><br />
+
+      <label for="colorInput">Colors (comma separated):</label><br />
+      <input
+        id="colorInput"
+        type="text"
+        placeholder="#ff0000, #00ff00, #0000ff"
+      /><br /><br />
+
+      <button id="applyBtn">Apply Changes</button>
+    </div>
 
     <script src="script.js"></script>
-</body>
+  </body>
 </html>
