@@ -1,4 +1,4 @@
-/** @type{HTMLCanvasElement} **/
+/** @type {HTMLCanvasElement} */
 const canvas = document.getElementById('canvas1');
 const ctx = canvas.getContext('2d');
 
@@ -6,7 +6,6 @@ function setCanvasSize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 }
-
 setCanvasSize();
 
 ctx.fillStyle = 'white';
@@ -85,15 +84,19 @@ class Effect {
             if (e.key === 'd') this.debug = !this.debug;
         });
 
-        window.addEventListener('resize', () => this.resize(window.innerWidth, window.innerHeight));
-
-        // Add double-tap listener for touchscreens
-        window.addEventListener('touchstart', (e) => {
-            const currentTime = new Date().getTime();
-            if (currentTime - this.lastTouchTime < 300) {
+        window.addEventListener('touchstart', () => {
+            const now = Date.now();
+            if (now - this.lastTouchTime < 300) {
                 this.debug = !this.debug;
             }
-            this.lastTouchTime = currentTime;
+            this.lastTouchTime = now;
+        });
+        window.addEventListener('resize', () => {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+            this.width = this.canvas.width;
+            this.height = this.canvas.height;
+            this.init();
         });
     }
 
@@ -144,15 +147,6 @@ class Effect {
         context.restore();
     }
 
-    resize(width, height) {
-        this.canvas.width = width;
-        this.canvas.height = height;
-        this.width = this.canvas.width;
-        this.height = this.canvas.height;
-        this.calculateFlowField();
-        this.createParticles();
-    }
-
     render(context) {
         if (this.debug) this.drawGrid(context);
         this.particles.forEach((particle) => {
@@ -169,36 +163,49 @@ function animate() {
     effect.render(ctx);
     requestAnimationFrame(animate);
 }
-
 animate();
 
-// Update button functionality
-const colorForm = document.getElementById('colorForm');
+/* =============================
+   Options Panel / UI Logic
+============================= */
+const cornerButton = document.getElementById('cornerButton');
+const optionsPanel = document.getElementById('optionsPanel');
 const colorInput = document.getElementById('colorInput');
-const applyColorsButton = document.getElementById('applyColors');
-const toggleButton = document.getElementById('toggleColorButton');
+const applyColorsBtn = document.getElementById('applyColorsBtn');
+const screenshotBtn = document.getElementById('screenshotBtn');
 
-applyColorsButton.addEventListener('click', (e) => {
-    e.preventDefault();
-    const colorInputValue = colorInput.value.trim();
-    const newColors = colorInputValue.split(',').map(color => color.trim()).filter(Boolean);
+cornerButton.addEventListener('click', () => {
+    if (optionsPanel.style.display === 'block') {
+        optionsPanel.style.display = 'none';
+    } else {
+        optionsPanel.style.display = 'block';
+    }
+});
+
+applyColorsBtn.addEventListener('click', () => {
+    const value = colorInput.value.trim();
+    if (!value) return;
+
+    const newColors = value.split(',')
+        .map(c => c.trim())
+        .filter(c => c.length > 0);
 
     if (newColors.length === 4) {
         effect.particles.forEach(particle => {
             particle.colors = newColors;
             particle.color = newColors[Math.floor(Math.random() * newColors.length)];
         });
-        colorForm.style.display = 'none';
+        optionsPanel.style.display = 'none';
     } else {
-        alert('Please enter exactly four colors separated by commas.');
+        alert('Please enter exactly 4 colors, separated by commas.');
     }
 });
 
-// Toggle color form visibility
-toggleButton.addEventListener('click', () => {
-    if (colorForm.style.display === 'none' || colorForm.style.display === '') {
-        colorForm.style.display = 'flex';
-    } else {
-        colorForm.style.display = 'none';
-    }
+/* Take a screenshot of the canvas */
+screenshotBtn.addEventListener('click', () => {
+    const dataURL = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = 'flow_field_screenshot.png';
+    link.href = dataURL;
+    link.click();
 });
