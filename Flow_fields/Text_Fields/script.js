@@ -1,252 +1,291 @@
-/** @type{HTMLCanvasElement} **/
-
+/** @type {HTMLCanvasElement} */
 const canvas = document.getElementById('canvas1');
 const ctx = canvas.getContext('2d');
+
 canvas.width = 1500;
 canvas.height = 500;
 
-console.log(ctx)
+let lastTap = 0;
 
-ctx.fillStyle = 'white';
-ctx.strokeStyle = 'white';
-ctx.lineWidth = 1;
+/* =============================
+   Debug Toggle
+============================= */
+window.addEventListener('touchstart', () => {
+    const currentTime = new Date().getTime();
+    const tapLength = currentTime - lastTap;
+    if (tapLength < 400 && tapLength > 0) {
+        // It's a double tap
+        effect.debug = !effect.debug;
+    }
+    lastTap = currentTime;
+});
+
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'd') {
+        effect.debug = !effect.debug;
+    }
+});
+const cornerButton = document.getElementById('cornerButton');
+const optionsPanel = document.getElementById('optionsPanel');
+cornerButton.addEventListener('click', () => {
+    if (optionsPanel.style.display === 'block') {
+        optionsPanel.style.display = 'none';
+    } else {
+        optionsPanel.style.display = 'block';
+    }
+});
+
+const textInput = document.getElementById('textInput');
+const colorInput = document.getElementById('colorInput');
+const applyBtn = document.getElementById('applyBtn');
+
+applyBtn.addEventListener('click', () => {
+    // If user typed a new text
+    const newText = textInput.value.trim();
+    if (newText) {
+        effect.setUserText(newText);
+    }
+
+    const colorValue = colorInput.value.trim();
+    if (colorValue) {
+        // Parse comma-separated colors
+        const colors = colorValue.split(',')
+            .map(c => c.trim())
+            .filter(c => c.length > 0);
+        if (colors.length > 0) {
+            effect.setUserGradient(colors);
+        }
+    }
+
+    optionsPanel.style.display = 'none';
+});
 
 class Particle {
     constructor(effect) {
         this.effect = effect;
         this.x = Math.floor(Math.random() * this.effect.width);
         this.y = Math.floor(Math.random() * this.effect.height);
-        this.speedX;
-        this.speedY;
+        this.speedX = 0;
+        this.speedY = 0;
         this.speedModifier = Math.floor(Math.random() * 2 + 1);
-        this.history = [{
-            x: this.x,
-            y: this.y
-        }];
+        this.history = [{ x: this.x, y: this.y }];
         this.maxLength = Math.floor(Math.random() * 60 + 20);
         this.angle = 0;
         this.newAngle = 0;
-        this.angleCorrector = Math.random() * 0.5 +0.01;
+        this.angleCorrector = Math.random() * 0.5 + 0.01;
         this.timer = this.maxLength * 2;
+        // Random color from a predefined list
         this.colors = ['#4C026B', '#8E0E00', '#9D0208', '#BA1A1A', '#730D9E'];
         this.color = this.colors[Math.floor(Math.random() * this.colors.length)];
     }
-    draw(context){
-        // context.fillRect(this.x, this.y, 10, 10);
+
+    draw(context) {
         context.beginPath();
         context.moveTo(this.history[0].x, this.history[0].y);
-        for(let i = 1; i < this.history.length; i++){
+        for (let i = 1; i < this.history.length; i++) {
             context.lineTo(this.history[i].x, this.history[i].y);
         }
         context.strokeStyle = this.color;
         context.stroke();
     }
-    update(){
+
+    update() {
         this.timer--;
-        if(this.timer >= 1){
+        if (this.timer >= 1) {
+            // Determine which cell we’re in
             let x = Math.floor(this.x / this.effect.cellSize);
             let y = Math.floor(this.y / this.effect.cellSize);
             let index = y * this.effect.cols + x;
-            if(this.effect.flowField[index]){
+
+            // Adjust angle based on flowField
+            if (this.effect.flowField[index]) {
                 this.newAngle = this.effect.flowField[index].colorAngle;
 
-                if(this.angle > this.newAngle){
+                if (this.angle > this.newAngle) {
                     this.angle -= this.angleCorrector;
-                }else if(this.angle < this.newAngle){
+                } else if (this.angle < this.newAngle) {
                     this.angle += this.angleCorrector;
-                }else{
+                } else {
                     this.angle = this.newAngle;
                 }
             }
-            
+
+            // Move & record history
             this.speedX = Math.cos(this.angle);
             this.speedY = Math.sin(this.angle);
             this.x += this.speedX * this.speedModifier;
             this.y += this.speedY * this.speedModifier;
-            
-            this.history.push({x: this.x, y: this.y});
-            if(this.history.length > this.maxLength){
+
+            this.history.push({ x: this.x, y: this.y });
+            if (this.history.length > this.maxLength) {
                 this.history.shift();
             }
-        }else if(this.history.length > 1){
+        } else if (this.history.length > 1) {
             this.history.shift();
-        }else{
+        } else {
             this.reset();
         }
     }
-    reset(){
+
+    reset() {
         let attempts = 0;
         let resetSuccess = false;
-        
-        while(attempts < 10 && !resetSuccess){
+
+        while (attempts < 10 && !resetSuccess) {
             attempts++;
             let testIndex = Math.floor(Math.random() * this.effect.flowField.length);
-            if(this.effect.flowField[testIndex].alpha > 0){
+            if (this.effect.flowField[testIndex].alpha > 0) {
                 this.x = Math.floor(Math.random() * this.effect.width);
                 this.y = Math.floor(Math.random() * this.effect.height);
-                this.history = [{
-                    x: this.x,
-                    y: this.y
-                }]
+                this.history = [{ x: this.x, y: this.y }];
                 this.timer = this.maxLength * 2;
                 resetSuccess = true;
             }
         }
-        if(!resetSuccess){
+        if (!resetSuccess) {
+            // If we never find a cell with alpha>0, just place randomly
             this.x = Math.random() * this.effect.width;
             this.y = Math.random() * this.effect.height;
-            this.history = [{
-                x: this.x,
-                y: this.y
-            }]
+            this.history = [{ x: this.x, y: this.y }];
             this.timer = this.maxLength * 2;
         }
     }
 }
 
-
 class Effect {
     constructor(canvas) {
         this.canvas = canvas;
-        this.context= ctx;
+        this.context = ctx;
         this.width = this.canvas.width;
         this.height = this.canvas.height;
+
         this.particles = [];
         this.numberOfParticles = 4000;
         this.cellSize = 20;
-        this.rows;
-        this.cols;
+        this.rows = 0;
+        this.cols = 0;
         this.flowField = [];
         this.curve = 5;
         this.zoom = 0.12;
         this.debug = true;
+
+        // User-controlled text & gradient
+        this.userText = 'FLOW';
+        this.userGradient = [
+            'rgb(255,255,0)',
+            'rgb(200,5,50)',
+            'rgb(150,255,255)',
+            'rgb(255,255,150)',
+        ];
+
         this.init();
-
-        window.addEventListener('keydown', e =>{
-            if(e.key === 'd') this.debug = !this.debug;
-        });
-
-        window.addEventListener('resize', e =>{
-            // this.resize(e.target.innerHeight, e.target.innerHeight);
-        })
     }
-    drawText(context){
+
+    setUserText(text) {
+        this.userText = text;
+        this.init();
+    }
+
+    setUserGradient(colors) {
+        this.userGradient = colors;
+        this.init();
+    }
+    drawText() {
+        this.context.save();
         this.context.font = '400px Helvetica';
         this.context.textAlign = 'center';
-        this.context.textBaseline = 'middle'
+        this.context.textBaseline = 'middle';
 
-        const gradient1 = this.context.createLinearGradient(0, 0, this.width, this.height);
-        gradient1.addColorStop(0.2, 'rgb(255,0,0)');
-        gradient1.addColorStop(0.4, 'rgb(0,255,0)');
-        gradient1.addColorStop(0.6, 'rgb(150,100,100)');
-        gradient1.addColorStop(0.8, 'rgb(0,255,255)');
+        const gradient = this.context.createLinearGradient(0, 0, this.width, this.height);
+        if (this.userGradient.length > 1) {
+            this.userGradient.forEach((color, i) => {
+                gradient.addColorStop(i / (this.userGradient.length - 1), color);
+            });
+        } else {
+            gradient.addColorStop(0, this.userGradient[0] || '#fff');
+            gradient.addColorStop(1, this.userGradient[0] || '#fff');
+        }
 
-        const gradient2 = this.context.createLinearGradient(0, 0, this.width, this.height);
-        gradient2.addColorStop(0.2, 'rgb(255,255,0)');
-        gradient2.addColorStop(0.4, 'rgb(200,5,50)');
-        gradient2.addColorStop(0.6, 'rgb(150,255,255)');
-        gradient2.addColorStop(0.8, 'rgb(255,255,150)');
-
-
-        const gradient3 = this.context.createRadialGradient(this.width * 0.5, this.height * 0.5, 10, this.width * 0.5,
-             this.height * 0.5, this.width);
-        gradient3.addColorStop(0.2, 'rgb(0,0,255)');
-        gradient3.addColorStop(0.4, 'rgb(200,255,0)');
-        gradient3.addColorStop(0.6, 'rgb(0,0,255)');
-        gradient3.addColorStop(0.8, 'rgb(0,0,0)');
-
-        this.context.fillStyle =gradient2;
-        this.context.fillText('FLOW', this.width *0.5, this.height * 0.5, this.width);
-
-
+        this.context.fillStyle = gradient;
+        this.context.fillText(this.userText, this.width * 0.5, this.height * 0.5, this.width);
+        this.context.restore();
     }
-    init(){
-        //create flow fields
+
+    init() {
         this.rows = Math.floor(this.height / this.cellSize);
         this.cols = Math.floor(this.width / this.cellSize);
         this.flowField = [];
 
-        // draw text
+        this.context.clearRect(0, 0, this.width, this.height);
         this.drawText();
 
-        //scan pixel data
         const pixels = this.context.getImageData(0, 0, this.width, this.height);
-        console.log(pixels)
 
-        for(let y = 0; y < this.height; y+= this.cellSize){
-            for(let x = 0; x < this.width; x+= this.cellSize){
+        for (let y = 0; y < this.height; y += this.cellSize) {
+            for (let x = 0; x < this.width; x += this.cellSize) {
                 const index = (y * this.width + x) * 4;
                 const r = pixels.data[index];
                 const g = pixels.data[index + 1];
                 const b = pixels.data[index + 2];
                 const alpha = pixels.data[index + 3];
                 const grayscale = (r + g + b) / 3;
-                const colorAngle = ((grayscale/255) * 6.28).toFixed(2);
-                /*
-                Convert scale 0 - 255(color) to
-                angle value 0 - 6.28 (radians)
-                */
+                // Convert 0-255 grayscale -> 0-2π (approx 6.28)
+                const colorAngle = ((grayscale / 255) * Math.PI * 2).toFixed(2);
+
                 this.flowField.push({
                     x: x,
                     y: y,
                     alpha: alpha,
-                    colorAngle: colorAngle
+                    colorAngle: parseFloat(colorAngle),
                 });
             }
         }
-
-        // for(let y = 0; y < this.rows; y++){
-        //     for(let x = 0; x < this.cols; x++){
-        //         let angle = (Math.cos(x * this.zoom) + Math.sin(y * this.zoom)) * this.curve;
-        //         this.flowField.push(angle);
-        //     }
-        //     console.log(this.flowField);
-        // }
-        //create particles
         this.particles = [];
-        for(let i = 0; i < this.numberOfParticles; i++){
+        for (let i = 0; i < this.numberOfParticles; i++) {
             this.particles.push(new Particle(this));
         }
-        this.particles.push(new Particle(this));
     }
-    drawGrid(){
+
+    drawGrid() {
         this.context.save();
         this.context.strokeStyle = 'white';
         this.context.lineWidth = 0.3;
-        for(let c = 0; c < this.cols; c++){
-             this.context.beginPath();
-             this.context.moveTo(c * this.cellSize, 0);
-             this.context.lineTo(c * this.cellSize, this.height);
-             this.context.stroke();
-        }
-        for(let r = 0; r < this.rows; r++){
+        for (let c = 0; c < this.cols; c++) {
             this.context.beginPath();
-             this.context.moveTo(0, r * this.cellSize);
-             this.context.lineTo(this.width ,r * this.cellSize);
-             this.context.stroke();
+            this.context.moveTo(c * this.cellSize, 0);
+            this.context.lineTo(c * this.cellSize, this.height);
+            this.context.stroke();
+        }
+        for (let r = 0; r < this.rows; r++) {
+            this.context.beginPath();
+            this.context.moveTo(0, r * this.cellSize);
+            this.context.lineTo(this.width, r * this.cellSize);
+            this.context.stroke();
         }
         this.context.restore();
     }
-    resize(width, height){
-        this.canvas = canvas;
+
+    resize(width, height) {
+        this.canvas.width = width;
         this.canvas.height = height;
         this.width = this.canvas.width;
         this.height = this.canvas.height;
+        this.init();
     }
-    render(){
-        if(this.debug) 
-        {
-        this.drawGrid();
-        this.drawText();
+
+    render() {
+        if (this.debug) {
+            this.drawGrid();
+            this.drawText();
         }
-        this.particles.forEach(particle => {
+        this.particles.forEach((particle) => {
             particle.draw(this.context);
             particle.update();
-        })
+        });
     }
 }
 
-const effect = new Effect(canvas,ctx);
+const effect = new Effect(canvas);
 
 function animate(){
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -254,3 +293,4 @@ function animate(){
     requestAnimationFrame(animate);
 }
 animate();
+
