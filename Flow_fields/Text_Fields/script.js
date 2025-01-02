@@ -2,8 +2,9 @@
 const canvas = document.getElementById('canvas1');
 const ctx = canvas.getContext('2d');
 
+// Hard-coded dimensions
 canvas.width = 1500;
-canvas.height = 500;
+canvas.height = 720;
 
 let lastTap = 0;
 
@@ -92,15 +93,12 @@ class Particle {
     update() {
         this.timer--;
         if (this.timer >= 1) {
-            // Determine which cell we’re in
             let x = Math.floor(this.x / this.effect.cellSize);
             let y = Math.floor(this.y / this.effect.cellSize);
             let index = y * this.effect.cols + x;
 
-            // Adjust angle based on flowField
             if (this.effect.flowField[index]) {
                 this.newAngle = this.effect.flowField[index].colorAngle;
-
                 if (this.angle > this.newAngle) {
                     this.angle -= this.angleCorrector;
                 } else if (this.angle < this.newAngle) {
@@ -110,7 +108,6 @@ class Particle {
                 }
             }
 
-            // Move & record history
             this.speedX = Math.cos(this.angle);
             this.speedY = Math.sin(this.angle);
             this.x += this.speedX * this.speedModifier;
@@ -143,7 +140,6 @@ class Particle {
             }
         }
         if (!resetSuccess) {
-            // If we never find a cell with alpha>0, just place randomly
             this.x = Math.random() * this.effect.width;
             this.y = Math.random() * this.effect.height;
             this.history = [{ x: this.x, y: this.y }];
@@ -169,7 +165,6 @@ class Effect {
         this.zoom = 0.12;
         this.debug = true;
 
-        // User-controlled text & gradient
         this.userText = 'FLOW';
         this.userGradient = [
             'rgb(255,255,0)',
@@ -220,7 +215,6 @@ class Effect {
         this.drawText();
 
         const pixels = this.context.getImageData(0, 0, this.width, this.height);
-
         for (let y = 0; y < this.height; y += this.cellSize) {
             for (let x = 0; x < this.width; x += this.cellSize) {
                 const index = (y * this.width + x) * 4;
@@ -229,13 +223,12 @@ class Effect {
                 const b = pixels.data[index + 2];
                 const alpha = pixels.data[index + 3];
                 const grayscale = (r + g + b) / 3;
-                // Convert 0-255 grayscale -> 0-2π (approx 6.28)
                 const colorAngle = ((grayscale / 255) * Math.PI * 2).toFixed(2);
 
                 this.flowField.push({
-                    x: x,
-                    y: y,
-                    alpha: alpha,
+                    x,
+                    y,
+                    alpha,
                     colorAngle: parseFloat(colorAngle),
                 });
             }
