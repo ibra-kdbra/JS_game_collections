@@ -1,4 +1,3 @@
-
 # Pac-Man Fruit Paths
 
 A fruit takes a random path around a maze.  It begins by traveling to the center of the maze from any of a given set of preset entrance paths.  It continues around the ghost pen once and exits the maze from another given set of preset paths for exiting.
