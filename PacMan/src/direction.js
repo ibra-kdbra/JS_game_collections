@@ -1,5 +1,3 @@
-//////////////////////////////////////////////////////////////////////////////////////
-// Directions
 // (variables and utility functions for representing actor heading direction)
 
 // direction enums (in counter-clockwise order)
