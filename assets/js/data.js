@@ -67,7 +67,7 @@ export const games = [
   },
   {
     link: "./PacMan/index.html",
-    imgSrc: "./Tetris/imgs/color03.png",
+    imgSrc: "./PacMan/imgs/color03.png",
     title: "PacMan",
     description: "The original PacMan game, with a few enhancements, many modes, playgrounds provided."
   },
