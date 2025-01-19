@@ -66,6 +66,12 @@ export const games = [
     description: "The original Tetris game, with a few enhancements, many options included."
   },
   {
+    link: "./PacMan/index.html",
+    imgSrc: "./Tetris/imgs/color03.png",
+    title: "PacMan",
+    description: "The original PacMan game, with a few enhancements, many modes, playgrounds provided."
+  },
+  {
     link: "./MoonLDR/index.html",
     imgSrc: "./MoonLDR/images/normal.png",
     title: "MoonLDR",
