@@ -4,7 +4,7 @@
 
 // Based on original works by Namco, GCC, and Midway.
 // Research by Jamey Pittman and Bart Grantham
-// Developed by Ezra Adeyinka
+// Developed by ibra-kdbra
 
 // ==========================================================================
 
@@ -183,7 +183,7 @@ var getGameDescription = (function(){
             "JAMEY PITTMAN",
             "",
             "REMAKE:",
-            "Ezra Adeyinka",
+            "ibra-kdbra",
         ],
         [
             "ORIGINAL ARCADE ADDON:",
@@ -193,12 +193,12 @@ var getGameDescription = (function(){
             "BART GRANTHAM",
             "",
             "REMAKE:",
-            "Ezra Adeyinka",
+            "ibra-kdbra",
         ],
         [
             "A NEW PAC-MAN GAME",
             "WITH RANDOM MAZES:",
-            "Ezra Adeyinka (C) 2022",
+            "ibra-kdbra (C) 2024",
             "",
             "COOKIE MONSTER DESIGN:",
             "JIM HENSON",
@@ -213,10 +213,10 @@ var getGameDescription = (function(){
             "",
             "SPRITES REFERENCED FROM",
             "STEVE GOLSON'S",
-            "CAX 2022 PRESENTATION",
+            "CAX 2024 PRESENTATION",
             "",
             "REMAKE:",
-            "Ezra Adeyinka",
+            "ibra-kdbra",
         ],
     ];
     
@@ -10591,7 +10591,7 @@ var aboutState = (function(){
         ctx.fillText("DEVELOPER", x,y);
         y += tileSize*2;
         ctx.fillStyle = "#777";
-        ctx.fillText("Ezra Adeyinka", x,y);
+        ctx.fillText("ibra-kdbra", x,y);
 
         y += tileSize*4;
         ctx.fillStyle = "#0FF";

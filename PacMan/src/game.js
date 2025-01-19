@@ -62,7 +62,7 @@ var getGameDescription = (function(){
             "",
             "SPRITES REFERENCED FROM",
             "STEVE GOLSON'S",
-            "CAX 2022 PRESENTATION",
+            "CAX 2024 PRESENTATION",
             "",
             "REMAKE:",
             "ibra-kdbra",

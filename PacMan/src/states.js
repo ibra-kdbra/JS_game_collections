@@ -1099,7 +1099,7 @@ var aboutState = (function(){
         ctx.fillText("DEVELOPER", x,y);
         y += tileSize*2;
         ctx.fillStyle = "#777";
-        ctx.fillText("Ezra Adeyinka", x,y);
+        ctx.fillText("ibra-kdbra", x,y);
 
         y += tileSize*4;
         ctx.fillStyle = "#0FF";
