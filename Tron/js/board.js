@@ -1,26 +1,30 @@
-var Board = function (dimX, dimY) {
-  this.dimX = dimX;
-  this.dimY = dimY;
+import { Bike } from './bike.js';
 
-  // enter start coordinates as an array - [i, j]
-  var player1StartPos = [Math.floor(dimY/2), Math.floor(7*dimX/8)] ;
-  this.player1 = new Bike(this, player1StartPos, "W");
+export class Board {
+  constructor(dimX, dimY) {
+    this.dimX = dimX;
+    this.dimY = dimY;
 
-  var player2StartPos = [Math.floor(dimY/2), Math.floor(dimX/8)];
-  this.player2 = new Bike(this, player2StartPos, "E");
+    // Enter start coordinates as an array - [i, j]
+    const player1StartPos = [Math.floor(dimY / 2), Math.floor((7 * dimX) / 8)];
+    this.player1 = new Bike(this, player1StartPos, "W");
 
-  this.player1.opponent = this.player2;
-  this.player2.opponent = this.player1;
+    const player2StartPos = [Math.floor(dimY / 2), Math.floor(dimX / 8)];
+    this.player2 = new Bike(this, player2StartPos, "E");
 
-  // take the difficulty that was defined on a previous game if one exists
-  this.difficulty = window.difficulty ? window.difficulty : 1;
-};
+    this.player1.opponent = this.player2;
+    this.player2.opponent = this.player1;
 
-Board.prototype.validPosition = function (coord) {
-  return (coord.i >= 0 && coord.i < this.dimY) &&
-         (coord.j >= 0 && coord.j < this.dimX);
-};
+    // Take the difficulty that was defined on a previous game if one exists
+    this.difficulty = window.difficulty ? window.difficulty : 1;
+  }
 
-
-// so linter doesn't yell at us
-var Bike = Bike || {};
+  validPosition(coord) {
+    return (
+      coord.i >= 0 &&
+      coord.i < this.dimY &&
+      coord.j >= 0 &&
+      coord.j < this.dimX
+    );
+  }
+}
