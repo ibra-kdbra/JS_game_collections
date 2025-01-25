@@ -10,9 +10,11 @@
   </head>
 
   <body>
-    <audio controls>
+    <audio id="game-audio" loop>
       <source src="./music/derezzed.mp3" type="audio/mpeg">
     </audio>
+    <button class="mute-btn" id="mute-btn">🔊</button>
+
     <div class="tron-logo">
       <img src="https://upload.wikimedia.org/wikipedia/commons/b/bb/TRON.png" />
     </div>
@@ -61,6 +63,7 @@
 
       <div class="rightspace"></div>
     </div>
+    
     <script type="module" src="./js/main.js"></script>
   </body>
 </html>

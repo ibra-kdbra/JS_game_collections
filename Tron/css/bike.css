@@ -33,7 +33,7 @@ figure {
   display: block;
   width: 90vw;
   max-width: 800px;
-  aspect-ratio: 100 / 70; /* Keep the 100:70 ratio */
+  aspect-ratio: 100 / 70; /* Maintain a 100:70 ratio */
   margin: auto;
   border: 5px solid #5EC4F2;
   box-sizing: border-box;
@@ -44,12 +44,12 @@ figure ul {
   flex-direction: row;
   margin: 0;
   padding: 0;
-  height: calc(100% / 70); /* each row is 1/70 of figure's height */
+  height: calc(100% / 70);
 }
 
 figure ul li {
   flex: 1;
-  aspect-ratio: 1 / 1; /* keep squares */
+  aspect-ratio: 1 / 1;
   box-sizing: border-box;
 }
 
@@ -168,4 +168,24 @@ h1#instructions {
   font-family: 'Orbitron', sans-serif;
   color: #FF4500;
   margin-left: 10px;
+}
+
+/* Mute button top-right corner */
+.mute-btn {
+  position: fixed; /* Changed to fixed for better responsiveness */
+  top: 20px;
+  right: 20px;
+  z-index: 3;
+  cursor: pointer;
+  padding: 10px;
+  background: black;
+  color: white;
+  border: 2px solid white;
+  border-radius: 50%;
+  font-size: 1.5em;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
