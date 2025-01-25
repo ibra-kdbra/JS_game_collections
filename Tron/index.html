@@ -6,6 +6,7 @@
     <link rel="stylesheet" type="text/css" href="./css/bike.css">
     <link href='https://fonts.googleapis.com/css?family=Orbitron|Audiowide' rel='stylesheet' type='text/css'>
     <link href="./imgs/tron-favicon.ico" rel="icon" type="image/x-icon" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Make page responsive -->
   </head>
 
   <body>
@@ -60,41 +61,6 @@
 
       <div class="rightspace"></div>
     </div>
-
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
-    <script src="./js/coord.js"></script>
-    <script src="./js/bike.js"></script>
-    <script src="./js/board.js"></script>
-    <script src="./js/view.js"></script>
-
-    <script>
-      $(".end-display").hide();
-      var rootEl = $('.tron-game');
-      var view;
-      window.wins = {blue: 0, red: 0}
-
-      $("#start").on("click", function() {
-        $(".start-display").hide();
-        $(".score, .difficulty").show();
-        var view = new View(rootEl);
-        view.startGame();
-      })
-
-      $("#two-player").on("click", function() {
-        $(".start-display").hide();
-        $(".score").show();
-
-        window.players = 2;
-        var view = new View(rootEl, window.players);
-        view.startGame();
-      })
-
-      $("#replay").on("click", function() {
-        $(".end-display").hide();
-        var view = new View(rootEl, window.players);
-        view.startGame();
-      })
-    </script>
-
+    <script type="module" src="./js/main.js"></script>
   </body>
 </html>
