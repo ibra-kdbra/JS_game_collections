@@ -5,7 +5,6 @@ export class Board {
     this.dimX = dimX;
     this.dimY = dimY;
 
-    // Enter start coordinates as an array - [i, j]
     const player1StartPos = [Math.floor(dimY / 2), Math.floor((7 * dimX) / 8)];
     this.player1 = new Bike(this, player1StartPos, "W");
 
@@ -15,7 +14,6 @@ export class Board {
     this.player1.opponent = this.player2;
     this.player2.opponent = this.player1;
 
-    // Take the difficulty that was defined on a previous game if one exists
     this.difficulty = window.difficulty ? window.difficulty : 1;
   }
 

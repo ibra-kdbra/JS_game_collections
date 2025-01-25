@@ -5,7 +5,6 @@ export class View {
     this.rootEl = rootEl;
     this.players = players;
     this.board = new Board(100, 70);
-    // Speed depends on the difficulty setting
     this.speed = window.speed ? window.speed : 35;
     this.setupGrid();
   }
@@ -40,7 +39,7 @@ export class View {
     } else if (this.players === 2 && View.KEYS2[event.keyCode]) {
       this.board.player2.turn(View.KEYS2[event.keyCode]);
     } else {
-      // Ignore other keys or implement additional functionality
+      // ignore
     }
   }
 
@@ -73,7 +72,6 @@ export class View {
 
   setupGrid() {
     let html = "";
-
     for (let i = 0; i < this.board.dimY; i++) {
       html += "<ul>";
       for (let j = 0; j < this.board.dimX; j++) {
@@ -81,7 +79,6 @@ export class View {
       }
       html += "</ul>";
     }
-
     this.rootEl.innerHTML = html;
     this.$li = this.rootEl.querySelectorAll("li");
   }

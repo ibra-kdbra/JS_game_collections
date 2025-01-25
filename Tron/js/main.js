@@ -1,7 +1,6 @@
 import { View } from './view.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Hide end-display elements initially
   document.querySelectorAll('.end-display').forEach(el => el.style.display = 'none');
 
   const rootEl = document.querySelector('.tron-game');
@@ -20,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     difficultyEl.style.display = 'block';
     
     const view = new View(rootEl, 1);
+    window.players = 1;
     view.startGame();
   });
 
@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     scoreEl.style.display = 'block';
     
     const view = new View(rootEl, 2);
+    window.players = 2;
     view.startGame();
   });
 

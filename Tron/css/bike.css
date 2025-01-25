@@ -11,7 +11,6 @@ ul {
 }
 
 body {
-  /*font-family: sans-serif;*/
   font-family: 'Orbitron', sans-serif;
   text-align: center;
   font-weight: bold;
@@ -29,20 +28,29 @@ body {
   max-width: 100%;
 }
 
+/* Responsive figure for the game board */
 figure {
-  display: inline-block;
-  /*will need to modify these if the size of the board changes*/
-  min-width: 800px;
-  min-height: 560px;
-  max-width: 850px;
-  max-height: 580px;
-  border: 10px solid #5EC4F2;
+  display: block;
+  width: 90vw;
+  max-width: 800px;
+  aspect-ratio: 100 / 70; /* Keep the 100:70 ratio */
+  margin: auto;
+  border: 5px solid #5EC4F2;
+  box-sizing: border-box;
 }
 
-li {
-  float: left;
-  width: 8px;
-  height: 8px;
+figure ul {
+  display: flex;
+  flex-direction: row;
+  margin: 0;
+  padding: 0;
+  height: calc(100% / 70); /* each row is 1/70 of figure's height */
+}
+
+figure ul li {
+  flex: 1;
+  aspect-ratio: 1 / 1; /* keep squares */
+  box-sizing: border-box;
 }
 
 .player {
@@ -56,7 +64,6 @@ li {
 h1 {
   color: white;
   font-family: 'Audiowide', cursive;
-  /*font-family: 'Orbitron', sans-serif;*/
   font-size: 30px;
 }
 
@@ -80,10 +87,7 @@ h1 {
 #start, #replay, #two-player {
   border: 4px solid red;
   border-radius: 10px;
-  padding-top: 5px;
-  padding-bottom: 5px;
-  padding-left: 30px;
-  padding-right: 30px;
+  padding: 5px 30px;
   cursor: pointer;
   background-color: black;
   margin-bottom: 8px;
@@ -110,10 +114,10 @@ h1#instructions {
 .display {
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
 .leftspace {
-  position: relative;
   width: 200px;
   margin-right: 10px;
 }
@@ -126,10 +130,7 @@ h1#instructions {
 .medium, .hard {
   border: 4px solid red;
   border-radius: 10px;
-  padding-top: 5px;
-  padding-bottom: 5px;
-  padding-left: 30px;
-  padding-right: 30px;
+  padding: 5px 30px;
   cursor: pointer;
   background-color: black;
   margin-bottom: 12px;
@@ -139,10 +140,7 @@ h1#instructions {
   color: red;
   border: 4px solid red;
   border-radius: 10px;
-  padding-top: 5px;
-  padding-bottom: 5px;
-  padding-left: 30px;
-  padding-right: 30px;
+  padding: 5px 30px;
   cursor: pointer;
   background-color: black;
   margin-bottom: 12px;
@@ -155,7 +153,7 @@ h1#instructions {
 
 .score {
   font-size: 26px;
-  margin-bottom: 60px
+  margin-bottom: 60px;
 }
 
 .blue-wins {

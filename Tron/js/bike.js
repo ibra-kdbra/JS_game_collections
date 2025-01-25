@@ -28,17 +28,12 @@ export class Bike {
   }
 
   isValid(coord) {
-    // Check boundaries on board
-    if (!this.board.validPosition(coord)) {
-      return false;
-    }
-    // Check if bike runs into itself
+    if (!this.board.validPosition(coord)) return false;
+    // Check if bike runs into itself (excluding the head, as is typical)
     for (let i = 0; i < this.segments.length - 1; i++) {
-      if (this.segments[i].equals(coord)) {
-        return false;
-      }
+      if (this.segments[i].equals(coord)) return false;
     }
-    // Check if bike runs into opponent
+    // Check collision with opponent
     if (this.opponent && this.opponent.isOccupying(coord)) {
       return false;
     }
@@ -64,47 +59,68 @@ export class Bike {
     }
   }
 
-  // Computer AI
-  computerChangeDir() {
-    let turningDirs;
-    if (this.dir === "N" || this.dir === "S") {
-      turningDirs = ["W", "E"];
-    } else {
-      turningDirs = ["N", "S"];
+  countFreeArea(startCoord) {
+    if (!this.isValid(startCoord)) return 0;
+    const visited = new Set();
+    const queue = [startCoord];
+    let count = 0;
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+      const key = `${current.i},${current.j}`;
+      if (visited.has(key)) continue;
+      visited.add(key);
+      if (!this.isValid(current)) continue;
+      count++;
+
+      // Explore neighbors
+      for (let diffKey in Bike.DIFFS) {
+        const neighbor = current.plus(Bike.DIFFS[diffKey]);
+        const neighborKey = `${neighbor.i},${neighbor.j}`;
+        if (!visited.has(neighborKey)) {
+          queue.push(neighbor);
+        }
+      }
     }
-
-    // Decide the turn to make based on the length of the open path
-    const [firstDir, secondDir] = turningDirs;
-    let firstDirPathCount = 0;
-    let firstDirCoord = this.head().plus(Bike.DIFFS[firstDir]);
-
-    while (this.isValid(firstDirCoord)) {
-      firstDirPathCount++;
-      firstDirCoord = firstDirCoord.plus(Bike.DIFFS[firstDir]);
-    }
-
-    let secondDirPathCount = 0;
-    let secondDirCoord = this.head().plus(Bike.DIFFS[secondDir]);
-
-    while (this.isValid(secondDirCoord)) {
-      secondDirPathCount++;
-      secondDirCoord = secondDirCoord.plus(Bike.DIFFS[secondDir]);
-    }
-
-    // Go with the direction that has the clearest path
-    if (firstDirPathCount > secondDirPathCount) {
-      this.dir = firstDir;
-    } else {
-      this.dir = secondDir;
-    }
+    return count;
   }
 
+  // Decide direction based on largest free area among possible turns.
+  // This method looks in all directions: straight, left, right.
+  // You can tweak which directions to compare.
+  computerAdvancedAI() {
+    const possibleDirections = [];
+    // Straight
+    possibleDirections.push(this.dir);
+    // Left / Right relative to current
+    if (this.dir === "N" || this.dir === "S") {
+      possibleDirections.push("W");
+      possibleDirections.push("E");
+    } else {
+      possibleDirections.push("N");
+      possibleDirections.push("S");
+    }
+
+    let bestDir = this.dir;
+    let bestArea = -1;
+    for (const d of possibleDirections) {
+      const nextCoord = this.head().plus(Bike.DIFFS[d]);
+      const area = this.countFreeArea(nextCoord);
+      if (area > bestArea) {
+        bestArea = area;
+        bestDir = d;
+      }
+    }
+    this.dir = bestDir;
+  }
+  
+  // Computer move with advanced AI plus a small random factor
   computerMove() {
     let nextCoord = this.head().plus(Bike.DIFFS[this.dir]);
 
-    // Make a random turn once in a while to avoid wall hugging
+    // Occasionally do a quick logic check to see if we should pick a new direction
     if (Math.random() > this.computerTurnFrequency()) {
-      this.computerChangeDir();
+      this.computerAdvancedAI();
     }
 
     nextCoord = this.head().plus(Bike.DIFFS[this.dir]);
@@ -112,7 +128,8 @@ export class Bike {
     if (this.isValid(nextCoord)) {
       this.segments.push(nextCoord);
     } else {
-      this.computerChangeDir();
+      // If that direction is no longer valid, try to choose again:
+      this.computerAdvancedAI();
       nextCoord = this.head().plus(Bike.DIFFS[this.dir]);
       if (this.isValid(nextCoord)) {
         this.segments.push(nextCoord);
@@ -123,14 +140,13 @@ export class Bike {
   }
 
   computerTurnFrequency() {
-    // Make the easy difficulty turn more frequently
     switch (this.board.difficulty) {
       case 1:
         return 0.95;
       case 2:
         return 0.98;
       default:
-        return 1.0; // hardest will make no turns and just hug the wall
+        return 1.0; 
     }
   }
 }
