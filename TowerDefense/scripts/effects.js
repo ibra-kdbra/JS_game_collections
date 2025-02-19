@@ -1,18 +1,12 @@
-function createEffect(duration, template) {
-    var e = new Effect(duration);
-    // Fill in all keys
-    template = typeof template === 'undefined' ? {} : template;
-    var keys = Object.keys(template);
-    for (var i = 0; i < keys.length; i++) {
-        var key = keys[i];
+function createEffect(duration, template = {}) {
+    const e = new Effect(duration);
+    Object.keys(template).forEach(key => {
         e[key] = template[key];
-    }
+    });
     return e;
 }
 
-
-var effects = {};
-
+const effects = {};
 
 effects.slow = {
     // Display
@@ -20,10 +14,10 @@ effects.slow = {
     // Misc
     name: 'slow',
     // Methods
-    onEnd: function(e) {
+    onEnd(e) {
         e.speed = this.oldSpeed;
     },
-    onStart: function(e) {
+    onStart(e) {
         this.oldSpeed = e.speed;
         this.speed = e.speed / 2;
         e.speed = this.speed;
@@ -36,7 +30,7 @@ effects.poison = {
     // Misc
     name: 'poison',
     // Methods
-    onTick: function(e) {
+    onTick(e) {
         e.dealDamage(1, 'poison');
     }
 };
@@ -47,7 +41,7 @@ effects.regen = {
     // Misc
     name: 'regen',
     // Methods
-    onTick: function(e) {
+    onTick(e) {
         if (e.health < e.maxHealth && random() < 0.2) e.health++;
     }
 };
