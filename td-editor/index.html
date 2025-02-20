@@ -5,9 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Map Editor</title>
     <link href="css/style.css" rel="stylesheet">
+    <link href="css/custom_import.css" rel="stylesheet">
     <link href="./assets/icons//map.svg" rel="icon" type="image/svg+xml" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.2/p5.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js@1.12.0/src/toastify.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js@1.12.0/src/toastify.min.js"></script>
     <script src="scripts/utils.js" defer></script>
     <script src="scripts/tiles.js" defer></script>
     <script src="scripts/sketch.js" defer></script>
@@ -120,7 +124,7 @@
             <p><button class="fill" onclick="userFill()">Fill Selected (F)</button></p>
           </div>
           <div class="group">
-            <p><button class="io" onclick="importMap(prompt('Input map string:'))">Import map (M)</button></p>
+            <p><button class="io" onclick="showImportMapPrompt()">Import map (M)</button></p>
             <p><button class="io" onclick="copyToClipboard(exportMap())">Export map (X)</button></p>
           </div>
           <div class="group">
