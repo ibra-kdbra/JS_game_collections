@@ -4,13 +4,18 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tower Defense</title>
-    <link href="style.css" rel="stylesheet">
-    <!-- p5.js library -->
+    <link href="css/style.css" rel="stylesheet">
+    <link href="css/custom_import.css" rel="stylesheet">
+
+    <!-- p5.js lib, sound lib, lz-string lib -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.2/p5.min.js" defer></script>
-    <!-- p5.sound addon -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.2/addons/p5.sound.min.js" defer></script>
-    <!-- lz-string library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js" defer></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js@1.12.0/src/toastify.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js@1.12.0/src/toastify.min.js"></script>
+    
     <script src="scripts/utils.js" defer></script>
     <script src="scripts/enemy.js" defer></script>
     <script src="scripts/enemies.js" defer></script>
@@ -34,7 +39,7 @@
       <div id="left-asides">
         <aside id="map-aside">
           <div class="group">
-            <p><button class="io" onclick="importMap(prompt('Input map string:'))">Import map (M)</button></p>
+            <p><button class="io" onclick="showImportMapPrompt()">Import map (M)</button></p>
             <p><button class="io" onclick="copyToClipboard(exportMap())">Export map (X)</button></p>
           </div>
           <p>Edit maps <a href="../td-editor/index.html" target="_blank">here</a>.</p>
