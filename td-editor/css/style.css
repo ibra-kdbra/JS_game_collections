@@ -1,0 +1,331 @@
+@font-face {
+    font-family: 'Source Code Pro';
+    src: url('../TowerDefense/fonts/SourceCodePro-Regular.ttf');
+}
+
+::-webkit-scrollbar {
+    display: none;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: #000;
+    color: #00E640;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Source Code Pro', monospace;
+    max-height: 100vh;
+    min-height: 100vh;
+}
+
+
+/* Medium devices (tablets, 768px and below)
+@media (max-width: 1440px) {
+    body {
+        zoom: 0.9;
+        overflow: hidden; 
+    }
+} 
+*/
+
+
+/* Green borders, margins, and navy blue background */
+
+header, aside, #sketch-holder {
+    border: 1px solid #00E640;
+    border-radius: 10px;
+    margin: 2px;
+}
+
+header, aside {
+    background-color: #013243;
+}
+
+
+/* Page content */
+
+header {
+    padding: 14px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+    text-align: center;
+    text-shadow: 1px 1px 0 #000;
+}
+
+main {
+    display: flex;
+    flex: 1;
+    flex-direction: row;
+}
+
+aside {
+    overflow-y: scroll;
+    padding: 14px;
+}
+
+p {
+    margin: 8px 0;
+}
+
+.group p:first-of-type {
+    margin-bottom: 0;
+}
+
+.group p + p:not(:last-of-type) {
+    margin: 0;
+}
+
+.group p:last-of-type {
+    margin-top: 0;
+}
+
+#tiles button, #utils button {
+    color: #000;
+    min-width: 100%;
+    text-align: center;
+    text-shadow: none;
+}
+
+#sketch-holder {
+    background-color: #000;
+    flex: 1;
+    margin: 2px;
+    overflow: hidden;
+    position: relative;
+}
+
+canvas {
+    bottom: 0;
+    display: block;
+    left: 0;
+    margin: auto;
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+button, select {
+    background-color: #22313F;
+    color: #00E640;
+    font-family: 'Source Code Pro', monospace;
+    font-size: 0.85em;
+    text-shadow: 1px 1px 0 #000;
+}
+
+button {
+    height: 30px;
+}
+
+.aside-holder {
+    display: flex;
+    flex-direction: column;
+    margin-right: 2px;
+}
+
+#status {
+    font-size: 0.95em;
+}
+
+#utils {
+    flex: 1;
+}
+
+#tiles {
+    width: 180px;
+}
+
+#deco-picker {
+    display: none;
+}
+
+.light {
+    color: #FFF !important;
+}
+
+
+/* Grid tile types */
+
+.empty {
+    background-color: rgb(255, 255, 255);
+}
+
+.wall {
+    background-color: rgb(108, 122, 137);
+}
+
+.path {
+    background-color: rgb(191, 85, 236);
+}
+
+.tower {
+    background-color: rgb(25, 181, 254);
+}
+
+.enemy {
+    background-color: rgb(233, 212, 96);
+}
+
+
+/* Special types */
+
+.spawn {
+    background-color: rgb(0, 230, 64);
+}
+
+.exit {
+    background-color: rgb(207, 0, 15);
+}
+
+
+/* Path types */
+
+.dir {
+    background-color: rgb(248, 148, 6);
+}
+
+
+/* Utilities */
+
+.fill {
+    background-color: rgb(54, 215, 183);
+}
+
+.io {
+    background-color: rgb(224, 130, 131);
+}
+
+.zoom {
+    background-color: rgb(82, 179, 217);
+}
+
+.disp {
+    background-color: rgb(191, 85, 236);
+}
+
+
+
+.road {
+    background-color: rgb(210, 77, 87);
+}
+
+.sidewalk {
+    background-color: rgb(149, 165, 166);
+}
+
+.grass {
+    background-color: rgb(30, 130, 76);
+}
+
+
+/* Deco */
+
+.emptyD {
+    background-color: #000;
+}
+
+.wallD {
+    background-color: rgb(1, 50, 67);
+}
+
+.towerD {
+    background-color: rgb(51, 110, 123);
+}
+
+
+/* Color Set 0 */
+
+.c0_lightBrown {
+    background-color: rgb(206, 171, 171);
+}
+
+.c0_lightPurple {
+    background-color: rgb(123, 95, 167);
+}
+
+.c0_mediumPurple {
+    background-color: rgb(117, 65, 129);
+}
+
+.c0_darkPurple {
+    background-color: rgb(55, 12, 63);
+}
+
+.c0_paleGreen {
+    background-color: rgb(212, 244, 194);
+}
+
+
+
+/* Color Set 1 */
+
+.c1_darkBlue {
+    background-color: rgb(10, 25, 50);
+}
+
+.c1_mediumBlue {
+    background-color: rgb(22, 64, 122);
+}
+
+.c1_lightBlue {
+    background-color: rgb(34, 189, 197);
+}
+
+.c1_darkPurple {
+    background-color: rgb(112, 35, 143);
+}
+
+.c1_neonPink {
+    background-color: rgb(232, 33, 215);
+}
+
+
+/* Color Set 2 */
+
+.c2_darkRed {
+    background-color: rgb(135, 6, 13);
+}
+
+.c2_navyBlue {
+    background-color: rgb(1, 18, 57);
+}
+
+.c2_darkBlue {
+    background-color: rgb(3, 36, 97);
+}
+
+.c2_paleYellow {
+    background-color: rgb(232, 228, 197);
+}
+
+.c2_lightYellow {
+    background-color: rgb(248, 241, 193);
+}
+
+
+/* Neon */
+
+.neon_pink {
+    background-color: rgb(255, 0, 153);
+}
+
+.neon_yellow {
+    background-color: rgb(243, 243, 21);
+}
+
+.neon_green {
+    background-color: rgb(131, 245, 44);
+}
+
+.neon_orange {
+    background-color: rgb(255, 102, 0);
+}
+
+.neon_purple {
+    background-color: rgb(110, 13, 208);
+}
