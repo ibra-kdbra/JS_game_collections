@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Editor</title>
+    <link href="css/style.css" rel="stylesheet">
+    <link href="./assets/icons//map.svg" rel="icon" type="image/svg+xml" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.2/p5.min.js" defer></script>
+    <script src="scripts/utils.js" defer></script>
+    <script src="scripts/tiles.js" defer></script>
+    <script src="scripts/sketch.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <h1>Map Editor</h1>
+    </header>
+
+    <main>
+      <aside id="tiles">
+        <div id="tile-picker">
+          <h2>Tiles</h2>
+          <div class="group">
+            <p><button class="empty" onclick="tile='empty'">Empty Tile (1)</button></p>
+            <p><button class="wall" onclick="tile='wall'">Wall Tile (2)</button></p>
+            <p><button class="path" onclick="tile='path'">Path Tile (3)</button></p>
+            <p><button class="tower" onclick="tile='tower'">Tower Tile (4)</button></p>
+            <p><button class="enemy" onclick="tile='enemy'">Enemy-Only Tile (5)</button></p>
+          </div>
+  
+          <h2>Special</h2>
+          <div class="group">
+            <p><button class="spawn" onclick="tile='spawn'">Spawnpoint (6)</button></p>
+            <p><button class="exit" onclick="tile='exit'">Exit Point (7)</button></p>
+          </div>
+  
+          <h2>Paths</h2>
+          <div class="group">
+            <p><button class="dir" onclick="tile='none'">No Path (0)</button></p>
+            <p><button class="dir" onclick="tile='left'">Left Path (left)</button></p>
+            <p><button class="dir" onclick="tile='up'">Up Path (up)</button></p>
+            <p><button class="dir" onclick="tile='right'">Right Path (right)</button></p>
+            <p><button class="dir" onclick="tile='down'">Down Path (down)</button></p>
+          </div>
+        </div>
+        <div id="deco-picker">
+          <h2>Decorative</h2>
+          <div class="group">
+            <p><button class="emptyD light" onclick="deco='empty'">Empty Tile (1)</button></p>
+            <p><button class="wallD light" onclick="deco='wall'">Wall Tile (2)</button></p>
+            <p><button class="towerD light" onclick="deco='tower'">Tower Tile (3)</button></p>
+          </div>
+
+          <h2>Direction</h2>
+          <div class="group">
+            <p><button class="dir" onclick="deco='none'">None (0)</button></p>
+            <p><button class="dir" onclick="deco='left'">Left (left)</button></p>
+            <p><button class="dir" onclick="deco='up'">Up (up)</button></p>
+            <p><button class="dir" onclick="deco='right'">Right (right)</button></p>
+            <p><button class="dir" onclick="deco='down'">Down (down)</button></p>
+          </div>
+
+          <h2>City</h2>
+          <div class="group">
+            <p><button class="grass" onclick="deco='grass'">Grass (4)</button></p>
+            <p><button class="road" onclick="deco='road'">Road Tile (5)</button></p>
+            <p><button class="road" onclick="deco='lCorner'">Left Corner (6)</button></p>
+            <p><button class="road" onclick="deco='rCorner'">Right Corner (7)</button></p>
+            <p><button class="sidewalk" onclick="deco='sidewalk'">Sidewalk (8)</button></p>
+          </div>
+
+          <h2>Neon</h2>
+          <div class="group">
+            <p><button class="neon_pink" onclick="deco='neon_pink'">Pink</button></p>
+            <p><button class="neon_yellow" onclick="deco='neon_yellow'">Yellow</button></p>
+            <p><button class="neon_green" onclick="deco='neon_green'">Green</button></p>
+            <p><button class="neon_orange" onclick="deco='neon_orange'">Orange</button></p>
+            <p><button class="neon_purple light" onclick="deco='neon_purple'">Purple</button></p>
+          </div>
+
+          <h2>Colors</h2>
+          <div class="group">
+            <p><button class="c0_lightBrown" onclick="deco='c0_lightBrown'">Light Brown</button></p>
+            <p><button class="c0_lightPurple" onclick="deco='c0_lightPurple'">Light Purple</button></p>
+            <p><button class="c0_mediumPurple light" onclick="deco='c0_mediumPurple'">Medium Purple</button></p>
+            <p><button class="c0_darkPurple light" onclick="deco='c0_darkPurple'">Dark Purple</button></p>
+            <p><button class="c0_paleGreen" onclick="deco='c0_paleGreen'">Pale Green</button></p>
+          </div>
+          <div class="group">
+            <p><button class="c1_darkBlue light" onclick="deco='c1_darkBlue'">Dark Blue</button></p>
+            <p><button class="c1_mediumBlue light" onclick="deco='c1_mediumBlue'">Medium Blue</button></p>
+            <p><button class="c1_lightBlue" onclick="deco='c1_lightBlue'">Light Blue</button></p>
+            <p><button class="c1_darkPurple light" onclick="deco='c1_darkPurple'">Dark Purple</button></p>
+            <p><button class="c1_neonPink" onclick="deco='c1_neonPink'">Neon Pink</button></p>
+          </div>
+          <div class="group">
+            <p><button class="c2_darkRed light" onclick="deco='c2_darkRed'">Dark Red</button></p>
+            <p><button class="c2_navyBlue light" onclick="deco='c2_navyBlue'">Navy Blue</button></p>
+            <p><button class="c2_darkBlue light" onclick="deco='c2_darkBlue'">Dark Blue</button></p>
+            <p><button class="c2_paleYellow" onclick="deco='c2_paleYellow'">Pale Yellow</button></p>
+            <p><button class="c2_lightYellow" onclick="deco='c2_lightYellow'">Light Yellow</button></p>
+          </div>
+        </div>
+      </aside>
+
+      <div id="sketch-holder"></div>
+
+      <div class="aside-holder">
+        <aside id="status">
+          <h2>Status</h2>
+          <p id="dim"></p>
+          <p id="coord">Mouse: (0, 0)</p>
+        </aside>
+
+        <aside id="utils">
+          <h2>Utilities</h2>
+          <div class="group">
+            <p><button class="fill" onclick="resetMap(0)">Reset Map (R)</button></p>
+            <p><button class="fill" onclick="userFill()">Fill Selected (F)</button></p>
+          </div>
+          <div class="group">
+            <p><button class="io" onclick="importMap(prompt('Input map string:'))">Import map (M)</button></p>
+            <p><button class="io" onclick="copyToClipboard(exportMap())">Export map (X)</button></p>
+          </div>
+          <div class="group">
+            <p><button class="dir" onclick="recalculate()">Auto-Pathfind (P)</button></p>
+            <p><button class="dir" onclick="paths=buildArray(cols,rows,null)">Clear Pathfinding (Q)</button></p>
+          </div class="group">
+          <div class="group">
+            <p><button class="disp" onclick="dispMode=!dispMode;updateDivs()">Display Mode (Space)</button></p>
+            <p><button class="disp" id="autogen" onclick="autogen=!autogen;var state=autogen?'Off':'On';document.getElementById('autogen').innerHTML='Turn Autogen '+state+' (D)'">Turn Autogen Off (D)</button></p>
+            <p><button class="disp" onclick="autogenDisplay()">Update Display (U)</button></p>
+            <p><button class="disp" onclick="displayDir=copyArray(paths)">Display Paths (L)</button></p>
+            <p><button class="disp" onclick="display=buildArray(cols,rows,'empty');displayDir=buildArray(cols,rows,0)">Clear Display (C)</button></p>
+          </div>
+          <p><button class="spawn" onclick="spawnpoints=[]">Clear Spawns (S)</button></p>
+          <p><button class="zoom" onclick="ts=zoomDefault;resizeMax();resetMap(0)">Reset Zoom (Z)</button></p>
+        </aside>
+      </div>
+    </main>
+  </body>
+</html>
