@@ -177,9 +177,25 @@ const empty = (col, row) => {
 
 // Return map string
 const exportMap = () => {
+    if (!spawnpoints || spawnpoints.length === 0) {
+        Toastify({
+            text: "Warning: No spawnpoints defined!",
+            backgroundColor: "red",
+            duration: 3000
+        }).showToast();
+        return;
+    }
+    if (!exit || !exit.x || !exit.y) {
+        Toastify({
+            text: "Warning: No exit defined!",
+            backgroundColor: "red",
+            duration: 3000
+        }).showToast();
+        return;
+    }
     // Convert spawnpoints into a JSON-friendly format
     const spawns = spawnpoints.map(s => [s.x, s.y]);
-    return LZString.compressToBase64(JSON.stringify({
+    const mapData = {
         // Grids
         display,
         displayDir,
@@ -196,8 +212,19 @@ const exportMap = () => {
         // Misc
         cols,
         rows
-    }));
-}
+    };
+
+    const compressedMap = LZString.compressToBase64(JSON.stringify(mapData));
+
+    // Display success notification
+    Toastify({
+        text: "Map exported successfully!",
+        backgroundColor: "green",
+        duration: 3000
+    }).showToast();
+
+    return compressedMap;
+};
 
 // Get an empty tile
 const getEmpty = () => {
@@ -252,10 +279,77 @@ const getWalkMap = () => {
 // Load a map from a map string
 const importMap = (str) => {
     try {
-        custom = JSON.parse(LZString.decompressFromBase64(str));
-        document.getElementById('custom').selected = true;
-        resetGame();
-    } catch (err) {}
+        const m = JSON.parse(LZString.decompressFromBase64(str));
+
+        // Grids
+        display = m.display;
+        displayDir = m.displayDir;
+        grid = m.grid;
+        metadata = m.metadata;
+        paths = m.paths;
+        // Important tiles
+        exit = createVector(m.exit[0], m.exit[1]);
+        spawnpoints = m.spawnpoints.map(s => createVector(s[0], s[1]));
+        // Colors
+        bg = m.bg;
+        border = m.border;
+        borderAlpha = m.borderAlpha;
+        // Misc
+        cols = m.cols;
+        rows = m.rows;
+
+        resizeFit();
+
+        // Display success notification
+        Toastify({
+            text: "Map imported successfully!",
+            backgroundColor: "green",
+            duration: 3000
+        }).showToast();
+    } catch (err) {
+        console.error('Error importing map:', err);
+
+        // Display error notification
+        Toastify({
+            text: "Failed to import map. Please check the input.",
+            backgroundColor: "red",
+            duration: 3000
+        }).showToast();
+    }
+};
+
+function showImportMapPrompt() {
+    Swal.fire({
+        title: 'Input map string:',
+        input: 'textarea',
+        inputPlaceholder: 'Paste your map string here...',
+        showCancelButton: true,
+        confirmButtonText: 'Import',
+        cancelButtonText: 'Cancel',
+        inputValidator: (value) => {
+            if (!value) {
+                return 'Please enter a map string!';
+            }
+        },
+        customClass: {
+            popup: 'custom-swal-popup',
+            header: 'custom-swal-header',
+            title: 'custom-swal-title',
+            input: 'custom-swal-input',
+            cancelButton: 'custom-swal-cancel-btn',
+            confirmButton: 'custom-swal-confirm-btn',
+            actions: 'custom-swal-actions'
+        },
+        background: '#013243',
+        color: '#fff',
+        buttonsStyling: false,
+        width: '400px'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const mapString = result.value;
+            importMap(mapString);
+        }
+    });
 }
 
 // Check if wave is at least min and less than max
