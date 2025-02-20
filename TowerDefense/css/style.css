@@ -1,0 +1,271 @@
+@font-face {
+    font-family: 'Source Code Pro';
+    src: url('fonts/SourceCodePro-Regular.ttf');
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: #000;
+    color: #00E640;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Source Code Pro', monospace;
+    max-height: 100vh;
+    min-height: 100vh;
+}
+
+/* Green borders, margins, and navy blue background */
+header, aside, #sketch-holder {
+    border: 1px solid #00E640;
+    border-radius: 10px;
+    margin: 2px;
+}
+
+header, aside {
+    background-color: #013243;
+}
+
+/* Page content */
+header {
+    padding: 14px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+    text-align: center;
+    text-shadow: 1px 1px 0 #000;
+}
+
+main {
+    display: flex;
+    flex: 1;
+    flex-direction: row;
+}
+
+a:link, a:visited {
+    color: #00E640;
+}
+
+#left-asides, #right-asides {
+    display: flex;
+    flex-direction: column;
+}
+
+#left-asides {
+    margin-left: 2px;
+}
+
+#right-asides {
+    margin-right: 2px;
+    min-width: 195px;
+}
+
+aside {
+    padding: 14px;
+}
+
+.group p:first-of-type {
+    margin-bottom: 0;
+}
+
+.group p + p:not(:last-of-type) {
+    margin: 0;
+}
+
+.group p:last-of-type {
+    margin-top: 0;
+}
+
+#store {
+    flex: 1;
+}
+
+#store button, #map-aside button {
+    color: #000;
+    min-width: 100%;
+    text-align: center;
+    text-shadow: none;
+}
+
+#sketch-holder {
+    background-color: #000;
+    flex: 1;
+    margin: 2px;
+    overflow: hidden;
+    position: relative;
+}
+
+canvas {
+    bottom: 0;
+    display: block;
+    left: 0;
+    margin: auto;
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+button, select {
+    background-color: #22313F;
+    color: #00E640;
+    font-family: 'Source Code Pro', monospace;
+    font-size: 0.85em;
+    text-shadow: 1px 1px 0 #000;
+}
+
+button {
+    height: 30px;
+}
+
+.horiz-buttons {
+    display: flex;
+    flex-direction: row;
+    min-width: 100%;
+}
+
+.horiz-buttons button {
+    display: block;
+    flex: 1;
+    text-align: center;
+}
+
+#status {
+    font-size: 0.95em;
+}
+
+#info {
+    flex: 1;
+}
+
+#info-div {
+    display: none;
+    margin: 0;
+}
+
+#info p {
+    font-size: 0.8em;
+}
+
+#info-buttons {
+    display: none;
+}
+
+#info-buttons button {
+    color: #000;
+    font-size: 0.8em;
+    text-shadow: none;
+}
+
+/* Misc. buttons */
+.io {
+    background-color: rgb(224, 130, 131);
+}
+
+#sell {
+    background-color: rgb(248, 148, 6);
+}
+
+#upgrade {
+    background-color: rgb(25, 181, 254);
+}
+
+/* Tower types */
+.gun {
+    background-color: rgb(249, 191, 59);
+}
+
+.laser {
+    background-color: rgb(25, 181, 254);
+}
+
+.slow {
+    background-color: rgb(68, 108, 179);
+}
+
+.sniper {
+    background-color: rgb(207, 0, 15);
+}
+
+.rocket {
+    background-color: rgb(30, 130, 76);
+}
+
+.bomb {
+    background-color: rgb(102, 51, 153);
+}
+
+.tesla {
+    background-color: rgb(255, 255, 0);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    main {
+        flex-direction: column;
+    }
+
+    #left-asides, #right-asides {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    #right-asides {
+        min-width: auto;
+    }
+
+    aside {
+        flex: 1 1 45%;
+        margin: 5px;
+    }
+
+    #sketch-holder {
+        order: -1;
+    }
+
+    .horiz-buttons {
+        flex-direction: column;
+    }
+
+    .horiz-buttons button {
+        margin: 5px 0;
+    }
+
+    #store button, #map-aside button {
+        min-width: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    header {
+        padding: 10px;
+    }
+
+    h1 {
+        font-size: 1.5em;
+    }
+
+    aside {
+        flex: 1 1 100%;
+        margin: 5px 0;
+    }
+
+    button, select {
+        font-size: 0.75em;
+    }
+
+    #status {
+        font-size: 0.85em;
+    }
+
+    #info p {
+        font-size: 0.7em;
+    }
+
+    #info-buttons button {
+        font-size: 0.7em;
+    }
+}

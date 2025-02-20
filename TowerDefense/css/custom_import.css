@@ -1,0 +1,78 @@
+.custom-swal-popup {
+    background-color: #013243 !important;
+    border-radius: 10px;
+    padding: 20px;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #00E640;
+}
+
+.custom-swal-header {
+    background-color: #013243;
+    border-bottom: 1px solid #00E640;
+}
+
+.custom-swal-title {
+    color: #fff;
+    font-size: 22px;
+    font-weight: bold;
+    padding-bottom: 10px;
+}
+
+.custom-swal-input {
+    background-color: #013243;
+    color: #fff;
+    border: 1px solid #00E640;
+    padding: 10px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 20px;
+    resize: none;
+    word-wrap: break-word;
+}
+
+.swal2-textarea {
+    max-width: 80% !important;
+}
+
+.custom-swal-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.custom-swal-confirm-btn {
+    background-color: #8e44ad !important;
+    color: #fff !important;
+    border: none !important;
+    padding: 15px 30px;
+    border-radius: 5px;
+    font-size: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 50px;
+}
+
+.custom-swal-confirm-btn:hover {
+    background-color: #9b59b6 !important;
+}
+
+.custom-swal-cancel-btn {
+    background-color: #2ecc71 !important;
+    color: #fff !important;
+    border: none !important;
+    padding: 15px 30px;
+    border-radius: 5px;
+    font-size: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 50px;
+}
+
+.custom-swal-cancel-btn:hover {
+    background-color: #27ae60 !important;
+}
