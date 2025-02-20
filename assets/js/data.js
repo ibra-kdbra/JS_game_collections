@@ -30,6 +30,12 @@ export const games = [
     description: "Challenge yourself with the classic tile-merging puzzle. It has a built-in AI player, with some fantastic algorithms."
   },
   {
+    link: "./TowerDefense/index.html",
+    imgSrc: "./TowerDefense/imgs/captured.png",
+    title: "Tower Defense Game",
+    description: "A tower defense game with many options built with p5.js, with a few enhancements, many modes, playgrounds provided."
+  },
+  {
     link: "./Sprites_Games/ninth_project/index.html",
     imgSrc: "./Sprites_Games/ninth_project/images/captured.png",
     title: "Sprite Game",
