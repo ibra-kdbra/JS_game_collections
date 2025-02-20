@@ -36,12 +36,6 @@ export const games = [
     description: "A tower defense game with many options built with p5.js, with a few enhancements, many modes, playgrounds provided."
   },
   {
-    link: "./Sprites_Games/ninth_project/index.html",
-    imgSrc: "./Sprites_Games/ninth_project/images/captured.png",
-    title: "Sprite Game",
-    description: "Explore adventure with this sprite-based game."
-  },
-  {
     link: "./Hangman/index.html",
     imgSrc: "./Hangman/images/captured.png",
     title: "Hangman",
@@ -82,5 +76,11 @@ export const games = [
     imgSrc: "./MoonLDR/images/normal.png",
     title: "MoonLDR",
     description: "Fun landing ship on ground game, it's a classic based on Lunar Lander"
+  },
+  {
+    link: "./Sprites_Games/ninth_project/index.html",
+    imgSrc: "./Sprites_Games/ninth_project/images/captured.png",
+    title: "Sprite Game",
+    description: "Explore adventure with this sprite-based game."
   },
 ];
