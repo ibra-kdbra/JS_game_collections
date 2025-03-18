@@ -1,5 +1,6 @@
 import { createGameCards } from './Card.js';
 import { games } from './data.js';
+import './musicPlayer.js';  // Import the music player module
 
 document.addEventListener("DOMContentLoaded", () => {
   const container = document.getElementById("game-cards-container");
@@ -72,4 +73,3 @@ function initializeVerticalScroll(container) {
     }
   });
 }
-

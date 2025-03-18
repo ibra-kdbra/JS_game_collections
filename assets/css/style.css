@@ -17,3 +17,50 @@ body {
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
+
+#video-circle {
+  animation: slow-spin 10s linear infinite;
+}
+
+@keyframes slow-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Hover: Video Circle First, Then Mute Button */
+#music-slider {
+  left: -100px;
+}
+
+#music-slider:hover {
+  left: 1rem;
+}
+
+#music-slider:hover #mute-circle {
+  display: flex;
+  transform: scale(1.1);
+}
+
+#music-slider:hover #video-circle {
+  transform: scale(1.1);
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+  #music-slider {
+    top: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    flex-direction: column;
+  }
+
+  #video-circle {
+    transform: translateY(50%);
+  }
+
+  #mute-circle {
+    display: none;
+  }
+}
+
+
