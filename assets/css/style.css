@@ -5,7 +5,7 @@ html, body {
 }
 
 body {
-  background: linear-gradient(270deg, #16054e, #5e239d);
+  background: linear-gradient(90deg, #16054e, #5e239d);
   background-size: 800% 800%;
   animation: gradient 25s ease infinite;
   color: white;
@@ -17,6 +17,7 @@ body {
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
+
 
 #video-circle {
   animation: slow-spin 10s linear infinite;
