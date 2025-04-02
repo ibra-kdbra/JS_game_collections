@@ -1,8 +1,11 @@
 import { createGameCards } from './Card.js';
 import { games } from './data.js';
-import './musicPlayer.js';  // Import the music player module
+import './musicPlayer.js'; 
+import { VideoPlayerComponent } from './videoPlayer.js';
 
 document.addEventListener("DOMContentLoaded", () => {
+  const videoPlayer = new VideoPlayerComponent();
+  videoPlayer.render('#video-player-container');
   const container = document.getElementById("game-cards-container");
   const bodyId = document.body.id;
 
