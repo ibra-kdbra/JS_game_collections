@@ -15,7 +15,6 @@ window.addEventListener('touchstart', () => {
     const currentTime = new Date().getTime();
     const tapLength = currentTime - lastTap;
     if (tapLength < 400 && tapLength > 0) {
-        // It's a double tap
         effect.debug = !effect.debug;
     }
     lastTap = currentTime;
@@ -26,36 +25,39 @@ window.addEventListener('keydown', (e) => {
         effect.debug = !effect.debug;
     }
 });
+
 const cornerButton = document.getElementById('cornerButton');
 const optionsPanel = document.getElementById('optionsPanel');
 cornerButton.addEventListener('click', () => {
-    if (optionsPanel.style.display === 'block') {
-        optionsPanel.style.display = 'none';
-    } else {
-        optionsPanel.style.display = 'block';
-    }
+    optionsPanel.style.display = optionsPanel.style.display === 'block' ? 'none' : 'block';
 });
 
 const textInput = document.getElementById('textInput');
-const colorInput = document.getElementById('colorInput');
+const color1Input = document.getElementById('gradientColor1');
+const color2Input = document.getElementById('gradientColor2');
+const color3Input = document.getElementById('gradientColor3');
+const flowColorInput = document.getElementById('flowColor');
 const applyBtn = document.getElementById('applyBtn');
 
 applyBtn.addEventListener('click', () => {
-    // If user typed a new text
     const newText = textInput.value.trim();
     if (newText) {
         effect.setUserText(newText);
     }
 
-    const colorValue = colorInput.value.trim();
-    if (colorValue) {
-        // Parse comma-separated colors
-        const colors = colorValue.split(',')
-            .map(c => c.trim())
-            .filter(c => c.length > 0);
-        if (colors.length > 0) {
-            effect.setUserGradient(colors);
-        }
+    const gradientColors = [
+        color1Input.value.trim(),
+        color2Input.value.trim(),
+        color3Input.value.trim()
+    ].filter(c => c);
+
+    if (gradientColors.length > 0) {
+        effect.setUserGradient(gradientColors);
+    }
+
+    const flowColor = flowColorInput.value.trim();
+    if (flowColor) {
+        effect.setFlowFieldColor(flowColor);
     }
 
     optionsPanel.style.display = 'none';
@@ -75,9 +77,14 @@ class Particle {
         this.newAngle = 0;
         this.angleCorrector = Math.random() * 0.5 + 0.01;
         this.timer = this.maxLength * 2;
-        // Random color from a predefined list
-        this.colors = ['#4C026B', '#8E0E00', '#9D0208', '#BA1A1A', '#730D9E'];
-        this.color = this.colors[Math.floor(Math.random() * this.colors.length)];
+
+        // If user-defined flowFieldColor exists, use it; otherwise pick from default
+        if (this.effect.flowFieldColor) {
+            this.color = this.effect.flowFieldColor;
+        } else {
+            this.colors = ['#4C026B', '#8E0E00', '#9D0208', '#BA1A1A', '#730D9E'];
+            this.color = this.colors[Math.floor(Math.random() * this.colors.length)];
+        }
     }
 
     draw(context) {
@@ -172,6 +179,7 @@ class Effect {
             'rgb(150,255,255)',
             'rgb(255,255,150)',
         ];
+        this.flowFieldColor = null;
 
         this.init();
     }
@@ -185,6 +193,12 @@ class Effect {
         this.userGradient = colors;
         this.init();
     }
+
+    setFlowFieldColor(color) {
+        this.flowFieldColor = color;
+        this.init();
+    }
+
     drawText() {
         this.context.save();
         this.context.font = '400px Helvetica';
@@ -235,7 +249,8 @@ class Effect {
         }
         this.particles = [];
         for (let i = 0; i < this.numberOfParticles; i++) {
-            this.particles.push(new Particle(this));
+            const p = new Particle(this);
+            this.particles.push(p);
         }
     }
 
@@ -280,10 +295,9 @@ class Effect {
 
 const effect = new Effect(canvas);
 
-function animate(){
+function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     effect.render();
     requestAnimationFrame(animate);
 }
 animate();
-

@@ -14,16 +14,20 @@
       <label for="textInput">Display Text:</label><br />
       <input id="textInput" type="text" placeholder="Enter text" /><br /><br />
 
-      <label for="colorInput">Colors (comma separated):</label><br />
-      <input
-        id="colorInput"
-        type="text"
-        placeholder="#ff0000, #00ff00, #0000ff"
-      /><br /><br />
+      <<label>Gradient Colors:</label><br />
+      <input type="color" id="gradientColor1" value="#ff0000" />
+      <input type="color" id="gradientColor2" value="#00ff00" />
+      <input type="color" id="gradientColor3" value="#0000ff" />
+      <br /><br />
+
+      <label for="flowColor">Flow Field Color:</label><br />
+      <input type="color" id="flowColor" value="#4C026B" />
+      <br /><br />
       <!-- Needs update -->
       <button id="applyBtn">Apply Changes</button>
     </div>
 
     <script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chroma-js@2.1.0/chroma.min.js"></script>
   </body>
 </html>
