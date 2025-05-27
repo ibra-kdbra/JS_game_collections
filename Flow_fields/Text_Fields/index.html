@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Text Fields</title>
     <link rel="stylesheet" href="styles.css" />
-    <!-- <script src="https://cdn.jsdelivr.net/npm/chroma-js@2.1.0/chroma.min.js"></script> -->
+    <link href="./ornamental.svg" rel="icon" type="image/svg+xml" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css"
+    />
   </head>
   <body>
     <canvas id="canvas1"></canvas>
@@ -16,23 +20,26 @@
       <input id="textInput" type="text" placeholder="Enter text" /><br /><br />
 
       <label>Gradient Colors:</label><br />
-      <input type="color" class="gradient-color" id="gradientColor1" value="#ff0000" />
-      <input type="color" class="gradient-color" id="gradientColor2" value="#00ff00" />
-      <input type="color" class="gradient-color" id="gradientColor3" value="#0000ff" />
+      <div class="color-container">
+        <input class="gradient-color" id="gradientColor1" />
+        <input class="gradient-color" id="gradientColor2" />
+        <input class="gradient-color" id="gradientColor3" />
+      </div>
       <br /><br />
 
       <label>Flow Field Colors:</label><br />
-      <input type="color" class="flow-color" id="flowColor1" value="#4C026B" />
-      <input type="color" class="flow-color" id="flowColor2" value="#8E0E00" />
-      <input type="color" class="flow-color" id="flowColor3" value="#9D0208" />
-      <input type="color" class="flow-color" id="flowColor4" value="#BA1A1A" />
-      <input type="color" class="flow-color" id="flowColor5" value="#730D9E" />
+      <div class="color-container">
+        <div class="flow-color" id="flowColor1"></div>
+        <div class="flow-color" id="flowColor2"></div>
+        <div class="flow-color" id="flowColor3"></div>
+        <div class="flow-color" id="flowColor4"></div>
+        <div class="flow-color" id="flowColor5"></div>
+      </div>
+      <br /><br />
 
-
-      <!-- Needs update -->
       <button id="applyBtn">Apply Changes</button>
     </div>
-
+    <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
     <script src="script.js"></script>
   </body>
 </html>

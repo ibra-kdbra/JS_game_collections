@@ -33,9 +33,52 @@ cornerButton.addEventListener('click', () => {
 });
 
 const textInput = document.getElementById('textInput');
-const gradientColorInputs = document.querySelectorAll('.gradient-color');
-const flowColorInputs = document.querySelectorAll('.flow-color');
 const applyBtn = document.getElementById('applyBtn');
+
+// Initialize Pickr instances for flow and gradient colors
+const flowColorPickers = [];
+const gradientColorPickers = [];
+
+const initialFlowColors = ['#4C026B', '#8E0E00', '#9D0208', '#BA1A1A', '#730D9E'];
+const initialGradientColors = ['#ff0000', '#00ff00', '#0000ff'];
+
+// Helper function to initialize Pickr
+function initPickr(el, defaultColor) {
+    const pickr = Pickr.create({
+        el: el,
+        theme: 'classic',
+        default: defaultColor,
+        components: {
+            preview: true,
+            opacity: true,
+            hue: true,
+            interaction: {
+                hex: true,
+                input: true,
+                save: true
+            }
+        }
+    });
+
+    pickr.on('save', (color) => {
+        el.style.background = color.toHEXA().toString();
+        pickr.hide();
+    });
+
+    return pickr;
+}
+
+// Setup flow color Pickrs
+document.querySelectorAll('.flow-color').forEach((el, i) => {
+    const pickr = initPickr(el, initialFlowColors[i]);
+    flowColorPickers.push(pickr);
+});
+
+// Setup gradient color Pickrs
+document.querySelectorAll('.gradient-color').forEach((el, i) => {
+    const pickr = initPickr(el, initialGradientColors[i]);
+    gradientColorPickers.push(pickr);
+});
 
 applyBtn.addEventListener('click', () => {
     const newText = textInput.value.trim();
@@ -43,18 +86,16 @@ applyBtn.addEventListener('click', () => {
         effect.setUserText(newText);
     }
 
-    const gradientColors = Array.from(gradientColorInputs)
-        .map(input => input.value.trim())
+    const gradientColors = gradientColorPickers
+        .map(pickr => pickr.getColor().toHEXA().toString())
         .filter(Boolean);
-
     if (gradientColors.length > 0) {
         effect.setUserGradient(gradientColors);
     }
 
-    const flowColors = Array.from(flowColorInputs)
-        .map(input => input.value.trim())
+    const flowColors = flowColorPickers
+        .map(pickr => pickr.getColor().toHEXA().toString())
         .filter(Boolean);
-
     if (flowColors.length > 0) {
         effect.setFlowFieldColor(flowColors);
     }
