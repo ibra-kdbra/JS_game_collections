@@ -33,10 +33,8 @@ cornerButton.addEventListener('click', () => {
 });
 
 const textInput = document.getElementById('textInput');
-const color1Input = document.getElementById('gradientColor1');
-const color2Input = document.getElementById('gradientColor2');
-const color3Input = document.getElementById('gradientColor3');
-const flowColorInput = document.getElementById('flowColor');
+const gradientColorInputs = document.querySelectorAll('.gradient-color');
+const flowColorInputs = document.querySelectorAll('.flow-color');
 const applyBtn = document.getElementById('applyBtn');
 
 applyBtn.addEventListener('click', () => {
@@ -45,23 +43,25 @@ applyBtn.addEventListener('click', () => {
         effect.setUserText(newText);
     }
 
-    const gradientColors = [
-        color1Input.value.trim(),
-        color2Input.value.trim(),
-        color3Input.value.trim()
-    ].filter(c => c);
+    const gradientColors = Array.from(gradientColorInputs)
+        .map(input => input.value.trim())
+        .filter(Boolean);
 
     if (gradientColors.length > 0) {
         effect.setUserGradient(gradientColors);
     }
 
-    const flowColor = flowColorInput.value.trim();
-    if (flowColor) {
-        effect.setFlowFieldColor(flowColor);
+    const flowColors = Array.from(flowColorInputs)
+        .map(input => input.value.trim())
+        .filter(Boolean);
+
+    if (flowColors.length > 0) {
+        effect.setFlowFieldColor(flowColors);
     }
 
     optionsPanel.style.display = 'none';
 });
+
 
 class Particle {
     constructor(effect) {
@@ -79,8 +79,8 @@ class Particle {
         this.timer = this.maxLength * 2;
 
         // If user-defined flowFieldColor exists, use it; otherwise pick from default
-        if (this.effect.flowFieldColor) {
-            this.color = this.effect.flowFieldColor;
+        if (this.effect.flowFieldColor && this.effect.flowFieldColor.length > 0) {
+            this.color = this.effect.flowFieldColor[Math.floor(Math.random() * this.effect.flowFieldColor.length)];
         } else {
             this.colors = ['#4C026B', '#8E0E00', '#9D0208', '#BA1A1A', '#730D9E'];
             this.color = this.colors[Math.floor(Math.random() * this.colors.length)];
@@ -194,8 +194,8 @@ class Effect {
         this.init();
     }
 
-    setFlowFieldColor(color) {
-        this.flowFieldColor = color;
+    setFlowFieldColor(colors) {
+        this.flowFieldColor = colors;
         this.init();
     }
 
