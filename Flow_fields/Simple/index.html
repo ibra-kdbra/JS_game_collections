@@ -5,22 +5,32 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Flow Fields</title>
     <link rel="stylesheet" href="styles.css" />
+    <link href="../../assets/icons/ornamental.svg" rel="icon" type="image/svg+xml" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css"
+    />
   </head>
   <body>
     <canvas id="canvas1"></canvas>
     <div id="cornerButton"></div>
     <div id="optionsPanel">
       <h2>Options</h2>
-      <label for="colorInput">Enter 4 colors (comma-separated):</label>
-      <input
-        id="colorInput"
-        type="text"
-        placeholder="#FF5733,#33FF57,#3357FF,#FF33A1"
-      />
-      <!-- Needs update -->
+      <label>Flow Field Colors:</label><br />
+      <div class="color-container">
+        <div class="flow-color" id="flowColor1"></div>
+        <div class="flow-color" id="flowColor2"></div>
+        <div class="flow-color" id="flowColor3"></div>
+        <div class="flow-color" id="flowColor4"></div>
+        <div class="flow-color" id="flowColor5"></div>
+      </div>
+      <br /><br />
+
       <button id="applyColorsBtn">Apply Changes</button>
       <button id="screenshotBtn">Take Screenshot</button>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
     <script src="script.js"></script>
   </body>
 </html>

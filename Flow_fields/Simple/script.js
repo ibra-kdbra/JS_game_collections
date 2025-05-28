@@ -12,6 +12,42 @@ ctx.fillStyle = 'white';
 ctx.strokeStyle = 'white';
 ctx.lineWidth = 1;
 
+const flowColorPickers = [];
+const defaultColors = ['#4C026B', '#8E0E00', '#9D0208', '#BA1A1A', '#730D9E'];
+
+for (let i = 1; i <= 5; i++) {
+    const el = document.getElementById(`flowColor${i}`);
+    const pickr = Pickr.create({
+        el,
+        theme: 'classic',
+        default: defaultColors[i - 1],
+        components: {
+            preview: true,
+            opacity: true,
+            hue: true,
+            interaction: {
+                hex: true,
+                rgba: true,
+                input: true,
+                clear: true,
+                save: true
+            }
+        }
+    });
+
+    pickr.on('save', (color) => {
+        el.style.background = color.toHEXA().toString();
+        el.setAttribute('data-color', color.toHEXA().toString());
+    });
+
+    pickr.on('init', instance => {
+        el.setAttribute('data-color', defaultColors[i - 1]);
+        el.style.background = defaultColors[i - 1];
+    });
+
+    flowColorPickers.push(pickr);
+}
+
 class Particle {
     constructor(effect) {
         this.effect = effect;
@@ -183,22 +219,18 @@ cornerButton.addEventListener('click', () => {
 });
 
 applyColorsBtn.addEventListener('click', () => {
-    const value = colorInput.value.trim();
-    if (!value) return;
-
-    const newColors = value.split(',')
-        .map(c => c.trim())
-        .filter(c => c.length > 0);
-
-    if (newColors.length === 4) {
-        effect.particles.forEach(particle => {
-            particle.colors = newColors;
-            particle.color = newColors[Math.floor(Math.random() * newColors.length)];
-        });
-        optionsPanel.style.display = 'none';
-    } else {
-        alert('Please enter exactly 4 colors, separated by commas.');
+    const pickedColors = flowColorPickers.map(p => p.getColor()?.toHEXA().toString());
+    if (pickedColors.some(c => !c)) {
+        alert("Please make sure all 5 colors are selected.");
+        return;
     }
+
+    effect.particles.forEach(p => {
+        p.colors = pickedColors;
+        p.color = pickedColors[Math.floor(Math.random() * pickedColors.length)];
+    });
+
+    optionsPanel.style.display = 'none';
 });
 
 /* Take a screenshot of the canvas */
