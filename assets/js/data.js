@@ -91,11 +91,11 @@ export const games = [
     description: "Fun landing ship on ground game, it's a classic based on Lunar Lander",
     tags: ["#PC", "#Mobile"]
   },
-  {
-    link: "./Sprites_Games/ninth_project/index.html",
-    imgSrc: "./Sprites_Games/ninth_project/images/captured.png",
-    title: "Sprite Game",
-    description: "Explore adventure with this sprite-based game.",
-    tags: ["#PC", "#Mobile"]
-  },
+  // {
+  //   link: "./Sprites_Games/ninth_project/index.html",
+  //   imgSrc: "./Sprites_Games/ninth_project/images/captured.png",
+  //   title: "Sprite Game",
+  //   description: "Explore adventure with this sprite-based game.",
+  //   tags: ["#PC", "#Mobile"]
+  // },
 ];
