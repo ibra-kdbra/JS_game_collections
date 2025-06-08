@@ -98,4 +98,11 @@ export const games = [
   //   description: "Explore adventure with this sprite-based game.",
   //   tags: ["#PC", "#Mobile"]
   // },
+  {
+    link: "./Back_Attacker/index.html",
+    imgSrc: "./Back_Attacker/assets/imgs/captured.png",
+    title: "Back Attacker",
+    description: "This is the Ninja Forest, you are the guard.",
+    tags: ["#PC", "#Mobile"]
+  }
 ];
