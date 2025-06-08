@@ -1,0 +1,10 @@
+{
+  "x": 0,
+  "y": 0,
+  "downX": 0,
+  "downY": 0,
+  "justDown": false,
+  "justUp": false,
+  "isDown": false,
+  "pointing": false
+}
