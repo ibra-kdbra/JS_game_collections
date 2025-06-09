@@ -1,0 +1,525 @@
+{
+  "game": {
+    "canvas": {
+      "w": 320,
+      "h": 416,
+      "tW": 320,
+      "tH": 416,
+      "gW": 320,
+      "gH": 416,
+      "oX": -13312,
+      "oY": 48,
+      "gX": 0,
+      "gY": 48,
+      "zoom": 1,
+      "parentSelector": "body"
+    },
+    "statemachine": {
+      "active": ["level", "controls"]
+    },
+    "pointer": {
+      "x": 0,
+      "y": 0,
+      "justDown": false,
+      "justUp": false,
+      "isDown": false
+    },
+    "levels": {
+      "sequence": [
+        "titlescreen",
+        "startscreen",
+        "click",
+        "wait",
+        "push",
+        "move",
+        "tango",
+        "substitute",
+        "wander",
+        "double",
+        "conflict",
+        "extract",
+        "grab",
+        "twin",
+        "snare",
+        "sink",
+        "support",
+        "snatch",
+        "swivel",
+        "turmoil",
+        "end"
+      ],
+      "wm": [
+        "titlescreen",
+        "startscreen",
+        "click",
+        "wait",
+        "push",
+        "move",
+        "tango",
+        "substitute",
+        "wander",
+        "double",
+        "conflict",
+        "extract",
+        "grab",
+        "twin",
+        "snare",
+        "sink",
+        "support",
+        "snatch",
+        "swivel",
+        "turmoil",
+        "end"
+      ],
+      "current": 0
+    }
+  },
+  "titlescreen": {
+    "puzzle": {
+      "grid": [],
+      "init": true,
+      "taps": "",
+      "text": [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "Swipe left to start"
+      ],
+      "lT": " ",
+      "rT": " ",
+      "noBoard": true
+    }
+  },
+  "maintitle": {
+    "maintitle": {},
+    "position": {
+      "x": -160,
+      "y": -208,
+      "origin": "center"
+    }
+  },
+  "startscreen": {
+    "puzzle": {
+      "grid": [],
+      "init": true,
+      "taps": "",
+      "text": [
+        "Welcome to Black Hole Square!",
+        "Clean up all the other squares",
+        "in the universe. Just tap them",
+        "and see what happens.",
+        "",
+        "Swipe right to reset a puzzle",
+        "or go back to the old ones.",
+        "Swipe left to skip a puzzle.",
+        "",
+        "Swipe left for first puzzle!"
+      ],
+      "lT": "Wrong way",
+      "rT": "Let's puzzle"
+    }
+  },
+  "ad": {
+    "puzzle": {
+      "grid": [],
+      "init": true,
+      "taps": "",
+      "text": [
+        "The edge of the universe...",
+        "",
+        "Thank you for playing!",
+        "",
+        "Did you know you could",
+        "unlock 3 bonus puzzles",
+        "when you support this game",
+        "through Web Monetization?"
+      ],
+      "rT": "Not too dark here"
+    }
+  },
+  "ty": {
+    "puzzle": {
+      "grid": [],
+      "init": true,
+      "taps": "",
+      "text": [
+        "Thank you",
+        "for supporting this game",
+        "through Web Monetization.",
+        "",
+        "The next 3 puzzles are only",
+        "for WM supporters.",
+        "",
+        "Swipe left for bonus puzzles"
+      ],
+      "lT": "Free puzzles",
+      "rT": "Bonus puzzles"
+    }
+  },
+  "end": {
+    "puzzle": {
+      "grid": [],
+      "init": true,
+      "taps": "",
+      "text": [
+        "The edge of the universe...",
+        "",
+        "Thank you for playing!"
+      ],
+      "rT": "Just dark here"
+    }
+  },
+  "substitute": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 0, 6, 0, 0, 0,
+        0, 5, 2, 2, 1, 0,
+        0, 0, 1, 2, 0, 0,
+        0, 0, 0, 1, 0, 0,
+        0, 0, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 6
+    }
+  },
+  "double": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0,
+        0, 1, 2, 7, 7, 0,
+        0, 0, 4, 0, 0, 0,
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 5
+    }
+  },
+  "move": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 0, 6, 0, 0, 0,
+        0, 0, 2, 0, 0, 0,
+        0, 1, 2, 2, 7, 0,
+        0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 5
+    }
+  },
+  "click": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 0, 5, 0, 1, 0,
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0,
+        0, 1, 0, 7, 0, 0,
+        0, 0, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 4
+    }
+  },
+  "wait": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 0, 5, 0, 1, 0,
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 4, 0, 0,
+        0, 0, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 5
+    }
+  },
+  "push": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 1, 0, 0,
+        0, 0, 0, 2, 0, 0,
+        0, 5, 0, 0, 1, 0,
+        0, 0, 4, 0, 0, 0,
+        0, 0, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 6
+    }
+  },
+  "extract": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 0, 6, 0, 0, 0,
+        0, 0, 2, 0, 0, 0,
+        0, 0, 3, 7, 0, 0,
+        0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 5
+    }
+  },
+  "grab": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 2, 0,
+        5, 3, 2, 2, 2, 1,
+        0, 0, 0, 4, 0, 0,
+        0, 0, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 9
+    }
+  },
+  "snare": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 6, 1, 6, 1, 0,
+        5, 2, 3, 3, 2, 1,
+        0, 1, 4, 1, 4, 0,
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 9
+    }
+  },
+  "twin": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0,
+        0, 5, 2, 0, 0, 0,
+        0, 0, 3, 7, 0, 0,
+        0, 1, 2, 3, 7, 0,
+        0, 0, 4, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 11
+    }
+  },
+  "tango": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0,
+        0, 5, 6, 0, 0, 0,
+        0, 0, 0, 4, 7, 0,
+        0, 0, 0, 1, 0, 0,
+        0, 0, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 6
+    }
+  },
+  "snatch": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 6, 0, 0, 0, 0,
+        0, 5, 3, 3, 7, 0,
+        0, 0, 0, 0, 8, 0,
+        0, 0, 0, 0, 4, 0,
+        0, 0, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 12
+    }
+  },
+  "turmoil": {
+    "puzzle": {
+      "grid": [
+        0, 6, 0, 0, 6, 0,
+        0, 2, 0, 0, 8, 0,
+        0, 0, 3, 7, 0, 0,
+        0, 0, 5, 5, 0, 0,
+        8, 0, 0, 0, 0, 2,
+        4, 0, 0, 0, 0, 4
+      ],
+      "init": true,
+      "taps": 20
+    }
+  },
+  "sink": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 6, 0, 0,
+        0, 0, 5, 0, 0, 0,
+        0, 0, 0, 8, 0, 0,
+        0, 0, 5, 0, 0, 0,
+        0, 0, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 6
+    }
+  },
+  "swivel": {
+    "puzzle": {
+      "grid": [
+        0, 0, 6, 0, 0, 0,
+        0, 0, 6, 8, 0, 0,
+        0, 0, 0, 0, 3, 7,
+        5, 2, 0, 0, 0, 0,
+        0, 0, 0, 8, 0, 0,
+        0, 0, 0, 4, 0, 0
+      ],
+      "init": true,
+      "taps": 14
+    }
+  },
+  "wander": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 1, 0,
+        1, 0, 2, 0, 0, 0,
+        0, 6, 0, 0, 0, 0,
+        0, 5, 0, 0, 7, 0,
+        0, 0, 0, 4, 0, 1,
+        0, 1, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 15
+    }
+  },
+  "support": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 1, 0, 0, 0, 0,
+        0, 0, 7, 0, 0, 0,
+        0, 0, 0, 0, 0, 0,
+        0, 1, 0, 8, 7, 0,
+        0, 0, 4, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 8
+    }
+  },
+  "conflict": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 6, 0, 0,
+        0, 1, 2, 5, 0, 0,
+        0, 0, 0, 7, 2, 1,
+        0, 0, 0, 4, 0, 0,
+        0, 0, 0, 1, 0, 0
+      ],
+      "init": true,
+      "taps": 10
+    }
+  },
+  "level": {
+    "state": {
+      "draws": [],
+      "updates": ["titlescreen"]
+    }
+  },
+  "controls": {
+    "state": {
+      "draws": [
+        "bgcut",
+        "bgout",
+        "feedback",
+        "tunnel",
+        "tapstext",
+        "titletext",
+        "progress"
+      ],
+      "updates": [
+        "progress"
+      ]
+    }
+  },
+  "tapstext": {
+    "position": {
+      "x": 296,
+      "y": 44,
+      "origin": "game"
+    },
+    "text": {
+      "text": "",
+      "align": "right"
+    }
+  },
+  "titletext": {
+    "position": {
+      "x": 24,
+      "y": 44,
+      "origin": "game"
+    },
+    "text": {
+      "text": ""
+    }
+  },
+  "feedback": {
+    "position": {
+      "x": 0,
+      "y": 0,
+      "origin": "center"
+    },
+    "text": {
+      "text": "",
+      "align": "center",
+      "behind": true,
+      "base": "middle"
+    }
+  },
+  "bgcut": {
+    "position": {
+      "x": 16,
+      "y": 64,
+      "origin": "game"
+    },
+    "bgcut": {
+      "fill": "#1F363D"
+    }
+  },
+  "bgout": {
+    "position": {
+      "x": 16,
+      "y": 68,
+      "origin": "game"
+    },
+    "bgcut": {
+      "fill": "#16272C"
+    }
+  },
+  "tunnel": {
+    "tunnel": {
+      "fill": "#16272C"
+    }
+  },
+  "progress": {
+    "position": {
+      "x": 0,
+      "y": 160,
+      "origin": "center"
+    },
+    "progress": {
+      "dots": []
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "Gravity Wells",
+  "short_name": "BHS",
+  "description": "Clean the universe!",
+  "background_color": "#0E181B",
+  "theme_color": "#0E181B",
+  "foreground_color": "#F2F7F6",
+  "author": "ibra-kdbra",
+  "start_url": "/Gravity_Wells/index.html",
+  "scope": "/Gravity_Wells/",
+  "display": "standalone",
+  "icons": [
+    {
+      "src": "/Gravity_Wells/assets/icon.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}
