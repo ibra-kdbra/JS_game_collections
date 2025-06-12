@@ -64,4 +64,41 @@ body {
   }
 }
 
+.github-link {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: #7b7676;
+  color: #fff;       
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
+  transition: transform 0.25s ease, background 0.25s ease;
+}
 
+.github-link:hover {
+  transform: scale(1.12);
+  background: #bfaeae;
+}
+
+.github-link svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+@media (max-width: 480px) {
+  .github-link {
+    width: 2.5rem;
+    height: 2.5rem;
+    bottom: 0.75rem;
+    right: 0.75rem;
+  }
+  .github-link svg {
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+}
