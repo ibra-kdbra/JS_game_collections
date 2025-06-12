@@ -43,7 +43,7 @@ p {
   width: 3rem;
   height: 3rem;
   border-radius: 50%;
-  background: #111;
+  background: #7b7676;
   color: #fff;       
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
   transition: transform 0.25s ease, background 0.25s ease;
@@ -51,7 +51,7 @@ p {
 
 .github-link:hover {
   transform: scale(1.12);
-  background: #222;
+  background: #bfaeae;
 }
 
 .github-link svg {
