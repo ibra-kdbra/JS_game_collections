@@ -89,20 +89,20 @@ export const games = [
     imgSrc: "./MoonLDR/images/normal.png",
     title: "MoonLDR",
     description: "Fun landing ship on ground game, it's a classic based on Lunar Lander",
-    tags: ["#PC", "#Mobile"]
+    tags: ["#PC"]
   },
-  // {
-  //   link: "./Sprites_Games/ninth_project/index.html",
-  //   imgSrc: "./Sprites_Games/ninth_project/images/captured.png",
-  //   title: "Sprite Game",
-  //   description: "Explore adventure with this sprite-based game.",
-  //   tags: ["#PC", "#Mobile"]
-  // },
   {
     link: "./Back_Attacker/index.html",
     imgSrc: "./Back_Attacker/assets/imgs/captured.png",
     title: "Back Attacker",
     description: "This is the Ninja Forest, you are the guard.",
+    tags: ["#PC"]
+  },
+  {
+    link: "./Gravity_Wells/index.html",
+    imgSrc: "./Gravity_Wells/assets/imgs/captured.png",
+    title: "Gravity Wells",
+    description: "Gravity Wells is a puzzle game set in space.",
     tags: ["#PC", "#Mobile"]
   }
 ];
