@@ -1,6 +1,6 @@
 let manifest;
 try {
-  const response = await fetch('../manifest.json');
+  const response = await fetch('../assets/manifest.json');
   manifest = await response.json();
 } catch (error) {
   console.error('Error loading manifest.json:', error);
