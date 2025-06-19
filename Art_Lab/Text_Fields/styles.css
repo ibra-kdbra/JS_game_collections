@@ -1,0 +1,106 @@
+/* Reset & box-sizing */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;     /* lock scrollbars */
+  background: black;
+}
+
+/* 
+  Canvas:
+  - fill entire viewport (no letterboxing)
+  - position fixed at all edges
+  - internally 1500x720, but visually scaled
+*/
+#canvas1 {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  width: 100vw;   /* fill the screen’s width */
+  height: 100vh;  /* fill the screen’s height */
+
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+
+#cornerButton {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+
+  border-top: 60px solid rgba(255, 255, 255, 0.2);
+  border-left: 60px solid transparent;
+
+  cursor: pointer;
+  transition: border-top-color 0.3s ease;
+}
+
+#cornerButton:hover {
+  border-top-color: rgba(255, 255, 255, 0.4);
+}
+
+#optionsPanel {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 250px;
+  padding: 16px;
+  background-color: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  border: 1px solid #444;
+  border-radius: 4px;
+  display: none;
+}
+
+#optionsPanel h2 {
+  margin-bottom: 8px;
+}
+
+#optionsPanel input {
+  width: 100%;
+  padding: 6px;
+  margin-bottom: 8px;
+  border: 1px solid #555;
+  border-radius: 3px;
+  background-color: #222;
+  color: #fff;
+}
+
+#optionsPanel button {
+  background-color: #333;
+  border: 1px solid #777;
+  border-radius: 3px;
+  padding: 6px 10px;
+  cursor: pointer;
+  color: #fff;
+  transition: background-color 0.2s;
+}
+
+#optionsPanel button:hover {
+  background-color: #555;
+}
+
+.color-container {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.flow-color, .gradient-color {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  cursor: pointer;
+}

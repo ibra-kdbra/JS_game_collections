@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <link href="../../assets/icons/ornamental_floral.svg" rel="icon" type="image/svg+xml" />
+
+    <title>Adaptive</title>
+</head>
+
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+    <script src="script.js"></script>
+
+    <div class="contenu">
+        <h1 class="titre">flow fields visualisation :</h1>
+
+        <div style="display: flex;">
+            <main id="main" class="visu">
+                <p onclick=" let x = random(10000); noiseSeed(x); console.log(x); reset();" class="bouton boutonAbsolu">New seed</p>
+                <p class="bouton boutonFixed" onclick="saveCanvas('FlowFieldCanvas', 'png');" title="don't be impatient&#013it might take a while">Save canvas</p>
+            </main>
+
+            <div class="sideBar">
+                <div id="setterCanvaHeight">
+                    <div>
+                        <h3>Colors :</h3>
+
+                        <div class="liste">
+                            <p onclick="inputColor(color(0, 255, 200, opacity))" class="bouton" id="turquoise">turquoise</p>
+                            <p onclick="inputColor(color(255, 0, 0, opacity))" class="bouton" id="red">red</p>
+                            <p onclick="inputColor(color(225, 170, 10, opacity))" class="bouton" id="saffron">saffron</p>
+                            <p onclick="inputColor(color(210, 210, 210, opacity))" class="bouton" id="titanium">titanium</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3>Border rule :</h3>
+
+                        <div class="liste">
+                            <p onclick="inputBorderRule('randomTeleport')" class="bouton">random teleport</p>
+                            <p onclick="inputBorderRule('linkedTeleport')" class="bouton">linked teleport</p>
+                            <p onclick="inputBorderRule('none')" class="bouton">none</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3>Values :</h3>
+
+                        <div class="valueWithName" title="usual values : 500 - 3000&#013(performance reasons)">
+                            <p class="valueName">particle amount : </p>
+                            <input id="nbPoints" class="value" value="2000" onkeydown="inputNbParticle(event);"><br>
+                        </div>
+                        <div class="valueWithName" title="usual values : 0.1 - 100">
+                            <p class="valueName">speed : </p>
+                            <input id="speed" class="value" value="0.5" onkeydown="inputSpeed(event)">
+                        </div>
+                        <div class="valueWithName" title="usual values : 0.5 - 2.5">
+                            <p class="valueName">particle size : </p>
+                            <input id="size" class="value" value="1" onkeydown="inputSize(event)">
+                        </div>
+                        <div class="valueWithName" title="usual values : 20 - 1000">
+                            <p class="valueName">position scale : </p>
+                            <input id="positionScale" class="value" value="200" onkeydown="inputPositionScale(event)">
+                        </div>
+                        <div class="valueWithName" title="usual values : 0.5 - 100">
+                            <p class="valueName">rotation scale : </p>
+                            <input id="rotationScale" class="value" value="1" onkeydown="inputRotationScale(event)">
+                        </div>
+                        <div class="valueWithName" title="min value : 0&#013max value : 255">
+                            <p class="valueName">particle opacity : </p>
+                            <input id="opacity" class="value" value="20" onkeydown="inputOpacity(event)">
+                        </div>
+                        <div class="valueWithName" title="min value : 0&#013max value : 255">
+                            <p class="valueName">fade : </p>
+                            <input id="fadeSpeed" class="value" value="0" onkeydown="inputFade(event)">
+                        </div>
+                    </div>
+                    <br><p onclick="applyAllInputs(null, null)" class="bouton">apply values</p>
+                </div>
+            </div>
+        </div>
+
+        <h3> Presets :</h3>
+        <div class="presets">
+            <p onclick="presetSandStream();" class="bouton first" id="sandStream">sandStream</p>
+            <p onclick="presetHighway()" class="bouton" id="highway">highway</p>
+            <p onclick="presetGenerativeMap()" class="bouton" id="generativeMap">generative map</p>
+            <p onclick="presetGlitch()" class="bouton" id="glitch">glitch</p>
+            <p onclick="presetDuoTone()" class="bouton" id="duoTone">duoColor</p>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer">
+            <a href="https://www.linkedin.com/in/" target="_blank" title="contact me on Linkedin"><img class="imageFooter" src="images/logoLinkedin.png" alt="Logo Linkedin"></a>
+            <a href="https://github.com/ibra-kdbra/JS_game_collections/tree/main/Flow_fields/Adaptive" target="_blank" title="see the Github repository&#013of my project"><img class="imageFooter" src="images/logoGithub.png" alt="logo Github"></a>
+        </div>
+    </footer>
+</body>
+
+</html>
