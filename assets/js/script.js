@@ -12,10 +12,10 @@ document.addEventListener("DOMContentLoaded", () => {
   let selectedGames = [];
 
   if (bodyId === "flow-body") {
-    selectedGames = games.slice(0, 4);
+    selectedGames = games.slice(0, 6);
     initializeHorizontalScroll(container);
   } else if (bodyId === "main") {
-    selectedGames = games.slice(4, 15);
+    selectedGames = games.slice(6, 17);
     initializeVerticalScroll(container);
   }
 
