@@ -1,0 +1,343 @@
+html, body{
+  font-size: 16px;
+  font-family: Helvetica;
+  /*max-width: 100%;
+  overflow-x: hidden;*/
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  background-color: #151632;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+#gui {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: black;
+  opacity: 0.9;
+  margin: 0;
+  z-index: 10;
+  float: right;
+}
+
+.close-button {
+  font-size: 1.2em;
+  font-weight: bold;
+  background-color: #630940 !important;
+}
+/*
+.dg {
+  margin: 0 !important;
+}
+
+.closed{
+  height: 0px;
+}
+*/
+
+.canvasDiv {
+  display:flex;
+  /* display:block; */
+  margin-top: 2vh;
+  /* margin: 0 auto; */
+  text-align: center;
+  width:98vw;
+  /* box-sizing: border-box; */
+}
+
+#canvas {
+  margin: 0 auto;
+  padding: 0;
+  background: rgb(0, 0, 0);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+  max-width: calc(100vw - 20px);
+  max-height: calc(100vh - 80px);
+}
+
+#defaultImage {
+  max-width: calc(100vw - 20px);
+}
+
+.menuButton {
+  padding: 0px 2px 2px 2px;
+  font-weight: bold;
+  margin: 8px 2px 8px 2px;
+  border: 1px solid #cb0b81;
+  border-radius: 6px;
+  background-color: #630940;
+  cursor: pointer;
+  font-size: 1.6em;
+}
+
+.menuButton:hover {
+  background-color: #cb0b81;
+}
+
+#introDiv{
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+
+  background-color: #2D0A3D;
+  padding-top: 2px;
+  padding-bottom: 10px;
+  text-align: center;
+  color:white;
+}
+
+#siteNameText{
+  font-size: 42px;
+  font-family: "Permanent Marker";
+  font-weight: 400;
+  font-style: normal;
+  display:block;
+}
+
+#subtitleText{
+  font-size: 24px;
+  font-family: "Permanent Marker";
+  font-weight: 400;
+  font-style: normal;
+  font-style: italic;
+  margin:0 auto;
+}
+
+#aboutText{
+  font-size: 48px;
+  font-family: "Courier New", system-ui;
+  font-weight: 400;
+  font-style: normal;
+  display:block;
+  padding: 0;
+  margin: 0;
+}
+
+#notesDiv{
+  width:98vw;
+  box-sizing: border-box;
+  /*overflow: hidden;*/
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /*border-top: 5px solid #581845;*/
+  background-color: #151632;
+  color: white;
+}
+
+#textBox {
+  min-width: 350px;
+  max-width: 75vw;
+}
+
+#textBox > ul > li {
+  margin-bottom: 6px;
+}
+
+#linksDiv{
+  background-color: #faebf6;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.x-link {
+  text-decoration: none;
+}
+
+h2 {
+  font-size: 40px;
+  font-family: Helvetica;
+}
+
+#buttonDiv {
+  display: inline block;
+  margin: 0 auto;
+  width: 100vw;
+}
+
+.displayCanvas {
+  float: left;
+}
+
+.exampleImage {
+  max-width: 70vw;
+  margin: 0 auto;
+  padding: 0;
+  display: block;
+}
+
+.hidden {
+  display: none !important;
+}
+
+
+/* Styling for image upload field */
+input, select {
+  cursor: pointer;
+}
+
+input[type="file"] {
+  /*display: none;*/
+  position:absolute;
+  top:-9999px;
+}
+.custom-file-upload {
+  border: 1px solid #cb0b81;
+  border-radius: 6px;
+  background-color: #630940;
+  color: #fff;
+  font-weight: bold;
+  font-size: 1.2em;
+  font-family: Helvetica;
+  display: inline-block;
+  padding: 8px;
+  cursor: pointer;
+  margin-left: 3px;
+  margin-right: 2px;
+}
+
+.custom-file-upload:hover {
+  background-color: #cb0b81;
+}
+
+/* Styling for color inputs */
+input[type="color"] {
+  border: none;
+  background-color: none;
+  padding:0;
+  margin: 0px;
+}
+
+input[type="checkbox"] {
+  min-width: 20px;
+  min-height: 20px;
+}
+
+.tableText{
+  font-weight: bold;
+  font-size: 0.7em;
+  font-family: Helvetica;
+  color:white;
+}
+
+pre {
+  margin: 0;
+}
+
+/* applies when screen is wide enough */ 
+@media (min-width: 700px) {
+  button, .tableText {
+    font-size: 1em;
+  }
+}
+
+table {
+  border-collapse: collapse;
+  margin:auto;
+}
+
+td {
+  max-width: 250px;
+}
+
+#inputTable{
+  font-size:0.8em;
+  text-align: center;
+  /*min-width: 280px;
+  width:80vw;
+  max-width: 350px;
+  margin-top: 15px;
+  margin-bottom: 15px;
+  border-top: 1px solid black;
+  border-bottom: 1px solid black;
+  */
+  width:100vw;
+  /*background-color: rgb(228, 218, 255);*/
+  background-color: #2D0A3D;
+}
+
+#textInput{
+  width: 85vw !important;
+  border: 4px solid rgb(161, 50, 154);
+  font-size: 1.1em;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  text-align: left;
+}
+
+/* applies when screen is wide enough */ 
+@media (min-width: 700px) {
+  #inputTable {
+      font-size:1.0em;
+      /*max-width: 700px;*/
+  }
+}
+
+#videoRecordingMessageDiv{
+  background: rgba(0, 0, 0, 0.75);
+  color:white;
+  font-family: helvetica;
+  font-size: 20px;
+  font-weight: bold;
+  padding: 8px;
+  text-align: center;
+  z-index: 100;
+}
+
+.sticky-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+}
+
+.sticky-top {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+/*floating loading screen*/
+.lockOn {
+  display: block;
+  visibility: visible;
+  position: fixed;
+  z-index: 999;
+  top: 0px;
+  left: 0px;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(255, 255, 255, 0.25);
+  padding-top: 0%;
+  opacity: 0.9; 
+  font-size:large;
+  color:blue;
+  font-style:italic;
+  font-weight:400;
+  background-image: url(https://github.com/imageMageAge/imageMageAge.github.io/blob/main/images/loadingCircle.gif?raw=true);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-position: center;
+}
+
+/* Styling for table with github and social links */
+
+#infoMenuTable td {
+  text-align:center;
+  border: 0;
+  padding: 20px;
+}
+
+#infoMenuTable{
+  table-layout: fixed;
+  margin: 0px;
+}
+
+a, a:visited{
+  color:rgb(161, 50, 154);
+}
