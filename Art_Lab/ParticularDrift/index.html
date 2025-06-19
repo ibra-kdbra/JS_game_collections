@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particular Drift</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  
+    <meta property="og:title" content="Particular Drift" />
+    <meta property="og:description" content="Turn images into flowing particle animations" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image:type" content="image/png" >
+    <meta property="og:image:width" content="784" >
+    <meta property="og:image:height" content="784" >
+  
+    <link rel="icon" href="assets/siteFavicon3.png">
+    <link rel="apple-touch-icon" href="assets/siteFavicon3.png">
+
+    <script defer src="https://cloud.umami.is/script.js" data-website-id="eb59c81c-27cb-4e1d-9e8c-bfbe70c48cd9"></script>
+
+</head>
+<body>
+
+    <div id="gui"></div>
+    <div class="canvasDiv">
+      <canvas id="canvas"></canvas>
+    </div>
+    <img id="defaultImage" class="hidden" src="assets/face.webp"> 
+
+    <table id="buttonTable">
+      <tr>
+          <td>
+            <button id="randomizeBtn" class="menuButton" title="Randomize All Inputs">🎲</button>
+          </td>
+
+          <td>
+            <button id="randomizeColorBtn" class="menuButton" title="Randomize Colors">🎨</button>
+          </td>
+
+          <td>
+              <button id="restartBtn" class="menuButton" title="Restart Animation">🔄</button>
+          </td>
+
+          <td>
+            <label for="imageInput" class="custom-file-upload menuButton" id="imageInputLabel" title="Upload Image">
+                <i class="fa fa-cloud-upload"></i> Upload Image
+            </label>
+            <input type="file" id="imageInput" accept="image/*">
+          </td>
+
+          <td>
+            <button id="exportVideoBtn" class="menuButton" title="Export Video">🎥</button>
+          </td>
+          
+      </tr>
+  </table>
+
+  <div id="videoRecordingMessageDiv" class="hidden sticky-top">
+      Video recording underway. Press menu button or "v" to stop. The video will save to your downloads folder after.
+  </div>
+</body>
+
+<!-- Application Scripts -->
+<script src="js/gl-state.js"></script>
+<script src="js/resource-manager.js"></script>
+<script src="js/webgl-utils.js"></script>
+<script src="js/particles.js"></script>
+<script src="js/main.js"></script>
+<script src="js/canvasVideoExport.js"></script>
+<script src="../assets/js/mp4-muxer-main/build/mp4-muxer.js"></script>
+
+</html>
