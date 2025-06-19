@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Liquid Shape Distortions</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.9/dat.gui.min.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Modak&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <meta property="og:title" content="Liquid Shape Distortions" />
+    <meta property="og:description" content="psychedelic animation generator; (p)art of your next trip" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image:type" content="image/png" >
+    <meta property="og:image:width" content="1622" >
+    <meta property="og:image:height" content="1622" >
+
+    <link rel="icon" href="assets/siteFavicon3.png">
+    <link rel="apple-touch-icon" href="assets/siteFavicon3.png">
+
+    <script defer src="https://cloud.umami.is/script.js" data-website-id="eb59c81c-27cb-4e1d-9e8c-bfbe70c48cd9"></script>
+   
+</head>
+<body>
+    
+    <div id="intro-overlay">
+        <div id="intro-content">
+          <h1 id="intro-title">Liquid Shape Distortions 🌀</h1>
+          <p class="intro-text">
+            Create psychedelic art using liquid motion, distortion, shadows and light. 
+          </p>
+          <p class="intro-text">I recommend hitting the 🎲 button until you get something you like.</p>
+          <p class="intro-text">You can also use the full controls at the top right to fine-tune all parameters.</p>
+
+          <div id="hotkeys-section">
+            <ul id="hotkeys-list">
+              <li>🎲: randomize all inputs [r]</li>
+              <li>⏯️: pause/play the animation [space]</li>
+              <li>📷: save a screenshot image [s]</li>
+              <li>🎥: start/stop video export [v]</li>
+              <li>🔊: start/stop music [m]</li>
+            </ul>
+          </div>
+          <button id="start-button">Go ✨</button>
+        </div>
+    </div>
+
+    <div id="gui" class="ui-overlay"></div>
+    <canvas id="canvas"></canvas>
+
+    <div id="zen-mode-container">
+        <button id="zen-mode-button" class="gui-button icon">[Zen Mode]</button>
+    </div>
+    
+    <table id="button-table">
+        <tr>
+            <td>
+              <button id="randomizeBtn" class="gui-button icon" title="Randomize Inputs (r)">🎲</button>
+            </td>
+
+            <td>
+                <button id="playPauseBtn" class="gui-button icon" title="Play/Pause (space)">⏯️</button>
+            </td>
+  
+            <td>
+              <button id="saveBtn" class="gui-button icon" title="Save Image (s)">📷</button>
+            </td>
+  
+            <td>
+              <button id="exportVideoBtn" class="gui-button icon" title="Export Video (v)">🎥</button>
+            </td>
+
+            <td>
+                <button id="toggleMusicBtn" class="gui-button icon" title="Toggle Music (m)">🔊</button>
+            </td>
+        </tr>
+    </table>
+    
+    <div id="info-container">
+        <p>Made by: <a id="floating-ig-link" href="https://github.com/ibra-kdbra" rel="noopener" target="_blank">@stereo.drift</a></p>
+        <p>Song: Fahrenheit Fair Enough</p>
+        <p id="fpsIndicator" class="ui-overlay">FPS: </p>
+    </div>
+
+    <div id="videoRecordingMessageDiv" class="hidden sticky-top">
+        Video recording underway. Press 🎥 button or "v" to stop. The video will save to your downloads folder after.
+    </div>
+
+    <script id="vertexShader" type="x-shader/x-vertex">
+        attribute vec2 position;
+        void main() {
+            gl_Position = vec4(position, 0.0, 1.0);
+        }
+    </script>
+
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        precision highp float;
+
+        uniform vec2 resolution;
+        uniform float time;
+        uniform float seed;
+        
+        // GUI-controlled parameters
+        uniform float timeScale;
+        uniform float patternAmp;
+        uniform float patternFreq;
+        uniform float bloomStrength;
+        uniform float saturation;
+        uniform float grainAmount;
+        uniform vec3 colorTint;
+        uniform float minCircleSize;
+        uniform float circleStrength;
+        uniform float distortX;
+        uniform float distortY;
+        
+        // Noise functions for 3D simplex noise
+        vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+        vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+        vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+        vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+        
+        // Random function that uses the seed
+        float rand(vec3 co) {
+            return fract(sin(dot(co.xyz + vec3(seed * 0.1), vec3(12.9898, 78.233, 53.539))) * 43758.5453);
+        }
+        
+        // Pseudo-random function for noise generation
+        float random(vec2 st) {
+            return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
+        }
+        
+        // 3D Simplex noise implementation
+        float snoise3D(vec3 v) {
+          const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+          const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+        
+          // First corner
+          vec3 i  = floor(v + dot(v, C.yyy));
+          vec3 x0 = v - i + dot(i, C.xxx);
+        
+          // Other corners
+          vec3 g = step(x0.yzx, x0.xyz);
+          vec3 l = 1.0 - g;
+          vec3 i1 = min(g.xyz, l.zxy);
+          vec3 i2 = max(g.xyz, l.zxy);
+        
+          vec3 x1 = x0 - i1 + C.xxx;
+          vec3 x2 = x0 - i2 + C.yyy;
+          vec3 x3 = x0 - D.yyy;
+        
+          // Permutations
+          i = mod289(i);
+          vec4 p = permute(permute(permute(
+                    i.z + vec4(0.0, i1.z, i2.z, 1.0))
+                  + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+                  + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+        
+          // Gradients: 7x7 points over a square, mapped onto an octahedron.
+          // The ring size 17*17 = 289 is close to a multiple of 49 (49*6 = 294)
+          float n_ = 0.142857142857; // 1.0/7.0
+          vec3 ns = n_ * D.wyz - D.xzx;
+        
+          vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+        
+          vec4 x_ = floor(j * ns.z);
+          vec4 y_ = floor(j - 7.0 * x_);
+        
+          vec4 x = x_ *ns.x + ns.yyyy;
+          vec4 y = y_ *ns.x + ns.yyyy;
+          vec4 h = 1.0 - abs(x) - abs(y);
+        
+          vec4 b0 = vec4(x.xy, y.xy);
+          vec4 b1 = vec4(x.zw, y.zw);
+        
+          vec4 s0 = floor(b0)*2.0 + 1.0;
+          vec4 s1 = floor(b1)*2.0 + 1.0;
+          vec4 sh = -step(h, vec4(0.0));
+        
+          vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+          vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+        
+          vec3 p0 = vec3(a0.xy, h.x);
+          vec3 p1 = vec3(a0.zw, h.y);
+          vec3 p2 = vec3(a1.xy, h.z);
+          vec3 p3 = vec3(a1.zw, h.w);
+        
+          // Normalise gradients
+          vec4 norm = taylorInvSqrt(vec4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3)));
+          p0 *= norm.x;
+          p1 *= norm.y;
+          p2 *= norm.z;
+          p3 *= norm.w;
+        
+          // Mix final noise value
+          vec4 m = max(0.6 - vec4(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.0);
+          m = m * m;
+          return 42.0 * dot(m*m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
+        }
+        
+        // Modified fbm function to use 3D noise
+        float fbm3D(vec3 p) {
+            float sum = 0.0;
+            float amp = patternAmp;
+            float freq = patternFreq;
+            
+            // Create seed-based offsets using prime multipliers
+            vec3 seedOffset = vec3(
+                sin(seed * 0.731) * cos(seed * 0.293) * 1.0,
+                cos(seed * 0.897) * sin(seed * 0.413) * 1.0,
+                sin(seed * 0.529) * cos(seed * 0.671) * 1.0
+            );
+            
+            // Use octaves with better frequency scaling
+            for(int i = 0; i < 2; i++) {
+                // Create unique rotation for each octave to break grid patterns
+                float angle = seed * 0.1 + float(i) * 0.01;
+                mat2 rotation = mat2(
+                    cos(angle), -sin(angle),
+                    sin(angle), cos(angle)
+                );
+                
+                // Rotate coordinates slightly for each octave
+                vec2 rotatedP = rotation * p.xy;
+                vec3 rotated3D = vec3(rotatedP, p.z);
+                
+                // Use prime-number-based offsets to avoid repeating patterns
+                vec3 octaveOffset = seedOffset + vec3(
+                    sin(float(i) * 1.731 + seed * 0.47),
+                    cos(float(i) * 1.293 + seed * 0.83),
+                    sin(float(i) * 1.453 + seed * 0.61)
+                );
+                
+                // Apply progressive domain warping for more organic results
+                vec3 warpedP = rotated3D + octaveOffset;
+                if (i > 0) {
+                    // Add slight domain warping based on previous octave
+                    warpedP += vec3(
+                        sin(sum * 2.14 + warpedP.y * 1.5),
+                        cos(sum * 1.71 + warpedP.x * 1.5),
+                        sin(sum * 1.93 + warpedP.z * 1.5)
+                    ) * 0.1 * float(i);
+                }
+                
+                // Add contribution from this octave
+                sum += amp * snoise3D(warpedP * freq);
+                
+                // Use better persistence values (slower amplitude reduction)
+                amp *= 0.8;
+                
+                // Use better lacunarity values (more moderate frequency increase)
+                freq *= 0.8;
+            }
+            
+            // Normalize and add slight contrast adjustment
+            return sum * 0.5 + 0.5;
+        }
+        
+        void main() {
+            vec2 uv = gl_FragCoord.xy / resolution.xy;
+            
+            // Adjust aspect ratio
+            uv.x *= resolution.x / resolution.y;
+            
+            // Apply timeScale from GUI
+            float slowTime = time * timeScale;
+            
+            // Create seed-influenced flow vectors for different pattern on each refresh
+            vec2 flow1 = vec2(
+                sin(slowTime * 0.25 + seed * 0.42) * 0.3 + sin(slowTime * 0.14 + seed * 0.23) * 0.2,
+                cos(slowTime * 0.22 + seed * 0.31) * 0.3 + cos(slowTime * 0.11 + seed * 0.17) * 0.2
+            );
+            
+            vec2 flow2 = vec2(
+                sin(slowTime * 0.16 + 1.7 + seed * 0.13) * 0.4 + sin(slowTime * 0.18 + seed * 0.29) * 0.1,
+                cos(slowTime * 0.19 + 2.3 + seed * 0.19) * 0.4 + cos(slowTime * 0.11 + seed * 0.33) * 0.1
+            );
+            
+            vec2 flow3 = vec2(
+                sin(slowTime * 0.13 + 3.4 + seed * 0.25) * 0.25 + sin(slowTime * 0.22 + seed * 0.11) * 0.15,
+                cos(slowTime * 0.18 + 1.2 + seed * 0.37) * 0.25 + cos(slowTime * 0.25 + seed * 0.27) * 0.15
+            );
+            
+            float noiseScale1 = 10000.0;
+                        
+            // Main light layer with enhanced 3D liquid motion - using 3D noise
+            // The third component determines how the pattern changes over time
+            float timeComponent = slowTime * 5.5 + sin(seed * 0.63) * 0.2;
+            float lightPattern = fbm3D(vec3(uv * noiseScale1, timeComponent));
+        
+            float combinedPattern = lightPattern * 0.25;
+        
+            // Start with a seed-influenced base color
+            vec3 baseColor = vec3(
+                0.6 + sin(seed * 0.4) * 0.1,
+                0.9 + cos(seed * 0.3) * 0.05,
+                0.92 + sin(seed * 0.5) * 0.05
+            );
+            
+            // Define pastel colors with slight seed-based variations
+            float colorSeed1 = sin(seed * 0.73) * 0.88;
+            float colorSeed2 = cos(seed * 0.51) * 0.28;
+            float colorSeed3 = sin(seed * 0.92) * 0.48;
+            
+            vec3 pastelGreen = vec3(0.85 + colorSeed1, 0.95 + colorSeed2, 0.85 + colorSeed3);
+            vec3 pastelBlue = vec3(0.85 + colorSeed3, 0.9 + colorSeed1, 0.98 + colorSeed2);
+            vec3 pastelPink = vec3(0.98 + colorSeed2, 0.88 + colorSeed3, 0.92 + colorSeed1);
+            vec3 pastelYellow = vec3(0.98 + colorSeed3, 0.95 + colorSeed1, 0.85 + colorSeed2);
+            vec3 brightPink = vec3(0.98 + colorSeed1, 0.85 + colorSeed2, 0.92 + colorSeed3);            
+            vec3 pastelLavender = vec3(0.92 + colorSeed2, 0.88 + colorSeed3, 0.98 + colorSeed1);
+            vec3 pastelPeach = vec3(0.98 + colorSeed3, 0.92 + colorSeed1, 0.87 + colorSeed2);
+            vec3 pastelTeal = vec3(0.85 + colorSeed1, 0.95 + colorSeed2, 0.95 + colorSeed3);
+            vec3 pastelCoral = vec3(0.98 + colorSeed2, 0.88 + colorSeed1, 0.85 + colorSeed3);
+            vec3 pastelMint = vec3(0.88 + colorSeed3, 0.98 + colorSeed2, 0.91 + colorSeed1);
+            vec3 pastelLilac = vec3(0.91 + colorSeed1, 0.85 + colorSeed3, 0.98 + colorSeed2);
+            vec3 pastelSkyBlue = vec3(0.85 + colorSeed2, 0.91 + colorSeed1, 0.98 + colorSeed3);
+            
+            // Using larger color patches with 3D liquid-like noise and seed influence
+            float verticalFlow = sin(uv.y * 3.0 + slowTime * 0.2 + seed * 0.4) * 1.0;
+            
+            // Creating more complex flow patterns for liquid movement
+            vec2 liquidFlow1 = flow1 + vec2(verticalFlow, sin(uv.x * 2.5 + slowTime * 0.10 + seed * 0.3) * 0.2);
+            vec2 liquidFlow2 = flow2 + vec2(cos(uv.y * 2.2 + slowTime * 0.05 + seed * 0.5) * 0.15, verticalFlow);
+            vec2 liquidFlow3 = flow3 + vec2(verticalFlow * 0.5, cos(uv.x * 1.8 - slowTime * 0.07 + seed * 0.7) * 0.25);
+            
+            // Add seed-dependent scale factors for noise
+            float noiseSeedFactor1 = 0.15 * (1.0 + sin(seed * 0.3) * 0.3);
+            float noiseSeedFactor2 = 0.2 * (1.0 + cos(seed * 0.5) * 0.3);
+            float noiseSeedFactor3 = 0.12 * (1.0 + sin(seed * 0.7) * 0.3);
+            
+            // Using 3D noise for color patterns with different time components for variety
+            float colorNoise1 = fbm3D(vec3(uv * noiseSeedFactor1 + liquidFlow1 * 0.03, slowTime * 0.02 + seed * 0.27));
+            
+            // Adjust thresholds with seed influence for variety
+            float threshSeed1 = 0.0 + sin(seed * 0.4) * 0.15;
+            float threshSeed2 = 0.15 + cos(seed * 0.6) * 0.15;
+            float threshSeed3 = 0.25 + sin(seed * 0.8) * 0.15;
+            
+            float colorMixValue1 = smoothstep(0.0, threshSeed1, colorNoise1);
+            float colorMixValue2 = smoothstep(0.0, threshSeed2, colorNoise1);
+            float colorMixValue3 = smoothstep(0.0, threshSeed3, colorNoise1);
+            
+            // Start with base color and mix in expanded pastel palette
+            vec3 colorVariation = baseColor;
+            
+            // Layer 1: Primary colors with seed-influenced mix factors
+            float mixFactor1 = 2.2 + sin(seed * 0.3) * 0.5;
+            float mixFactor2 = 2.0 + cos(seed * 0.5) * 0.5;
+            float mixFactor3 = 2.0 + sin(seed * 0.7) * 0.5;
+            float mixFactor4 = 2.0 + cos(seed * 0.9) * 0.5;
+            
+            colorVariation = mix(colorVariation, pastelBlue, colorMixValue1 * mixFactor1);
+            colorVariation = mix(colorVariation, pastelPink, (1.0 - colorMixValue1) * colorMixValue2 * mixFactor2);
+            colorVariation = mix(colorVariation, pastelGreen, colorMixValue2 * (1.0 - colorMixValue1) * mixFactor3);
+            colorVariation = mix(colorVariation, pastelYellow, (1.0 - colorMixValue2) * colorMixValue1 * mixFactor4);
+            
+            // Layer 2: New pastel colors with seed-influenced mix factors
+            float mixFactor5 = 1.8 + sin(seed * 1.1) * 0.4;
+            float mixFactor6 = 1.8 + cos(seed * 1.3) * 0.4;
+            float mixFactor7 = 1.7 + sin(seed * 1.5) * 0.4;
+            float mixFactor8 = 1.6 + cos(seed * 1.7) * 0.4;
+            float mixFactor9 = 1.5 + sin(seed * 1.9) * 0.4;
+            
+            colorVariation = mix(colorVariation, brightPink, (colorMixValue1 * colorMixValue2) * mixFactor5);
+            colorVariation = mix(colorVariation, pastelLavender, (1.0 - colorMixValue3) * colorMixValue1 * mixFactor6);
+            colorVariation = mix(colorVariation, pastelPeach, colorMixValue3 * (1.0 - colorMixValue2) * mixFactor7);
+            colorVariation = mix(colorVariation, pastelTeal, (colorMixValue2 * colorMixValue3) * mixFactor8);
+            colorVariation = mix(colorVariation, pastelCoral, ((1.0 - colorMixValue1) * colorMixValue3) * mixFactor9);
+            
+            // Layer 3: Additional colors with seed-influenced noise combinations
+            float seedOffset1 = sin(seed * 2.1) * 0.05;
+            float seedOffset2 = cos(seed * 2.3) * 0.05;
+            
+            float mixValue4 = smoothstep(0.0, 1.0, float(uv * (0.18 + seedOffset1)));
+            float mixValue5 = mixValue4 - (sin(seed*0.6)*0.4);
+
+            float mixFactor10 = 1.7 + sin(seed * 2.5) * 0.4;
+            float mixFactor11 = 1.8 + cos(seed * 2.7) * 0.4;
+            float mixFactor12 = 1.5 + sin(seed * 2.9) * 0.4;
+            
+            colorVariation = mix(colorVariation, pastelMint, mixValue4 * (1.0 - mixValue5) * mixFactor10);
+            colorVariation = mix(colorVariation, pastelLilac, (1.0 - mixValue4) * mixValue5 * mixFactor11);
+            colorVariation = mix(colorVariation, pastelSkyBlue, mixValue4 * mixValue5 * mixFactor12);
+            
+            // Adjust pattern brightness with seed influence
+            float brightnessFactor = 1.0 + sin(seed * 0.5) * 2.1;
+            combinedPattern = pow(combinedPattern * 0.2 + 0.8, brightnessFactor);
+            
+            // Create light spots with seed-influenced threshold
+            float lightThreshold = 1.0 + sin(seed * 0.6) * 0.8;
+            float lightSpots = smoothstep(0.0, lightThreshold, combinedPattern);
+            
+            // Enhanced circular light patterns with seed-influenced distortion
+            float distortionAmount = 1.0 + cos(seed * 0.7) * 5.05;
+            float distortion = sin(slowTime * 0.1 + seed) * distortionAmount;
+            
+            vec2 distortedUV = fract(uv * 1.0 + vec2(
+                sin(uv.y * 2.0 + slowTime * 0.15 + seed * 0.8) * distortY,
+                cos(uv.x * 1.8 + slowTime * 0.1 + seed * 0.9) * distortX
+            ));
+            
+            // Adjust circular spots with seed influence
+            float circleSize = minCircleSize + sin(seed) * 1.3;
+            float circleThreshold = 0.0 + cos(seed * 1.3) * 2.05;
+            float circularSpots = smoothstep(0.0, circleThreshold, 1.0 - length((distortedUV - 0.5) * (circleSize + distortion)));
+            
+            // Mix with liquid movement
+            float mixRatio = 0.0 + sin(seed * 1.5) * circleStrength;
+            lightSpots = mix(lightSpots, circularSpots * lightSpots, mixRatio);
+
+            // Apply liquid-like diffusion with seed influence and 3D noise
+            float diffusionScale = 0.0 + cos(seed * 1.7) * 5.0;
+            float diffusedLightSpots = fbm3D(vec3(
+                uv * diffusionScale + vec2(
+                    sin(slowTime * 0.03 + uv.x + seed * 1.9) * 0.2,
+                    cos(slowTime * 0.02 + uv.y + seed * 2.1) * 0.2
+                ),
+                slowTime * 0.05 + sin(seed * 0.76) * 0.5
+            )) * lightSpots;
+            
+            // Mix diffusion with seed influence
+            //float diffusionMix = 0.7 + sin(seed * 2.3) * 0.1;
+            float diffusionMix = 1.0;
+            lightSpots = mix(lightSpots, diffusedLightSpots, diffusionMix);
+
+            // Final pattern mix
+            float patternMix = 1.0;
+            combinedPattern = mix(combinedPattern, lightSpots, patternMix);
+            
+            float finalValue = combinedPattern;
+            
+            // Use the color variation and apply color tint from GUI
+            vec3 color = finalValue * colorVariation * colorTint;
+            
+            // Bloom with GUI-controlled bloomStrength
+            float bloomThreshold = 1.0;
+            float bloom = smoothstep(0.0, bloomThreshold, finalValue) * bloomStrength;
+            color += bloom;
+            
+            // Grain with GUI-controlled grainAmount
+            vec2 noiseCoord = uv;
+            float noise = random(noiseCoord + time * 0.0015) * grainAmount;        
+            color = color + vec3(noise);
+
+            // Saturation with GUI control
+            float luminance = dot(color, vec3(0.299, 0.587, 0.114));
+            vec3 saturatedColor = mix(vec3(luminance), color, saturation);
+            float satMix = 1.0;
+            color = mix(color, saturatedColor, satMix);
+            
+            gl_FragColor = vec4(color, 1.0);
+        }
+    </script>
+    
+</body>
+
+<script src="../assets/js/mp4-muxer-main/build/mp4-muxer.js"></script>
+<script src="js/helperFunctions.js"></script>
+<script src="js/canvasVideoExport.js"></script>
+<script src="js/main.js"></script>
+
+</html>
