@@ -28,6 +28,20 @@ export const games = [
     description: "Try multiple variations with adaptive flow fields.",
     tags: ["#PC", "#Mobile"]
   },
+    {
+    link: "./LSD/index.html",
+    imgSrc: "./LSD/assets/captured.png",
+    title: "LSD",
+    description: "Create psychedelic animations in real-time",
+    tags: ["#PC"]
+  },
+  {
+    link: "./ParticularDrift/index.html",
+    imgSrc: "./ParticularDrift/assets/captured.png",
+    title: "Particular Drift",
+    description: "Particular Drift is a puzzle game set in space.",
+    tags: ["#PC"]
+  },
   {
     link: "./2048/index.html",
     imgSrc: "./2048/meta/apple-touch-icon.png",
@@ -50,9 +64,9 @@ export const games = [
     tags: ["#PC", "#Mobile"]
   },
   {
-    link: "./Flow_fields/index.html",
+    link: "./Art_Lab/index.html",
     imgSrc: "./assets/icons/captured.png",
-    title: "Flow Fields",
+    title: "Art Lab",
     description: "Math with Art create wonders",
     tags: ["#PC", "#Mobile"]
   },
@@ -104,5 +118,5 @@ export const games = [
     title: "Gravity Wells",
     description: "Gravity Wells is a puzzle game set in space.",
     tags: ["#PC", "#Mobile"]
-  }
+  },
 ];
