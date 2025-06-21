@@ -149,7 +149,6 @@ class ParticleEmitter extends EngineObject
     render() {} // emitters are not rendered
 }
 
-///////////////////////////////////////////////////////////////////////////////
 // particle object
 
 class Particle extends EngineObject
