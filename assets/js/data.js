@@ -1,5 +1,12 @@
 export const games = [
   {
+    link: "./BlossomingFlowers/index.html",
+    imgSrc: "./BlossomingFlowers/assets/captured.png",
+    title: "Blossoming Flowers",
+    description: "Pure CSS blossoming flowers",
+    "tags":["#PC", "#Mobile"]
+  },
+  {
     link: "./Simple/index.html",
     imgSrc: "./Simple/captured.png",
     title: "Flow Fields (Simple)",
