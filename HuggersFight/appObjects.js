@@ -297,8 +297,6 @@ class Prop extends GameObject
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
 let checkpointPos, activeCheckpoint, checkpointTimer = new Timer;
 
 class Checkpoint extends GameObject 
@@ -343,8 +341,6 @@ class Checkpoint extends GameObject
         drawRect(this.pos.add(vec2(0,height/2-.5)), vec2(.1,height), new Color(.9,.9,.9));
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////
 
 class Grenade extends GameObject
 {
@@ -462,8 +458,6 @@ class Weapon extends EngineObject
             this.fireTimeBuffer = min(this.fireTimeBuffer, 0);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////
 
 class Bullet extends EngineObject 
 {

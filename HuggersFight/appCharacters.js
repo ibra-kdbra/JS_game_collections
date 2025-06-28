@@ -348,8 +348,6 @@ class Character extends GameObject
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
 const type_weak   = 0;
 const type_normal = 1;
 const type_strong = 2;
@@ -658,8 +656,6 @@ class Enemy extends Character
         levelWarmup || ++totalKills;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////
 
 class Player extends Character
 {

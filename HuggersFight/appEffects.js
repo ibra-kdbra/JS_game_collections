@@ -3,7 +3,6 @@
 const precipitationEnable = 1;
 const debugFire = 0;
 
-///////////////////////////////////////////////////////////////////////////////
 // sounds
 
 const sound_shoot =        [,,90,,.01,.03,4,,,,,,,9,50,.2,,.2,.01];
@@ -18,7 +17,6 @@ const sound_rain =         [.02,,1e3,2,,2,,,,,,,,99];
 const sound_wind =         [.01,.3,2e3,2,1,2,,,,,,,1,2,,,,,,.1];
 const sound_grenade =      [.5,.01,300,,,.02,3,.22,,,-9,.2,,,,,,.5];
 
-///////////////////////////////////////////////////////////////////////////////
 // special effects
 
 const persistentParticleDestroyCallback = (particle)=>
@@ -120,7 +118,6 @@ function makeWater(pos, amount=400)
     return emitter;
 }
 
-///////////////////////////////////////////////////////////////////////////////
 
 function explosion(pos, radius=2)
 {
@@ -195,8 +192,6 @@ function explosion(pos, radius=2)
         .5, 0, 1, 0, 1e9              // randomness, collide, additive, randomColorLinear, renderOrder
     );
 }
-
-///////////////////////////////////////////////////////////////////////////////
 
 class TileCascadeDestroy extends EngineObject 
 {
@@ -336,7 +331,6 @@ function destroyTile(pos, makeSound = 1, cleanNeighbors = 1, maxCascadeChance = 
     return 1;
 }
 
-///////////////////////////////////////////////////////////////////////////////
 
 function drawStars()
 {
@@ -398,8 +392,6 @@ function updateSky()
             playSound(sound_wind, skyParticlesPos, 20, rand(skyParticles.emitRate/1e3));
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////
 
 let tileParallaxLayers = [];
 
