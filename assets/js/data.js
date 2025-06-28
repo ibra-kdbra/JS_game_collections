@@ -1,20 +1,20 @@
 export const games = [
   {
-    link: "./BlossomingFlowers/index.html",
+    link: "./Art_Lab/BlossomingFlowers/index.html",
     imgSrc: "./BlossomingFlowers/assets/captured.png",
     title: "Blossoming Flowers",
     description: "Pure CSS blossoming flowers",
-    "tags":["#PC", "#Mobile"]
+    "tags": ["#PC", "#Mobile"]
   },
   {
-    link: "./Simple/index.html",
+    link: "./Art_Lab/Simple/index.html",
     imgSrc: "./Simple/captured.png",
     title: "Flow Fields (Simple)",
     description: "Experiment with flow fields. Press D to debug or double touch.",
     "tags": ["#PC", "#Mobile"]
   },
   {
-    link: "./Text_Fields/index.html",
+    link: "./Art_Lab/Text_Fields/index.html",
     imgSrc: "./Text_Fields/captured.png",
     title: "Text Fields",
     description: "Experiment with flow fields. Press D to debug or double touch.",
@@ -29,21 +29,21 @@ export const games = [
     tags: ["#PC", "#Mobile"]
   },
   {
-    link: "./Adaptive/index.html",
+    link: "./Art_Lab/Adaptive/index.html",
     imgSrc: "./Adaptive/images/result3.png",
     title: "Adaptive Fields",
     description: "Try multiple variations with adaptive flow fields.",
     tags: ["#PC", "#Mobile"]
   },
-    {
-    link: "./LSD/index.html",
+  {
+    link: "./Art_Lab/LSD/index.html",
     imgSrc: "./LSD/assets/captured.png",
     title: "LSD",
     description: "Create psychedelic animations in real-time",
     tags: ["#PC"]
   },
   {
-    link: "./ParticularDrift/index.html",
+    link: "./Art_Lab/ParticularDrift/index.html",
     imgSrc: "./ParticularDrift/assets/captured.png",
     title: "Particular Drift",
     description: "Particular Drift is a puzzle game set in space.",
