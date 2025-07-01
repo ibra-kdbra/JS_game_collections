@@ -15,7 +15,7 @@ export class VideoPlayerComponent {
 
         <div class="flex flex-col">                
       <button class="btn rounded-full p-4 border-2 border-purple-400" id="change-btn">
-                <i class="fas fa-sync-alt"></i> تغيير الفيديو
+                <i class="fas fa-sync-alt"></i> change music
       </button>
         </div>
       </div>
