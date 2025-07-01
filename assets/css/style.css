@@ -1,4 +1,5 @@
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -13,55 +14,65 @@ body {
 }
 
 @keyframes gradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
-
 
 #video-circle {
   animation: slow-spin 10s linear infinite;
 }
 
 @keyframes slow-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Hover: Video Circle First, Then Mute Button */
-#music-slider {
-  left: -100px;
-}
+@media (min-width: 768px) {
+  #music-slider {
+    left: -100px;
+  }
 
-#music-slider:hover {
-  left: 1rem;
-}
+  #music-slider:hover {
+    left: 1rem;
+  }
 
-#music-slider:hover #mute-circle {
-  display: flex;
-  transform: scale(1.1);
-}
+  #music-slider:hover #mute-circle {
+    display: flex;
+    transform: scale(1.1);
+  }
 
-#music-slider:hover #video-circle {
-  transform: scale(1.1);
+  #music-slider:hover #video-circle {
+    transform: scale(1.1);
+  }
 }
-
 /* Mobile Adjustments */
 @media (max-width: 768px) {
   #music-slider {
-    top: -50px;
+    /* top: -50px; */
     left: 50%;
     transform: translateX(-50%);
-    flex-direction: column;
+    /* flex-direction: column; */
   }
 
-  #video-circle {
+  /* #video-circle {
     transform: translateY(50%);
-  }
+  } */
 
-  #mute-circle {
+  /* #mute-circle {
     display: none;
-  }
+  } */
 }
 
 .github-link {
@@ -75,7 +86,7 @@ body {
   height: 3rem;
   border-radius: 50%;
   background: #7b7676;
-  color: #fff;       
+  color: #fff;
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
   transition: transform 0.25s ease, background 0.25s ease;
 }
