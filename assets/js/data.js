@@ -113,6 +113,13 @@ export const games = [
     tags: ["#PC"]
   },
   {
+    link: "./HuggersFight/index.html",
+    imgSrc: "./HuggersFight/captured.png",
+    title: "HuggersFight",
+    description: "The empire is spreading like a plague across the galaxy and building outposts on remote planets.",
+    tags: ["#PC"]
+  },
+  {
     link: "./Back_Attacker/index.html",
     imgSrc: "./Back_Attacker/assets/imgs/captured.png",
     title: "Back Attacker",
