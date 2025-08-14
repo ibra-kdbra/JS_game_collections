@@ -74,7 +74,7 @@ const tower = {
                 damageMin: 0.001,
                 range: 3,
                 // Methods
-                attack: (e) => {
+                attack(e) {
                     if (this.lastTarget === e) {
                         this.duration++;
                     } else {
@@ -86,7 +86,8 @@ const tower = {
                     const damage = d * sq(this.duration);
                     e.dealDamage(damage, this.type);
                     this.onHit(e);
-                }
+                },
+                onHit(e) {}
             }
         ]
     },
