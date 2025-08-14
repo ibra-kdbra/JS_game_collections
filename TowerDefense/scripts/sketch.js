@@ -882,7 +882,7 @@ function draw() {
         }
 
         // Temporary spawnpoints
-        for (const i = 0; i < tempSpawns.length; i++) {
+        for (let i = 0; i < tempSpawns.length; i++) {
             const s = tempSpawns[i];
             if (s[1] === 0) continue;
             s[1]--;
@@ -919,7 +919,7 @@ function draw() {
 
     // Draw health bars
     if (healthBar) {
-        for (var i = 0; i < enemies.length; i++) {
+        for (let i = 0; i < enemies.length; i++) {
             enemies[i].drawHealth();
         }
     }
