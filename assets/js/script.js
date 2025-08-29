@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
     selectedGames = games.slice(0, 7);
     initializeHorizontalScroll(container);
   } else if (bodyId === "main") {
-    selectedGames = games.slice(7, 19);
+    selectedGames = games.slice(7, 20);
     initializeVerticalScroll(container);
   }
 

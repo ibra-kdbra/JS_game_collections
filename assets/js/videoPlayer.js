@@ -8,19 +8,32 @@ export class VideoPlayerComponent {
           <iframe id="youtube-player" class="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-300 pointer-events-none" allow="autoplay; encrypted-media"></iframe>
         </div>
       
-        <!-- Mute Button (Hidden on Mobile) -->
-        <button id="mute-circle" class="hidden md:flex w-12 h-12 rounded-full border-2 border-purple-400 bg-black bg-opacity-70 text-white text-lg shadow-lg items-center justify-center transition-all duration-300">
-          <i id="mute-icon" class="fas fa-volume-mute"></i>
-        </button>
-
-        <div class="flex flex-col">                
-      <button class="btn rounded-full p-4 border-2 border-purple-400" id="change-btn">
-                <i class="fas fa-sync-alt"></i> change music
-      </button>
+        <!-- Controls -->
+        <div class="flex items-center space-x-2">
+          <button id="mute-circle" class="w-12 h-12 rounded-full border-2 border-purple-400 bg-black bg-opacity-70 text-white text-lg shadow-lg flex items-center justify-center">
+            <i id="mute-icon" class="fas fa-volume-up"></i>
+          </button>
+          <button id="change-btn" class="w-12 h-12 rounded-full border-2 border-purple-400 bg-black bg-opacity-70 text-white text-lg shadow-lg flex items-center justify-center">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <button id="settings-btn" class="w-12 h-12 rounded-full border-2 border-purple-400 bg-black bg-opacity-70 text-white text-lg shadow-lg flex items-center justify-center">
+            <i class="fas fa-cog"></i>
+          </button>
         </div>
       </div>
 
-      
+      <!-- Playlist Modal -->
+      <div id="playlist-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-gray-900 p-8 rounded-lg shadow-xl w-11/12 max-w-md">
+          <h2 class="text-2xl font-bold mb-4 text-purple-400">Load Music</h2>
+          <p class="text-gray-400 mb-6">Enter a YouTube Video URL or Playlist ID.</p>
+          <input type="text" id="media-input" placeholder="Enter URL or ID" class="w-full bg-gray-800 text-white border-2 border-purple-400 rounded-full px-4 py-2 mb-4">
+          <div class="flex justify-end space-x-4">
+            <button id="close-modal-btn" class="btn rounded-full py-2 px-6 border-2 border-gray-600">Cancel</button>
+            <button id="load-media-btn" class="btn rounded-full py-2 px-6 border-2 border-purple-400 bg-purple-600">Load</button>
+          </div>
+        </div>
+      </div>
     `;
   }
 
