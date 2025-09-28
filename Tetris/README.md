@@ -41,3 +41,10 @@ Controls are configurable
 - DAS and DAS delay settings
 - Adaptable game size
 - Last game replay
+
+
+## Future Features
+
+[] Update for most of the platforms
+
+[] Introduce new levels and harder algorithms to make the game more enjoyable
