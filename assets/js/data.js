@@ -140,4 +140,11 @@ export const games = [
     description: "Gravity Wells is a puzzle game set in space.",
     tags: ["#PC", "#Mobile"]
   },
+  {
+    link: "./Wahdatio/index.html",
+    imgSrc: "./Wahdatio/img/sample_logo.png",
+    title: "Wahdatio",
+    description: "A profound 3D strategy game that embodies the concept of unity and interconnectedness",
+    tags: ["#PC",]
+  }
 ];
