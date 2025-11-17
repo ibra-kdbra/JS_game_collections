@@ -50,6 +50,11 @@ Piece.prototype.new = function(index) {
   }
 };
 Piece.prototype.rotate = function(direction) {
+  // Audio: Play rotation sound
+  if (typeof audioManager !== 'undefined') {
+    audioManager.playSound('rotate');
+  }
+
   // Rotates tetromino.
   var rotated = [];
   if (direction === -1) {
@@ -202,6 +207,11 @@ Piece.prototype.getDrop = function(distance) {
   return i - 1;
 };
 Piece.prototype.hold = function() {
+  // Audio: Play hold sound
+  if (typeof audioManager !== 'undefined') {
+    audioManager.playSound('hold');
+  }
+
   var temp = hold.piece;
   if (!this.held) {
     if (hold.piece !== void 0) {

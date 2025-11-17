@@ -347,7 +347,13 @@ function resize() {
     }
   }
 }
-addEventListener('resize', resize, false);
+addEventListener('resize', function() {
+  if (typeof Responsive !== 'undefined') {
+    Responsive.resize();
+  } else {
+    resize();
+  }
+}, false);
 
 /**
  * ========================== Model ===========================================

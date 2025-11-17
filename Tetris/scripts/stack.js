@@ -52,6 +52,7 @@ Stack.prototype.addPiece = function(tetro) {
   range = range.sort(function(a, b) {
     return a - b;
   });
+  var totalLinesCleared = 0;
   for (var row = range[0], len = row + range.length; row < len; row++) {
     var count = 0;
     for (var x = 0; x < 10; x++) {
@@ -61,6 +62,8 @@ Stack.prototype.addPiece = function(tetro) {
     // TODO Ponder during the day and see if there is a more elegant solution.
     if (count === 10) {
       lines++; // NOTE stats
+      totalLinesCleared++; // Track for effects
+
       if (gametype === 3) {
         if (digLines.indexOf(row) !== -1) {
           digLines.splice(digLines.indexOf(row), 1);
@@ -71,6 +74,29 @@ Stack.prototype.addPiece = function(tetro) {
           this.grid[x][y] = this.grid[x][y - 1];
         }
       }
+    }
+  }
+
+  // Spectacular effects for line clears!
+  if (totalLinesCleared > 0) {
+    // Audio effects
+    if (typeof audioManager !== 'undefined') {
+      const audioMap = ['', 'single', 'double', 'triple', 'tetris'];
+      if (totalLinesCleared <= 4) {
+        audioManager.playSound(`line-${audioMap[totalLinesCleared]}`);
+        setTimeout(() => {
+          audioManager.playSound(`voice-${audioMap[totalLinesCleared]}`);
+        }, 300);
+      }
+
+      if (totalLinesCleared === 4) {
+        setTimeout(() => audioManager.playSound('level-up'), 800);
+      }
+    }
+
+    // Particle effects
+    if (typeof particleSystem !== 'undefined') {
+      particleSystem.createLineExplosion(totalLinesCleared);
     }
   }
 
