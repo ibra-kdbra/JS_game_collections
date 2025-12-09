@@ -8,27 +8,21 @@ class ParticleSystem {
   }
 
   createContainer() {
-    // Create particle overlay
+    // Create particle overlay that works on all devices
     const container = document.createElement('div');
     container.id = 'particle-overlay';
     container.style.cssText = `
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
       pointer-events: none;
-      z-index: 10;
+      z-index: 100;
       overflow: hidden;
     `;
 
-    // Insert after game canvas
-    const gameCanvas = document.querySelector('#b canvas') || document.querySelector('canvas');
-    if (gameCanvas) {
-      gameCanvas.parentNode.style.position = 'relative';
-      gameCanvas.parentNode.appendChild(container);
-    }
-
+    document.body.appendChild(container);
     return container;
   }
 
