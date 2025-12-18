@@ -14,18 +14,199 @@
   <!-- CSS Stylesheet -->
   <link rel="stylesheet" href="css/style.css">
 
-  <!-- Background image styling -->
+  <!-- Enhanced background styling -->
   <style>
     body {
-      background-image: url('./imgs/water_leave_drops.jpg');
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      background-attachment: fixed;
+      background: #000;
+      overflow-x: hidden;
+    }
+    
+    /* Professional loading screen */
+    .loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #0a0a0a, #1a0033);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      transition: opacity 0.5s ease;
+    }
+    
+    .loading-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    .loading-spinner {
+      width: 60px;
+      height: 60px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top: 3px solid #00ffff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    
+    .loading-text {
+      color: #fff;
+      font-family: 'Source Sans Pro', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 300;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Theme switcher */
+    .theme-switcher {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 8px;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+    
+    .theme-switcher:hover {
+      background: rgba(0, 0, 0, 0.9);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+    
+    .theme-btn {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      font-family: 'Source Sans Pro', sans-serif;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .theme-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-1px);
+    }
+    
+    .theme-btn:active {
+      transform: translateY(0);
+    }
+    
+    /* Performance indicator */
+    .perf-indicator {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #fff;
+      font-family: 'Source Sans Pro', sans-serif;
+      font-size: 0.8rem;
+      backdrop-filter: blur(10px);
+      opacity: 0.7;
+      transition: opacity 0.3s ease;
+    }
+    
+    .perf-indicator:hover {
+      opacity: 1;
+    }
+    
+    /* Enhanced game container */
+    #content {
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(20px);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      transition: all 0.3s ease;
+    }
+    
+    #content:hover {
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
+    }
+    
+    /* Enhanced CRT effects */
+    #b::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: repeating-linear-gradient(
+        transparent,
+        transparent 2px,
+        rgba(255, 255, 255, 0.03) 2px,
+        rgba(255, 255, 255, 0.03) 4px
+      );
+      pointer-events: none;
+      z-index: 1;
+      animation: scanlines 8s linear infinite;
+    }
+    
+    @keyframes scanlines {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(10px); }
+    }
+    
+    /* Enhanced glow effects */
+    #b {
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 
+        0 0 20px rgba(255, 255, 255, 0.5),
+        inset 0 0 20px rgba(255, 255, 255, 0.1);
+      animation: flicker 0.15s infinite linear, glow 3s ease-in-out infinite alternate;
+    }
+    
+    @keyframes glow {
+      0% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.1); }
+      100% { box-shadow: 0 0 30px rgba(255, 255, 255, 0.8), inset 0 0 30px rgba(255, 255, 255, 0.2); }
+    }
+    
+    /* Smooth transitions for all interactive elements */
+    * {
+      transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
     }
   </style>
 </head>
 <body>
+  <!-- Professional Loading Screen -->
+  <div class="loading-screen" id="loadingScreen">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Loading Tetris</div>
+  </div>
+
+  <!-- Theme Switcher -->
+  <div class="theme-switcher">
+    <button class="theme-btn" onclick="LiveBackground.nextTheme()" title="Switch Theme">
+      <i class="fas fa-palette"></i> Theme
+    </button>
+  </div>
+
+  <!-- Performance Indicator -->
+  <div class="perf-indicator" id="perfIndicator" style="display: none;">
+    <span id="perfText">FPS: 60</span>
+  </div>
+
   <div id="content">
     <!-- Left Panel -->
     <section id="d" class="panel">
@@ -170,10 +351,151 @@
   <script src="./scripts/preview.js"></script>
   <script src="./scripts/menu.js"></script>
   <script src="./scripts/responsive.js"></script>
+  <script src="./scripts/liveBackground.js"></script>
   <script src="./scripts/audio.js"></script>
   <script src="./scripts/particles.js"></script>
   <!-- <script src="./scripts/bg.js"></script> -->
+  
+  <!-- Professional Initialization Script -->
   <script>
+    // Professional loading and initialization
+    document.addEventListener('DOMContentLoaded', function() {
+      // Hide loading screen after everything is loaded
+      setTimeout(function() {
+        const loadingScreen = document.getElementById('loadingScreen');
+        if (loadingScreen) {
+          loadingScreen.classList.add('hidden');
+          setTimeout(() => {
+            loadingScreen.style.display = 'none';
+          }, 500);
+        }
+      }, 1500);
+      
+      // Show performance indicator in development
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        const perfIndicator = document.getElementById('perfIndicator');
+        if (perfIndicator) {
+          perfIndicator.style.display = 'block';
+          
+          // Update FPS counter
+          let fps = 60;
+          let lastTime = performance.now();
+          
+          function updateFPS() {
+            const now = performance.now();
+            const delta = now - lastTime;
+            fps = Math.round(1000 / delta);
+            lastTime = now;
+            
+            const perfText = document.getElementById('perfText');
+            if (perfText) {
+              perfText.textContent = `FPS: ${fps} | Theme: ${LiveBackground ? LiveBackground.getTheme() : 'Unknown'}`;
+            }
+            
+            requestAnimationFrame(updateFPS);
+          }
+          
+          updateFPS();
+        }
+      }
+      
+      // Add keyboard shortcuts for theme switching
+      document.addEventListener('keydown', function(e) {
+        // Press 'T' to cycle themes
+        if (e.key === 't' || e.key === 'T') {
+          if (typeof LiveBackground !== 'undefined') {
+            LiveBackground.nextTheme();
+            
+            // Show theme notification
+            const theme = LiveBackground.getTheme();
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+              position: fixed;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              background: rgba(0, 0, 0, 0.9);
+              color: white;
+              padding: 20px 30px;
+              border-radius: 8px;
+              font-family: 'Source Sans Pro', sans-serif;
+              font-size: 1.2rem;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 2px;
+              z-index: 10000;
+              backdrop-filter: blur(10px);
+              border: 1px solid rgba(255, 255, 255, 0.2);
+              animation: fadeInOut 2s ease;
+            `;
+            notification.textContent = `Theme: ${theme}`;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+              document.body.removeChild(notification);
+            }, 2000);
+          }
+        }
+        
+        // Press 'P' to toggle performance indicator
+        if (e.key === 'p' || e.key === 'P') {
+          const perfIndicator = document.getElementById('perfIndicator');
+          if (perfIndicator) {
+            const isVisible = perfIndicator.style.display !== 'none';
+            perfIndicator.style.display = isVisible ? 'none' : 'block';
+          }
+        }
+      });
+      
+      // Add fade in/out animation for notifications
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes fadeInOut {
+          0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+          20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+        }
+      `;
+      document.head.appendChild(style);
+      
+      // Enhanced line clear effects integration
+      if (typeof stack !== 'undefined' && typeof stack.clearLines === 'function') {
+        const originalClearLines = stack.clearLines;
+        stack.clearLines = function() {
+          const result = originalClearLines.apply(this, arguments);
+          
+          // Trigger enhanced effects when lines are cleared
+          if (result > 0 && typeof LiveBackground !== 'undefined') {
+            LiveBackground.onLinesCleared(result);
+            
+            // Additional visual feedback
+            if (Responsive && Responsive.triggerHaptic) {
+              if (result === 4) {
+                Responsive.triggerHaptic('heavy');
+              } else if (result >= 2) {
+                Responsive.triggerHaptic('medium');
+              } else {
+                Responsive.triggerHaptic('light');
+              }
+            }
+          }
+          
+          return result;
+        };
+      }
+      
+      // Console welcome message
+      console.log('%c🎮 Professional Tetris Enhanced 🎮', 'font-size: 20px; font-weight: bold; color: #00ffff; text-shadow: 0 0 10px #00ffff;');
+      console.log('%cFeatures:', 'font-weight: bold; color: #ff00ff;');
+      console.log('✨ Responsive design with touch controls');
+      console.log('🎨 Live particle backgrounds with themes');
+      console.log('📱 Mobile-optimized controls');
+      console.log('🎯 Enhanced visual effects');
+      console.log('⌨️  Press T to cycle themes, P for performance');
+      console.log('%cEnjoy the enhanced Tetris experience!', 'font-style: italic; color: #ffff00;');
+    });
+    
     _gaq = [['_setAccount', 'UA-30472693-1'], ['_trackPageview']];
     (function (d) {
       var g = d.createElement('script'), s = d.scripts[0];
