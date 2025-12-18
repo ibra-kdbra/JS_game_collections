@@ -1,4 +1,4 @@
-// Professional loading and initialization
+// Loading and initialization
 document.addEventListener("DOMContentLoaded", function () {
   // Hide loading screen after everything is loaded
   setTimeout(function () {
