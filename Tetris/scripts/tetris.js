@@ -189,7 +189,7 @@ var settings = {
 };
 
 var setting = {
-  Theme: ['Cyberpunk', 'Neon', 'Matrix', 'Retro'],
+  Theme: ['Water Drop', 'Cyberpunk', 'Neon', 'Matrix', 'Retro'],
   DAS: range(0, 31),
   ARR: range(0, 11),
   Gravity: (function() {
