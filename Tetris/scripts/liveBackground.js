@@ -77,6 +77,23 @@ const LiveBackground = {
         gradient: ['#2c3e50', '#34495e', '#2c3e50'],
         animation: false
       }
+    },
+    'water drop': {
+      particles: {
+        count: 50,
+        speed: { min: 2, max: 5 },
+        size: { min: 1, max: 2 },
+        colors: ['rgba(255, 255, 255, 0.4)', 'rgba(255, 255, 255, 0.2)', 'rgba(200, 240, 255, 0.3)'],
+        connections: false,
+        connectionColor: '',
+        glow: false,
+        direction: 'down' // Custom property for rain effect
+      },
+      background: {
+        gradient: [],
+        animation: false,
+        image: 'url("./imgs/waterdrop.jpg")'
+      }
     }
   },
 
@@ -93,7 +110,16 @@ const LiveBackground = {
   init() {
     this.createCanvas();
     this.setupEventListeners();
-    this.setTheme('cyberpunk');
+    
+    // Check for saved setting or default
+    if (typeof settings !== 'undefined' && typeof setting !== 'undefined') {
+      const themeIndex = settings.Theme;
+      const themeName = setting.Theme[themeIndex].toLowerCase();
+      this.setTheme(themeName);
+    } else {
+      this.setTheme('water drop');
+    }
+    
     this.start();
   },
 
@@ -200,6 +226,24 @@ const LiveBackground = {
     }
     
     this.theme = themeName;
+    
+    // Handle background image
+    const theme = this.themes[this.theme];
+    if (theme.background.image) {
+      document.body.style.backgroundImage = theme.background.image;
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundRepeat = 'no-repeat';
+      document.body.style.backgroundPosition = 'center center';
+      document.body.style.backgroundAttachment = 'fixed';
+      // Clear canvas
+      if (this.ctx) {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      }
+    } else {
+      document.body.style.backgroundImage = '';
+      document.body.style.background = '#000';
+    }
+
     this.initParticles();
   },
 
@@ -220,11 +264,21 @@ const LiveBackground = {
     const config = theme.particles;
     const colorIndex = Math.floor(Math.random() * config.colors.length);
     
+    // Custom logic for rain/water drop effect
+    let vx, vy;
+    if (config.direction === 'down') {
+      vx = (Math.random() - 0.5) * 0.5; // Slight drift
+      vy = Math.random() * (config.speed.max - config.speed.min) + config.speed.min; // Falling down
+    } else {
+      vx = (Math.random() - 0.5) * (config.speed.max - config.speed.min) + config.speed.min;
+      vy = (Math.random() - 0.5) * (config.speed.max - config.speed.min) + config.speed.min;
+    }
+
     return {
       x: Math.random() * this.canvas.width,
       y: Math.random() * this.canvas.height,
-      vx: (Math.random() - 0.5) * (config.speed.max - config.speed.min) + config.speed.min,
-      vy: (Math.random() - 0.5) * (config.speed.max - config.speed.min) + config.speed.min,
+      vx: vx,
+      vy: vy,
       size: Math.random() * (config.size.max - config.size.min) + config.size.min,
       color: config.colors[colorIndex],
       life: 1,
@@ -325,7 +379,20 @@ const LiveBackground = {
     const theme = this.themes[this.theme];
     
     // Clear canvas
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    // If not using image, draw background fill/gradient
+    if (!theme.background.image) {
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      
+      // Draw background gradient
+      if (theme.background.animation) {
+        this.drawAnimatedBackground();
+      } else {
+        this.drawStaticBackground();
+      }
+    }
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     
     // Draw background gradient
