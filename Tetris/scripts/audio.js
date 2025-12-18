@@ -9,6 +9,9 @@ class AudioManager {
 
     this.initWebAudio();
     this.loadSounds();
+    this.musicLoop = null;
+    this.currentNote = 0;
+    this.isPlaying = false;
   }
 
   initWebAudio() {
@@ -39,6 +42,22 @@ class AudioManager {
       'voice-triple': this.createTone(1000, 0.7),
       'voice-tetris': this.createTone(1200, 0.8)
     };
+    
+    // Full Korobeiniki (Tetris Theme) Melody
+    // Frequencies: E5=659, B4=494, C5=523, D5=587, A4=440, G#4=415, E4=330
+    this.musicNotes = [
+      {f: 659, d: 0.4}, {f: 494, d: 0.2}, {f: 523, d: 0.2}, {f: 587, d: 0.4}, // E B C D
+      {f: 523, d: 0.2}, {f: 494, d: 0.2}, {f: 440, d: 0.4}, {f: 440, d: 0.2}, // C B A A
+      {f: 523, d: 0.2}, {f: 659, d: 0.4}, {f: 587, d: 0.2}, {f: 523, d: 0.2}, // C E D C
+      {f: 494, d: 0.6}, {f: 523, d: 0.2}, {f: 587, d: 0.4}, {f: 659, d: 0.4}, // B C D E
+      {f: 523, d: 0.4}, {f: 440, d: 0.4}, {f: 440, d: 0.4}, {f: 0, d: 0.4},   // C A A (rest)
+      
+      {f: 587, d: 0.4}, {f: 587, d: 0.2}, {f: 698, d: 0.2}, {f: 880, d: 0.4}, // D D F A
+      {f: 784, d: 0.2}, {f: 698, d: 0.2}, {f: 659, d: 0.6}, {f: 523, d: 0.2}, // G F E C
+      {f: 659, d: 0.4}, {f: 587, d: 0.2}, {f: 523, d: 0.2}, {f: 494, d: 0.4}, // E D C B
+      {f: 494, d: 0.2}, {f: 523, d: 0.2}, {f: 587, d: 0.4}, {f: 659, d: 0.4}, // B C D E
+      {f: 523, d: 0.4}, {f: 440, d: 0.4}, {f: 440, d: 0.4}, {f: 0, d: 0.4}    // C A A (rest)
+    ];
   }
 
   createTone(frequency, duration, type = 'sine') {
@@ -53,11 +72,64 @@ class AudioManager {
     return this.createSequence([659, 622, 659, 622, 659, 494, 587, 523], 0.2);
   }
 
+  startMusic() {
+    if (this.isPlaying) return;
+    this.isPlaying = true;
+    this.currentNote = 0;
+    this.playNextMusicNote();
+  }
+
+  stopMusic() {
+    this.isPlaying = false;
+    if (this.musicLoop) {
+      clearTimeout(this.musicLoop);
+      this.musicLoop = null;
+    }
+  }
+
+  playNextMusicNote() {
+    if (!this.isPlaying) return;
+
+    // Check settings
+    if (typeof settings !== 'undefined') {
+      if (settings.Sound === 0) {
+        // Just wait for next check if muted, to keep sync
+        this.musicLoop = setTimeout(() => this.playNextMusicNote(), 500);
+        return;
+      }
+    }
+
+    const note = this.musicNotes[this.currentNote];
+    
+    // Play note if frequency > 0 (0 is rest)
+    if (note.f > 0) {
+      this.createOscillator(note.f, note.d * 0.9, 'triangle', 0.15); // Lower volume for music
+    }
+
+    this.currentNote = (this.currentNote + 1) % this.musicNotes.length;
+    
+    // Schedule next note
+    // tempo adjustment: multiply duration by constant (e.g., 1000 for ms, scale for speed)
+    const tempo = 450; 
+    this.musicLoop = setTimeout(() => {
+      this.playNextMusicNote();
+    }, note.d * tempo);
+  }
+
   playSound(soundId) {
-    if (this.isMuted) return;
+    // Check global game settings if available
+    if (typeof settings !== 'undefined') {
+      if (settings.Sound === 0) return; // Sound Off
+    } else if (this.isMuted) return;
 
     const soundDef = this.soundDefinitions[soundId];
     if (!soundDef) return;
+
+    // Apply volume from settings
+    let volume = 1.0;
+    if (typeof settings !== 'undefined' && typeof settings.Volume !== 'undefined') {
+      volume = settings.Volume / 100;
+    }
 
     try {
       if (this.audioContext) {
@@ -78,7 +150,7 @@ class AudioManager {
     }
   }
 
-  createOscillator(frequency, duration, type = 'sine') {
+  createOscillator(frequency, duration, type = 'sine', maxVolOverride = 0.3) {
     if (!this.audioContext) return;
 
     const oscillator = this.audioContext.createOscillator();
@@ -90,9 +162,18 @@ class AudioManager {
     oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
     oscillator.type = type;
 
+    // Use dynamic volume
+    let volume = 1.0;
+    if (typeof settings !== 'undefined' && typeof settings.Volume !== 'undefined') {
+      volume = settings.Volume / 100;
+    }
+    
+    // Scale base volume by global volume
+    const baseVol = maxVolOverride * volume;
+
     gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
-    gainNode.gain.linearRampToValueAtTime(0.3, this.audioContext.currentTime + 0.01);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+    gainNode.gain.linearRampToValueAtTime(baseVol, this.audioContext.currentTime + 0.02); // Slower attack
+    gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + duration);
 
     oscillator.start(this.audioContext.currentTime);
     oscillator.stop(this.audioContext.currentTime + duration);
@@ -112,38 +193,7 @@ class AudioManager {
     };
     return freqMap[soundId] || 440;
   }
-
-  toggleMute() {
-    this.isMuted = !this.isMuted;
-    localStorage.setItem('tetris-muted', this.isMuted);
-
-    // Update UI if exists
-    const soundBtn = document.querySelector('.sound-toggle, #sound-toggle');
-    if (soundBtn) {
-      soundBtn.textContent = this.isMuted ? '🔇' : '🔊';
-    }
-  }
 }
 
 // Create global audio manager
 const audioManager = new AudioManager();
-
-// Add sound button if it doesn't exist
-document.addEventListener('DOMContentLoaded', () => {
-  let soundBtn = document.querySelector('.sound-toggle');
-
-  if (!soundBtn) {
-    // Add sound toggle to existing menu
-    const menu = document.querySelector('#content nav ul') || document.querySelector('nav ul');
-    if (menu) {
-      const li = document.createElement('li');
-      const btn = document.createElement('a');
-      btn.href = '#';
-      btn.className = 'sound-toggle';
-      btn.onclick = (e) => { e.preventDefault(); audioManager.toggleMute(); };
-      btn.textContent = audioManager.isMuted ? '🔇' : '🔊';
-      li.appendChild(btn);
-      menu.appendChild(li);
-    }
-  }
-});
