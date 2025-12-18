@@ -209,6 +209,12 @@ function saveSetting(s) {
     setting[s][settings[s]];
 
   localStorage['settings'] = JSON.stringify(settings);
+
+  // Apply theme if changed
+  if (s === 'Theme' && typeof LiveBackground !== 'undefined') {
+    var themeName = setting[s][settings[s]].toLowerCase();
+    LiveBackground.setTheme(themeName);
+  }
 }
 function loadLocalData() {
   if (localStorage['binds']) {

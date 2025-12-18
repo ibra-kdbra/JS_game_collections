@@ -185,9 +185,11 @@ var settings = {
   Ghost: 0,
   Grid: 0,
   Outline: 0,
+  Theme: 0,
 };
 
 var setting = {
+  Theme: ['Cyberpunk', 'Neon', 'Matrix', 'Retro'],
   DAS: range(0, 31),
   ARR: range(0, 11),
   Gravity: (function() {

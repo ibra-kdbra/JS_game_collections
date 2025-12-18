@@ -309,39 +309,7 @@
 
   <canvas id="sprite"></canvas>
 
-  <!-- Mobile Touch Controls -->
-  <div id="mobile-controls" class="mobile-controls">
-    <div class="mobile-controls-left">
-      <!-- D-pad for movement -->
-      <div class="d-pad">
-        <div class="d-pad-up" data-action="softDrop">
-          <i class="fas fa-chevron-up"></i>
-        </div>
-        <div class="d-pad-middle">
-          <div class="d-pad-left" data-action="moveLeft">
-            <i class="fas fa-chevron-left"></i>
-          </div>
-          <div class="d-pad-center">
-            <div class="rotate-btn" data-action="rotCW">
-              <i class="fas fa-redo"></i>
-            </div>
-          </div>
-          <div class="d-pad-right" data-action="moveRight">
-            <i class="fas fa-chevron-right"></i>
-          </div>
-        </div>
-        <div class="d-pad-down" data-action="hardDrop">
-          <i class="fas fa-chevron-down"></i>
-        </div>
-      </div>
-    </div>
-    <div class="mobile-controls-right">
-      <button class="mobile-btn hold-btn" data-action="hold">
-        <i class="fas fa-hand-paper"></i>
-        <br><small>HOLD</small>
-      </button>
-    </div>
-  </div>
+  <!-- Mobile Touch Controls (Handled via Gestures) -->
 
   <!-- Scripts -->
   <script src="./scripts/tetris.js"></script>

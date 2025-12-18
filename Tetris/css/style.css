@@ -41,7 +41,12 @@ body {
   background: #000;
   background-size: cover;
   color: #fff;
-  touch-action: manipulation; /* Prevent double-tap zoom on mobile */
+  touch-action: none; /* Prevent browser zooming/scrolling */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  overflow: hidden; /* Prevent scrollbars */
 }
 
 a {
@@ -126,9 +131,9 @@ nav a {
    Content Section
 =============================== */
 #content {
-  display: table;
-  margin: auto;
+  position: relative;
   background: rgba(0, 0, 0, 0.7);
+  display: block; /* Flex item */
 }
 
 /* ============================

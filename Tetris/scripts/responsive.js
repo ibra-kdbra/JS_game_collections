@@ -1,319 +1,320 @@
-// Responsive Design and Touch Controls System
-// Added to Tetris game for mobile/tablet compatibility
+// Responsive Design and Gesture Controls
+// Replaces button-based controls with direct touch gestures
+// Implements specific mobile layout requested
 
 'use strict';
 
-/**
- * Device Detection and Responsive Management
- */
 const Responsive = {
   isMobile: false,
-  isTablet: false,
-  isTouchDevice: false,
-  screenWidth: window.innerWidth,
-  screenHeight: window.innerHeight,
-  orientation: window.orientation || 0,
-
-  // Touch control mappings to keyboard flags
-  touchMappings: {
-    'moveLeft': flags.moveLeft,
-    'moveRight': flags.moveRight,
-    'softDrop': flags.moveDown,
-    'hardDrop': flags.hardDrop,
-    'hold': flags.holdPiece,
-    'rotCW': flags.rotRight,
-    'rotCCW': flags.rotLeft
-  },
-
-  // Initialize responsive system
+  lastTapTime: 0,
+  touchStartX: 0,
+  touchStartY: 0,
+  isDragging: false,
+  dragThreshold: 10,
+  softDropThreshold: 30,
+  
+  // Track accumulated movement for discrete steps
+  accumulatedX: 0,
+  
   init() {
     this.detectDevice();
-    this.setupTouchControls();
-    this.setupOrientationChange();
+    this.setupGestures();
+    window.addEventListener('resize', () => {
+      this.detectDevice();
+      this.resize();
+    });
     this.resize();
   },
 
-  // Detect device type
   detectDevice() {
-    const userAgent = navigator.userAgent.toLowerCase();
-    const isIOS = /iphone|ipad|ipod/.test(userAgent);
-    const isAndroid = /android/.test(userAgent);
-
-    // Touch capability detection
-    this.isTouchDevice = ('ontouchstart' in window) ||
-                        (navigator.maxTouchPoints > 0) ||
-                        (navigator.msMaxTouchPoints > 0);
-
-    // Screen size detection
-    this.screenWidth = window.innerWidth;
-    this.screenHeight = window.innerHeight;
-
-    // Device classification
-    if (isIOS || isAndroid) {
-      this.isMobile = this.screenWidth < 768;
-      this.isTablet = !this.isMobile;
+    this.isMobile = window.innerWidth < 768 || ('ontouchstart' in window);
+    if (this.isMobile) {
+      document.body.classList.add('touch-device');
     } else {
-      // Desktop detection
-      this.isMobile = false;
-      this.isTablet = false;
-    }
-
-    // Show/hide mobile controls based on device type
-    this.updateMobileControlsVisibility();
-  },
-
-  // Show/hide mobile touch controls
-  updateMobileControlsVisibility() {
-    const mobileControls = document.getElementById('mobile-controls');
-
-    if (this.isMobile && this.screenWidth <= 480) {
-      mobileControls.classList.add('show');
-    } else {
-      mobileControls.classList.remove('show');
+      document.body.classList.remove('touch-device');
     }
   },
 
-  // Setup touch event handlers
-  setupTouchControls() {
-    const mobileControls = document.getElementById('mobile-controls');
+  setupGestures() {
+    const target = document.body; // Capture all touches
 
-    // Handle D-pad and rotate button
-    const dPadElements = mobileControls.querySelectorAll('.d-pad-up, .d-pad-down, .d-pad-left, .d-pad-right, .rotate-btn');
-
-    dPadElements.forEach(element => {
-      // Touch start - press action
-      element.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        this.handleTouchStart(element.dataset.action || element.parentElement.dataset.action);
-        element.classList.add('active');
-      }, { passive: false });
-
-      // Touch end - release action
-      element.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        this.handleTouchEnd(element.dataset.action || element.parentElement.dataset.action);
-        element.classList.remove('active');
-      }, { passive: false });
-
-      // Mouse events for desktop testing
-      element.addEventListener('mousedown', (e) => {
-        this.handleTouchStart(element.dataset.action || element.parentElement.dataset.action);
-        element.classList.add('active');
-      });
-
-      element.addEventListener('mouseup', (e) => {
-        this.handleTouchEnd(element.dataset.action || element.parentElement.dataset.action);
-        element.classList.remove('active');
-      });
-    });
-
-    // Handle hold button
-    const holdBtn = mobileControls.querySelector('.hold-btn');
-    if (holdBtn) {
-      holdBtn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        this.handleTouchStart(holdBtn.dataset.action);
-        holdBtn.classList.add('active');
-      }, { passive: false });
-
-      holdBtn.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        this.handleTouchEnd(holdBtn.dataset.action);
-        holdBtn.classList.remove('active');
-      }, { passive: false });
-
-      // Mouse events for hold button
-      holdBtn.addEventListener('mousedown', (e) => {
-        this.handleTouchStart(holdBtn.dataset.action);
-        holdBtn.classList.add('active');
-      });
-
-      holdBtn.addEventListener('mouseup', (e) => {
-        this.handleTouchEnd(holdBtn.dataset.action);
-        holdBtn.classList.remove('active');
-      });
-    }
-
-    // Prevent default touch behaviors on game area
-    const gameArea = document.getElementById('b');
-    gameArea.addEventListener('touchstart', (e) => {
-      e.preventDefault();
+    target.addEventListener('touchstart', (e) => {
+      if (!this.isMobile) return;
+      // e.preventDefault(); // Prevent default only if necessary, might block other interactions if global
+      
+      const touch = e.changedTouches[0];
+      this.touchStartX = touch.clientX;
+      this.touchStartY = touch.clientY;
+      this.isDragging = false;
+      this.accumulatedX = 0;
     }, { passive: false });
-  },
 
-  // Handle touch start (button press)
-  handleTouchStart(action) {
-    if (this.touchMappings[action] !== undefined) {
-      keysDown |= this.touchMappings[action];
-    }
+    target.addEventListener('touchmove', (e) => {
+      if (!this.isMobile) return;
+      e.preventDefault(); // Prevent scrolling
 
-    // Special handling for continuous actions
-    switch (action) {
-      case 'softDrop':
-        // Soft drop needs to be held
-        break;
-    }
-  },
+      const touch = e.changedTouches[0];
+      const deltaX = touch.clientX - this.touchStartX;
+      const deltaY = touch.clientY - this.touchStartY;
 
-  // Handle touch end (button release)
-  handleTouchEnd(action) {
-    if (this.touchMappings[action] !== undefined) {
-      keysDown &= ~this.touchMappings[action];
-    }
-  },
+      // Vertical Swipe (Soft Drop)
+      if (deltaY > this.softDropThreshold) {
+        keysDown |= flags.moveDown;
+        this.isDragging = true;
+      } else {
+        keysDown &= ~flags.moveDown;
+      }
 
-  // Setup orientation change detection
-  setupOrientationChange() {
-    window.addEventListener('orientationchange', () => {
-      // Wait for orientation change to complete
-      setTimeout(() => {
-        this.screenWidth = window.innerWidth;
-        this.screenHeight = window.innerHeight;
-        this.orientation = window.orientation || 0;
-        this.detectDevice();
-        resize(); // Call existing resize function
-      }, 300);
-    });
-
-    // Fallback for browsers that don't support orientationchange
-    window.addEventListener('resize', () => {
-      // Only resize if it's not an orientation change
-      setTimeout(() => {
-        const newWidth = window.innerWidth;
-        const newHeight = window.innerHeight;
-
-        if (newWidth !== this.screenWidth || newHeight !== this.screenHeight) {
-          this.screenWidth = newWidth;
-          this.screenHeight = newHeight;
-          this.detectDevice();
-          resize(); // Call existing resize function
+      // Horizontal Drag
+      // We want to trigger moveLeft/Right based on distance moved
+      // Reset keys first
+      // keysDown &= ~(flags.moveLeft | flags.moveRight);
+      
+      // Calculate how many cells we should have moved
+      // cellSize is global from tetris.js
+      if (typeof cellSize !== 'undefined' && cellSize > 0) {
+        // Use a sensitivity factor, e.g., move 1 cell for every cellSize pixels dragged
+        const dist = deltaX - this.accumulatedX;
+        
+        if (Math.abs(dist) > cellSize) {
+          this.isDragging = true;
+          if (dist > 0) {
+             // Move Right
+             keysDown |= flags.moveRight;
+             keysDown &= ~flags.moveLeft;
+             // We need to pulse the key for the game loop to register a shift if DAS is active
+             // But tetris.js logic handles continuous hold for DAS.
+             // If we want 1-to-1 movement, we might need to manually call piece.move
+             // For now, let's emulate holding the key.
+          } else {
+             // Move Left
+             keysDown |= flags.moveLeft;
+             keysDown &= ~flags.moveRight;
+          }
+          this.accumulatedX += (dist > 0 ? cellSize : -cellSize);
+        } else if (Math.abs(dist) < cellSize * 0.5) {
+          // If stopped dragging, release keys
+           keysDown &= ~(flags.moveLeft | flags.moveRight);
         }
-      }, 300);
+      }
+
+    }, { passive: false });
+
+    target.addEventListener('touchend', (e) => {
+      if (!this.isMobile) return;
+      
+      const touch = e.changedTouches[0];
+      const deltaX = touch.clientX - this.touchStartX;
+      const deltaY = touch.clientY - this.touchStartY;
+      const totalDist = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
+
+      // Release movement keys
+      keysDown &= ~(flags.moveLeft | flags.moveRight | flags.moveDown);
+
+      if (!this.isDragging && totalDist < 10) {
+        // It was a tap
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - this.lastTapTime;
+        
+        if (tapLength < 300 && tapLength > 0) {
+          // Double Tap -> Hold
+          keysDown |= flags.holdPiece;
+          setTimeout(() => keysDown &= ~flags.holdPiece, 100);
+        } else {
+          // Single Tap -> Rotate
+          keysDown |= flags.rotRight;
+          setTimeout(() => keysDown &= ~flags.rotRight, 100);
+        }
+        this.lastTapTime = currentTime;
+      }
     });
   },
 
-  // Enhanced resize function that considers device type
   resize() {
-    const a = document.getElementById('a');
-    const b = document.getElementById('b');
-    const c = document.getElementById('c');
-    const content = document.getElementById('content');
-    const stats = document.getElementById('stats');
-    const h3s = document.getElementsByTagName('h3');
+    // Standard resize logic for PC (defer to original if not mobile)
+    // But since we are overriding, we must handle both or call original for PC.
+    // The original resize() in tetris.js is good for PC, but we want to change mobile.
+    
+    if (!this.isMobile) {
+      // Restore PC styles if needed, or just let the original resize function handle it if we can call it?
+      // tetris.js calls Responsive.resize() if it exists.
+      // So we must implement PC resize here too or copy it.
+      // Let's copy/adapt the PC logic and add Mobile logic.
+      
+      // PC Logic (Centered)
+      const content = document.getElementById('content');
+      const b = document.getElementById('b');
+      const a = document.getElementById('a');
+      const c = document.getElementById('c');
+      const stats = document.getElementById('stats');
+      
+      // Reset specific mobile styles
+      content.style.padding = '';
+      content.style.height = '';
+      content.style.width = '';
+      
+      b.style.position = '';
+      b.style.bottom = '';
+      b.style.left = '';
+      b.style.transform = '';
+      
+      a.style.position = '';
+      a.style.top = '';
+      a.style.left = '';
+      
+      c.style.position = '';
+      c.style.top = '';
+      c.style.right = '';
+      
+      stats.style.position = 'absolute';
+      stats.style.top = '';
+      stats.style.left = '';
+      stats.style.bottom = ''; // Will be set by PC logic
+      
+      // Calculate PC dimensions (Center logic is now handled by CSS Flexbox on body)
+      var screenHeight = window.innerHeight - 34;
+      var screenWidth = ~~(screenHeight * 1.024);
+      if (screenWidth > window.innerWidth)
+        screenHeight = ~~(window.innerWidth / 1.024);
 
-    const screenHeight = window.innerHeight - 34;
-    let screenWidth = window.innerWidth;
+      if (settings.Size === 1 && screenHeight > 602) cellSize = 15;
+      else if (settings.Size === 2 && screenHeight > 602) cellSize = 30;
+      else if (settings.Size === 3 && screenHeight > 902) cellSize = 45;
+      else cellSize = Math.max(~~(screenHeight / 20), 10);
 
-    // Responsive cellSize calculation based on device type
-    if (this.isMobile && screenWidth <= 480) {
-      // Mobile: prioritize width for touch controls
-      const availableHeight = this.screenHeight - 250; // Leave room for touch controls
-      const maxWidth = this.screenWidth - 20; // Padding
-      const aspectRatio = 10/20; // Standard tetris ratio (10 wide, 20 tall)
+      // We don't need padding for centering anymore due to flexbox, 
+      // but we need to set canvas sizes.
+      
+      // Set sizes
+      stackCanvas.width = activeCanvas.width = bgStackCanvas.width = cellSize * 10;
+      stackCanvas.height = activeCanvas.height = bgStackCanvas.height = cellSize * 20;
+      b.style.width = stackCanvas.width + 'px';
+      b.style.height = stackCanvas.height + 'px';
 
-      cellSize = Math.min(
-        Math.floor(maxWidth / 10), // Fit 10 columns in width
-        Math.floor(availableHeight / 20), // Fit 20 rows in available height
-        25 // Don't let pieces get too big on mobile
-      );
-    } else if (this.isTablet || screenWidth <= 1023) {
-      // Tablet: balance width and height
-      const maxWidth = Math.min(this.screenWidth * 0.6, 360); // 60% of width or 360px max
-      cellSize = Math.min(
-        Math.floor(maxWidth / 10),
-        Math.floor(screenHeight / 20),
-        30
-      );
-    } else {
-      // Desktop: original calculation
-      cellSize = Math.max(Math.floor((screenHeight) / 20), 10);
-    }
+      holdCanvas.width = cellSize * 4;
+      holdCanvas.height = cellSize * 2;
+      a.style.width = holdCanvas.width + 'px';
+      a.style.height = holdCanvas.height + 'px';
 
-    // Ensure minimum cellSize for gameplay
-    cellSize = Math.max(cellSize, this.isMobile ? 12 : 10);
-
-    // Calculate padding based on device type
-    let verticalPadding;
-    if (this.isMobile && screenWidth <= 480) {
-      verticalPadding = '10px';
-      content.style.padding = `10px 5px`;
-      content.style.minHeight = 'calc(100vh - 250px)'; // Account for touch controls
-    } else {
-      verticalPadding = `0 ${(this.screenHeight - (cellSize * 20 + 2)) / 2}px`;
-      content.style.padding = verticalPadding;
-      content.style.minHeight = 'auto';
-    }
-
-    // Size canvases
-    stackCanvas.width = activeCanvas.width = bgStackCanvas.width = cellSize * 10;
-    stackCanvas.height = activeCanvas.height = bgStackCanvas.height = cellSize * 20;
-
-    holdCanvas.width = cellSize * 4;
-    holdCanvas.height = cellSize * 2;
-
-    previewCanvas.width = cellSize * 4;
-    previewCanvas.height = stackCanvas.height;
-
-    // Size containers
-    b.style.width = stackCanvas.width + 'px';
-    b.style.height = stackCanvas.height + 'px';
-
-    a.style.width = holdCanvas.width + 'px';
-    a.style.height = holdCanvas.height + 'px';
-
-    c.style.width = previewCanvas.width + 'px';
-    c.style.height = b.style.height;
-
-    // Scale text
-    if (this.isMobile) {
-      msg.style.lineHeight = (stackCanvas.height * 0.8) + 'px';
-      msg.style.fontSize = Math.floor(stackCanvas.width / 8) + 'px';
-      stats.style.fontSize = Math.floor(stackCanvas.width / 14) + 'px';
-
-      for (let i = 0; i < h3s.length; i++) {
-        h3s[i].style.lineHeight = (a.offsetHeight * 0.8) + 'px';
-        h3s[i].style.fontSize = Math.max(stats.style.fontSize, '10px');
-      }
-    } else {
+      previewCanvas.width = cellSize * 4;
+      previewCanvas.height = stackCanvas.height;
+      c.style.width = previewCanvas.width + 'px';
+      c.style.height = b.style.height;
+      
+      // Font sizes
       msg.style.lineHeight = b.style.height;
-      msg.style.fontSize = Math.floor(stackCanvas.width / 6) + 'px';
-      stats.style.fontSize = Math.floor(stackCanvas.width / 11) + 'px';
-      document.documentElement.style.fontSize = Math.floor(stackCanvas.width / 16) + 'px';
-
-      for (let i = 0; i < h3s.length; i++) {
-        h3s[i].style.lineHeight = a.style.height;
-        h3s[i].style.fontSize = stats.style.fontSize;
-      }
+      msg.style.fontSize = ~~(stackCanvas.width / 6) + 'px';
+      stats.style.fontSize = ~~(stackCanvas.width / 11) + 'px';
+      document.documentElement.style.fontSize = ~~(stackCanvas.width / 16) + 'px';
+      
+      stats.style.width = a.style.width;
+      // Position stats at bottom left of content if standard layout
+      // Original logic used padding to position stats. 
+      // Let's stick to standard flow: Left col, Center col, Right col.
+      // CSS floats handle this.
+      
+    } else {
+      // MOBILE LOGIC
+      const content = document.getElementById('content');
+      const b = document.getElementById('b'); // Game
+      const a = document.getElementById('a'); // Hold
+      const c = document.getElementById('c'); // Next
+      const stats = document.getElementById('stats');
+      
+      // Maximize game area at bottom
+      // Available height
+      const h = window.innerHeight;
+      const w = window.innerWidth;
+      
+      // Calculate cellSize to fit height (leaving space for top panels) or width
+      // We want panels at top. Let's say top 20% or fixed pixels.
+      // Hold panel is cellSize*4 wide, cellSize*2 high.
+      // Game is cellSize*10 wide, cellSize*20 high.
+      
+      // Try to fit game in bottom 75% of screen
+      const gameHeightTarget = h * 0.75;
+      const gameWidthTarget = w * 0.95;
+      
+      cellSize = Math.min(
+        Math.floor(gameHeightTarget / 20),
+        Math.floor(gameWidthTarget / 10)
+      );
+      
+      // Update Canvases
+      stackCanvas.width = activeCanvas.width = bgStackCanvas.width = cellSize * 10;
+      stackCanvas.height = activeCanvas.height = bgStackCanvas.height = cellSize * 20;
+      
+      holdCanvas.width = cellSize * 4;
+      holdCanvas.height = cellSize * 2;
+      
+      previewCanvas.width = cellSize * 4;
+      previewCanvas.height = cellSize * 4; // Show fewer next pieces to save space? Or full? 
+      // User said "minified on the right". Let's keep width but maybe shorter height if needed?
+      // Original preview height is stackCanvas.height.
+      // Let's make it smaller for mobile top bar.
+      previewCanvas.height = cellSize * 10; // 3-4 pieces
+      
+      // Style Game Box (Bottom Center)
+      b.style.width = stackCanvas.width + 'px';
+      b.style.height = stackCanvas.height + 'px';
+      b.style.position = 'fixed';
+      b.style.bottom = '10px';
+      b.style.left = '50%';
+      b.style.transform = 'translateX(-50%)';
+      b.style.float = 'none';
+      b.style.border = '1px solid rgba(255,255,255,0.5)';
+      
+      // Style Hold Panel (Top Left)
+      a.style.width = holdCanvas.width + 'px';
+      a.style.height = holdCanvas.height + 'px';
+      a.style.position = 'fixed';
+      a.style.top = '10px';
+      a.style.left = '10px';
+      a.style.float = 'none';
+      
+      // Style Next Panel (Top Right)
+      c.style.width = previewCanvas.width + 'px';
+      c.style.height = previewCanvas.height + 'px';
+      c.style.position = 'fixed';
+      c.style.top = '10px';
+      c.style.right = '10px';
+      c.style.float = 'none';
+      
+      // Style Stats (Below Hold)
+      stats.style.position = 'fixed';
+      stats.style.top = (10 + holdCanvas.height + 10) + 'px'; // 10px padding + hold height + gap
+      stats.style.left = '10px';
+      stats.style.width = holdCanvas.width + 'px';
+      stats.style.fontSize = (cellSize * 0.8) + 'px';
+      stats.style.display = 'block';
+      
+      // Content container adjustment
+      content.style.width = '100%';
+      content.style.height = '100%';
+      content.style.padding = '0';
+      content.style.background = 'transparent'; // Remove background on mobile to see wallpaper
+      content.style.display = 'block';
+      
+      // Adjust font sizes
+      msg.style.lineHeight = b.style.height;
+      msg.style.fontSize = (cellSize * 2) + 'px';
     }
-
-    // Position stats
-    if (this.isMobile) {
-      stats.style.position = 'static';
-      stats.style.margin = '10px auto';
-      stats.style.width = Math.min(stackCanvas.width * 0.8, 300) + 'px';
-    }
-
-    // Redraw game elements
+    
+    // Redraw
     makeSprite();
-
     if (settings.Grid === 1) bg(bgStackCtx);
-
     if (gameState === 0) {
       piece.drawGhost();
       piece.draw();
       stack.draw();
       preview.draw();
-      if (hold.piece !== void 0) {
-        hold.draw();
-      }
+      if (hold.piece !== void 0) hold.draw();
     }
   }
 };
 
-// Initialize responsive system when page loads
 document.addEventListener('DOMContentLoaded', () => {
   Responsive.init();
 });
 
-// Make Responsive available globally
 window.Responsive = Responsive;
