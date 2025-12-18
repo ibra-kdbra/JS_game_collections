@@ -132,15 +132,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Console welcome message
 //   console.log(
-//     "%c🎮 Professional Tetris Enhanced 🎮",
+//     "%c🎮 Professional Tetris Enhanced ",
 //     "font-size: 20px; font-weight: bold; color: #00ffff; text-shadow: 0 0 10px #00ffff;"
 //   );
 //   console.log("%cFeatures:", "font-weight: bold; color: #ff00ff;");
-//   console.log("✨ Responsive design with touch controls");
-//   console.log("🎨 Live particle backgrounds with themes");
-//   console.log("📱 Mobile-optimized controls");
-//   console.log("🎯 Enhanced visual effects");
-//   console.log("⌨️  Press T to cycle themes, P for performance");
+//   console.log(" Responsive design with touch controls");
+//   console.log(" Live particle backgrounds with themes");
+//   console.log(" Mobile-optimized controls");
+//   console.log(" Enhanced visual effects");
+//   console.log("⌨  Press T to cycle themes, P for performance");
 //   console.log(
 //     "%cEnjoy the enhanced Tetris experience!",
 //     "font-style: italic; color: #ffff00;"
