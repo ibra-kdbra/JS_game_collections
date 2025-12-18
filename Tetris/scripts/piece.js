@@ -264,6 +264,11 @@ Piece.prototype.update = function() {
     landed = true;
     this.y = Math.floor(this.y);
     if (this.lockDelay >= settings['Lock Delay']) {
+      // Audio: Play place/drop sound
+      if (typeof audioManager !== 'undefined') {
+        audioManager.playSound('place');
+      }
+
       stack.addPiece(this.tetro);
       this.new(preview.next());
     } else {

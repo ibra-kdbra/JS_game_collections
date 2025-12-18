@@ -1,6 +1,5 @@
 // Responsive Design and Gesture Controls
 // Replaces button-based controls with direct touch gestures
-// Implements specific mobile layout requested
 
 'use strict';
 
@@ -231,8 +230,8 @@ const Responsive = {
       // Hold panel is cellSize*4 wide, cellSize*2 high.
       // Game is cellSize*10 wide, cellSize*20 high.
       
-      // Try to fit game in bottom 75% of screen
-      const gameHeightTarget = h * 0.75;
+      // Try to fit game in bottom 70% of screen to ensure visibility
+      const gameHeightTarget = h * 0.70;
       const gameWidthTarget = w * 0.95;
       
       cellSize = Math.min(
@@ -264,6 +263,9 @@ const Responsive = {
       b.style.float = 'none';
       b.style.border = '1px solid rgba(255,255,255,0.5)';
       
+      // Minify top panels
+      const scale = 0.8;
+
       // Style Hold Panel (Top Left)
       a.style.width = holdCanvas.width + 'px';
       a.style.height = holdCanvas.height + 'px';
@@ -271,6 +273,8 @@ const Responsive = {
       a.style.top = '10px';
       a.style.left = '10px';
       a.style.float = 'none';
+      a.style.transform = `scale(${scale})`;
+      a.style.transformOrigin = 'top left';
       
       // Style Next Panel (Top Right)
       c.style.width = previewCanvas.width + 'px';
@@ -279,14 +283,18 @@ const Responsive = {
       c.style.top = '10px';
       c.style.right = '10px';
       c.style.float = 'none';
+      c.style.transform = `scale(${scale})`;
+      c.style.transformOrigin = 'top right';
       
       // Style Stats (Below Hold)
       stats.style.position = 'fixed';
-      stats.style.top = (10 + holdCanvas.height + 10) + 'px'; // 10px padding + hold height + gap
+      // Calculate top position based on scaled hold panel
+      stats.style.top = (10 + (holdCanvas.height * scale) + 5) + 'px'; 
       stats.style.left = '10px';
-      stats.style.width = holdCanvas.width + 'px';
-      stats.style.fontSize = (cellSize * 0.8) + 'px';
+      stats.style.width = (holdCanvas.width * scale) + 'px';
+      stats.style.fontSize = (cellSize * 0.7) + 'px';
       stats.style.display = 'block';
+      stats.style.transform = 'none'; // Reset any transform
       
       // Content container adjustment
       content.style.width = '100%';
