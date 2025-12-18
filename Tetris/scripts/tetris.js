@@ -390,6 +390,11 @@ function init(gt) {
   pauseTime = 0;
   paused = false;
 
+  // Start music
+  if (typeof audioManager !== 'undefined') {
+    audioManager.startMusic();
+  }
+
   rng.seed = replayKeys.seed;
   toGreyRow = 21;
   frame = 0;
@@ -484,6 +489,9 @@ function pause() {
     startPauseTime = Date.now();
     msg.innerHTML = 'Paused';
     menu(4);
+    if (typeof audioManager !== 'undefined') {
+      audioManager.stopMusic();
+    }
   }
 }
 
@@ -492,6 +500,9 @@ function unpause() {
   pauseTime += Date.now() - startPauseTime;
   msg.innerHTML = '';
   menu();
+  if (typeof audioManager !== 'undefined') {
+    audioManager.startMusic();
+  }
 }
 
 /**
