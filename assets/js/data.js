@@ -106,6 +106,13 @@ export const games = [
     tags: ["#PC"]
   },
   {
+    link: "./Souls-Bumper/index.html",
+    imgSrc: "./Souls-Bumper/assets/captured.png",
+    title: "Souls Bumper",
+    description: "Souls Bumper is a platformer where you navigate through challenging levels.",
+    tags: ["#PC"]
+  },
+  {
     link: "./PacMan/index.html",
     imgSrc: "./PacMan/imgs/color03.png",
     title: "PacMan",
