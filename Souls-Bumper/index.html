@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Creepster&display=swap" rel="stylesheet">
+  <link href="../assets/icons/soul.svg" rel="icon" type="image/svg+xml" />
+  <link rel="stylesheet" href="./css/style.css?v=6" />
+</head>
+<body onload="startGame()">
+  <div id="ui-menu" class="creepy-ui">
+    <div class="menu-section">
+      <div class="header-accent">CONTROLS</div>
+      <p>[A][D] or [←][→] Left / Right</p>
+      <p>[W] [Space] [↑] Jump</p>
+      <p>[E] Rewind Ghost</p>
+    </div>
+    <div class="menu-section">
+      <div class="header-accent">CREDITS</div>
+      <p>Code: @ibra-kdbra</p>
+      <p>Music: @EmiSus</p>
+    </div>
+  </div>
+
+  <div id="intro-prompt" class="intro-overlay">
+    <div class="pulse-text">PRESS ANY KEY TO BEGIN</div>
+  </div>
+
+  <div id="pause-menu" class="pause-overlay hidden">
+    <div class="pause-content creepy-ui">
+      <h2>SOUL PAUSED</h2>
+      <button id="continue-btn">CONTINUE</button>
+    </div>
+  </div>
+
+  <a href="https://github.com/ibra-kdbra/JS_game_collections/tree/main/Souls-Bumper" target="_blank" class="github-link" title="View Source on GitHub">
+    <img src="../assets/icons/github-icon.svg" width="32" height="32" alt="GitHub">
+  </a>
+  <script type="application/javascript" src="./js/audio.js"></script>
+  <script type="application/javascript" src="./js/camera.js"></script>
+  <script type="application/javascript" src="./js/particle.js"></script>
+  <script type="application/javascript" src="./js/keys.js"></script>
+  <script type="application/javascript" src="./js/sound.js"></script>
+  <script type="application/javascript" src="./js/entity.js"></script>
+  <script type="application/javascript" src="./js/hero.js"></script>
+  <script type="application/javascript" src="./js/enums.js"></script>
+  <script type="application/javascript" src="./js/tile.js"></script>
+  <script type="application/javascript" src="./js/utility.js"></script>
+  <script type="application/javascript" src="./js/level.js"></script>
+  <script type="application/javascript" src="./js/cart.js"></script>
+  <script type="application/javascript" src="./js/game.js"></script>
+</body>
+</html>
