@@ -63,7 +63,7 @@ html {
 }
 
 .creepy-ui {
-  font-family: 'Creepster', cursive;
+  font-family: 'VT323', monospace;
   background-color: rgba(0, 0, 0, 0.8);
   border: 2px solid #990099;
   color: white;
@@ -76,17 +76,18 @@ html {
   right: 0;
   padding: 15px;
   z-index: 900;
-  font-size: 18px;
-  min-width: 260px;
+  font-size: 24px;
+  min-width: 280px;
 }
 
 .header-accent {
   background: linear-gradient(90deg, #990099, transparent);
   padding: 5px 15px;
   color: #05f2db;
-  font-size: 20px;
+  font-size: 28px;
   margin: 10px -15px 10px 0;
   border-left: 4px solid #05f2db;
+  letter-spacing: 1px;
 }
 
 #ui-menu p {
@@ -108,11 +109,12 @@ html {
 }
 
 .pulse-text {
-  font-family: 'Creepster', cursive;
-  font-size: 36px;
+  font-family: 'Pixelify Sans', sans-serif;
+  font-size: 42px;
   color: white;
   text-shadow: 0 0 10px #990099;
   animation: pulse 1.5s infinite ease-in-out;
+  letter-spacing: 2px;
 }
 
 @keyframes pulse {
@@ -136,12 +138,13 @@ html {
 .pause-content {
   padding: 30px;
   text-align: center;
-  min-width: 250px;
+  min-width: 300px;
 }
 
 .pause-content h2 {
   margin-top: 0;
-  font-size: 40px;
+  font-size: 56px;
+  color: #05f2db;
 }
 
 #continue-btn {
@@ -149,8 +152,8 @@ html {
   border: none;
   color: white;
   padding: 10px 25px;
-  font-family: 'Creepster', cursive;
-  font-size: 24px;
+  font-family: 'VT323', monospace;
+  font-size: 36px;
   cursor: pointer;
   transition: background-color 0.3s;
   margin-top: 10px;

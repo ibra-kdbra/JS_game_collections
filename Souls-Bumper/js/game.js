@@ -148,7 +148,7 @@ function updateGameArea() {
     drawBox(ctx,0.1,"#"+COL1,0,0,800,600)
 
     z=TIME/1600;
-    writeTxt(ctx, 1, "60px 'Creepster'","WHITE","Souls Bumper", 400, 150, "center");
+    writeTxt(ctx, 1, "80px 'VT323'","WHITE","SOULS BUMPER", 400, 150, "center");
     
     document.getElementById("ui-menu").classList.toggle("hidden", false);
     document.getElementById("pause-menu").classList.toggle("hidden", true);
@@ -181,12 +181,12 @@ function updateGameArea() {
     mg.clear();
     cart.update(delta / 1e3, TIME);
     drawBox(ctx,0.1,"#"+COL1,0,0,800,600)
-    let font = "18px 'Creepster'";
+    let font = "32px 'VT323'";
     writeTxt(ctx, 1, font,"WHITE","[M] Music: " + !pause, 650, 20);
-    writeTxt(ctx, 1, font,"WHITE","[T] Tips: " + (cart.tips), 650, 40);
-    writeTxt(ctx, 1, font,"WHITE","[R] Reset Level", 650, 60);
-    writeTxt(ctx, 1, font,"WHITE","Lives: " + cart.hero.hp, 10, 40);
-    writeTxt(ctx, 1, font,"RED","Deaths: " + cart.hero.deaths, 10, 60);
+    writeTxt(ctx, 1, font,"WHITE","[T] Tips: " + (cart.tips), 650, 45);
+    writeTxt(ctx, 1, font,"WHITE","[R] Reset Level", 650, 70);
+    writeTxt(ctx, 1, font,"WHITE","Lives: " + cart.hero.hp, 10, 45);
+    writeTxt(ctx, 1, font,"RED","Deaths: " + cart.hero.deaths, 10, 70);
     writeTxt(ctx, 1, font,"WHITE","Level: " + (cart.hero.e.curLevel+1), 10, 20);
 
     let lvl=cart.hero.e.curLevel;
@@ -207,8 +207,8 @@ function updateGameArea() {
       } else if(lvl==5){
         writeTxt(ctx, 1, font,"WHITE","Check points allow you to reclaim your soul and move on!", 400, 100, "center");
       } else if(lvl==10){
-        font = "40px 'Creepster'";
-        writeTxt(ctx, 1, font,"WHITE","Souls Bumper Completed!", 400, 100, "center");
+        font = "80px 'VT323'";
+        writeTxt(ctx, 1, font,"WHITE","SOULS BUMPER COMPLETED!", 400, 100, "center");
       }
     }
 
