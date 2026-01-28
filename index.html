@@ -118,29 +118,29 @@
         <p class="section-subtitle">Click any game to start playing instantly</p>
       </div>
       
-      <!-- Search -->
-      <div class="search-container">
-        <i class="fas fa-search search-icon"></i>
-        <input 
-          type="text" 
-          class="search-input" 
-          id="search-input" 
-          placeholder="Search games..."
-          autocomplete="off"
-        />
-      </div>
-      
-      <!-- Filter Buttons -->
-      <div class="filter-section">
-        <button class="filter-btn active" data-filter="all">
-          <i class="fas fa-border-all"></i> All
-        </button>
-        <button class="filter-btn" data-filter="pc">
-          <i class="fas fa-desktop"></i> PC
-        </button>
-        <button class="filter-btn" data-filter="mobile">
-          <i class="fas fa-mobile-alt"></i> Mobile
-        </button>
+      <!-- Search & Filter Section -->
+      <div class="search-filter-container">
+        <div class="search-wrapper">
+          <i class="fas fa-search search-icon"></i>
+          <input 
+            type="text" 
+            id="search-input" 
+            placeholder="Search games..."
+            autocomplete="off"
+          />
+        </div>
+        
+        <div class="filter-section">
+          <button class="filter-btn active" data-filter="all">
+            <i class="fas fa-border-all"></i> All
+          </button>
+          <button class="filter-btn" data-filter="pc">
+            <i class="fas fa-desktop"></i> PC
+          </button>
+          <button class="filter-btn" data-filter="mobile">
+            <i class="fas fa-mobile-alt"></i> Mobile
+          </button>
+        </div>
       </div>
       
       <!-- Game Cards Grid -->
@@ -151,18 +151,16 @@
     
     <!-- Footer -->
     <footer class="footer">
-      <p>MIT License &copy; 2024 JS Game Lab</p>
-      <div class="footer-links">
-        <a href="https://github.com/ibra-kdbra/JS_game_collections" target="_blank">GitHub</a>
-        <a href="#artlab">Art Lab</a>
-      </div>
+      <p class="footer-text">
+        Made by <a class="footer-link" href="https://github.com/ibra-kdbra" target="_blank">ibra-kdbra</a>
+      </p>
     </footer>
     
     <!-- Scripts -->
     <link rel="stylesheet" href="./assets/css/feedback.css">
     <script type="module" src="./assets/js/dropEffect.js"></script>
     <script type="module" src="./assets/js/lazyLoad.js"></script>
-    <script type="module" src="./assets/js/main.js"></script>
+    <script type="module" src="./assets/js/script.js"></script>
     
     <!-- Initialize Feedback (Modal Mode) -->
     <script type="module">
