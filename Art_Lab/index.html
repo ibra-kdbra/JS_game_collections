@@ -3,52 +3,105 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Art Lab</title>
+    <title>Art Lab | Creative Code Experiments</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Where mathematics meets creativity. Explore mesmerizing flow fields, particle systems, and generative art experiments built with JavaScript and Canvas." />
+    <meta name="keywords" content="generative art, creative coding, flow fields, particle systems, JavaScript art, canvas experiments" />
+    <meta name="author" content="ibra-kdbra" />
+    
+    <!-- Icons -->
     <link href="../assets/icons/video_game.ico" rel="icon" type="image/x-icon" />
-    <link href="../assets/icons//video_game.svg" rel="icon" type="image/svg+xml" />
-    <link href="../assets/icons//video_game.png" rel="icon" type="image/png" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link href="../assets/icons/video_game.svg" rel="icon" type="image/svg+xml" />
+    <link href="../assets/icons/video_game.png" rel="icon" type="image/png" />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="../assets/css/artlab.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <link rel="stylesheet" href="../assets/css/flowStyle.css">
-    <link rel="stylesheet" href="../assets/css/style.css">
+    
+    <!-- GSAP for animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
   </head>
-  <body class="bg-black text-white font-sans" id="flow-body">
-    <div class="animated-bg"></div>
-    <div id="video-player-container"></div>    
-
-    <div class="container mx-auto p-8 flex flex-col items-center justify-center min-h-screen">
-      <header class="flex items-center justify-between w-full max-w-4xl mb-8">
-        <h1 class="text-4xl md:text-5xl font-bold text-purple-400 mr-2">Art Lab</h1>
-        <a class="github-link" href="https://github.com/ibra-kdbra/JS_game_collections/tree/main/Art_Lab" target="_blank" rel="noopener noreferrer">
-        <img src="../assets/icons/github-icon.svg" alt="GitHub Repository" aria-hidden="true">
-        </a>
-      </header>
-
-      <p class="text-lg text-gray-300 mb-10 text-center">
-        Math with Art create wonders, no one can stop yourself from creating new things.
+  <body id="artlab-body">
+    <!-- Animated Background -->
+    <div class="artlab-bg"></div>
+    <!-- Three.js particle effect loads automatically -->
+    
+    <!-- Minimal Corner Navigation (no logo) -->
+    <div class="corner-nav">
+      <a href="../index.html" class="corner-back">
+        <i class="fas fa-arrow-left"></i>
+      </a>
+      <a href="https://github.com/ibra-kdbra/JS_game_collections/tree/main/Art_Lab" class="corner-link" target="_blank" aria-label="Source">
+        <i class="fab fa-github"></i>
+      </a>
+    </div>
+    
+    <!-- Hero Section -->
+    <section class="artlab-hero">
+      <div class="artlab-hero-badge">
+        <i class="fas fa-flask"></i>
+        Creative Coding Lab
+      </div>
+      
+      <h1 class="artlab-hero-title">Art Lab</h1>
+      
+      <p class="artlab-hero-subtitle">
+        Where <span style="color: var(--artlab-primary);">mathematics</span> meets 
+        <span style="color: var(--artlab-secondary);">creativity</span>. 
+        Explore mesmerizing flow fields, particle systems, and generative art experiments 
+        that push the boundaries of what's possible with code.
       </p>
-
-      <div class="scroll-container w-full max-w-4xl relative">
-        <button class="scroll-button left">
-          <i class="fas fa-chevron-left"></i>
-        </button>
-        <button class="scroll-button right">
-          <i class="fas fa-chevron-right"></i>
-        </button>
-        <div class ="horizontal-scroll" id="game-cards-container">
-          <!-- Cards will be inserted dynamically here -->
+      
+      <div class="artlab-hero-cta">
+        <a href="#experiments" class="btn btn-artlab">
+          <i class="fas fa-eye"></i>
+          View Experiments
+        </a>
+      </div>
+    </section>
+    
+    <!-- Experiments Carousel Section -->
+    <section class="carousel-section" id="experiments">
+      <div class="carousel-container">
+        <div class="carousel-track" id="carousel-track">
+          <!-- Experiment cards will be inserted dynamically -->
         </div>
         
+        <div class="carousel-nav">
+          <button class="carousel-btn" id="carousel-prev">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <button class="carousel-btn" id="carousel-next">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
       </div>
-
-      <footer class="mt-10 text-gray-500 text-sm">
-        Made by <a class="text-purple-400" href="https://github.com/ibra-kdbra">ibra-kdbra</a>
-      </footer>
-    </div>
-
-    <script type="module" src="../assets/js/script.js"></script>
+    </section>
+    
+    <!-- Footer -->
+    <footer class="artlab-footer">
+      <p class="artlab-footer-text">
+        Made by <a class="artlab-footer-link" href="https://github.com/ibra-kdbra" target="_blank">ibra-kdbra</a>
+      </p>
+    </footer>
+    
+    <!-- Scripts -->
+    <link rel="stylesheet" href="../assets/css/feedback.css">
+    <script type="module" src="../assets/js/dropEffect.js"></script>
+    <script type="module" src="../assets/js/lazyLoad.js"></script>
+    <script src="../assets/js/artlab.js" defer></script>
+    
+    <!-- Initialize Feedback (Modal Mode) -->
+    <script type="module">
+      import { FeedbackUI } from '../assets/js/feedback/FeedbackUI.js';
+      // Only initialize, it auto-attaches button to navbar
+      new FeedbackUI('art_lab_hub');
+    </script>
   </body>
 </html>
-
