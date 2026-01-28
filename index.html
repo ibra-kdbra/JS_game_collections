@@ -3,46 +3,172 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>JS Lab</title>
+    <title>JS Game Lab | Indie Game Collection</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Explore a curated collection of JavaScript and HTML5 games. From puzzles to arcade classics, all built with vanilla JavaScript and HTML5 Canvas." />
+    <meta name="keywords" content="JavaScript games, HTML5 games, indie games, browser games, Canvas games, web games" />
+    <meta name="author" content="ibra-kdbra" />
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="JS Game Lab | Indie Game Collection" />
+    <meta property="og:description" content="A stunning collection of browser-based games built with vanilla JavaScript" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="./assets/imgs/captured.png" />
+    
     <!-- Icons -->
     <link href="./assets/icons/video_game.ico" rel="icon" type="image/x-icon" />
-    <link href="./assets/icons//video_game.svg" rel="icon" type="image/svg+xml" />
-    <link href="./assets/icons//video_game.png" rel="icon" type="image/png" />
-    <link rel="stylesheet" href="./assets/css/style.css" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-  </head>
-  <body class="text-white font-sans" id="main">
-    <div id="video-player-container"></div>
+    <link href="./assets/icons/video_game.svg" rel="icon" type="image/svg+xml" />
+    <link href="./assets/icons/video_game.png" rel="icon" type="image/png" />
     
-    <div class="container mx-auto p-8 flex flex-col items-center justify-center">
-      <header class="flex items-center justify-between w-full max-w-4xl mt-16 sm:mb-8">
-        <h1 class="text-4xl md:text-5xl font-bold text-purple-400 mr-2">
-          Game Lab
-        </h1>
-      </header>
-      
-      <!-- Description -->
-      <p class="text-lg text-gray-300 mb-10 text-center">
-        Explore my collection of JavaScript and HTML games. Click any game to start playing!
-      </p>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="./assets/css/cyberpunk.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <!-- GSAP for animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
+  </head>
+  <body id="main">
+    <!-- Animated Background -->
+    <div class="cyber-bg"></div>
+    <!-- Three.js particle effect container -->
+    
+    <!-- Minimal Corner Navigation (GitHub only) -->
+    <div class="corner-nav">
+      <div></div>
+      <a href="https://github.com/ibra-kdbra/JS_game_collections" class="corner-link" target="_blank" aria-label="GitHub">
+        <i class="fab fa-github"></i>
+      </a>
+    </div>
 
-      <!-- Game Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-4xl" id="game-cards-container">
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <i class="fas fa-gamepad"></i>
+          <span>Open Source Game Collection</span>
+        </div>
+        
+        <h1 class="hero-title">Game Lab</h1>
+        
+        <p class="hero-subtitle">
+          Explore a curated collection of <span class="text-glow">JavaScript</span> and 
+          <span class="text-glow-magenta">HTML5</span> games. From classic puzzles to 
+          creative experiments, all built with vanilla code.
+        </p>
+        
+        <div class="hero-stats">
+          <div class="stat-item">
+            <span class="stat-value" id="game-count">15+</span>
+            <span class="stat-label">Games</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value">7</span>
+            <span class="stat-label">Art Experiments</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value">100%</span>
+            <span class="stat-label">Vanilla JS</span>
+          </div>
+        </div>
+        
+        <div class="hero-cta">
+          <a href="#games" class="btn btn-primary">
+            <i class="fas fa-play"></i>
+            Start Playing
+          </a>
+          <a href="#artlab" class="btn btn-secondary">
+            <i class="fas fa-flask"></i>
+            Explore Art Lab
+          </a>
+        </div>
+      </div>
+      
+      <div class="scroll-indicator">
+        <span>Scroll to explore</span>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+        </svg>
+      </div>
+    </section>
+    
+    <!-- Art Lab Feature Section -->
+    <section class="section" id="artlab">
+      <div class="section-header">
+        <h2 class="section-title">Featured: <span class="text-glow-magenta">Art Lab</span></h2>
+        <p class="section-subtitle">Where mathematics meets creativity</p>
+      </div>
+      
+      <!-- Art Lab showcase - populated by main.js using data.js -->
+      <div class="artlab-showcase-container" id="artlab-showcase">
+        <!-- Will be dynamically rendered -->
+      </div>
+    </section>
+    
+    <!-- Games Section -->
+    <section class="section" id="games">
+      <div class="section-header">
+        <h2 class="section-title">Game Collection</h2>
+        <p class="section-subtitle">Click any game to start playing instantly</p>
+      </div>
+      
+      <!-- Search -->
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input 
+          type="text" 
+          class="search-input" 
+          id="search-input" 
+          placeholder="Search games..."
+          autocomplete="off"
+        />
+      </div>
+      
+      <!-- Filter Buttons -->
+      <div class="filter-section">
+        <button class="filter-btn active" data-filter="all">
+          <i class="fas fa-border-all"></i> All
+        </button>
+        <button class="filter-btn" data-filter="pc">
+          <i class="fas fa-desktop"></i> PC
+        </button>
+        <button class="filter-btn" data-filter="mobile">
+          <i class="fas fa-mobile-alt"></i> Mobile
+        </button>
+      </div>
+      
+      <!-- Game Cards Grid -->
+      <div class="games-grid" id="game-cards-container">
         <!-- Cards will be inserted dynamically here -->
       </div>
-
-      <!-- Footer Section -->
-      <footer class="mt-10 text-gray-500 text-sm">
-        Made by <a class="text-purple-400" href="https://github.com/ibra-kdbra">ibra-kdbra</a>
-      </footer>
-    </div>
+    </section>
     
-    <a class="github-link" href="https://github.com/ibra-kdbra/JS_game_collections/" target="_blank" rel="noopener noreferrer">
-    <img src="./assets/icons/github-icon.svg" alt="GitHub Repository" aria-hidden="true">
-    </a>
-    <script type="module" src="./assets/js/script.js"></script>
-
+    <!-- Footer -->
+    <footer class="footer">
+      <p>MIT License &copy; 2024 JS Game Lab</p>
+      <div class="footer-links">
+        <a href="https://github.com/ibra-kdbra/JS_game_collections" target="_blank">GitHub</a>
+        <a href="#artlab">Art Lab</a>
+      </div>
+    </footer>
+    
+    <!-- Scripts -->
+    <link rel="stylesheet" href="./assets/css/feedback.css">
+    <script type="module" src="./assets/js/dropEffect.js"></script>
+    <script type="module" src="./assets/js/lazyLoad.js"></script>
+    <script type="module" src="./assets/js/main.js"></script>
+    
+    <!-- Initialize Feedback (Modal Mode) -->
+    <script type="module">
+      import { FeedbackUI } from './assets/js/feedback/FeedbackUI.js';
+      // Initialize for main hub
+      new FeedbackUI('main_hub');
+    </script>
   </body>
 </html>
