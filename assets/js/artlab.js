@@ -1,7 +1,5 @@
-/**
- * Art Lab - Creative Experiments Application
- * Completely rewritten for stability and performance
- */
+import { games } from './data.js';
+
 (function () {
     'use strict';
 
@@ -9,65 +7,17 @@
     if (window.artLabInitialized) return;
     window.artLabInitialized = true;
 
-    // Experiment Data
-    const experiments = [
-        {
-            id: 1,
-            link: './BlossomingFlowers/index.html',
-            imgSrc: './BlossomingFlowers/assets/captured.png',
-            title: 'Blossoming Flowers',
-            description: 'Pure CSS blossoming flowers animation. Watch as petals unfold in a mesmerizing dance of color and motion.',
-            tags: ['CSS Art', 'Animation']
-        },
-        {
-            id: 2,
-            link: './Simple/index.html',
-            imgSrc: './Simple/captured.png',
-            title: 'Flow Fields',
-            description: 'Experiment with flow fields. Press D to debug or double touch. Watch particles dance through invisible currents.',
-            tags: ['Canvas', 'Particles']
-        },
-        {
-            id: 3,
-            link: './Text_Fields/index.html',
-            imgSrc: './Text_Fields/captured.png',
-            title: 'Text Fields',
-            description: 'Typography meets generative art. Text rendered as particle systems moving through flow fields.',
-            tags: ['Typography', 'Canvas']
-        },
-        {
-            id: 4,
-            link: './Experimental_math/index.html',
-            imgSrc: './Experimental_math/captured.png',
-            title: 'Experimental Math',
-            description: 'Low-level mathematical explorations with flow fields. Visualize equations in motion.',
-            tags: ['Math', 'Generative']
-        },
-        {
-            id: 5,
-            link: './Adaptive/index.html',
-            imgSrc: './Adaptive/images/result3.png',
-            title: 'Adaptive Fields',
-            description: 'Try multiple variations with adaptive flow fields that respond to your interaction.',
-            tags: ['Interactive', 'Canvas']
-        },
-        {
-            id: 6,
-            link: './LSD/index.html',
-            imgSrc: './LSD/assets/captured.png',
-            title: 'LSD',
-            description: 'Create psychedelic animations in real-time. A trip through color and form.',
-            tags: ['Psychedelic', 'Real-time']
-        },
-        {
-            id: 7,
-            link: './ParticularDrift/index.html',
-            imgSrc: './ParticularDrift/assets/captured.png',
-            title: 'Particular Drift',
-            description: 'Watch particles drift through space in this meditative visual experience.',
-            tags: ['Particles', 'Ambient']
-        }
-    ];
+    // Filter experiments from shared data source
+    const experiments = games
+        .filter(item => item.type === 'experiment')
+        .map((item, index) => ({
+            id: index + 1,
+            link: item.link,
+            imgSrc: item.imgSrc,
+            title: item.title,
+            description: item.description,
+            tags: item.experimentTags || []
+        }));
 
     // Core Init Function
     function init() {
@@ -107,13 +57,12 @@
         setupNavigation(track);
 
         // 4. Trigger Animations (CSS Transition based)
-        // Use a small timeout to allow DOM to paint first, ensuring transition runs
         requestAnimationFrame(() => {
             const cards = track.querySelectorAll('.experiment-card');
             cards.forEach((card, index) => {
                 setTimeout(() => {
                     card.classList.add('appear');
-                }, index * 100); // Stagger effect
+                }, index * 100);
             });
         });
 
@@ -166,7 +115,6 @@
     function runHeroAnimations() {
         if (typeof gsap === 'undefined') return;
 
-        // Simple Hero Animations only - Only run once
         gsap.from('.artlab-hero-badge', { opacity: 0, y: 30, duration: 0.8, delay: 0.2 });
         gsap.from('.artlab-hero-title', { opacity: 0, y: 40, duration: 1, delay: 0.4 });
         gsap.from('.artlab-hero-subtitle', { opacity: 0, y: 30, duration: 0.8, delay: 0.6 });
