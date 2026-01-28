@@ -314,6 +314,13 @@ body {
   50% { transform: translateX(-50%) translateY(8px); }
 }
 
+/* Hide scroll indicator on mobile */
+@media (max-width: 768px) {
+  .scroll-indicator {
+    display: none;
+  }
+}
+
 /* ---------- Section Styling ---------- */
 .section {
   padding: 5rem 2rem;
@@ -342,99 +349,131 @@ body {
 .games-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1.5rem;
+  gap: 2rem;
 }
 
-/* ---------- Glass Card ---------- */
+/* ---------- Game Cards (Art Lab Style) ---------- */
+/* Outer anchor wrapper */
 .game-card {
   position: relative;
-  background: var(--glass-bg);
-  backdrop-filter: var(--blur-md);
-  -webkit-backdrop-filter: var(--blur-md);
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-  border: 1px solid var(--glass-border);
-  transition: all var(--transition-normal);
-  cursor: pointer;
-  text-decoration: none;
   display: block;
+  text-decoration: none;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .game-card:hover {
-  transform: translateY(-6px);
-  border-color: var(--glass-border-hover);
-  box-shadow: var(--shadow-lg), var(--shadow-glow);
+  transform: translateY(-12px) scale(1.02);
+  z-index: 10;
 }
 
-.game-card-image {
-  position: relative;
-  height: 180px;
+/* Inner glass container */
+.game-card-inner {
+  background: rgba(15, 15, 35, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
   overflow: hidden;
+  border: 1px solid rgba(168, 85, 247, 0.15);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
-.game-card-image img {
+.game-card:hover .game-card-inner {
+  border-color: #a855f7;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(168, 85, 247, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Image preview area */
+.game-card-preview {
+  height: 200px;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.game-card-preview img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform var(--transition-slow);
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.game-card:hover .game-card-image img {
-  transform: scale(1.08);
+.game-card:hover .game-card-preview img {
+  transform: scale(1.1);
 }
 
-.game-card-overlay {
+/* Gradient overlay on image */
+.game-card-preview::after {
+  content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(15, 15, 35, 0.9) 0%, transparent 60%);
+  background: linear-gradient(to top, rgba(15, 15, 35, 1) 0%, rgba(15, 15, 35, 0.5) 30%, transparent 60%);
+  pointer-events: none;
 }
 
+/* Tags container */
 .game-card-tags {
   position: absolute;
   top: 1rem;
   right: 1rem;
   display: flex;
   gap: 0.5rem;
+  z-index: 2;
 }
 
+/* Tags */
 .tag {
   padding: 0.25rem 0.75rem;
   font-size: 0.7rem;
   font-weight: 600;
-  border-radius: var(--radius-full);
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: var(--blur-sm);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 .tag-pc {
-  color: var(--primary-light);
-  border-color: rgba(99, 102, 241, 0.3);
+  color: #818cf8;
+  border-color: rgba(99, 102, 241, 0.4);
 }
 
 .tag-mobile {
-  color: var(--secondary);
-  border-color: rgba(244, 114, 182, 0.3);
+  color: #f472b6;
+  border-color: rgba(244, 114, 182, 0.4);
 }
 
+/* Content section */
 .game-card-content {
-  padding: 1.25rem 1.5rem 1.5rem;
+  padding: 1.25rem;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .game-card-title {
   font-size: 1.15rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
-  color: var(--text-primary);
+  color: #ffffff;
   letter-spacing: -0.01em;
 }
 
 .game-card-description {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
   line-height: 1.5;
+  margin-bottom: 1rem;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -442,27 +481,26 @@ body {
   overflow: hidden;
 }
 
+/* Action link area */
 .game-card-action {
+  margin-top: auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--glass-border);
 }
 
 .play-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  color: var(--primary-light);
+  color: #c084fc;
   font-weight: 600;
   font-size: 0.85rem;
-  transition: all var(--transition-fast);
+  transition: gap 0.2s ease, color 0.2s ease;
 }
 
 .game-card:hover .play-btn {
   gap: 0.75rem;
+  color: #a855f7;
 }
 
 /* ---------- Art Lab Showcase ---------- */
@@ -661,47 +699,97 @@ body {
   }
 }
 
-/* ---------- Filter Section ---------- */
+/* ---------- Search & Filter Section (Matches Art Lab Theme) ---------- */
+.search-filter-container {
+  max-width: 1200px;
+  margin: 0 auto 3rem;
+  padding: 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.search-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+}
+
+/* Art Lab Form Style */
+#search-input {
+  width: 100%;
+  padding: 1rem 1.5rem 1rem 3rem;
+  /* Darker glass background like Art Lab inputs/modals */
+  background: rgba(15, 15, 35, 0.6); 
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(168, 85, 247, 0.25); /* Purple tint border */
+  border-radius: 50px; /* Fully rounded */
+  color: white;
+  font-size: 1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+#search-input:focus {
+  outline: none;
+  border-color: #a855f7; /* Art Lab Primary */
+  background: rgba(15, 15, 35, 0.8);
+  box-shadow: 0 8px 30px rgba(168, 85, 247, 0.25);
+  transform: translateY(-2px);
+}
+
+#search-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.search-icon {
+  position: absolute;
+  left: 1.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(168, 85, 247, 0.7); /* Purple tinted icon */
+  pointer-events: none;
+  font-size: 1.1rem;
+}
+
+/* Filter Section */
 .filter-section {
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
   gap: 0.75rem;
-  margin-bottom: 2.5rem;
+  /* margin-bottom: 2.5rem; */ /* Removed as it's now part of search-filter-container gap */
 }
 
+/* Art Lab Button Style */
 .filter-btn {
   padding: 0.625rem 1.25rem;
-  background: var(--glass-bg);
-  backdrop-filter: var(--blur-sm);
-  border: 1px solid var(--glass-border);
+  background: rgba(168, 85, 247, 0.1); /* Low opacity purple */
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(168, 85, 247, 0.25);
   border-radius: var(--radius-full);
   color: var(--text-secondary);
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: inherit;
+  display: flex; /* Ensure alignment if icons added */
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .filter-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary-light);
-}
-
-.filter-btn.active {
-  background: var(--primary);
+  background: rgba(168, 85, 247, 0.2);
+  border-color: #a855f7;
   color: white;
-  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.2);
 }
 
-/* Search Input */
-.search-container {
-  position: relative;
-  width: 100%;
-  max-width: 380px;
-  margin: 0 auto 2rem;
-}
+/* Removed empty ruleset */
 
 .search-input {
   width: 100%;
