@@ -1,0 +1,568 @@
+/* Inherit base variables from main theme */
+@import './cyberpunk.css';
+
+/* ---------- Art Lab Custom Properties ---------- */
+:root {
+  /* Art Lab specific palette - Creative feel */
+  --artlab-primary: #a855f7;       /* Purple */
+  --artlab-primary-light: #c084fc;
+  --artlab-secondary: #ec4899;      /* Pink */
+  --artlab-accent: #22d3ee;         /* Cyan */
+  
+  /* Art Lab background gradient */
+  --artlab-bg-start: #0c0c1d;
+  --artlab-bg-mid: #1a1035;
+  --artlab-bg-end: #2d1d4a;
+  
+  /* Glass effects */
+  --artlab-glass: rgba(168, 85, 247, 0.05);
+  --artlab-glass-border: rgba(168, 85, 247, 0.2);
+}
+
+/* ---------- Art Lab Body ---------- */
+body#artlab-body {
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  background: var(--artlab-bg-start);
+}
+
+/* ---------- Unified Mesh Gradient Background ---------- */
+.artlab-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: 
+    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(168, 85, 247, 0.28) 0%, transparent 50%),
+    radial-gradient(ellipse 55% 35% at 85% 75%, rgba(236, 72, 153, 0.18) 0%, transparent 50%),
+    radial-gradient(ellipse 45% 30% at 5% 85%, rgba(34, 211, 238, 0.1) 0%, transparent 50%),
+    linear-gradient(180deg, var(--artlab-bg-start) 0%, var(--artlab-bg-mid) 45%, var(--artlab-bg-end) 100%);
+  background-attachment: fixed;
+}
+
+/* ---------- Minimal Corner Navigation ---------- */
+.corner-nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.25rem;
+  pointer-events: none;
+}
+
+.corner-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  pointer-events: auto;
+  transition: all 0.3s ease;
+}
+
+.corner-back:hover {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: var(--artlab-primary);
+  color: var(--text-primary);
+  transform: translateY(-2px);
+}
+
+.corner-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  pointer-events: auto;
+  transition: transform 0.3s ease;
+}
+
+.corner-logo:hover {
+  transform: translateY(-2px);
+}
+
+.logo-icon {
+  font-size: 1.5rem;
+  filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.5));
+}
+
+.logo-text {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--artlab-primary-light) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.corner-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 1.1rem;
+  pointer-events: auto;
+  transition: all 0.3s ease;
+}
+
+.corner-link:hover {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: var(--artlab-primary);
+  color: var(--text-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(168, 85, 247, 0.2);
+}
+
+/* ---------- Art Lab Hero Section ---------- */
+.artlab-hero {
+  min-height: 75vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 6rem 2rem 3rem;
+  text-align: center;
+  position: relative;
+}
+
+.artlab-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  color: var(--artlab-primary-light);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 1.5rem;
+}
+
+.artlab-hero-title {
+  font-size: clamp(2.5rem, 9vw, 5rem);
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 1.25rem;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--artlab-primary-light) 50%, var(--artlab-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.artlab-hero-subtitle {
+  font-size: clamp(1rem, 2.5vw, 1.2rem);
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin: 0 auto 2.5rem;
+  line-height: 1.7;
+}
+
+.artlab-hero-cta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn-artlab {
+  background: linear-gradient(135deg, var(--artlab-primary) 0%, var(--artlab-secondary) 100%);
+  color: white;
+  box-shadow: 0 4px 20px rgba(168, 85, 247, 0.25);
+}
+
+.btn-artlab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 30px rgba(168, 85, 247, 0.35);
+}
+
+/* ---------- Modern Centered Carousel Section ---------- */
+.carousel-section {
+  padding: 2rem 0 4rem;
+  position: relative;
+}
+
+.carousel-container {
+  width: 100%;
+  max-width: 100%;
+  position: relative;
+  padding: 0 2rem;
+}
+
+.carousel-track {
+  display: flex;
+  gap: 2rem;
+  padding: 1rem 0 2rem;
+  min-height: 420px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  align-items: stretch;
+}
+
+.carousel-track::-webkit-scrollbar {
+  display: none;
+}
+
+.experiment-card {
+  flex: 0 0 auto;
+  width: 340px;
+  scroll-snap-align: center;
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Initial state for entrance animation */
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+/* Animation state */
+.experiment-card.appear {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.8s ease-out, transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.experiment-card:hover {
+  transform: translateY(-12px) scale(1.02);
+}
+
+.experiment-card-inner {
+  background: rgba(15, 15, 35, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(168, 85, 247, 0.15);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.experiment-card:hover .experiment-card-inner {
+  border-color: var(--artlab-primary);
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(168, 85, 247, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.experiment-card-preview {
+  height: 220px;
+  overflow: hidden;
+  position: relative;
+}
+
+.experiment-card-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.experiment-card:hover .experiment-card-preview img {
+  transform: scale(1.1);
+}
+
+.experiment-card-preview::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(15, 15, 35, 1) 0%, rgba(15, 15, 35, 0.5) 30%, transparent 60%);
+  pointer-events: none;
+}
+
+.experiment-number {
+  position: absolute;
+  top: 0.875rem;
+  left: 0.875rem;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: var(--blur-sm);
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--artlab-primary-light);
+  z-index: 2;
+}
+
+.experiment-card-content {
+  padding: 1.25rem;
+}
+
+.experiment-card-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.experiment-card-description {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 1rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.experiment-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.875rem;
+}
+
+.experiment-tag {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--radius-full);
+  background: rgba(168, 85, 247, 0.1);
+  color: var(--artlab-primary-light);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+}
+
+.experiment-card-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.experiment-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--artlab-primary-light);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.experiment-card:hover .experiment-link {
+  gap: 0.7rem;
+}
+
+/* ---------- Modern Carousel Navigation ---------- */
+.carousel-nav {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2.5rem;
+}
+
+.carousel-btn {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(168, 85, 247, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 1.1rem;
+}
+
+.carousel-btn:hover {
+  background: linear-gradient(135deg, var(--artlab-primary) 0%, var(--artlab-secondary) 100%);
+  border-color: transparent;
+  color: white;
+  transform: scale(1.08);
+  box-shadow: 0 8px 24px rgba(168, 85, 247, 0.4);
+}
+
+/* ---------- Minimal Art Lab Footer ---------- */
+.artlab-footer {
+  position: relative;
+  padding: 2rem 2rem;
+  text-align: center;
+  background: rgba(12, 12, 29, 0.6);
+}
+
+.artlab-footer-text {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  position: relative;
+  z-index: 1;
+}
+
+.artlab-footer-link {
+  color: var(--artlab-primary-light);
+  text-decoration: none;
+  font-weight: 500;
+  position: relative;
+  transition: color 0.25s ease;
+}
+
+.artlab-footer-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--artlab-primary) 0%, var(--artlab-secondary) 100%);
+  transition: width 0.3s ease;
+}
+
+.artlab-footer-link:hover {
+  color: var(--artlab-secondary);
+}
+
+.artlab-footer-link:hover::after {
+  width: 100%;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1024px) {
+  .corner-nav {
+    padding: 0.6rem 1rem;
+  }
+  
+  .corner-link, .corner-back {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+  
+  .carousel-section {
+    padding: 3rem 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .corner-nav {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .logo-text {
+    font-size: 0.95rem;
+  }
+  
+  .logo-icon {
+    font-size: 1.25rem;
+  }
+  
+  .corner-link, .corner-back {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
+  
+  .experiment-card {
+    width: 85vw;
+    max-width: 340px;
+  }
+  
+  .carousel-container {
+    padding: 0 1.5rem;
+  }
+  
+  .carousel-track {
+    gap: 1.5rem;
+  }
+  
+  .carousel-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 1rem;
+  }
+  
+  .artlab-hero {
+    min-height: auto;
+    padding-top: 4rem;
+    padding-bottom: 2rem;
+  }
+  
+  .artlab-hero-title {
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .corner-nav {
+    padding: 0.4rem 0.5rem;
+  }
+  
+  .corner-logo {
+    gap: 0.3rem;
+  }
+  
+  .logo-text {
+    font-size: 0.85rem;
+  }
+  
+  .logo-icon {
+    font-size: 1rem;
+  }
+  
+  .corner-link, .corner-back {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+  
+  .experiment-card {
+    width: 90vw;
+    max-width: 320px;
+  }
+  
+  .carousel-container {
+    padding: 0 1rem;
+  }
+  
+  .carousel-btn {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .artlab-hero-title {
+    font-size: 2rem;
+  }
+  
+  .artlab-hero-cta {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
