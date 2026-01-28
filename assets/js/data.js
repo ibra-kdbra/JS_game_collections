@@ -3,51 +3,64 @@ export const games = [
     link: "./BlossomingFlowers/index.html",
     imgSrc: "./BlossomingFlowers/assets/captured.png",
     title: "Blossoming Flowers",
-    description: "Pure CSS blossoming flowers",
-    "tags":["#PC", "#Mobile"]
+    description: "Pure CSS blossoming flowers animation. Watch as petals unfold in a mesmerizing dance of color and motion.",
+    tags: ["#PC", "#Mobile"],
+    type: "experiment",
+    experimentTags: ["CSS Art", "Animation"]
   },
   {
     link: "./Simple/index.html",
     imgSrc: "./Simple/captured.png",
-    title: "Flow Fields (Simple)",
-    description: "Experiment with flow fields. Press D to debug or double touch.",
-    "tags": ["#PC", "#Mobile"]
+    title: "Flow Fields",
+    description: "Experiment with flow fields. Press D to debug or double touch. Watch particles dance through invisible currents.",
+    tags: ["#PC", "#Mobile"],
+    type: "experiment",
+    experimentTags: ["Canvas", "Particles"]
   },
   {
     link: "./Text_Fields/index.html",
     imgSrc: "./Text_Fields/captured.png",
     title: "Text Fields",
-    description: "Experiment with flow fields. Press D to debug or double touch.",
-    "tags": ["#PC", "#Mobile"]
-
+    description: "Typography meets generative art. Text rendered as particle systems moving through flow fields.",
+    tags: ["#PC", "#Mobile"],
+    type: "experiment",
+    experimentTags: ["Typography", "Canvas"]
   },
   {
     link: "./Experimental_math/index.html",
     imgSrc: "./Experimental_math/captured.png",
     title: "Experimental Math",
-    description: "Low-level math with flow fields.",
-    tags: ["#PC", "#Mobile"]
+    description: "Low-level mathematical explorations with flow fields. Visualize equations in motion.",
+    tags: ["#PC", "#Mobile"],
+    type: "experiment",
+    experimentTags: ["Math", "Generative"]
   },
   {
     link: "./Adaptive/index.html",
     imgSrc: "./Adaptive/images/result3.png",
     title: "Adaptive Fields",
-    description: "Try multiple variations with adaptive flow fields.",
-    tags: ["#PC", "#Mobile"]
+    description: "Try multiple variations with adaptive flow fields that respond to your interaction.",
+    tags: ["#PC", "#Mobile"],
+    type: "experiment",
+    experimentTags: ["Interactive", "Canvas"]
   },
-    {
+  {
     link: "./LSD/index.html",
     imgSrc: "./LSD/assets/captured.png",
     title: "LSD",
-    description: "Create psychedelic animations in real-time",
-    tags: ["#PC"]
+    description: "Create psychedelic animations in real-time. A trip through color and form.",
+    tags: ["#PC"],
+    type: "experiment",
+    experimentTags: ["Psychedelic", "Real-time"]
   },
   {
     link: "./ParticularDrift/index.html",
     imgSrc: "./ParticularDrift/assets/captured.png",
     title: "Particular Drift",
-    description: "Particular Drift is a puzzle game set in space.",
-    tags: ["#PC"]
+    description: "Watch particles drift through space in this meditative visual experience.",
+    tags: ["#PC"],
+    type: "experiment",
+    experimentTags: ["Particles", "Ambient"]
   },
   {
     link: "./2048/index.html",
