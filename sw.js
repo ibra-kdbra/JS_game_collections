@@ -9,7 +9,7 @@ const ASSETS_TO_CACHE = [
     './index.html',
     './assets/css/cyberpunk.css',
     './assets/css/feedback.css',
-    './assets/js/main.js',
+    './assets/js/script.js',
     './assets/js/dropEffect.js',
     './assets/js/lazyLoad.js',
     './assets/js/config.js',
