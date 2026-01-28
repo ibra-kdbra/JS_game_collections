@@ -1,0 +1,121 @@
+/* ---------- Responsive Design ---------- */
+@media (max-width: 1024px) {
+  .artlab-main-card {
+    flex-direction: column;
+  }
+  
+  .artlab-card-content {
+    max-width: 100%;
+    flex: none;
+  }
+  
+  .artlab-floating-previews {
+    display: none;
+  }
+  
+  .corner-nav {
+    padding: 0.6rem 1rem;
+  }
+  
+  .corner-link {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .corner-nav {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .logo-text {
+    font-size: 0.95rem;
+  }
+  
+  .logo-icon {
+    font-size: 1.25rem;
+  }
+  
+  .corner-link {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
+  
+  .hero {
+    padding-top: 4rem;
+    min-height: auto;
+  }
+  
+  .hero-stats {
+    gap: 1.5rem;
+  }
+  
+  .stat-value {
+    font-size: 1.5rem;
+  }
+  
+  .games-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .artlab-main-card {
+    padding: 1.5rem;
+    min-height: auto;
+  }
+  
+  .artlab-card-title {
+    font-size: 1.35rem;
+  }
+  
+  .section {
+    padding: 3rem 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .corner-nav {
+    padding: 0.4rem 0.5rem;
+  }
+  
+  .corner-logo {
+    gap: 0.3rem;
+  }
+  
+  .logo-text {
+    font-size: 0.85rem;
+  }
+  
+  .logo-icon {
+    font-size: 1rem;
+  }
+  
+  .corner-link {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+  
+  .hero-title {
+    font-size: 2rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .hero-cta {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .section {
+    padding: 2rem 0.75rem;
+  }
+}
