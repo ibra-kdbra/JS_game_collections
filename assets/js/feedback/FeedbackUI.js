@@ -26,21 +26,24 @@ export class FeedbackUI {
             // Check if already attached
             if (nav.querySelector('.feedback-trigger')) return;
 
+            // If a group container exists, append there (keeps icons together)
+            const group = nav.querySelector('.nav-icons-group');
+            const target = group || nav;
+
             const btn = document.createElement('a');
             btn.className = 'corner-link feedback-trigger';
             // Use javascript:void(0) to act like a link but prevent nav
             btn.href = 'javascript:void(0)';
             btn.innerHTML = '<i class="fas fa-comments"></i>';
             btn.title = "Community Feedback";
-            btn.style.marginLeft = '1rem'; // Ensure spacing
 
             btn.onclick = (e) => {
                 e.preventDefault();
                 this.toggle();
             };
 
-            // Insert at the end (usually after GitHub)
-            nav.appendChild(btn);
+            // Insert at the end
+            target.appendChild(btn);
         }
     }
 
