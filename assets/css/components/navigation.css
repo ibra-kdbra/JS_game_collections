@@ -6,8 +6,9 @@
   right: 0;
   z-index: 10;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
+  gap: 0.75rem;
   padding: 0.75rem 1.25rem;
   pointer-events: none;
 }
@@ -59,6 +60,52 @@
 }
 
 .corner-link:hover {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.4);
+  color: var(--text-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.2);
+}
+
+/* Art Lab specific: back arrow left, icons right */
+.corner-nav.artlab-nav {
+  justify-content: space-between;
+}
+
+/* Group container for right-side icons */
+.nav-icons-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  /* Match the gap from main navigation */
+}
+
+/* Ensure buttons inside matching the standard style */
+.nav-icons-group .corner-link {
+  /* No overrides needed - inherit standard .corner-link styles */
+  margin: 0 !important;
+}
+
+/* Back arrow (corner-back) shares same style as corner-link */
+.corner-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 1.1rem;
+  pointer-events: auto;
+  transition: all 0.3s ease;
+}
+
+.corner-back:hover {
   background: rgba(99, 102, 241, 0.15);
   border-color: rgba(99, 102, 241, 0.4);
   color: var(--text-primary);

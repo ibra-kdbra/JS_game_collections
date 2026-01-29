@@ -1,25 +1,14 @@
-/* Trigger Button */
+/* Trigger Button - Inherits base style from .corner-link */
 .feedback-trigger {
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: rgba(168, 85, 247, 0.1);
-    border: 1px solid rgba(168, 85, 247, 0.25);
-    color: var(--text-secondary, #94a3b8);
-    transition: all 0.3s ease;
-    margin-left: 0.5rem; /* Space from other icons */
+    /* Other properties handled by .corner-link */
+    margin-left: 0;
 }
 
+/* Hover effects handled by .corner-link */
 .feedback-trigger:hover {
-    background: rgba(168, 85, 247, 0.2);
-    border-color: #a855f7;
-    color: #fff;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(168, 85, 247, 0.2);
+    /* Optional: Add specific hover glow if needed, otherwise inherit */
+    /* keeping empty to match GitHub link exactly */
 }
 
 /* Modal Overlay */
@@ -44,7 +33,8 @@
 
 /* Modal Content */
 .feedback-modal-content {
-    background: #1a1a2e; /* Fallback */
+    background: #1a1a2e;
+    /* Fallback */
     background: rgba(26, 26, 46, 0.95);
     border: 1px solid rgba(168, 85, 247, 0.3);
     border-radius: 16px;
@@ -192,8 +182,8 @@
 }
 
 .stars label:hover,
-.stars label:hover ~ label,
-.stars input:checked ~ label {
+.stars label:hover~label,
+.stars input:checked~label {
     color: #fbbf24;
 }
 
@@ -227,8 +217,13 @@
     text-align: center;
 }
 
-.form-message.success { color: #4ade80; }
-.form-message.error { color: #f87171; }
+.form-message.success {
+    color: #4ade80;
+}
+
+.form-message.error {
+    color: #f87171;
+}
 
 /* List */
 .feedback-list {
