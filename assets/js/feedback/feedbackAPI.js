@@ -59,24 +59,40 @@ class FeedbackService {
             }
 
             const data = await response.json();
-            return { rows: data.results?.[0]?.rows || data.rows || [] };
+
+            // Parse the Turso response format
+            // Response: [{ results: { columns: [...], rows: [[...], [...]] } }]
+            const results = data[0]?.results || data.results || {};
+            const columns = results.columns || ['id', 'game_id', 'rating', 'comment', 'author_name', 'created_at'];
+            const rows = results.rows || [];
+
+            // Convert array rows to objects
+            const items = rows.map(row => {
+                const obj = {};
+                columns.forEach((col, i) => {
+                    obj[col] = row[i];
+                });
+                return obj;
+            });
+
+            return { items };
         } catch (error) {
             console.error('Failed to fetch feedback:', error);
-            return { rows: [] };
+            return { items: [] };
         }
     }
 
     /**
-     * Get aggregate stats for a page (placeholder - implement in worker if needed)
+     * Get aggregate stats for a page
      */
     async getStats(pageId) {
         const feedback = await this.getFeedback(pageId);
-        const rows = feedback.rows || [];
-        const count = rows.length;
+        const items = feedback.items || [];
+        const count = items.length;
         const average = count > 0
-            ? rows.reduce((sum, r) => sum + (r.rating || 0), 0) / count
+            ? items.reduce((sum, r) => sum + (r.rating || 0), 0) / count
             : 0;
-        return { count, average };
+        return { items: [{ count, average }] };
     }
 
     /**
