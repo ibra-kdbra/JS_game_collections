@@ -20,6 +20,9 @@
 @import url('./components/artlab-showcase.css');
 @import url('./components/search-filter.css');
 @import url('./components/footer.css');
+@import url('./components/music-player.css');
+@import url('./components/search-filter.css');
+@import url('./components/footer.css');
 
 /* Responsive */
 @import url('./responsive.css');

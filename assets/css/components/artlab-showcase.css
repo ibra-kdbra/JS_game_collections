@@ -136,15 +136,15 @@
   height: 85px;
   border-radius: 14px;
   overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.15); 
+  border: 2px solid rgba(255, 255, 255, 0.15);
   background: #1a1a2e;
   cursor: pointer;
-  
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), 
-              border-color 0.2s ease, 
-              box-shadow 0.2s ease,
-              margin 0.3s ease;
-              
+
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    margin 0.3s ease;
+
   flex-shrink: 0;
   margin-left: -25px;
   box-shadow: -4px 0 15px rgba(0, 0, 0, 0.3);
@@ -152,22 +152,63 @@
 }
 
 /* Specific stacking order to ensure visibility */
-.strip-item:nth-child(1) { z-index: 1; margin-left: 0; }
-.strip-item:nth-child(2) { z-index: 2; }
-.strip-item:nth-child(3) { z-index: 3; }
-.strip-item:nth-child(4) { z-index: 4; }
-.strip-item:nth-child(5) { z-index: 5; }
-.strip-item:nth-child(6) { z-index: 6; }
-.strip-item:nth-child(7) { z-index: 7; }
+.strip-item:nth-child(1) {
+  z-index: 1;
+  margin-left: 0;
+}
+
+.strip-item:nth-child(2) {
+  z-index: 2;
+}
+
+.strip-item:nth-child(3) {
+  z-index: 3;
+}
+
+.strip-item:nth-child(4) {
+  z-index: 4;
+}
+
+.strip-item:nth-child(5) {
+  z-index: 5;
+}
+
+.strip-item:nth-child(6) {
+  z-index: 6;
+}
+
+.strip-item:nth-child(7) {
+  z-index: 7;
+}
 
 /* Scattered "Mosaic" Effect - Random-looking offsets */
-.strip-item:nth-child(1) { transform: translateY(0px) rotate(-6deg); }
-.strip-item:nth-child(2) { transform: translateY(10px) rotate(4deg); }
-.strip-item:nth-child(3) { transform: translateY(-8px) rotate(-3deg); }
-.strip-item:nth-child(4) { transform: translateY(5px) rotate(2deg); }
-.strip-item:nth-child(5) { transform: translateY(-12px) rotate(-5deg); }
-.strip-item:nth-child(6) { transform: translateY(8px) rotate(3deg); }
-.strip-item:nth-child(7) { transform: translateY(-4px) rotate(-2deg); }
+.strip-item:nth-child(1) {
+  transform: translateY(0px) rotate(-6deg);
+}
+
+.strip-item:nth-child(2) {
+  transform: translateY(10px) rotate(4deg);
+}
+
+.strip-item:nth-child(3) {
+  transform: translateY(-8px) rotate(-3deg);
+}
+
+.strip-item:nth-child(4) {
+  transform: translateY(5px) rotate(2deg);
+}
+
+.strip-item:nth-child(5) {
+  transform: translateY(-12px) rotate(-5deg);
+}
+
+.strip-item:nth-child(6) {
+  transform: translateY(8px) rotate(3deg);
+}
+
+.strip-item:nth-child(7) {
+  transform: translateY(-4px) rotate(-2deg);
+}
 
 .strip-item img {
   width: 100%;
@@ -188,5 +229,15 @@
 @media (max-width: 768px) {
   .artlab-preview-strip {
     display: none;
+  }
+
+  /* Thinner card on mobile */
+  .artlab-main-card {
+    width: 90%;
+    /* Thinner than default constraint */
+    max-width: 320px;
+    /* Force it to be quite compact */
+    margin: 0 auto;
+    /* Center it */
   }
 }

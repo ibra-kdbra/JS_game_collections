@@ -2,8 +2,6 @@
  * Feedback API Service
  * Uses Cloudflare Worker proxy for secure database access
  */
-
-// TODO: Replace with your actual Cloudflare Worker URL after deployment
 const API_URL = 'https://js-game-feedback-api.sonarfarouq.workers.dev';
 
 class FeedbackService {
