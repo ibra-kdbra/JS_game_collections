@@ -1,85 +1,90 @@
-import { TursoClient } from './tursoClient.js';
-import CONFIG from '../config.js';
+/**
+ * Feedback API Service
+ * Uses Cloudflare Worker proxy for secure database access
+ */
+
+// TODO: Replace with your actual Cloudflare Worker URL after deployment
+const API_URL = 'https://js-game-feedback-api.sonarfarouq.workers.dev';
 
 class FeedbackService {
     constructor() {
-        this.client = new TursoClient(CONFIG.turso);
-        this.initialized = false;
-    }
-
-    /**
-     * Initialize database tables if they don't exist
-     */
-    async init() {
-        if (this.initialized) return;
-
-        const createTableSQL = `
-            CREATE TABLE IF NOT EXISTS feedback (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                game_id TEXT NOT NULL,
-                rating INTEGER CHECK(rating >= 1 AND rating <= 5),
-                comment TEXT,
-                author_name TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-        `;
-
-        try {
-            await this.client.execute(createTableSQL);
-            this.initialized = true;
-            console.log('Feedback system initialized');
-        } catch (error) {
-            console.error('Failed to initialize feedback tables:', error);
-        }
+        this.initialized = true; // No init needed with proxy
     }
 
     /**
      * Submit new feedback
+     * @param {string} pageId - Page/game identifier
+     * @param {number} rating - Rating (1-5)
+     * @param {string} comment - Feedback comment
+     * @param {string} authorName - Author's name
      */
-    async submitFeedback(gameId, rating, comment, authorName) {
-        if (!this.initialized) await this.init();
+    async submitFeedback(pageId, rating, comment, authorName) {
+        try {
+            const response = await fetch(`${API_URL}/feedback`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    page_id: pageId,
+                    name: authorName || 'Anonymous',
+                    message: comment,
+                    rating: rating
+                })
+            });
 
-        const sql = `
-            INSERT INTO feedback (game_id, rating, comment, author_name)
-            VALUES (?, ?, ?, ?)
-            RETURNING id, created_at
-        `;
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
 
-        return await this.client.execute(sql, [gameId, rating, comment, authorName || 'Anonymous']);
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to submit feedback:', error);
+            throw error;
+        }
     }
 
     /**
-     * Get feedback for a specific game
+     * Get feedback for a specific page
+     * @param {string} pageId - Page/game identifier (optional filter)
      */
-    async getFeedback(gameId) {
-        if (!this.initialized) await this.init();
+    async getFeedback(pageId) {
+        try {
+            const url = pageId
+                ? `${API_URL}/feedback?page_id=${encodeURIComponent(pageId)}`
+                : `${API_URL}/feedback`;
 
-        const sql = `
-            SELECT * FROM feedback 
-            WHERE game_id = ? 
-            ORDER BY created_at DESC 
-            LIMIT 50
-        `;
+            const response = await fetch(url);
 
-        return await this.client.execute(sql, [gameId]);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            return { rows: data.results?.[0]?.rows || data.rows || [] };
+        } catch (error) {
+            console.error('Failed to fetch feedback:', error);
+            return { rows: [] };
+        }
     }
 
     /**
-     * Get aggregate stats for a game
+     * Get aggregate stats for a page (placeholder - implement in worker if needed)
      */
-    async getStats(gameId) {
-        if (!this.initialized) await this.init();
+    async getStats(pageId) {
+        const feedback = await this.getFeedback(pageId);
+        const rows = feedback.rows || [];
+        const count = rows.length;
+        const average = count > 0
+            ? rows.reduce((sum, r) => sum + (r.rating || 0), 0) / count
+            : 0;
+        return { count, average };
+    }
 
-        const sql = `
-            SELECT 
-                COUNT(*) as count,
-                AVG(rating) as average
-            FROM feedback
-            WHERE game_id = ?
-        `;
-
-        const result = await this.client.execute(sql, [gameId]);
-        return result.rows[0]; // Access first row from results
+    /**
+     * Init method (no-op, kept for compatibility)
+     */
+    async init() {
+        // No initialization needed when using proxy
+        return true;
     }
 }
 
