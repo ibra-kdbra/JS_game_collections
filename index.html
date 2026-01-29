@@ -159,6 +159,15 @@
     
     <!-- Scripts -->
     <link rel="stylesheet" href="./assets/css/feedback.css">
+    
+    <!-- Initialize Music Player -->
+    <script type="module">
+      import { VideoPlayerComponent } from './assets/js/videoPlayer.js';
+      // Inject player into the icons group
+      new VideoPlayerComponent().render('.nav-icons-group');
+    </script>
+    <script type="module" src="./assets/js/musicPlayer.js"></script>
+
     <script type="module" src="./assets/js/dropEffect.js"></script>
     <script type="module" src="./assets/js/lazyLoad.js"></script>
     <script type="module" src="./assets/js/script.js"></script>
