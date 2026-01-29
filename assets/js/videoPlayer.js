@@ -6,7 +6,7 @@ export class VideoPlayerComponent {
         <div id="video-circle" class="music-circle">
           <img id="music-thumbnail" class="music-thumbnail" alt="Video Thumbnail">
           <!-- Youtube Iframe API will replace this or inject into it -->
-          <iframe id="youtube-player" class="music-iframe" allow="autoplay; encrypted-media"></iframe>
+          <iframe id="youtube-player" class="music-iframe" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>
         </div>
       
         <!-- Controls -->

@@ -29,7 +29,7 @@ async function initMusicPlayer() {
     return;
   }
 
-  let isMuted = false;
+  let isMuted = true; // Start muted to allow Autoplay
   let playlist = [];
   let currentMedia = { type: 'playlist', id: GAMING_MUSIC_PLAYLIST_ID };
 
@@ -67,6 +67,14 @@ async function initMusicPlayer() {
   }
 
   async function loadPlaylist(playlistId) {
+    // Optimization: If using the default playlist and we know the API key is restricted,
+    // skip the fetch entirely and use local defaults immediately.
+    if (playlistId === GAMING_MUSIC_PLAYLIST_ID) {
+      console.log("Using local default mix (skipping API).");
+      loadDefaultVideo();
+      return;
+    }
+
     try {
       playlist = await fetchPlaylistItems(playlistId);
       if (playlist.length > 0) {
@@ -82,21 +90,12 @@ async function initMusicPlayer() {
   }
 
   async function loadSingleVideo(videoId) {
-    try {
-      const videoDetails = await fetchVideoDetails(videoId);
-      if (videoDetails && !videoDetails.embeddable) {
-        console.warn('Video reported as not embeddable by API, skipping:', videoId);
-        loadDefaultVideo();
-        return;
-      }
-    } catch (e) {
-      // Ignore API errors and try loading anyway
-      console.log('Skipping API check for video details, attempting load...');
-    }
-
+    // Optimization: Skip API check check for details since Key is likely invalid/restricted.
+    // This removes the network latency of a failed request.
     elements.thumbnail.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
     const origin = window.location.origin;
-    elements.player.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${videoId}&controls=0&modestbranding=1&origin=${origin}`;
+    elements.player.src = `https://www.youtube-nocookie.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${videoId}&controls=0&modestbranding=1&origin=${origin}`;
+    elements.player.allow = "autoplay; encrypted-media";
   }
 
   function loadRandomVideo() {
@@ -116,7 +115,9 @@ async function initMusicPlayer() {
 
     elements.thumbnail.src = thumb;
     const origin = window.location.origin;
-    elements.player.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${videoId}&controls=0&modestbranding=1&origin=${origin}`;
+    // Use youtube-nocookie to reduce tracking warnings
+    elements.player.src = `https://www.youtube-nocookie.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${videoId}&controls=0&modestbranding=1&origin=${origin}`;
+    elements.player.allow = "autoplay; encrypted-media";
   }
 
   function loadDefaultVideo() {
@@ -134,8 +135,9 @@ async function initMusicPlayer() {
   }
 
   // Initial State
-  elements.muteIcon.classList.add("fa-volume-up");
-  elements.muteIcon.classList.remove("fa-volume-mute");
+  // Start OFF as muted visually too
+  elements.muteIcon.classList.remove("fa-volume-up");
+  elements.muteIcon.classList.add("fa-volume-mute");
 
   // Toggle Mute Logic
   const toggleMute = () => {
@@ -159,6 +161,16 @@ async function initMusicPlayer() {
   elements.videoCircle.addEventListener("click", toggleMute);
   elements.muteCircle.addEventListener("click", toggleMute);
   elements.changeButton.addEventListener("click", loadRandomVideo);
+
+  // "Unmute on First Click" Hack
+  // Browsers block audio until the user interacts with the page.
+  // We listen for the first click anywhere to instantly unmute.
+  const unmuteOnFirstInteract = () => {
+    if (isMuted) {
+      toggleMute();
+    }
+  };
+  document.addEventListener('click', unmuteOnFirstInteract, { once: true });
 
   elements.settingsBtn.addEventListener("click", (e) => {
     e.preventDefault();

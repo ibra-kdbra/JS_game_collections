@@ -6,7 +6,7 @@ async function fetchPlaylistItems(playlistId) {
     const response = await fetch(url);
     const data = await response.json();
     if (!data.items) {
-      console.error('No items found in playlist response:', data);
+      // Silent fail
       return [];
     }
     return data.items
@@ -17,7 +17,7 @@ async function fetchPlaylistItems(playlistId) {
       }))
       .filter(item => item.title !== 'Deleted video' && item.title !== 'Private video');
   } catch (error) {
-    console.error('Error fetching playlist items:', error);
+    // Silent fail
     return [];
   }
 }
@@ -27,12 +27,11 @@ async function fetchVideoDetails(videoId) {
   try {
     const response = await fetch(url);
     const data = await response.json();
-    if (data.items.length > 0) {
+    if (data.items && data.items.length > 0) {
       return data.items[0].status;
     }
     return null;
   } catch (error) {
-    console.error('Error fetching video details:', error);
     return null;
   }
 }
