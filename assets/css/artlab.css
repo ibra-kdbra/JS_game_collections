@@ -4,16 +4,19 @@
 /* ---------- Art Lab Custom Properties ---------- */
 :root {
   /* Art Lab specific palette - Creative feel */
-  --artlab-primary: #a855f7;       /* Purple */
+  --artlab-primary: #a855f7;
+  /* Purple */
   --artlab-primary-light: #c084fc;
-  --artlab-secondary: #ec4899;      /* Pink */
-  --artlab-accent: #22d3ee;         /* Cyan */
-  
+  --artlab-secondary: #ec4899;
+  /* Pink */
+  --artlab-accent: #22d3ee;
+  /* Cyan */
+
   /* Art Lab background gradient */
   --artlab-bg-start: #0c0c1d;
   --artlab-bg-mid: #1a1035;
   --artlab-bg-end: #2d1d4a;
-  
+
   /* Glass effects */
   --artlab-glass: rgba(168, 85, 247, 0.05);
   --artlab-glass-border: rgba(168, 85, 247, 0.2);
@@ -32,7 +35,7 @@ body#artlab-body {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: 
+  background:
     radial-gradient(ellipse 70% 45% at 50% 0%, rgba(168, 85, 247, 0.28) 0%, transparent 50%),
     radial-gradient(ellipse 55% 35% at 85% 75%, rgba(236, 72, 153, 0.18) 0%, transparent 50%),
     radial-gradient(ellipse 45% 30% at 5% 85%, rgba(34, 211, 238, 0.1) 0%, transparent 50%),
@@ -230,7 +233,7 @@ body#artlab-body {
   scroll-snap-align: center;
   position: relative;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  
+
   /* Initial state for entrance animation */
   opacity: 0;
   transform: translateY(30px);
@@ -260,7 +263,7 @@ body#artlab-body {
 
 .experiment-card:hover .experiment-card-inner {
   border-color: var(--artlab-primary);
-  box-shadow: 
+  box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.4),
     0 0 40px rgba(168, 85, 247, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -374,12 +377,21 @@ body#artlab-body {
   gap: 0.7rem;
 }
 
-/* ---------- Modern Carousel Navigation ---------- */
+/* ---------- Modern Carousel Navigation (Desktop) ---------- */
 .carousel-nav {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
   display: flex;
-  justify-content: center;
-  gap: 1rem;
-  margin-top: 2.5rem;
+  justify-content: space-between;
+  padding: 0 1rem;
+  /* Space from screen edges */
+  pointer-events: none;
+  /* Let clicks pass through container to buttons */
+  z-index: 10;
+  margin-top: 0;
 }
 
 .carousel-btn {
@@ -389,23 +401,28 @@ body#artlab-body {
   align-items: center;
   justify-content: center;
   background: rgba(168, 85, 247, 0.1);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(168, 85, 247, 0.25);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: none;
+  /* No border as requested */
   border-radius: 50%;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-size: 1.1rem;
+  font-size: 1.5rem;
+  /* Larger icon */
+  pointer-events: auto;
+  /* Re-enable clicks on buttons */
 }
 
 .carousel-btn:hover {
-  background: linear-gradient(135deg, var(--artlab-primary) 0%, var(--artlab-secondary) 100%);
-  border-color: transparent;
-  color: white;
-  transform: scale(1.08);
-  box-shadow: 0 8px 24px rgba(168, 85, 247, 0.4);
+  background: rgba(168, 85, 247, 0.3);
+  /* Subtle hover bg */
+  color: var(--artlab-primary-light);
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
 }
+
 
 /* ---------- Minimal Art Lab Footer ---------- */
 .artlab-footer {
@@ -454,13 +471,14 @@ body#artlab-body {
   .corner-nav {
     padding: 0.6rem 1rem;
   }
-  
-  .corner-link, .corner-back {
+
+  .corner-link,
+  .corner-back {
     width: 36px;
     height: 36px;
     font-size: 1rem;
   }
-  
+
   .carousel-section {
     padding: 3rem 0;
   }
@@ -470,46 +488,60 @@ body#artlab-body {
   .corner-nav {
     padding: 0.5rem 0.75rem;
   }
-  
+
   .logo-text {
     font-size: 0.95rem;
   }
-  
+
   .logo-icon {
     font-size: 1.25rem;
   }
-  
-  .corner-link, .corner-back {
+
+  .corner-link,
+  .corner-back {
     width: 32px;
     height: 32px;
     font-size: 0.9rem;
   }
-  
+
   .experiment-card {
     width: 85vw;
     max-width: 340px;
   }
-  
+
   .carousel-container {
     padding: 0 1.5rem;
   }
-  
+
+  /* Vertical Stack for Mobile */
   .carousel-track {
-    gap: 1.5rem;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: visible;
+    overflow-y: visible;
+    gap: 2.5rem;
+    min-height: auto;
+    padding-bottom: 0;
+    scroll-snap-type: none;
   }
-  
+
+  /* Hide horizontal navigation arrows on mobile */
+  .carousel-nav {
+    display: none;
+  }
+
   .carousel-btn {
     width: 44px;
     height: 44px;
     font-size: 1rem;
   }
-  
+
   .artlab-hero {
     min-height: auto;
     padding-top: 4rem;
     padding-bottom: 2rem;
   }
-  
+
   .artlab-hero-title {
     font-size: 2.5rem;
   }
@@ -519,48 +551,49 @@ body#artlab-body {
   .corner-nav {
     padding: 0.4rem 0.5rem;
   }
-  
+
   .corner-logo {
     gap: 0.3rem;
   }
-  
+
   .logo-text {
     font-size: 0.85rem;
   }
-  
+
   .logo-icon {
     font-size: 1rem;
   }
-  
-  .corner-link, .corner-back {
+
+  .corner-link,
+  .corner-back {
     width: 28px;
     height: 28px;
     font-size: 0.8rem;
   }
-  
+
   .experiment-card {
     width: 90vw;
     max-width: 320px;
   }
-  
+
   .carousel-container {
     padding: 0 1rem;
   }
-  
+
   .carousel-btn {
     width: 40px;
     height: 40px;
   }
-  
+
   .artlab-hero-title {
     font-size: 2rem;
   }
-  
+
   .artlab-hero-cta {
     flex-direction: column;
     width: 100%;
   }
-  
+
   .btn {
     width: 100%;
     justify-content: center;
