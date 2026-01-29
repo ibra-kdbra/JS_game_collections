@@ -4,7 +4,8 @@ const GAMING_MUSIC_PLAYLIST_ID = 'DP3rDP02lE0';
 const DEFAULT_VIDEO_IDS = ["X2V0ag9mCjc", "CPIyuGoH_24", "-tOSh9bDh00"];
 
 async function initMusicPlayer() {
-  const elements = {
+  // DOM Elements are selected afresh to ensure we get the injected ones
+  const getElements = () => ({
     musicSlider: document.getElementById("music-slider"),
     videoCircle: document.getElementById("video-circle"),
     muteCircle: document.getElementById("mute-circle"),
@@ -17,16 +18,22 @@ async function initMusicPlayer() {
     mediaInput: document.getElementById("media-input"),
     loadMediaBtn: document.getElementById("load-media-btn"),
     closeModalBtn: document.getElementById("close-modal-btn")
-  };
+  });
 
-  if (Object.values(elements).some(el => !el)) {
-    setTimeout(initMusicPlayer, 100);
+  let elements = getElements();
+
+  // Retry if elements not yet injected (by VideoPlayerComponent)
+  if (!elements.musicSlider) {
+    console.log("Music player elements not found, retrying...");
+    setTimeout(initMusicPlayer, 500);
     return;
   }
 
   let isMuted = false;
   let playlist = [];
   let currentMedia = { type: 'playlist', id: GAMING_MUSIC_PLAYLIST_ID };
+
+  // ... (Parsing and Loading logic remains similar) ...
 
   function parseYoutubeUrl(url) {
     const videoIdMatch = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
@@ -37,9 +44,8 @@ async function initMusicPlayer() {
     if (playlistIdMatch) {
       return { type: 'playlist', id: playlistIdMatch[1] };
     }
-    // Assume it's a raw playlist ID if it doesn't match a video URL format
     if (url.length > 11) {
-        return { type: 'playlist', id: url };
+      return { type: 'playlist', id: url };
     }
     return null;
   }
@@ -47,7 +53,8 @@ async function initMusicPlayer() {
   async function loadMedia(input) {
     const parsed = parseYoutubeUrl(input);
     currentMedia = parsed || { type: 'playlist', id: GAMING_MUSIC_PLAYLIST_ID };
-    
+
+    // Save preference
     localStorage.setItem('youtubeMedia', input);
 
     if (currentMedia.type === 'playlist') {
@@ -75,25 +82,41 @@ async function initMusicPlayer() {
   }
 
   async function loadSingleVideo(videoId) {
-    const videoDetails = await fetchVideoDetails(videoId);
-    if (videoDetails && videoDetails.embeddable) {
-      elements.thumbnail.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-      elements.player.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${videoId}&controls=0&modestbranding=1`;
-    } else {
-      console.error('Failed to load single video. Using default videos.');
-      loadDefaultVideo();
+    try {
+      const videoDetails = await fetchVideoDetails(videoId);
+      if (videoDetails && !videoDetails.embeddable) {
+        console.warn('Video reported as not embeddable by API, skipping:', videoId);
+        loadDefaultVideo();
+        return;
+      }
+    } catch (e) {
+      // Ignore API errors and try loading anyway
+      console.log('Skipping API check for video details, attempting load...');
     }
+
+    elements.thumbnail.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+    const origin = window.location.origin;
+    elements.player.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${videoId}&controls=0&modestbranding=1&origin=${origin}`;
   }
 
   function loadRandomVideo() {
-    if (playlist.length === 0) {
-        loadDefaultVideo();
-        return;
+    if (!playlist || playlist.length === 0) {
+      // Use local defaults if playlist failed
+      const localDefaults = DEFAULT_VIDEO_IDS;
+      const randomId = localDefaults[Math.floor(Math.random() * localDefaults.length)];
+      loadSingleVideo(randomId);
+      return;
     };
     const randomIndex = Math.floor(Math.random() * playlist.length);
     const video = playlist[randomIndex];
-    elements.thumbnail.src = video.thumbnail;
-    elements.player.src = `https://www.youtube.com/embed/${video.videoId}?enablejsapi=1&autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${video.videoId}&controls=0&modestbranding=1`;
+
+    // Support both API object structure and raw ID strings
+    const videoId = video.videoId || video;
+    const thumb = video.thumbnail || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+
+    elements.thumbnail.src = thumb;
+    const origin = window.location.origin;
+    elements.player.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${videoId}&controls=0&modestbranding=1&origin=${origin}`;
   }
 
   function loadDefaultVideo() {
@@ -110,39 +133,62 @@ async function initMusicPlayer() {
     elements.playlistModal.classList.add('hidden');
   }
 
+  // Initial State
   elements.muteIcon.classList.add("fa-volume-up");
   elements.muteIcon.classList.remove("fa-volume-mute");
 
-  elements.videoCircle.addEventListener("mouseenter", () => {
-    gsap.to(elements.musicSlider, { right: "1rem", duration: 0.3, ease: "power2.out" });
-  });
-
-  elements.videoCircle.addEventListener("mouseleave", () => {
-    gsap.to(elements.musicSlider, { right: "-100px", duration: 0.3, ease: "power2.in" });
-  });
-
+  // Toggle Mute Logic
   const toggleMute = () => {
     isMuted = !isMuted;
     const action = isMuted ? 'mute' : 'unMute';
-    elements.player.contentWindow.postMessage(`{"event":"command","func":"${action}","args":""}`, "*");
+    // Post message to iframe
+    if (elements.player.contentWindow) {
+      elements.player.contentWindow.postMessage(`{"event":"command","func":"${action}","args":""}`, "*");
+    }
     elements.muteIcon.classList.toggle("fa-volume-up", !isMuted);
     elements.muteIcon.classList.toggle("fa-volume-mute", isMuted);
   };
 
+  // Event Listeners
+  // Note: Hover animations are now handled by CSS in music-player.css
+
+  // Debug: Check if buttons exist
+  if (!elements.closeModalBtn) console.error("Close Modal Button not found in DOM");
+  if (!elements.loadMediaBtn) console.error("Load Media Button not found in DOM");
+
   elements.videoCircle.addEventListener("click", toggleMute);
   elements.muteCircle.addEventListener("click", toggleMute);
   elements.changeButton.addEventListener("click", loadRandomVideo);
-  elements.settingsBtn.addEventListener("click", openModal);
-  elements.closeModalBtn.addEventListener("click", closeModal);
 
-  elements.loadMediaBtn.addEventListener("click", () => {
-    const mediaInput = elements.mediaInput.value.trim();
-    if (mediaInput) {
-      loadMedia(mediaInput);
-      closeModal();
-    }
+  elements.settingsBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    openModal();
   });
 
+  if (elements.closeModalBtn) {
+    elements.closeModalBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      console.log("Cancel clicked");
+      closeModal();
+    });
+  }
+
+  if (elements.loadMediaBtn) {
+    elements.loadMediaBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      console.log("Load clicked");
+      const mediaInput = elements.mediaInput.value.trim();
+      if (mediaInput) {
+        loadMedia(mediaInput);
+        closeModal();
+      } else {
+        console.warn("Input is empty");
+        // Optional: Shake animation or alert
+      }
+    });
+  }
+
+  // Load Initial Media
   const savedMedia = localStorage.getItem('youtubeMedia') || GAMING_MUSIC_PLAYLIST_ID;
   elements.mediaInput.value = savedMedia;
   await loadMedia(savedMedia);

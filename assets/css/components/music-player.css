@@ -1,0 +1,280 @@
+/* ---------- Music Player Component ---------- */
+
+/* 
+   Base container acts as the anchor.
+   By default (Main Page & Mobile), it sits inside .nav-icons-group (flexbox).
+   It behaves like a standard icon (40px x 40px) but handles hover expansion.
+*/
+.music-player-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    /* Default spacing in flex group */
+    width: 40px;
+    height: 40px;
+    z-index: 50;
+    transition: all 0.3s ease;
+    pointer-events: auto;
+    /* Required to capture hover inside corner-nav */
+}
+
+/* Floating Vinyl/Video Circle (The "Icon") */
+.music-circle {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    /* Match the standard .corner-link style */
+    background: rgba(255, 255, 255, 0.05);
+    /* Glass base */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    z-index: 2;
+    /* Keep above controls */
+    box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
+    /* Subtle purple glow */
+}
+
+.music-circle:hover {
+    border-color: rgba(168, 85, 247, 0.5);
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+    transform: scale(1.05);
+}
+
+.music-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.music-iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* 
+   Controls Container (The "Stereo" part).
+   Hidden by default, slides out on hover.
+*/
+.music-controls {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    /* Default: Slide out to the LEFT (for Right-aligned layout) */
+    right: 20px;
+    /* Start hidden behind circle */
+    left: auto;
+
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    background: rgba(15, 15, 30, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+
+    /* Pill Shape */
+    border-radius: 40px 0 0 40px;
+    /* Rounded left side */
+    padding: 0.25rem 2.5rem 0.25rem 0.75rem;
+    /* Right padding creates space for circle overlap */
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1;
+    /* Behind circle */
+
+    white-space: nowrap;
+}
+
+/* Hover Interaction: Slide out controls */
+.music-player-container:hover .music-controls {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    right: 18px;
+    /* Slide out (adjust for overlap) */
+}
+
+/* Fix for slight gap issue where mouse leaves */
+.music-player-container:after {
+    content: '';
+    position: absolute;
+    inset: -10px;
+    z-index: -1;
+}
+
+/* Control Buttons */
+.music-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.music-btn:hover {
+    background: rgba(168, 85, 247, 0.4);
+    color: white;
+    transform: scale(1.1);
+}
+
+/* ---------------------------------------------------------
+   Art Lab Desktop Layout Override (Top Left)
+   Triggered only on Desktop screen width AND #artlab-body 
+   --------------------------------------------------------- */
+
+@media (min-width: 768px) {
+    #artlab-body .music-player-container {
+        position: fixed;
+        /* Position next to Back Arrow */
+        /* Back Arrow: ~40px wide + ~20px padding-left */
+        left: calc(1.25rem + 40px + 0.75rem);
+        /* Padding + Icon + Gap */
+        top: 0.75rem;
+        right: auto;
+    }
+
+    /* Reverse expansion direction for Left-aligned player */
+    #artlab-body .music-controls {
+        right: auto;
+        left: 20px;
+        /* Start behind circle */
+        border-radius: 0 40px 40px 0;
+        /* Rounded right side */
+        padding: 0.25rem 0.75rem 0.25rem 2.5rem;
+        /* Left padding for circle overlap */
+    }
+
+    #artlab-body .music-player-container:hover .music-controls {
+        left: 18px;
+        /* Slide out to Right */
+        right: auto;
+    }
+}
+
+/* 
+   Playlist Modal Style (Unchanged from before)
+*/
+.playlist-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    pointer-events: auto;
+    /* Enable clicks since parent nav is pointer-events: none */
+}
+
+.playlist-modal:not(.hidden) {
+    opacity: 1;
+    visibility: visible;
+}
+
+.playlist-content {
+    background: rgba(20, 20, 40, 0.9);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    box-shadow: 0 0 50px rgba(168, 85, 247, 0.15);
+    border-radius: 16px;
+    padding: 2rem;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.playlist-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, white, var(--primary-light));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.playlist-desc {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+}
+
+.playlist-input {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    color: white;
+    margin-bottom: 1.5rem;
+    font-family: inherit;
+}
+
+.playlist-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.2);
+}
+
+.playlist-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.btn-modal {
+    padding: 0.5rem 1.25rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-modal:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+}
+
+.btn-modal.primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.btn-modal.primary:hover {
+    background: var(--primary-dark);
+    opacity: 0.9;
+}
