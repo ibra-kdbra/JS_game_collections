@@ -8,8 +8,10 @@ const createInputControl = (canvas) => {
 
     const mouseMoveListener = (e) => {
         let rect = canvas.getBoundingClientRect();
-        mousePos.x = e.clientX - rect.left;
-        mousePos.y = e.clientY - rect.top;
+        const scaleX = rect.width / canvas.width;
+        const scaleY = rect.height / canvas.height;
+        mousePos.x = (e.clientX - rect.left) / scaleX;
+        mousePos.y = (e.clientY - rect.top) / scaleY;
         e.preventDefault();
     };
     const mouseDownListener = (e) => {

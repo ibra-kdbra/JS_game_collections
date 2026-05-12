@@ -15,6 +15,7 @@ const startGame = (parent, resources, startLevel) => {
 
     const startNextLevel = () => {
         console.log('start level ' + currentLevel);
+        playAmbient(currentLevel);
 
         let tutorial;
         if (currentLevel == 0) {
@@ -81,12 +82,12 @@ const startGame = (parent, resources, startLevel) => {
             resetLevel();
         };
         backBtn.onclick = () => {
-            if (currentLevel < 1) {
-                return;
-            }
+            if (currentLevel < 1) return;
             currentLevel--;
             resetLevel();
         };
+        backBtn.style.display = currentLevel > 0 ? 'block' : 'none';
+        skipBtn.style.display = currentLevel < gameData.levels.length - 1 ? 'block' : 'none';
     };
 
     startNextLevel();
@@ -96,9 +97,10 @@ const prepareGame = () => {
     const [loadingBar, context] = createCanvas(200, 7);
     loadingBar.id = 'loadingbar';
     loadingElement.appendChild(loadingBar);
+    showElement(loadingElement);
     showElement(loadingBar);
-    context.strokeStyle = 'grey';
-    context.fillStyle = 'grey';
+    context.strokeStyle = '#3e7ff9';
+    context.fillStyle = '#3e7ff9';
     context.lineWidth = 1;
 
     context.strokeRect(0.5, 0.5, 199, 4);
@@ -106,15 +108,17 @@ const prepareGame = () => {
         context.fillRect(0.5, 0.5, 199 / 100 * p, 4);
     }, (resources) => {
 
-        hideElement(loadingBar, () => {
-            showElement([menuElement, descriptionElement]);
+        hideElement([loadingBar, loadingElement], () => {
+            showElement([titleElement, menuElement, descriptionElement]);
 
             const savedLevel = loadLevel();
-            continueBtn.style.visibility = savedLevel ? 'visible' : 'hidden';
+            continueBtn.style.display = savedLevel ? 'block' : 'none';
 
             const hideUIandStartGame = (startLevel) => {
                 startBtn.onclick = continueBtn.onclick = null;
-                hideElement([titleElement, menuElement, descriptionElement], () => {
+                hideElement([titleElement, menuElement, descriptionElement, loadingElement], () => {
+                    // Ensure buttons are fully gone
+                    startBtn.style.display = continueBtn.style.display = 'none';
                     startGame(contentElement, resources, startLevel);
                 });
             };
@@ -133,4 +137,4 @@ const prepareGame = () => {
     });
 };
 
-showElement(titleElement, prepareGame);
+prepareGame();

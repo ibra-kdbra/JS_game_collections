@@ -75,3 +75,15 @@ const hideElement = (element, onComplete) => {
         }
     );
 };
+
+const resize = () => {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const gameWidth = 1280;
+    const gameHeight = 720;
+    const scale = Math.min(width / gameWidth, height / gameHeight);
+    gameElement.style.transform = `scale(${scale})`;
+};
+
+window.addEventListener('resize', resize);
+resize();

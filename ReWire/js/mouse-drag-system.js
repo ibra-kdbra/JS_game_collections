@@ -26,6 +26,7 @@ const createMouseDragSystem = (inputControl) => {
                         document.body.style.cursor = 'pointer';
                         dragEntity = entity;
                         entity.render.hover = true;
+                        playSound(Sounds.click);
 
                     },
                     mouseOut: () => {
@@ -38,6 +39,7 @@ const createMouseDragSystem = (inputControl) => {
                     },
                     mouseDown: () => {
                         isDragging = true;
+                        playSound(Sounds.click);
                         copyIntoV(sp, subV(inputControl.mousePos, entity.pos));
                     },
                     mouseUp: () => {

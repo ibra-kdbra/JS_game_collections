@@ -30,7 +30,7 @@ const generateResources = (onProgress, onDone) => {
     //Tutorial Screens
     const [tutorial1, tutCtx1] = createCanvas(450, 264);
     tutorial1.className = 'tutorial';
-    tutCtx1.font = '20px sans-serif';
+    tutCtx1.font = '20px Outfit';
     tutCtx1.fillStyle = '#ccc';
     tutCtx1.fillText('1. Drag the cable ...', 20, 50);
     tutCtx1.drawImage(dragPoint, 358, 10);
@@ -41,7 +41,7 @@ const generateResources = (onProgress, onDone) => {
 
     const [tutorial2, tutCtx2] = createCanvas(450, 100);
     tutorial2.className = 'tutorial';
-    tutCtx2.font = '20px sans-serif';
+    tutCtx2.font = '20px Outfit';
     tutCtx2.fillStyle = '#ccc';
     tutCtx2.fillText('Isolated cables can overlap others ', 20, 55);
     tutCtx2.drawImage(createIsolatorSprite(80), 358, 10);

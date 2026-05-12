@@ -37,6 +37,7 @@ const resolveConnections = function (attachments, spools) {
                 } else {
                     // we have a connection
                     entity.spool.isAttached = true;
+                    playSound(Sounds.connect);
                     const side = sideOfLine(a.outPos, b.inPos, entity.pos);
                     const attachment = { entity: entity, side };
                     attachments.splice(i + 1, 0, attachment);
@@ -114,6 +115,7 @@ const createSpoolSystem = (onLevelCompleted) => {
                     spool.spool.powered = spool.spool.overpowered = false;
                 });
                 let numPoweredSpools = 0;
+                let wasOverpowered = cable.cable.overpowered;
 
 
                 calculateTangents(attachments);
@@ -156,6 +158,7 @@ const createSpoolSystem = (onLevelCompleted) => {
                     for (let j = 0; j < blockEntities.length; j++) {
                         if (lineCircleIntersect(a1.outPos, b1.inPos, blockEntities[j].pos, blockEntities[j].block.size)) {
                             a1.overlap = true;
+                            if (!cable.cable.overpowered) playSound(Sounds.error);
                             cable.cable.overpowered = true;
                         }
                     }
@@ -189,6 +192,7 @@ const createSpoolSystem = (onLevelCompleted) => {
 
                 // check if level is completed
                 if (hasPower && finishEntity.finish.connected && !cable.cable.overpowered && numPoweredSpools === numSpools) {
+                    playSound(Sounds.complete);
                     onLevelCompleted();
                 }
 
