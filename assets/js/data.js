@@ -161,6 +161,13 @@ export const games = [
     tags: ["#PC", "#Mobile"]
   },
   {
+    link: "./ReWire/index.html",
+    imgSrc: "./ReWire/assets/captured.png",
+    title: "ReWire",
+    description: "ReWire is a puzzle game set in space.",
+    tags: ["#PC", "#Mobile"]
+  },
+  {
     link: "./Wahdatio/index.html",
     imgSrc: "./Wahdatio/img/sample_logo.png",
     title: "Wahdatio",
