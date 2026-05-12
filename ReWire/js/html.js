@@ -85,5 +85,20 @@ const resize = () => {
     gameElement.style.transform = `scale(${scale})`;
 };
 
+const toggleMusicBtn = elementById('toggleMusic');
+const toggleFxBtn = elementById('toggleFx');
+
+toggleMusicBtn.addEventListener('click', () => {
+    const isMuted = toggleMusic();
+    toggleMusicBtn.classList.toggle('muted', isMuted);
+    toggleMusicBtn.querySelector('i').className = isMuted ? 'fas fa-music-slash' : 'fas fa-music';
+});
+
+toggleFxBtn.addEventListener('click', () => {
+    const isMuted = toggleFx();
+    toggleFxBtn.classList.toggle('muted', isMuted);
+    toggleFxBtn.querySelector('i').className = isMuted ? 'fas fa-volume-mute' : 'fas fa-volume-up';
+});
+
 window.addEventListener('resize', resize);
 resize();

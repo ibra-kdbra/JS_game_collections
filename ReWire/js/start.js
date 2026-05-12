@@ -115,6 +115,7 @@ const prepareGame = () => {
             continueBtn.style.display = savedLevel ? 'block' : 'none';
 
             const hideUIandStartGame = (startLevel) => {
+                playMusic();
                 startBtn.onclick = continueBtn.onclick = null;
                 hideElement([titleElement, menuElement, descriptionElement, loadingElement], () => {
                     // Ensure buttons are fully gone
