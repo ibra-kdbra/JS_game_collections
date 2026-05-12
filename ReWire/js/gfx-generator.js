@@ -300,11 +300,15 @@ const createGameBackground = () => {
     });
 
     const highlight = generateImage(128 * 2, 72 * 2, v => {
+        const cv = subV(v, halfV);
+        const d = lenV(cv) * 2;
+        const vignette = 1 - smoothstep(0.5, 1.5, d);
+        
         const w = 0.01;
         const c = smoothstep(0, w * 0.6, v.x) * smoothstep(1, 1 - w * 0.6, v.x) *
             smoothstep(0, w, v.y) * smoothstep(1, 1 - w, v.y);
 
-        return newCol(1, 1, 1, (1 - c) * 0.04);
+        return newCol(1, 1, 1, (1 - c) * 0.04 * vignette);
     });
 
     for (let y = 0; y < 12; y++) {
