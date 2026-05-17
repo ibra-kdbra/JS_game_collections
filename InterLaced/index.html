@@ -8,32 +8,34 @@
   </head>
   <body>
     <div class="display">
-      <div id="screen" class="hide">
-        <div class="title">GOLIATH NETWORK VISUALIZER</div>
-        <div class="mesh-id"><div id="spinner" class="spinner">&#x169b</div> mesh://<span id="mesh-id"></span></div>
-        <div class="health">Network Health: <span id="health">100%</span></div>
-        <div id="toolbar">
-          <div data-tool="info">&#x24D8<div id="info-use"></div></div>
-          <div data-tool="crash">&#x2349<div id="crash-use"></div></div>
-          <div data-tool="cut">&#x27DB<div id="cut-use"></div></div>
-          <div data-tool="slow">&#x21DD<div id="slow-use"></div></div>
-          <div data-tool="corrupt">&#x2A02<div id="corrupt-use"></div></div>
-          <div data-tool="reroute">&#x21AC<div id="reroute-use"></div></div>
-          <div data-tool="intercept">&#x291E<div id="intercept-use"></div></div>
-          <div data-tool="mine">&#x22C7<div id="mine-use"></div></div>
+      <div id="game-container">
+        <div id="screen" class="hide">
+          <div class="title">GOLIATH NETWORK VISUALIZER</div>
+          <div class="mesh-id"><div id="spinner" class="spinner">&#x169b</div> mesh://<span id="mesh-id"></span></div>
+          <div class="health">Network Health: <span id="health">100%</span></div>
+          <div id="toolbar">
+            <div data-tool="info">&#x24D8<div id="info-use"></div></div>
+            <div data-tool="crash">&#x2349<div id="crash-use"></div></div>
+            <div data-tool="cut">&#x27DB<div id="cut-use"></div></div>
+            <div data-tool="slow">&#x21DD<div id="slow-use"></div></div>
+            <div data-tool="corrupt">&#x2A02<div id="corrupt-use"></div></div>
+            <div data-tool="reroute">&#x21AC<div id="reroute-use"></div></div>
+            <div data-tool="intercept">&#x291E<div id="intercept-use"></div></div>
+            <div data-tool="mine">&#x22C7<div id="mine-use"></div></div>
+          </div>
+          <svg id="mesh"></svg>
+          <div id="coins"></div><div id="data"></div>
+          <pre id="info"></pre>
+          <pre id="console"></pre>
+          <div id="retry"><span id="retry-text"></span>&#x21BB</div>
+          <div id="quit"><span id="quit-text"></span>&#x21CF</div>
         </div>
-        <svg id="mesh"></svg>
-        <div id="coins"></div><div id="data"></div>
-        <pre id="info"></pre>
-        <pre id="console"></pre>
-        <div id="retry"><span id="retry-text"></span>&#x21BB</div>
-        <div id="quit"><span id="quit-text"></span>&#x21CF</div>
-      </div>
-      <pre id="terminal"></pre>
-      <pre id="crash" class="hide"></pre>
-      <div id="offline" class="hide">
-        <div id="offline-banner">OFFLINE</div>
-        <div id="continue"></div>
+        <pre id="terminal"></pre>
+        <pre id="crash" class="hide"></pre>
+        <div id="offline" class="hide">
+          <div id="offline-banner">OFFLINE</div>
+          <div id="continue"></div>
+        </div>
       </div>
     </div>
   </body>

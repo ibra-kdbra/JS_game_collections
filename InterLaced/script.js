@@ -2117,3 +2117,23 @@ function Interlaced() {
 window.addEventListener('load', function() {
   window.interlaced = new Interlaced();
 }, false);
+
+// Responsive full-screen scale-to-fit helper
+function resizeDisplay() {
+  const container = document.getElementById('game-container');
+  if (!container) return;
+  
+  const baseWidth = 980;
+  const baseHeight = 620;
+  const windowWidth = window.innerWidth;
+  const windowHeight = window.innerHeight;
+  
+  // Calculate scale factor to cover maximum viewport space while keeping aspect ratio
+  const scale = Math.min(windowWidth / baseWidth, windowHeight / baseHeight);
+  
+  // Apply standard layout scaling centered
+  container.style.transform = `scale(${scale})`;
+}
+
+window.addEventListener('resize', resizeDisplay);
+window.addEventListener('load', resizeDisplay);
