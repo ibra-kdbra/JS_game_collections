@@ -456,3 +456,36 @@
         stroke-dashoffset: 100;
       }
     }
+    .github-link {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 40px;
+      height: 40px;
+      background-color: rgba(24, 24, 24, 0.8);
+      border: 1px solid #333;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 9999;
+      text-decoration: none;
+    }
+    .github-link:hover {
+      background-color: rgba(35, 35, 35, 0.95);
+      border-color: #4f9ED8;
+      transform: scale(1.1) translateY(-2px);
+      box-shadow: 0 6px 16px rgba(79, 158, 216, 0.3);
+    }
+    .github-icon {
+      width: 20px;
+      height: 20px;
+      filter: invert(0.5);
+      transition: filter 0.3s ease;
+    }
+    .github-link:hover .github-icon {
+      filter: invert(1);
+    }
