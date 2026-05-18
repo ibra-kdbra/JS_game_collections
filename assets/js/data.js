@@ -147,10 +147,10 @@ export const games = [
     tags: ["#PC"]
   },
   {
-    link: "./Back_Attacker/index.html",
-    imgSrc: "./Back_Attacker/assets/imgs/captured.png",
-    title: "Back Attacker",
-    description: "This is the Ninja Forest, you are the guard.",
+    link: "./InterLaced/index.html",
+    imgSrc: "./InterLaced/assets/captured.png",
+    title: "InterLaced",
+    description: "Interlaced is a tactical network intrusion and sabotage simulator",
     tags: ["#PC"]
   },
   {
