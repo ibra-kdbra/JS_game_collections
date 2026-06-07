@@ -29,7 +29,7 @@ import { games } from './data.js';
 
         // 2. Render Cards efficiently
         const html = experiments.map((exp, i) => `
-            <article class="experiment-card">
+            <article class="experiment-card" style="animation-delay: ${i * 0.08}s;">
                 <a href="${exp.link}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; color: inherit; display: block;">
                     <div class="experiment-card-inner">
                         <div class="experiment-card-preview">
@@ -55,16 +55,6 @@ import { games } from './data.js';
 
         // 3. Setup Navigation
         setupNavigation(track);
-
-        // 4. Trigger Animations (CSS Transition based)
-        requestAnimationFrame(() => {
-            const cards = track.querySelectorAll('.experiment-card');
-            cards.forEach((card, index) => {
-                setTimeout(() => {
-                    card.classList.add('appear');
-                }, index * 100);
-            });
-        });
 
         // 5. Run Hero Animations (if GSAP available)
         runHeroAnimations();
