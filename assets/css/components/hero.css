@@ -30,15 +30,14 @@
 }
 
 .hero-title {
+  font-family: var(--font-display);
   font-size: clamp(2.5rem, 7vw, 4.5rem);
   font-weight: 800;
   line-height: 1.1;
   margin-bottom: 1.25rem;
-  letter-spacing: -0.03em;
-  background: linear-gradient(135deg, var(--text-primary) 0%, var(--primary-light) 50%, var(--secondary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  text-wrap: balance;
 }
 
 .hero-subtitle {
@@ -63,6 +62,7 @@
 }
 
 .stat-value {
+  font-family: var(--font-display);
   font-size: 2.25rem;
   font-weight: 700;
   color: var(--text-primary);
@@ -97,7 +97,8 @@
   transition: all var(--transition-normal);
   cursor: pointer;
   border: none;
-  font-family: inherit;
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
 }
 
 .btn-primary {

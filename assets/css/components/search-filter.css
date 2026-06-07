@@ -39,7 +39,7 @@
 }
 
 #search-input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.65);
 }
 
 .search-icon {
@@ -70,10 +70,11 @@
   border-radius: var(--radius-full);
   color: var(--text-secondary);
   font-size: 0.85rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: inherit;
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -99,11 +100,11 @@
   font-size: 0.95rem;
   outline: none;
   transition: all var(--transition-fast);
-  font-family: inherit;
+  font-family: var(--font-main);
 }
 
 .search-input::placeholder {
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .search-input:focus {
