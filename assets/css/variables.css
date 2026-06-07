@@ -48,5 +48,6 @@
   --transition-slow: 0.5s ease;
   
   /* Typography */
-  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-main: 'Albert Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Chakra Petch', sans-serif;
 }

@@ -56,10 +56,6 @@
     font-size: 1.5rem;
   }
   
-  .games-grid {
-    grid-template-columns: 1fr;
-  }
-  
   .artlab-main-card {
     padding: 1.5rem;
     min-height: auto;
