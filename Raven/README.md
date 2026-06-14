@@ -1,6 +1,5 @@
 # Raven
 
-
 ## Description
 
 In this 2D top-down action-puzzle game, the security cameras for a secret facility have been taken offline, and it is YOUR job to fix the problem. Take on a series of floors overrun by mysterious enemies known only as "Raven" -- although harmless as long as you can see them, they are deadly if you turn your back.
@@ -62,4 +61,3 @@ Excellent article that gives a couple ways to prevent oscillator "clicks". Your 
 * [AdvanceCOMP](http://www.advancemame.it/download)
 
 Additional compression tools that are quite nice for a competition like this (it's linked to on the js13kgames resources page as well). My experience is that the imagemin tool is already quite good, so `advpng` will likely only save you a handful of bytes, if any. However, `advzip` is great at squeezing those last 100 bytes out of your zip file, when you've already squeezed everything else you can.
-

@@ -71,13 +71,12 @@
 }
 
 .artlab-card-title {
+  font-family: var(--font-display);
   font-size: 1.5rem;
   font-weight: 800;
   margin-bottom: 0.25rem;
-  background: linear-gradient(to right, white, var(--text-secondary));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--text-primary);
+  text-wrap: balance;
 }
 
 .artlab-card-desc {
@@ -113,8 +112,10 @@
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   border-radius: var(--radius-lg);
   color: white;
+  font-family: var(--font-display);
   font-weight: 600;
   font-size: 0.9rem;
+  letter-spacing: 0.02em;
   text-decoration: none;
   transition: all var(--transition-normal);
 }

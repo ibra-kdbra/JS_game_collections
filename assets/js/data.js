@@ -147,10 +147,10 @@ export const games = [
     tags: ["#PC"]
   },
   {
-    link: "./Back_Attacker/index.html",
-    imgSrc: "./Back_Attacker/assets/imgs/captured.png",
-    title: "Back Attacker",
-    description: "This is the Ninja Forest, you are the guard.",
+    link: "./InterLaced/index.html",
+    imgSrc: "./InterLaced/assets/captured.png",
+    title: "InterLaced",
+    description: "Interlaced is a tactical network intrusion and sabotage simulator",
     tags: ["#PC"]
   },
   {
@@ -158,6 +158,13 @@ export const games = [
     imgSrc: "./Gravity_Wells/assets/imgs/captured.png",
     title: "Gravity Wells",
     description: "Gravity Wells is a puzzle game set in space.",
+    tags: ["#PC", "#Mobile"]
+  },
+  {
+    link: "./ReWire/index.html",
+    imgSrc: "./ReWire/assets/captured.png",
+    title: "ReWire",
+    description: "ReWire is a puzzle game set in space.",
     tags: ["#PC", "#Mobile"]
   },
   {

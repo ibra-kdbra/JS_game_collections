@@ -151,7 +151,7 @@
 
 @media (min-width: 768px) {
     #artlab-body .music-player-container {
-        position: fixed;
+        position: absolute;
         /* Position next to Back Arrow */
         /* Back Arrow: ~40px wide + ~20px padding-left */
         left: calc(1.25rem + 40px + 0.75rem);

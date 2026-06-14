@@ -27,6 +27,7 @@ body#artlab-body {
   color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
+  overflow-y: auto;
   background: var(--artlab-bg-start);
 }
 
@@ -160,15 +161,14 @@ body#artlab-body {
 }
 
 .artlab-hero-title {
+  font-family: var(--font-display);
   font-size: clamp(2.5rem, 9vw, 5rem);
   font-weight: 800;
   line-height: 1;
   margin-bottom: 1.25rem;
-  letter-spacing: -0.03em;
-  background: linear-gradient(135deg, var(--text-primary) 0%, var(--artlab-primary-light) 50%, var(--artlab-secondary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  text-wrap: balance;
 }
 
 .artlab-hero-subtitle {
@@ -227,23 +227,31 @@ body#artlab-body {
   display: none;
 }
 
+@keyframes card-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .experiment-card {
   flex: 0 0 auto;
   width: 340px;
   scroll-snap-align: center;
   position: relative;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* Initial state for entrance animation */
-  opacity: 0;
-  transform: translateY(30px);
-}
-
-/* Animation state */
-.experiment-card.appear {
   opacity: 1;
   transform: translateY(0);
-  transition: opacity 0.8s ease-out, transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .experiment-card {
+    animation: card-fade-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
 }
 
 .experiment-card:hover {
@@ -282,9 +290,7 @@ body#artlab-body {
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.experiment-card:hover .experiment-card-preview img {
-  transform: scale(1.1);
-}
+/* Image hover scale removed in compliance with Impeccable guidelines */
 
 .experiment-card-preview::after {
   content: '';
@@ -318,11 +324,13 @@ body#artlab-body {
 }
 
 .experiment-card-title {
+  font-family: var(--font-display);
   font-size: 1.15rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
   color: var(--text-primary);
   letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 .experiment-card-description {

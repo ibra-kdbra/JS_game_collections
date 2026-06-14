@@ -1,0 +1,491 @@
+    * {
+      font-family: monospace;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      background: radial-gradient(circle, #094781 0%, #07345E 80%);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+    .display {
+      position: relative;
+      background-color: #181818;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #game-container {
+      position: relative;
+      width: 980px;
+      height: 620px;
+      transform-origin: center center;
+      animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+    #screen {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background-color: #181818;
+      width: 960px;
+      height: 600px;
+      padding: 8px;
+      font-size: 11px;
+      color: white;
+    }
+    #terminal {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background-color: #181818;
+      width: 960px;
+      height: 600px;
+      padding: 8px;
+      font-size: 11px;
+      line-height: 15px;
+      color: white;
+      overflow: hidden;
+    }
+    #cursor::before {
+      content: '\0275A';
+      display: inline-block;
+      color: white;
+      animation: cursor 1s step-end infinite;
+    }
+    @keyframes cursor {
+      from, to {
+        color: white;
+      }
+      50% {
+        color: #181818;
+      }
+    }
+    #info {
+      position: absolute;
+      width: 150px;
+      top: 34px;
+      right: 8px;
+      text-align: right;
+      font-size: 11px;
+      background-color: rgba(24,24,24,0.8);
+    }
+    .decrypt {
+      animation: decrypt 2s forwards;
+    }
+    @keyframes decrypt {
+      from {
+        color: #0073b1;
+      }
+      to {
+        color: white;
+      }
+    }
+    #email {
+      padding-left: 10px;
+      width: 320px;
+      white-space: normal;
+    }
+    .hide {
+      display: none !important;
+    }
+    .fade-out {
+      animation: fade-out 0.5s forwards;
+    }
+    @keyframes fade-out {
+      to {
+        opacity: 0;
+        pointer-events: none;
+      }
+    }
+    #crash {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      width: 960px;
+      height: 600px;
+      padding: 8px;
+      overflow: hidden;
+      color: white;
+      letter-spacing: 3px;
+      line-height: 22px;
+      word-break: break-all;
+      white-space: pre-wrap;
+      opacity: 0.5;
+      animation: crashing 0.5s linear;
+    }
+    @keyframes crashing {
+      from {
+        height: 0;
+      }
+      to {
+        height: 95%;
+      }
+    }
+    #offline {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      width: 960px;
+      height: 600px;
+      padding: 8px;
+      animation: offline-fade 0.3s;
+    }
+    #offline-banner {
+      position: absolute;
+      display: inline-block;
+      border: 8px solid rgba(255,0,0,0.5);
+      border-radius: 16px;
+      font-size: 60px;
+      font-weight: 700;
+      padding: 20px 20px 20px 40px;
+      color: white;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      letter-spacing: 32px;
+    }
+    #offline-banner::before {
+      content: '';
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background-color: rgba(255,0,0,0.3);
+      width: 550px;
+      height: 125px;
+      z-index: -1;
+    }
+    .failed {
+      border-color: #F47E1B !important;
+    }
+    .failed:hover {
+      color: #F47E1B !important;
+    }
+    .failed::before {
+      background-color: rgba(244,126,27,0.3) !important;
+    }
+    #continue {
+      position: absolute;
+      top: 410px;
+      left: 640px;
+      color: white;
+      font-size: 16px;
+      line-height: 20px;
+      cursor: pointer;
+      padding: 8px;
+      background-color: #181818;
+      border-radius: 5px;
+      border: 4px solid rgba(255,0,0,0.5);
+    }
+    #continue:hover {
+      color: #F00;
+    }
+    @keyframes offline-fade {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+    #console {
+      position: absolute;
+      top: 530px;
+      height: 60px;
+      width: 944px;
+      overflow: hidden;
+      color: white;
+      font-size: 12px;
+    }
+    #retry {
+      position: absolute;
+      top: 540px;
+      right: 10px;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+    #retry-text {
+      font-size: 12px;
+      padding-right: 8px;
+    }
+    #quit {
+      position: absolute;
+      top: 570px;
+      right: 10px;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+    #quit-text {
+      font-size: 12px;
+      padding-right: 8px;
+    }
+
+    .title {
+      letter-spacing: 3px;
+      background-image: -webkit-linear-gradient(left, #094781 0%, #181818 40%);
+      border-radius: 5px;
+      padding: 4px 0 4px 8px;
+    }
+    .banner {
+      background-image: -webkit-linear-gradient(left, #094781 0%, #181818 60%);
+      border-radius: 5px;
+      padding: 4px 0 4px 8px;
+      font-weight: 700;
+    }
+    #mesh {
+      position: absolute;
+      top: 30px;
+      left: 34px;
+      width: 926px;
+      height: 510px;
+    }
+    #mesh circle, #mesh line {
+      cursor: pointer;
+    }
+    .mesh-id {
+      position: absolute;
+      top: 12px;
+      left: 370px;
+      width: 230px;
+      text-align: center;
+    }
+    .spinner {
+      display: inline-block;
+      animation: spinner .8s ease infinite;
+    }
+    @keyframes spinner {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    .blink {
+      animation: blink 2s ease-in-out infinite alternate
+    }
+    @keyframes blink {
+      to {
+        opacity: 0.6;
+      }
+    }
+    .health {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+    }
+    #coins {
+      position: absolute;
+      top: 30px;
+      right: 12px;
+    }
+    #data {
+      position: absolute;
+      top: 11px;
+      right: 175px;
+    }
+    #toolbar {
+      position: absolute;
+      top: 34px;
+      left: 0px;
+      width: 32px;
+      height: 400px;
+      font-size: 28px;
+      line-height: 42px;
+      text-align: center;
+    }
+    [data-tool] {
+      border-left: 2px solid transparent;
+      cursor: pointer;
+    }
+    [data-tool] > div {
+      font-size: 10px;
+      line-height: 10px;
+      padding-bottom: 10px;
+    }
+    [data-tool="info"] {
+      padding-top: 10px;
+      font-size: 20px;
+      font-weight: 700;
+      padding-left: 6px;
+    }
+    [data-tool="info"]:hover, [data-tool="info"].selected {
+      border-left: 2px solid #FFF;
+    }
+    [data-tool="crash"]:hover, [data-tool="crash"].selected {
+      border-left: 2px solid #D34E53;
+    }
+    [data-tool="cut"]:hover, [data-tool="cut"].selected {
+      border-left: 2px solid #F89100;
+    }
+    [data-tool="slow"]:hover, [data-tool="slow"].selected {
+      border-left: 2px solid #FCC700;
+    }
+    [data-tool="corrupt"] {
+      font-size: 20px;
+    }
+    [data-tool="corrupt"]:hover, [data-tool="corrupt"].selected {
+      border-left: 2px solid #535C8E;
+    }
+    [data-tool="reroute"]:hover, [data-tool="reroute"].selected {
+      border-left: 2px solid #9E379F;
+    }
+    [data-tool="intercept"] {
+      font-size: 26px;
+    }
+    [data-tool="intercept"]:hover, [data-tool="intercept"].selected {
+      border-left: 2px solid #1375F7;
+    }
+    [data-tool="mine"] {
+      font-size: 26px;
+    }
+    [data-tool="mine"]:hover, [data-tool="mine"].selected {
+      border-left: 2px solid #080;
+    }
+    .node {
+      fill: #5691DC;
+    }
+    .node:hover {
+      stroke: #5691DC;
+      stroke-width: 7px;
+    }
+    .node-effect {
+      stroke: transparent;
+      stroke-width: 2px;
+      fill: transparent;
+      pointer-events: none;
+    }
+    .node:hover + .node-effect {
+      stroke-width: 4px;
+      stroke-dasharray: none;
+      animation: none;
+    }
+    .node-effect-animate {
+      stroke-dasharray: 5 2;
+      animation: progress 3s linear infinite reverse;
+    }
+    .node-effect-corrupt {
+      stroke: #535C8E;
+    }
+    .node-effect-reroute {
+      stroke: #9E379F;
+    }
+    .node-effect-intercept {
+      stroke: #1375F7;
+    }
+    .node-effect-mine {
+      stroke: #080;
+    }
+    .node-effect-firewall {
+      stroke: #FFF;
+    }
+    .node-packet {
+      fill: #8BBF50;
+    }
+    .node-packet:hover {
+      stroke: #8BBF50 !important;
+    }
+    .node-offline {
+      fill: #D34E53 !important;
+    }
+    .node-offline:hover {
+      stroke: #D34E53 !important;
+    }
+    .edge-interact {
+      stroke: transparent;
+      stroke-width: 4px;
+    }
+    .edge-interact:hover {
+      stroke: rgba(153,153,153,0.3);
+    }
+    .edge-empty {
+      stroke: rgba(255, 255, 255, 0.2);
+    }
+    .edge-forward {
+      stroke: transparent;
+    }
+    .edge-reverse {
+      stroke: transparent;
+    }
+    .edge-slow {
+      stroke: #FCC700 !important;
+    }
+    .edge-cut {
+      stroke: #D34E53 !important;
+    }
+    .edge-empty-slow {
+      stroke: rgba(252, 199, 0, 0.3);
+    }
+    .edge-offline-empty {
+      stroke: #D34E53;
+    }
+    .edge-packet-empty {
+      stroke: transparent !important;
+    }
+    .edge-packet-forward {
+      stroke: #8BBF50;
+      stroke-dasharray: 5;
+      animation: progress 3s linear infinite;
+    }
+    .edge-packet-reverse {
+      stroke: #3B6D3D;
+      stroke-dasharray: 5;
+      animation: progress 3s linear infinite reverse;
+    }
+    @keyframes progress {
+      to {
+        stroke-dashoffset: 100;
+      }
+    }
+    .github-link {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 40px;
+      height: 40px;
+      background-color: rgba(24, 24, 24, 0.8);
+      border: 1px solid #333;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 9999;
+      text-decoration: none;
+    }
+    .github-link:hover {
+      background-color: rgba(35, 35, 35, 0.95);
+      border-color: #4f9ED8;
+      transform: scale(1.1) translateY(-2px);
+      box-shadow: 0 6px 16px rgba(79, 158, 216, 0.3);
+    }
+    .github-icon {
+      width: 20px;
+      height: 20px;
+      filter: invert(0.5);
+      transition: filter 0.3s ease;
+    }
+    .github-link:hover .github-icon {
+      filter: invert(1);
+    }

@@ -12,7 +12,6 @@ const ASSETS_TO_CACHE = [
     './assets/js/script.js',
     './assets/js/dropEffect.js',
     './assets/js/lazyLoad.js',
-    './assets/js/config.js',
     './assets/icons/video_game.png',
     './assets/icons/video_game.svg',
     // Art Lab
@@ -29,6 +28,7 @@ self.addEventListener('install', (event) => {
                 console.log('[Service Worker] Caching all: app shell and content');
                 return cache.addAll(ASSETS_TO_CACHE);
             })
+            .then(() => self.skipWaiting())
     );
 });
 
@@ -44,13 +44,13 @@ self.addEventListener('activate', (event) => {
                     }
                 })
             );
-        })
+        }).then(() => self.clients.claim())
     );
 });
 
 // Fetch Event - Stale-While-Revalidate Strategy
 self.addEventListener('fetch', (event) => {
-    // Skip cross-origin requests (like Turso or CDN)
+    // Skip cross-origin requests (like CDN)
     if (!event.request.url.startsWith(self.location.origin)) {
         return;
     }
@@ -60,12 +60,10 @@ self.addEventListener('fetch', (event) => {
             return cache.match(event.request).then((response) => {
                 const fetchPromise = fetch(event.request).then((networkResponse) => {
                     // Update cache if valid response
-                    if (networkResponse.ok) {
+                    if (networkResponse.ok && networkResponse.status === 200) {
                         cache.put(event.request, networkResponse.clone());
                     }
                     return networkResponse;
-                }).catch(() => {
-                    // console.log('Offline: ', event.request.url);
                 });
 
                 // Return cached response if available, else fetch

@@ -16,18 +16,62 @@
     <link href="../assets/icons/video_game.png" rel="icon" type="image/png" />
     
     <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700&family=Chakra+Petch:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
     
     <!-- Styles -->
     <link rel="stylesheet" href="../assets/css/artlab.css" />
+    <style>
+      body, p, li, a, span, button, input, select, textarea { font-family: 'Albert Sans', sans-serif; }
+      h1, h2, h3, h4, h5, h6 { font-family: 'Chakra Petch', sans-serif; }
+    </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- GSAP for animations -->
     <script src="../assets/vendor/gsap/gsap.min.js" defer></script>
   </head>
   <body id="artlab-body">
+    <!-- Inline Error Overlay for Debugging -->
+    <script>
+      window.addEventListener('error', function(e) {
+        var div = document.createElement('div');
+        div.style.position = 'fixed';
+        div.style.top = '10px';
+        div.style.left = '10px';
+        div.style.right = '10px';
+        div.style.background = 'rgba(255, 0, 0, 0.9)';
+        div.style.color = 'white';
+        div.style.padding = '15px';
+        div.style.zIndex = '99999';
+        div.style.fontFamily = 'monospace';
+        div.style.whiteSpace = 'pre-wrap';
+        div.style.borderRadius = '8px';
+        div.style.boxShadow = '0 4px 20px rgba(0,0,0,0.5)';
+        div.innerHTML = '<strong>JS Error:</strong> ' + e.message + '<br><small>' + e.filename + ':' + e.lineno + ':' + e.colno + '</small>';
+        document.body.appendChild(div);
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        var div = document.createElement('div');
+        div.style.position = 'fixed';
+        div.style.top = '80px';
+        div.style.left = '10px';
+        div.style.right = '10px';
+        div.style.background = 'rgba(255, 128, 0, 0.9)';
+        div.style.color = 'white';
+        div.style.padding = '15px';
+        div.style.zIndex = '99999';
+        div.style.fontFamily = 'monospace';
+        div.style.whiteSpace = 'pre-wrap';
+        div.style.borderRadius = '8px';
+        div.style.boxShadow = '0 4px 20px rgba(0,0,0,0.5)';
+        div.innerHTML = '<strong>Unhandled Promise Rejection:</strong> ' + e.reason;
+        document.body.appendChild(div);
+      });
+    </script>
     <!-- Animated Background -->
     <div class="artlab-bg"></div>
     <!-- Three.js particle effect loads automatically -->

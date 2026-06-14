@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ReWire</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id='game'>
+    <div id='content'></div>
+    <div id='levelInfo' class='blueFont hidden'>Level 6</div>
+    <!--<div id='tutorial' class='blueFont'>Level 6</div>-->
+    <div id='nodeInfo' class='blueFont hidden'>3 / 10</div>
+    <div id="main-menu" class="center hidden">
+        <div id='title'>
+            <div class="circuit-logo">
+                <div class="core"></div>
+                <div class="ring"></div>
+                <div class="ring"></div>
+                <div class="ring"></div>
+            </div>
+            <h1 class="logo-text">REWIRE</h1>
+        </div>
+        <div id='description' class='blueFont'>
+            <div style="font-size: 10px; color: #3e7ff9; letter-spacing: 4px; margin-bottom: 20px; text-transform: uppercase;">System Status: <span style="color: #ff4444; animation: flicker 0.5s infinite;">Offline</span></div>
+            <h2>Bring the System back online by rewiring the power nodes.</h2>
+            <h3>The game saves progress automatically, you can come back later and continue from the last played level.</h3>
+        </div>
+        <div id='menu'>
+            <a id='startBtn' class="btn">START NEW GAME</a>
+            <a id='continueBtn' class="btn">CONTINUE GAME</a>
+        </div>
+    </div>
+    <div id='loading' class='center hidden'></div>
+    <div id='levelDone' class='center hidden'>
+        <div><h1 id='nextMsg' class='blueFont'>Level completed!</h1></div>
+        <a id='nextBtn' class="btn">NEXT LEVEL</a>
+    </div>
+    <div id='reset' class='hidden'>
+        <a id='resetBtn' class='btn'>RESET</a>
+        <a id='backBtn' class='btn hidden'>BACK</a>
+        <a id='skipBtn' class='btn hidden'>NEXT</a>
+    </div>
+    <div id="settings-container">
+        <div class="settings-menu">
+            <button id="toggleMusic" class="settings-btn" title="Toggle Music"><i class="fas fa-music"></i></button>
+            <button id="toggleFx" class="settings-btn" title="Toggle FX"><i class="fas fa-volume-up"></i></button>
+        </div>
+        <a href="https://github.com/ibra-kdbra/JS_game_collections" target="_blank" id="settings-trigger" class="settings-btn main" aria-label="GitHub">
+            <i class="fab fa-github"></i>
+        </a>
+    </div>
+</div>
+
+<!-- Load scripts in order -->
+<script src="js/types.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/math-util.js"></script>
+<script src="js/vector.js"></script>
+<script src="js/canvas.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/html.js"></script>
+<script src="js/gfx-generator.js"></script>
+<script src="js/input.js"></script>
+<script src="js/space.js"></script>
+<script src="js/mouse-drag-system.js"></script>
+<script src="js/render-systems.js"></script>
+<script src="js/spool-system.js"></script>
+<script src="js/level-editor.js"></script>
+<script src="js/game.js"></script>
+<script src="js/level.js"></script>
+<script src="js/resources.js"></script>
+<script src="js/start.js"></script>
+
+</body>
+</html>
