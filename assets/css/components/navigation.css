@@ -19,16 +19,16 @@
   gap: 0.5rem;
   text-decoration: none;
   pointer-events: auto;
-  transition: transform 0.3s ease;
+  transition: transform var(--transition-fast);
 }
 
 .corner-logo:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 .logo-icon {
   font-size: 1.5rem;
-  filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.5));
+  filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.6));
 }
 
 .logo-text {
@@ -39,50 +39,32 @@
   color: var(--text-primary);
 }
 
-.corner-link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 50%;
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-size: 1.1rem;
-  pointer-events: auto;
-  transition: all 0.3s ease;
-}
-
-/* Back arrow (corner-back) shares identical style */
+.corner-link,
 .corner-back {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(18, 19, 26, 0.6);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(250, 204, 21, 0.2);
   border-radius: 50%;
   color: var(--text-secondary);
   text-decoration: none;
   font-size: 1.1rem;
   pointer-events: auto;
-  transition: all 0.3s ease;
+  transition: all var(--transition-fast);
 }
 
 .corner-link:hover,
 .corner-back:hover {
-  background: rgba(99, 102, 241, 0.15);
-  border-color: rgba(99, 102, 241, 0.4);
-  color: var(--text-primary);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.2);
+  background: rgba(250, 204, 21, 0.15);
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: 0 0 20px rgba(250, 204, 21, 0.3);
 }
 
 /* Art Lab specific: back arrow left, icons right */
@@ -96,5 +78,3 @@
   align-items: center;
   gap: 0.75rem;
 }
-
-/* Redundant overrides removed - standard .corner-link style applies */
