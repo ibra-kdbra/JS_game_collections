@@ -1,29 +1,23 @@
 /* Trigger Button - Inherits base style from .corner-link */
 .feedback-trigger {
     cursor: pointer;
-    /* Other properties handled by .corner-link */
     margin-left: 0;
-}
-
-/* Hover effects handled by .corner-link */
-.feedback-trigger:hover {
-    /* Optional: Add specific hover glow if needed, otherwise inherit */
-    /* keeping empty to match GitHub link exactly */
 }
 
 /* Modal Overlay */
 .feedback-modal {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(8px);
+    background: rgba(9, 9, 11, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     z-index: 1000;
     display: flex;
     justify-content: center;
     align-items: center;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.3s ease;
+    transition: all var(--transition-fast);
 }
 
 .feedback-modal.active {
@@ -33,20 +27,18 @@
 
 /* Modal Content */
 .feedback-modal-content {
-    background: #1a1a2e;
-    /* Fallback */
-    background: rgba(26, 26, 46, 0.95);
-    border: 1px solid rgba(168, 85, 247, 0.3);
-    border-radius: 16px;
+    background: rgba(18, 19, 26, 0.96);
+    border: 1px solid rgba(250, 204, 21, 0.3);
+    border-radius: var(--radius-lg);
     width: 90%;
     max-width: 500px;
     max-height: 85vh;
     display: flex;
     flex-direction: column;
     position: relative;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(250, 204, 21, 0.2);
     transform: scale(0.95);
-    transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+    transition: transform var(--transition-fast);
 }
 
 .feedback-modal.active .feedback-modal-content {
@@ -59,31 +51,37 @@
     right: 1.25rem;
     background: none;
     border: none;
-    color: var(--text-secondary, #94a3b8);
+    color: var(--text-secondary);
     font-size: 1.5rem;
     cursor: pointer;
-    transition: color 0.2s;
+    transition: color var(--transition-fast);
     z-index: 2;
     line-height: 1;
 }
 
 .modal-close:hover {
-    color: #fff;
+    color: var(--primary);
 }
 
 /* Header */
 .feedback-header {
     padding: 1.5rem 1.5rem 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(250, 204, 21, 0.15);
 }
 
 .feedback-header h3 {
     margin: 0 0 0.5rem;
     color: #fff;
+    font-family: var(--font-display);
     font-size: 1.25rem;
+    font-weight: 700;
     display: flex;
     align-items: center;
     gap: 0.5rem;
+}
+
+.feedback-header h3 i {
+    color: var(--primary);
 }
 
 .feedback-stats {
@@ -93,10 +91,10 @@
 }
 
 .stat-badge {
-    background: linear-gradient(135deg, #fbbf24, #d97706);
-    color: #1a1a2e;
+    background: var(--primary);
+    color: #09090b;
     padding: 0.2rem 0.6rem;
-    border-radius: 20px;
+    border-radius: var(--radius-full);
     font-weight: 700;
     font-size: 0.85rem;
     display: flex;
@@ -105,7 +103,7 @@
 }
 
 .stat-count {
-    color: var(--text-secondary, #94a3b8);
+    color: var(--text-secondary);
     font-size: 0.85rem;
 }
 
@@ -113,9 +111,8 @@
 .feedback-body {
     padding: 1.5rem;
     overflow-y: auto;
-    /* Custom Scrollbar */
     scrollbar-width: thin;
-    scrollbar-color: rgba(168, 85, 247, 0.3) transparent;
+    scrollbar-color: rgba(250, 204, 21, 0.3) transparent;
 }
 
 .feedback-body::-webkit-scrollbar {
@@ -123,16 +120,17 @@
 }
 
 .feedback-body::-webkit-scrollbar-thumb {
-    background: rgba(168, 85, 247, 0.3);
+    background: rgba(250, 204, 21, 0.3);
     border-radius: 3px;
 }
 
 /* Form Styles */
 .feedback-form {
     margin-bottom: 2rem;
-    background: rgba(255, 255, 255, 0.03);
-    padding: 1rem;
-    border-radius: 12px;
+    background: rgba(9, 9, 11, 0.6);
+    border: 1px solid rgba(250, 204, 21, 0.15);
+    padding: 1.25rem;
+    border-radius: var(--radius-md);
 }
 
 .form-group {
@@ -142,18 +140,19 @@
 .feedback-input {
     width: 100%;
     padding: 0.75rem 1rem;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    background: rgba(9, 9, 11, 0.8);
+    border: 1px solid rgba(250, 204, 21, 0.2);
+    border-radius: var(--radius-sm);
     color: white;
     font-family: inherit;
-    transition: all 0.2s;
+    transition: all var(--transition-fast);
 }
 
 .feedback-input:focus {
     outline: none;
-    border-color: #a855f7;
-    background: rgba(0, 0, 0, 0.4);
+    border-color: var(--primary);
+    background: rgba(9, 9, 11, 0.95);
+    box-shadow: 0 0 15px rgba(250, 204, 21, 0.25);
 }
 
 /* Star Rating */
@@ -177,35 +176,40 @@
 .stars label {
     cursor: pointer;
     font-size: 1.5rem;
-    color: #4b5563;
-    transition: color 0.2s;
+    color: rgba(255, 255, 255, 0.2);
+    transition: color var(--transition-fast);
 }
 
 .stars label:hover,
 .stars label:hover~label,
 .stars input:checked~label {
-    color: #fbbf24;
+    color: var(--primary);
 }
 
 .btn-submit {
     width: 100%;
-    background: linear-gradient(135deg, #a855f7, #ec4899);
-    color: white;
+    background: var(--primary);
+    color: #09090b;
     border: none;
     padding: 0.75rem;
-    border-radius: 8px;
-    font-weight: 600;
+    border-radius: var(--radius-md);
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: all var(--transition-fast);
+    box-shadow: 0 0 15px rgba(250, 204, 21, 0.25);
 }
 
 .btn-submit:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+    background: var(--primary-light);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(250, 204, 21, 0.4);
 }
 
 .btn-submit:disabled {
-    opacity: 0.7;
+    opacity: 0.6;
     cursor: not-allowed;
 }
 
@@ -233,10 +237,10 @@
 }
 
 .feedback-item {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(9, 9, 11, 0.6);
+    border: 1px solid rgba(250, 204, 21, 0.15);
     padding: 1rem;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
 }
 
 .feedback-item-header {
@@ -246,24 +250,24 @@
 }
 
 .author {
-    font-weight: 600;
+    font-weight: 700;
     color: #e2e8f0;
     font-size: 0.95rem;
 }
 
 .date {
     font-size: 0.75rem;
-    color: #64748b;
+    color: var(--text-muted);
 }
 
 .star-display {
-    color: #fbbf24;
+    color: var(--primary);
     font-size: 0.85rem;
     margin-bottom: 0.5rem;
 }
 
 .comment-text {
-    color: #cbd5e1;
+    color: var(--text-secondary);
     line-height: 1.5;
     font-size: 0.9rem;
 }
@@ -271,6 +275,6 @@
 .empty-state {
     text-align: center;
     padding: 2rem;
-    color: #64748b;
+    color: var(--text-muted);
     font-style: italic;
 }
