@@ -90,33 +90,32 @@ async function initMusicPlayer() {
   }
 
   async function loadSingleVideo(videoId) {
-    // Optimization: Skip API check check for details since Key is likely invalid/restricted.
-    // This removes the network latency of a failed request.
     elements.thumbnail.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-    const origin = window.location.origin;
-    elements.player.src = `https://www.youtube-nocookie.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${videoId}&controls=0&modestbranding=1&origin=${origin}`;
+    const originParam = (window.location.origin && window.location.origin !== 'null' && !window.location.origin.startsWith('file')) 
+      ? `&origin=${encodeURIComponent(window.location.origin)}` 
+      : '';
+    elements.player.src = `https://www.youtube-nocookie.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${videoId}&controls=0&modestbranding=1${originParam}`;
     elements.player.allow = "autoplay; encrypted-media";
   }
 
   function loadRandomVideo() {
     if (!playlist || playlist.length === 0) {
-      // Use local defaults if playlist failed
       const localDefaults = DEFAULT_VIDEO_IDS;
       const randomId = localDefaults[Math.floor(Math.random() * localDefaults.length)];
       loadSingleVideo(randomId);
       return;
-    };
+    }
     const randomIndex = Math.floor(Math.random() * playlist.length);
     const video = playlist[randomIndex];
 
-    // Support both API object structure and raw ID strings
     const videoId = video.videoId || video;
     const thumb = video.thumbnail || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
     elements.thumbnail.src = thumb;
-    const origin = window.location.origin;
-    // Use youtube-nocookie to reduce tracking warnings
-    elements.player.src = `https://www.youtube-nocookie.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${videoId}&controls=0&modestbranding=1&origin=${origin}`;
+    const originParam = (window.location.origin && window.location.origin !== 'null' && !window.location.origin.startsWith('file')) 
+      ? `&origin=${encodeURIComponent(window.location.origin)}` 
+      : '';
+    elements.player.src = `https://www.youtube-nocookie.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${videoId}&controls=0&modestbranding=1${originParam}`;
     elements.player.allow = "autoplay; encrypted-media";
   }
 
