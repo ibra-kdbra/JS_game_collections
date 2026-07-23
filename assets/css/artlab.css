@@ -3,23 +3,20 @@
 
 /* ---------- Art Lab Custom Properties ---------- */
 :root {
-  /* Art Lab specific palette - Creative feel */
-  --artlab-primary: #a855f7;
-  /* Purple */
-  --artlab-primary-light: #c084fc;
-  --artlab-secondary: #ec4899;
-  /* Pink */
-  --artlab-accent: #22d3ee;
-  /* Cyan */
+  /* Art Lab specific palette - High-Contrast Cyber Yellow */
+  --artlab-primary: #facc15;
+  --artlab-primary-light: #fef08a;
+  --artlab-secondary: #ff9900;
+  --artlab-accent: #00f0ff;
 
   /* Art Lab background gradient */
-  --artlab-bg-start: #0c0c1d;
-  --artlab-bg-mid: #1a1035;
-  --artlab-bg-end: #2d1d4a;
+  --artlab-bg-start: #09090b;
+  --artlab-bg-mid: #12131a;
+  --artlab-bg-end: #1a1c24;
 
   /* Glass effects */
-  --artlab-glass: rgba(168, 85, 247, 0.05);
-  --artlab-glass-border: rgba(168, 85, 247, 0.2);
+  --artlab-glass: rgba(250, 204, 21, 0.05);
+  --artlab-glass-border: rgba(250, 204, 21, 0.2);
 }
 
 /* ---------- Art Lab Body ---------- */
@@ -31,16 +28,16 @@ body#artlab-body {
   background: var(--artlab-bg-start);
 }
 
-/* ---------- Unified Mesh Gradient Background ---------- */
+/* ---------- Dedicated Procedural Art Lab Lighting Surface ---------- */
 .artlab-bg {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background:
-    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(168, 85, 247, 0.28) 0%, transparent 50%),
-    radial-gradient(ellipse 55% 35% at 85% 75%, rgba(236, 72, 153, 0.18) 0%, transparent 50%),
-    radial-gradient(ellipse 45% 30% at 5% 85%, rgba(34, 211, 238, 0.1) 0%, transparent 50%),
-    linear-gradient(180deg, var(--artlab-bg-start) 0%, var(--artlab-bg-mid) 45%, var(--artlab-bg-end) 100%);
+  background-color: #09090b;
+  background-image: 
+    radial-gradient(ellipse 85% 60% at 50% -10%, rgba(250, 204, 21, 0.25) 0%, transparent 70%),
+    radial-gradient(ellipse 65% 55% at 85% 75%, rgba(0, 240, 255, 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 10% 80%, rgba(255, 153, 0, 0.1) 0%, transparent 55%);
   background-attachment: fixed;
 }
 
@@ -64,21 +61,22 @@ body#artlab-body {
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: rgba(168, 85, 247, 0.1);
-  border: 1px solid rgba(168, 85, 247, 0.25);
+  background: rgba(18, 19, 26, 0.6);
+  border: 1px solid rgba(250, 204, 21, 0.2);
   border-radius: 50%;
   color: var(--text-secondary);
   text-decoration: none;
   font-size: 0.9rem;
   pointer-events: auto;
-  transition: all 0.3s ease;
+  transition: all var(--transition-fast);
 }
 
 .corner-back:hover {
-  background: rgba(168, 85, 247, 0.2);
+  background: rgba(250, 204, 21, 0.15);
   border-color: var(--artlab-primary);
-  color: var(--text-primary);
-  transform: translateY(-2px);
+  color: var(--artlab-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 0 15px rgba(250, 204, 21, 0.3);
 }
 
 .corner-logo {
@@ -87,26 +85,25 @@ body#artlab-body {
   gap: 0.5rem;
   text-decoration: none;
   pointer-events: auto;
-  transition: transform 0.3s ease;
+  transition: transform var(--transition-fast);
 }
 
 .corner-logo:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 .logo-icon {
   font-size: 1.5rem;
-  filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.5));
+  filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.6));
 }
 
 .logo-text {
+  font-family: var(--font-display);
   font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  background: linear-gradient(135deg, var(--text-primary) 0%, var(--artlab-primary-light) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--artlab-primary);
+  text-shadow: 0 0 12px rgba(250, 204, 21, 0.35);
 }
 
 .corner-link {
@@ -115,8 +112,8 @@ body#artlab-body {
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: rgba(168, 85, 247, 0.1);
-  border: 1px solid rgba(168, 85, 247, 0.25);
+  background: rgba(18, 19, 26, 0.6);
+  border: 1px solid rgba(250, 204, 21, 0.2);
   border-radius: 50%;
   color: var(--text-secondary);
   text-decoration: none;
@@ -187,14 +184,23 @@ body#artlab-body {
 }
 
 .btn-artlab {
-  background: linear-gradient(135deg, var(--artlab-primary) 0%, var(--artlab-secondary) 100%);
-  color: white;
-  box-shadow: 0 4px 20px rgba(168, 85, 247, 0.25);
+  background: var(--artlab-primary);
+  color: #09090b;
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-radius: var(--radius-md);
+  padding: 0.875rem 1.75rem;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 .btn-artlab:hover {
+  background: var(--artlab-primary-light);
   transform: translateY(-2px);
-  box-shadow: 0 6px 30px rgba(168, 85, 247, 0.35);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
 }
 
 /* ---------- Modern Centered Carousel Section ---------- */
@@ -448,11 +454,11 @@ body#artlab-body {
 }
 
 .artlab-footer-link {
-  color: var(--artlab-primary-light);
+  color: var(--artlab-primary);
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
   position: relative;
-  transition: color 0.25s ease;
+  transition: color var(--transition-fast);
 }
 
 .artlab-footer-link::after {
@@ -460,18 +466,20 @@ body#artlab-body {
   position: absolute;
   bottom: -2px;
   left: 0;
-  width: 0;
-  height: 1px;
-  background: linear-gradient(90deg, var(--artlab-primary) 0%, var(--artlab-secondary) 100%);
-  transition: width 0.3s ease;
+  width: 100%;
+  height: 2px;
+  background: var(--artlab-primary);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--transition-fast);
 }
 
 .artlab-footer-link:hover {
-  color: var(--artlab-secondary);
+  color: var(--artlab-primary-light);
 }
 
 .artlab-footer-link:hover::after {
-  width: 100%;
+  transform: scaleX(1);
 }
 
 /* ---------- Responsive ---------- */
