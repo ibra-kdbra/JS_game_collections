@@ -8,6 +8,7 @@
 html {
   scroll-behavior: smooth;
   font-size: 16px;
+  color-scheme: dark;
 }
 
 body {
@@ -19,21 +20,40 @@ body {
   background: var(--bg-gradient-start);
 }
 
+/* Custom Tactical Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-gradient-start);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(250, 204, 21, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display, inherit);
   letter-spacing: -0.01em;
 }
 
-/* ---------- Unified Mesh Gradient Background ---------- */
+/* ---------- Ambient Procedural Lighting Surface ---------- */
 .cyber-bg {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: 
-    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(99, 102, 241, 0.25) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(168, 85, 247, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse 50% 35% at 10% 90%, rgba(244, 114, 182, 0.12) 0%, transparent 50%),
-    linear-gradient(180deg, var(--bg-gradient-start) 0%, var(--bg-gradient-mid) 40%, var(--bg-gradient-end) 100%);
+  background-color: #09090b;
+  background-image: 
+    radial-gradient(ellipse 80% 55% at 50% -10%, rgba(250, 204, 21, 0.2) 0%, transparent 70%),
+    radial-gradient(ellipse 65% 45% at 85% 85%, rgba(0, 240, 255, 0.08) 0%, transparent 65%),
+    radial-gradient(ellipse 55% 40% at 15% 85%, rgba(255, 153, 0, 0.08) 0%, transparent 60%);
   background-attachment: fixed;
 }
 
@@ -78,9 +98,17 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .text-glow {
-  color: var(--primary-light);
+  color: var(--primary);
+  text-shadow: 0 0 12px rgba(250, 204, 21, 0.4);
 }
 
-.text-glow-magenta {
+.text-glow-cyan {
+  color: var(--accent);
+  text-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+}
+
+.text-glow-magenta,
+.text-glow-orange {
   color: var(--secondary);
+  text-shadow: 0 0 12px rgba(255, 153, 0, 0.4);
 }
