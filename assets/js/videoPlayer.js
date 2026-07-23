@@ -4,9 +4,9 @@ export class VideoPlayerComponent {
       <div id="music-slider" class="music-player-container">
         <!-- Video Circle -->
         <div id="video-circle" class="music-circle">
-          <img id="music-thumbnail" class="music-thumbnail" alt="Video Thumbnail">
-          <!-- Youtube Iframe API will replace this or inject into it -->
-          <iframe id="youtube-player" class="music-iframe" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>
+          <img id="music-thumbnail" class="music-thumbnail" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3C/svg%3E" alt="Video Thumbnail">
+          <!-- Youtube Iframe -->
+          <iframe id="youtube-player" class="music-iframe" allow="autoplay; encrypted-media"></iframe>
         </div>
       
         <!-- Controls -->
