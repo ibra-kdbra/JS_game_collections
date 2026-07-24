@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brainy Warrior 3D</title>
+    <meta name="description" content="A 3D sliding logic puzzle game based on Brainy Warrior. Slide the hero to defeat all enemies.">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Three.js Library via CDN -->
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.150.1/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.150.1/examples/jsm/"
+        }
+      }
+    </script>
+</head>
+<body>
+    <!-- 3D Canvas Container -->
+    <div id="game-container"></div>
+
+    <!-- UI Overlay -->
+    <div id="ui-layer">
+        <div class="glass-panel info-panel">
+            <h1 class="title">Brainy Warrior 3D</h1>
+            <p class="subtitle">Defeat all enemies without falling!</p>
+            <div class="stats">
+                <div class="stat-box">
+                    <span class="stat-label">Moves</span>
+                    <span id="move-count" class="stat-value">0</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Enemies</span>
+                    <span id="enemy-count" class="stat-value">0</span>
+                </div>
+            </div>
+            <p class="controls-help">
+                <b>Controls:</b> Arrow Keys or WASD to Slide.<br>
+                You slide until you hit an obstacle or enemy.
+            </p>
+        </div>
+
+        <div class="glass-panel controls-panel">
+            <button id="btn-restart" class="action-btn">
+                <span class="btn-icon">🔄</span> Restart Level
+            </button>
+            <button id="btn-solve" class="action-btn primary-btn">
+                <span class="btn-icon">🧠</span> Auto-Solve API
+            </button>
+        </div>
+    </div>
+    
+    <!-- Game Won Overlay -->
+    <div id="won-overlay" class="hidden">
+        <div class="glass-panel center-panel">
+            <h2 class="massive-text">LEVEL CLEARED!</h2>
+            <p>You have outsmarted the enemies.</p>
+            <button id="btn-next" class="action-btn primary-btn">Next Level ➔</button>
+        </div>
+    </div>
+
+    <!-- Main Game Script -->
+    <script type="module" src="js/game.js"></script>
+</body>
+</html>
