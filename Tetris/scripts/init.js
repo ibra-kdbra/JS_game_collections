@@ -146,11 +146,3 @@ document.addEventListener("DOMContentLoaded", function () {
 //     "font-style: italic; color: #ffff00;"
 //   );
 });
-
-_gaq = [["_setAccount", "UA-30472693-1"], ["_trackPageview"]];
-(function (d) {
-  var g = d.createElement("script"),
-    s = d.scripts[0];
-  g.src = "//www.google-analytics.com/ga.js";
-  s.parentNode.insertBefore(g, s);
-})(document);

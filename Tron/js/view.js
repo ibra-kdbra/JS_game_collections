@@ -15,8 +15,23 @@ export class View {
       this.speed
     );
 
-    window.addEventListener("keydown", this.handleKeyEvent.bind(this));
-    window.addEventListener("click", this.handleDifficultyChange.bind(this));
+    // Keep bound references so listeners can be removed when the round ends.
+    this.onKeyDown = this.handleKeyEvent.bind(this);
+    this.onClick = this.handleDifficultyChange.bind(this);
+    window.addEventListener("keydown", this.onKeyDown);
+    window.addEventListener("click", this.onClick);
+  }
+
+  stopGame() {
+    window.clearInterval(this.intervalId);
+    window.removeEventListener("keydown", this.onKeyDown);
+    window.removeEventListener("click", this.onClick);
+  }
+
+  handleSwipe(direction) {
+    if (this.board.player1.alive) {
+      this.board.player1.turn(direction);
+    }
   }
 
   static KEYS1 = {
@@ -95,7 +110,7 @@ export class View {
       }
       this.render();
     } else {
-      window.clearInterval(this.intervalId);
+      this.stopGame();
       document.getElementById('replay').style.display = 'block';
 
       if (this.players === 2) {

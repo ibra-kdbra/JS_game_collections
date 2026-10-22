@@ -47,7 +47,7 @@ class Game {
         if (this._storageDisabled) {
             this._startLevel = 0;
         } else {
-            this._startLevel = parseInt(localStorage.getItem('level') || '0', 10);
+            this._startLevel = parseInt(localStorage.getItem('raven.level') || '0', 10);
         }
 
         this.level = undefined;
@@ -180,10 +180,10 @@ class Game {
                     this.intro.update(delta);
                     this._renderPrep = false;
                     this._startLevel = 0;
-                    if (!this._storageDisabled) localStorage.setItem('level', 0);
+                    if (!this._storageDisabled) localStorage.setItem('raven.level', 0);
                     return;
                 } else {
-                    if (!this._storageDisabled) localStorage.setItem('level', this._pendingLevelIndex);
+                    if (!this._storageDisabled) localStorage.setItem('raven.level', this._pendingLevelIndex);
                 }
             }
 

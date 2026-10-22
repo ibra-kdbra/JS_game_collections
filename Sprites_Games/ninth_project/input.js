@@ -27,7 +27,6 @@ export class InputHandler {
         ) {
           this.keys.splice(this.keys.indexOf(e.key), 1);
         }
-        1
       });
 
       window.addEventListener('touchstart', e=>{
@@ -40,12 +39,11 @@ export class InputHandler {
         else if(swipeDistance > this.touchThreshold &&
           this.keys.indexOf('swipe down') === -1){
             this.keys.push('swipe down');
-            if(gameOver) restartGame();
-          } 
+          }
       });
       window.addEventListener('touchend', e=>{
-        this.keys.splice(this.keys.indexOf('swipe up'), 1);
-        this.keys.splice(this.keys.indexOf('swipe down'), 1);
+        // Only remove swipes that are present; splice(-1, 1) would drop the last held key.
+        this.keys = this.keys.filter(key => key !== 'swipe up' && key !== 'swipe down');
 
       });
 

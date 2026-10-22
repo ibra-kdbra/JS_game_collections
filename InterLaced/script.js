@@ -1751,7 +1751,21 @@ function Interlaced() {
       reroute: 5
     }
   } ];// Local storage for stage Continue and earned meshcoins
-  const storage = window.localStorage;
+  // Storage can throw when blocked (sandboxed iframe, privacy modes); fall back to memory.
+  const storage = {
+    getItem(key) {
+      try {
+        return window.localStorage.getItem('interlaced.' + key) ?? window.localStorage.getItem(key);
+      } catch (e) {
+        return null;
+      }
+    },
+    setItem(key, value) {
+      try {
+        window.localStorage.setItem('interlaced.' + key, value);
+      } catch (e) {}
+    }
+  };
   let resume = parseInt(storage.getItem('stage') || 0);
   let coins = parseInt(storage.getItem('coins') || 0);
 

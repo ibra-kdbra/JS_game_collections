@@ -165,7 +165,7 @@ export const games = [
     imgSrc: "./ReWire/assets/captured.png",
     title: "ReWire",
     description: "ReWire is a puzzle game set in space.",
-    tags: ["#PC", "#Mobile"]
+    tags: ["#PC"]
   },
   {
     link: "./Wahdatio/index.html",
@@ -173,12 +173,5 @@ export const games = [
     title: "Wahdatio",
     description: "A profound 3D strategy game that embodies the concept of unity and interconnectedness",
     tags: ["#PC",]
-  },
-  {
-    link: "./Brainy_Warrior/index.html",
-    imgSrc: "./Brainy_Warrior/assets/captured.png",
-    title: "Brainy Warrior 3D",
-    description: "A 3D sliding logic puzzle game based on Brainy Warrior. Slide the hero to defeat all enemies. Built with Three.js and features a BFS auto-solver.",
-    tags: ["#PC"]
   }
 ];

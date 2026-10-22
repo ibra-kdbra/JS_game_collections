@@ -4,7 +4,6 @@ import resizeSystem from './resize.js';
 import pointerSystem from './pointer.js';
 import dataSystem from './data.js';
 
-dataSystem.save('payed', true);
 
 let setup = (entities) => {
     let game = entities.game;

@@ -21,7 +21,7 @@ const backBtn = elementById('backBtn');
 
 const saveLevel = (level) => {
     try {
-        localStorage.setItem('level', '' + level);
+        localStorage.setItem('rewire.level', '' + level);
     } catch (e) {
         // IE and edge don't support localstorage when opening the file from disk
     }
@@ -29,7 +29,7 @@ const saveLevel = (level) => {
 
 const loadLevel = () => {
     try {
-        return parseInt(localStorage.getItem('level')) || 0;
+        return parseInt(localStorage.getItem('rewire.level')) || 0;
     } catch (e) {
         return 0;
     }

@@ -35,43 +35,6 @@
     <script src="../assets/vendor/gsap/gsap.min.js" defer></script>
   </head>
   <body id="artlab-body">
-    <!-- Inline Error Overlay for Debugging -->
-    <script>
-      window.addEventListener('error', function(e) {
-        var div = document.createElement('div');
-        div.style.position = 'fixed';
-        div.style.top = '10px';
-        div.style.left = '10px';
-        div.style.right = '10px';
-        div.style.background = 'rgba(255, 0, 0, 0.9)';
-        div.style.color = 'white';
-        div.style.padding = '15px';
-        div.style.zIndex = '99999';
-        div.style.fontFamily = 'monospace';
-        div.style.whiteSpace = 'pre-wrap';
-        div.style.borderRadius = '8px';
-        div.style.boxShadow = '0 4px 20px rgba(0,0,0,0.5)';
-        div.innerHTML = '<strong>JS Error:</strong> ' + e.message + '<br><small>' + e.filename + ':' + e.lineno + ':' + e.colno + '</small>';
-        document.body.appendChild(div);
-      });
-      window.addEventListener('unhandledrejection', function(e) {
-        var div = document.createElement('div');
-        div.style.position = 'fixed';
-        div.style.top = '80px';
-        div.style.left = '10px';
-        div.style.right = '10px';
-        div.style.background = 'rgba(255, 128, 0, 0.9)';
-        div.style.color = 'white';
-        div.style.padding = '15px';
-        div.style.zIndex = '99999';
-        div.style.fontFamily = 'monospace';
-        div.style.whiteSpace = 'pre-wrap';
-        div.style.borderRadius = '8px';
-        div.style.boxShadow = '0 4px 20px rgba(0,0,0,0.5)';
-        div.innerHTML = '<strong>Unhandled Promise Rejection:</strong> ' + e.reason;
-        document.body.appendChild(div);
-      });
-    </script>
     <!-- Animated Background -->
     <div class="artlab-bg"></div>
     <!-- Three.js particle effect loads automatically -->

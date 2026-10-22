@@ -15,11 +15,11 @@ const tileYsize = 20;
 
 preloader.onupdate = x => {textBlock.innerHTML = x+' %';};
 preloader.add('./img/sprites.png', './img/finger.png',
- './sound/opening_song.mp3', './sound/opening_song.ogg',
- './sound/eating_short.mp3', './sound/eating_short.ogg',
- './sound/eatpill.mp3', './sound/eatpill.ogg',
- './sound/extra_lives.mp3', './sound/extra_lives.ogg',
- './sound/die.mp3', './sound/die.ogg',
+ './audio/opening_song.mp3', './audio/opening_song.ogg',
+ './audio/eating_short.mp3', './audio/eating_short.ogg',
+ './audio/eatpill.mp3', './audio/eatpill.ogg',
+ './audio/extra_lives.mp3', './audio/extra_lives.ogg',
+ './audio/die.mp3', './audio/die.ogg',
  );
 
 
@@ -688,11 +688,11 @@ preloader.start().then(() => {
   ctxF.drawImage(finger, 0, 0);
   ctxF.setTransform(1,0,0,1,0,0);
 
-  sounds.opening = new Howl({preload : true, src: ['./sound/opening_song.mp3', './sound/opening_song.ogg'], volume: 0.25});
-  sounds.gesture = new Howl({preload : true, src: ['./sound/eating_short.mp3', './sound/eating_short.ogg'], volume: 0.25});
-  sounds.hurt = new Howl({preload : true, src: ['./sound/eatpill.mp3', './sound/eatpill.ogg'], volume: 0.25});
-  sounds.extralive = new Howl({preload : true, src: ['./sound/extra_lives.mp3', './sound/extra_lives.ogg'], volume: 0.25});
-  sounds.die = new Howl({preload : true, src: ['./sound/die.mp3', './sound/die.ogg'], volume: 0.25});
+  sounds.opening = new Howl({preload : true, src: ['./audio/opening_song.mp3', './audio/opening_song.ogg'], volume: 0.25});
+  sounds.gesture = new Howl({preload : true, src: ['./audio/eating_short.mp3', './audio/eating_short.ogg'], volume: 0.25});
+  sounds.hurt = new Howl({preload : true, src: ['./audio/eatpill.mp3', './audio/eatpill.ogg'], volume: 0.25});
+  sounds.extralive = new Howl({preload : true, src: ['./audio/extra_lives.mp3', './audio/extra_lives.ogg'], volume: 0.25});
+  sounds.die = new Howl({preload : true, src: ['./audio/die.mp3', './audio/die.ogg'], volume: 0.25});
   for (let prop in sounds) { sounds[prop].mute(!canSound); }
 
   sounds.opening.play();

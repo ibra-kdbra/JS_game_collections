@@ -1068,9 +1068,10 @@ function keyPressed() {
             clearInfo();
             break;
         case 32:
-            // Space
+            // Space: drop focus from any clicked button so it isn't also activated
+            if (document.activeElement instanceof HTMLButtonElement) document.activeElement.blur();
             pause();
-            break;
+            return false;
         case 49:
             // 1
             setPlace('gun');

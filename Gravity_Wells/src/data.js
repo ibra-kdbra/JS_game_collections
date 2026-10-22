@@ -1,27 +1,25 @@
-let manifest;
-try {
-  const response = await fetch('../assets/manifest.json');
-  manifest = await response.json();
-} catch (error) {
-  console.error('Error loading manifest.json:', error);
-  manifest = {}; // fallback empty object
-}
+const STORAGE_KEY = 'gravity-wells.data';
+// Older builds saved under this key because the manifest fetch 404'd.
+const LEGACY_KEY = 'undefined Data';
+
 let data = {};
 
-let lsData = localStorage.getItem(
-    manifest.name + ' Data'
-);
-
-if (lsData !== null) {
-    data = JSON.parse(lsData);
+try {
+    const raw = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_KEY);
+    if (raw !== null) {
+        data = JSON.parse(raw);
+    }
+} catch (error) {
+    console.warn('Gravity Wells: saved data unavailable', error);
 }
 
 let save = (key, value) => {
     data[key] = value;
-    localStorage.setItem(
-        manifest.name + ' Data',
-        JSON.stringify(data)
-    );
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (error) {
+        // Storage can be blocked (private mode, quota); keep playing in memory.
+    }
 };
 
 let load = (key) => {

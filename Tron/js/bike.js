@@ -141,12 +141,13 @@ export class Bike {
 
   computerTurnFrequency() {
     switch (this.board.difficulty) {
+      // Probability of skipping the look-ahead each step: lower = smarter AI.
       case 1:
-        return 0.95;
+        return 0.99;
       case 2:
-        return 0.98;
+        return 0.95;
       default:
-        return 1.0; 
+        return 0.85;
     }
   }
 }
