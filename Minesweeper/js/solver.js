@@ -204,7 +204,10 @@ export function solve(w, h, mines, start, opts = {}) {
     const d = deduce(state, opts);
     if (!d.rule) break;
     steps[d.rule]++;
-    for (const i of d.mines) known[i] = 1;
+    for (const i of d.mines) {
+      if (!mines[i]) throw new Error('solver contradiction: marked a safe cell as a mine');
+      known[i] = 1;
+    }
     for (const i of d.safe) {
       if (mines[i]) throw new Error('solver contradiction: marked a mine safe');
       if (!open[i]) opened += floodOpen(w, h, counts, open, i).length;

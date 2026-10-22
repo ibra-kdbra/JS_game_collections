@@ -193,7 +193,7 @@ export class Game {
    * @returns {{ cell: number, logical: boolean, rule?: string, src?: number[] } | null}
    */
   findSafe() {
-    if (this.state !== 'playing') return null;
+    if (this.over || !this.mines) return null;
     const known = new Uint8Array(this.n);
     const s = { w: this.w, h: this.h, counts: this.counts, open: this.open, known, total: this.total };
     for (let guard = 0; guard < this.n; guard++) {
@@ -217,6 +217,11 @@ export class Game {
     if (this.hintCell !== undefined && !this.open[this.hintCell]) return { cell: this.hintCell, repeat: true, logical: true };
     const found = this.findSafe();
     if (!found) return null;
+    if (this.state === 'ready') {
+      // Daily and puzzle boards start pre-opened: asking for a hint starts the clock.
+      this.state = 'playing';
+      this.startClock();
+    }
     this.hintCell = found.cell;
     this.hints++;
     this.penalty += RULES.hintPenalty;

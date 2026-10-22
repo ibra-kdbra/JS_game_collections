@@ -124,7 +124,7 @@ button {
   justify-content: flex-end;
   gap: 8px;
   min-height: 38px;
-  padding-left: 132px; /* room for the Game Lab shell button */
+  padding-left: 180px; /* room for the Game Lab shell buttons */
 }
 
 .brand {
@@ -1058,6 +1058,69 @@ table.stats {
   .brand svg {
     width: 18px;
     height: 18px;
+  }
+}
+
+@media (max-width: 420px) {
+  .top {
+    padding-left: 104px; /* the shell shows icons only here */
+  }
+}
+
+/* Phones held sideways: controls on the left, the field takes the full height. */
+@media (max-height: 520px) and (orientation: landscape) and (min-width: 600px) {
+  .app {
+    grid-template-columns: minmax(250px, 300px) minmax(0, 1fr);
+    grid-template-rows: auto auto auto 1fr;
+    column-gap: 12px;
+    row-gap: 8px;
+  }
+  .top {
+    grid-column: 1;
+    padding-left: 104px;
+  }
+  .brand {
+    display: none;
+  }
+  .modes {
+    grid-column: 1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .mode {
+    min-height: 34px;
+    font-size: 11px;
+  }
+  .hud {
+    grid-column: 1;
+  }
+  .readout {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+  .readout .val {
+    font-size: 17px;
+  }
+  .face {
+    width: 44px;
+    height: 44px;
+  }
+  .field {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    padding: 6px;
+  }
+  .bar {
+    grid-column: 1;
+    align-self: start;
+  }
+  .toolset {
+    flex-wrap: wrap;
+  }
+  .status {
+    display: none;
+  }
+  .gk-shell-btn span {
+    display: none;
   }
 }
 

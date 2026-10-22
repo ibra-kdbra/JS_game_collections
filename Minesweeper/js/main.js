@@ -48,7 +48,7 @@ const MODES = [
   { key: 'intermediate', label: 'Intermed.', sub: '16×16 · 40', title: 'Intermediate' },
   { key: 'expert', label: 'Expert', sub: '30×16 · 99' },
   { key: 'custom', label: 'Custom', sub: '' },
-  { key: 'daily', label: 'Daily', sub: 'same for all' },
+  { key: 'daily', label: 'Daily', sub: 'today' },
   { key: 'puzzle', label: 'Puzzles', sub: '12 levels' },
 ];
 
@@ -278,7 +278,7 @@ function update() {
   }
   const left = game.total - game.flags;
   $('mines-left').textContent = (left < 0 ? '-' : '') + String(Math.abs(left)).padStart(3, '0');
-  $('btn-hint').disabled = game.state !== 'playing';
+  $('btn-hint').disabled = game.over || !game.mines;
   renderFace();
   renderClock();
   renderNotes();
@@ -533,8 +533,9 @@ const RULE_TEXT = {
 
 function doHint() {
   if (busy) return;
-  if (game.state !== 'playing') {
-    if (game.state === 'ready') status('Make the first move: the first click is always safe.');
+  if (game.over) return;
+  if (!game.mines) {
+    status('Make the first move: the first click is always safe.');
     return;
   }
   const h = game.hint();

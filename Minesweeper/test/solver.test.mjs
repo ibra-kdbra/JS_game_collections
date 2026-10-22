@@ -49,7 +49,7 @@ for (const p of Object.values(PRESETS)) {
   console.log(
     `       generation ms: avg ${avg.toFixed(1)}, median ${times[times.length >> 1].toFixed(1)}, ` +
       `p95 ${times[Math.floor(times.length * 0.95)].toFixed(1)}, max ${times[times.length - 1].toFixed(1)}; ` +
-      `${(attempts / PER).toFixed(2)} rerolls/board; fallbacks ${relaxed}`,
+      `${(attempts / PER).toFixed(2)} attempts/board; fallbacks ${relaxed}`,
   );
 }
 
