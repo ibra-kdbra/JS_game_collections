@@ -198,6 +198,15 @@ export const games = [
     inputs: ['keyboard', 'touch'],
     mobile: true,
   },
+  {
+    slug: 'breakout',
+    title: 'Breakout',
+    href: 'Breakout/index.html',
+    blurb: 'Classic brick breaker with 27 levels, steel, armour and explosive bricks, six power-ups and an endless mode.',
+    genre: 'arcade',
+    inputs: ['keyboard', 'mouse', 'touch'],
+    mobile: true,
+  },
 ];
 
 export const experiments = [

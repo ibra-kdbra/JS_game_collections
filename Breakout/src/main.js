@@ -53,7 +53,6 @@ const keys = { left: false, right: false };
 let pointerTarget = null;
 let launchQueued = false;
 let drag = null;
-const autoplay = params.has('bot');
 
 /* ---------- Layout ---------- */
 
@@ -357,7 +356,7 @@ function setLevelLabel() {
 let introShown = false;
 function updateFieldMsg() {
   const el = $('fieldMsg');
-  const serving = screen === 'play' && world && world.state === 'serve' && mode !== 'demo' && !autoplay;
+  const serving = screen === 'play' && world && world.state === 'serve' && mode !== 'demo';
   el.hidden = !serving;
   if (!serving) return;
   const launchHint = coarse ? 'Tap to launch' : 'Click or press Space to launch';
@@ -387,7 +386,6 @@ function newWorld(map, speed, lives, score) {
   resetHudCache();
   introShown = false;
   endTimer = 0;
-  if (autoplay) bot = createBot(world, Math.random, 'perfect');
 }
 
 function startCampaign(index, fresh) {
@@ -623,17 +621,11 @@ function update(dt) {
     return;
   }
   if (screen !== 'play') return;
-  let input;
-  if (autoplay && bot) {
-    input = bot.input(dt);
-  } else {
-    const dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-    input = { targetX: dir ? null : pointerTarget, moveDir: dir, launch: launchQueued };
-  }
+  const dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+  const input = { targetX: dir ? null : pointerTarget, moveDir: dir, launch: launchQueued };
   launchQueued = false;
   world.step(dt, input);
   const events = world.drainEvents();
-  if (bot && autoplay) bot.observe(events);
   handleEvents(events, false);
   updateHud(dt);
   if (endTimer > 0) {
@@ -841,29 +833,11 @@ document.fonts?.load('800 13px "JetBrains Mono"').catch(() => {});
 
 const startParam = params.get('level');
 if (params.has('endless')) startEndless(true);
-else if (startParam && Number(startParam) >= 1 && Number(startParam) <= LEVELS.length) startCampaign(Number(startParam) - 1, true);
+// ?level=N deep-links to a level the player has already unlocked.
+else if (startParam && Number(startParam) >= 1 && Number(startParam) <= unlockedCount()) startCampaign(Number(startParam) - 1, true);
 else {
   startDemo();
   refreshTitle();
   show('title');
 }
 loop.start();
-
-// Read-only snapshot for automated play tests.
-Object.defineProperty(window, '__bk', {
-  get: () =>
-    world && {
-      screen,
-      mode,
-      state: world.state,
-      paddleX: world.paddle.x,
-      ballX: world.balls[0]?.x ?? null,
-      balls: world.balls.length,
-      capsules: world.capsules.length,
-      effects: { ...world.effects },
-      lives: world.lives,
-      score: world.score,
-      left: world.breakable,
-      scale: layout.scale,
-    },
-});
