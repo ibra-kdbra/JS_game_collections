@@ -254,7 +254,7 @@ const LEVELS = [
   },
   {
     name: "Thank you",
-    tips: ["SOULS BUMPER COMPLETED!"],
+    tips: ["SOULS BUMPER COMPLETED!", "Pause to replay any level from the level select."],
     map: [
       [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
       [0,13,0,0,0,0,0,0,0,0,0,0,13,0,0],

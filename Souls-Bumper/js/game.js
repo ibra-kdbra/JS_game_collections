@@ -347,7 +347,7 @@ function updateGameArea() {
 function drawHud(lvl) {
   let font = "32px 'VT323'";
   const touch = !controls.el.hidden;
-  if (!touch) {
+  if (!touch && lvl < lastLevel()) {
     writeTxt(ctx, 1, font, "WHITE", "[M] Music: " + (musicOff ? "off" : "on"), 790, 20, "right");
     writeTxt(ctx, 1, font, "WHITE", "[T] Tips: " + (cart.tips ? "on" : "off"), 790, 45, "right");
     writeTxt(ctx, 1, font, "WHITE", "[R] Reset Level", 790, 70, "right");
@@ -360,9 +360,10 @@ function drawHud(lvl) {
 
   const tips = LEVELS[lvl].tips;
   if (cart.tips || lvl == lastLevel()) {
-    const big = lvl == lastLevel();
+    const finale = lvl == lastLevel();
     tips.forEach((tip, i) => {
-      writeTxt(ctx, 1, big ? "80px 'VT323'" : font, "WHITE", tip, 400, (big ? 100 : 110) + i * 22, "center");
+      const big = finale && i == 0;
+      writeTxt(ctx, 1, big ? "80px 'VT323'" : font, "WHITE", tip, 400, finale ? 100 + i * 50 : 110 + i * 22, "center");
     });
   }
 
