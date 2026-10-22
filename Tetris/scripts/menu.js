@@ -1,4 +1,6 @@
 const version = '0.1.0';
+let store;
+let touchControls;
 let setLoop;
 let arrowReleased = true;
 let arrowDelay = 0;
@@ -152,8 +154,9 @@ addEventListener(
       // Binds the key and saves the data.
       binds[currCell.id] = e.keyCode;
       currCell.innerHTML = key[e.keyCode];
-      localStorage.setItem('binds', JSON.stringify(binds));
+      store.set('binds', binds);
       currCell = 0;
+      buildTouchControls();
     }
   },
   false,
@@ -200,15 +203,15 @@ function right() {
 }
 
 /**
- * LocalStorage functions
+ * Saved data lives in the Game Lab store under "tetris.*".
  */
 function saveSetting(s) {
-  localStorage['version'] = version;
+  store.set('version', version);
 
   document.getElementById(s).getElementsByTagName('span')[0].innerHTML =
     setting[s][settings[s]];
 
-  localStorage['settings'] = JSON.stringify(settings);
+  store.set('settings', settings);
 
   // Apply theme if changed
   if (s === 'Theme' && typeof LiveBackground !== 'undefined') {
@@ -217,42 +220,92 @@ function saveSetting(s) {
   }
 }
 function loadLocalData() {
-  if (localStorage['binds']) {
-    binds = JSON.parse(localStorage.getItem('binds'));
+  // Move data saved by older versions under the old, un-namespaced keys.
+  if (localStorage.getItem('version') === version) {
+    GameKit.migrateKey(store, 'version', 'version');
+    GameKit.migrateKey(store, 'settings', 'settings', { parse: JSON.parse });
+    GameKit.migrateKey(store, 'binds', 'binds', { parse: JSON.parse });
+  }
+
+  if (store.get('version') !== version) {
+    store.remove('settings');
+    store.remove('binds');
+  }
+  const savedBinds = store.get('binds');
+  if (savedBinds) {
+    binds = savedBinds;
     for (let i = 0, len = controlCells.length; i < len; i++) {
       controlCells[i].innerHTML = key[binds[controlCells[i].id]];
     }
   }
-  // TODO When new version just update with new stuff, rest stays unchanged.
-  if (localStorage['version'] !== version) {
-    localStorage.removeItem('settings');
-    localStorage.removeItem('binds');
-  }
-  if (localStorage['settings']) {
-    settings = JSON.parse(localStorage.getItem('settings'));
-  }
+  // Settings added since the save keep their defaults.
+  settings = Object.assign({}, settings, store.get('settings', {}));
 }
 
-loadLocalData();
-for (let s in settings) {
-  let div = document.createElement('div');
-  let b = document.createElement('b');
-  let iLeft = document.createElement('i');
-  let span = document.createElement('span');
-  let iRight = document.createElement('i');
-
-  div.id = s;
-  b.innerHTML = s + ':';
-  span.innerHTML = setting[s][settings[s]];
-  iLeft.className = 'left';
-  iRight.className = 'right';
-  iLeft.onmousedown = left;
-  iRight.onmousedown = right;
-
-  set.appendChild(div);
-  div.appendChild(b);
-  div.appendChild(iLeft);
-  div.appendChild(span);
-  div.appendChild(iRight);
+/**
+ * KeyboardEvent.key values for the bound key codes, so the on-screen
+ *  controls press whatever keys the player has bound.
+ */
+const keyNames = { 8: 'Backspace', 9: 'Tab', 13: 'Enter', 16: 'Shift', 17: 'Control', 27: 'Escape', 32: ' ', 37: 'ArrowLeft', 38: 'ArrowUp', 39: 'ArrowRight', 40: 'ArrowDown' };
+function keyForCode(code) {
+  if (keyNames[code]) return keyNames[code];
+  if ((code >= 48 && code <= 57) || (code >= 65 && code <= 90)) return String.fromCharCode(code).toLowerCase();
+  return null;
 }
-resize();
+
+/**
+ * On-screen controls for touch screens: move, soft drop and hard drop on the
+ *  pad, rotate both ways, hold and pause on the buttons.
+ */
+function buildTouchControls() {
+  if (touchControls) touchControls.destroy();
+  const k = function(name) {
+    return keyForCode(binds[name]);
+  };
+  const buttons = [
+    { label: '↺', key: k('rotLeft') },
+    { label: '↻', key: k('rotRight') },
+    { label: 'Hold', key: k('holdPiece'), small: true },
+    { label: 'Pause', key: k('pause'), small: true },
+  ].filter(function(b) {
+    return b.key;
+  });
+  touchControls = GameKit.createTouchControls({
+    dpad: { left: k('moveLeft'), right: k('moveRight'), down: k('moveDown'), up: k('hardDrop') },
+    buttons: buttons,
+  });
+}
+
+/**
+ * Runs once the page and the Game Lab kit have loaded.
+ */
+function bootTetris() {
+  store = GameKit.createStore('tetris');
+  loadLocalData();
+  for (let s in settings) {
+    let div = document.createElement('div');
+    let b = document.createElement('b');
+    let iLeft = document.createElement('i');
+    let span = document.createElement('span');
+    let iRight = document.createElement('i');
+
+    div.id = s;
+    b.innerHTML = s + ':';
+    span.innerHTML = setting[s][settings[s]];
+    iLeft.className = 'left';
+    iRight.className = 'right';
+    iLeft.onmousedown = left;
+    iRight.onmousedown = right;
+
+    set.appendChild(div);
+    div.appendChild(b);
+    div.appendChild(iLeft);
+    div.appendChild(span);
+    div.appendChild(iRight);
+  }
+  GameKit.initShell({ slug: 'tetris' });
+  buildTouchControls();
+  resize();
+  renderBests();
+}
+document.addEventListener('DOMContentLoaded', bootTetris);

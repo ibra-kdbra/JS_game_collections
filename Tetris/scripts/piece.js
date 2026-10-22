@@ -18,35 +18,28 @@ function Piece() {
  * Removes last active piece, and gets the next active piece from the grab bag.
  */
 Piece.prototype.new = function(index) {
-  // TODO if no arguments, get next grabbag piece
   this.pos = 0;
   this.tetro = [];
   this.held = false;
   this.finesse = 0;
   this.dirty = true;
-  //TODO change this
   landed = false;
 
-  // TODO Do this better. Make clone object func maybe.
-  //for property in pieces, this.prop = piece.prop
   this.tetro = pieces[index].tetro;
   this.kickData = pieces[index].kickData;
   this.x = pieces[index].x;
   this.y = pieces[index].y;
   this.index = index;
 
-  // TODO ---------------- snip
-
-  //TODO Do this better. (make grabbag object)
-  // Preview.next(); == grabbag.next()
-  // Preview.draw();
-  //preview.next();
-
-  // Check for blockout.
+  // Check for blockout. Zen never ends: the board is cleared instead.
   if (!this.moveValid(0, 0, this.tetro)) {
-    gameState = 9;
-    msg.innerHTML = 'BLOCK OUT!';
-    menu(3);
+    if (gametype === 6) {
+      stack.new(10, 22);
+      stack.draw();
+      showAction('FRESH START');
+    } else {
+      endGame(9, 'BLOCK OUT!');
+    }
   }
 };
 Piece.prototype.rotate = function(direction) {
@@ -74,8 +67,8 @@ Piece.prototype.rotate = function(direction) {
   }
 
   // Goes thorugh kick data until it finds a valid move.
-  var curPos = this.pos.mod(4);
-  var newPos = (this.pos + direction).mod(4);
+  var curPos = mod(this.pos, 4);
+  var newPos = mod(this.pos + direction, 4);
 
   for (var x = 0, len = this.kickData[0].length; x < len; x++) {
     if (
@@ -89,8 +82,6 @@ Piece.prototype.rotate = function(direction) {
       this.y += this.kickData[curPos][x][1] - this.kickData[newPos][x][1];
       this.tetro = rotated;
       this.pos = newPos;
-      // TODO make 180 rotate count as one or just update finess 180s
-      //this.finesse++;
       break;
     }
   }
@@ -191,13 +182,17 @@ Piece.prototype.shift = function(direction) {
 };
 Piece.prototype.shiftDown = function() {
   if (this.moveValid(0, 1, this.tetro)) {
+    var row = Math.floor(this.y);
     var grav = gravityArr[settings['Soft Drop'] + 1];
     if (grav > 1) this.y += this.getDrop(grav);
     else this.y += grav;
+    addDropScore(Math.floor(this.y) - row);
   }
 };
 Piece.prototype.hardDrop = function() {
-  this.y += this.getDrop(20);
+  var rows = this.getDrop(20);
+  this.y += rows;
+  addDropScore(rows * 2);
   this.lockDelay = settings['Lock Delay'];
 };
 Piece.prototype.getDrop = function(distance) {
@@ -253,7 +248,11 @@ Piece.prototype.moveValid = function(cx, cy, tetro) {
 Piece.prototype.update = function() {
   if (this.moveValid(0, 1, this.tetro)) {
     landed = false;
-    if (settings.Gravity) {
+    var forced = modeGravity();
+    if (forced !== null) {
+      if (forced > 1) this.y += this.getDrop(forced);
+      else this.y += forced;
+    } else if (settings.Gravity) {
       var grav = gravityArr[settings.Gravity - 1];
       if (grav > 1) this.y += this.getDrop(grav);
       else this.y += grav;
