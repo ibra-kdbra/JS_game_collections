@@ -1,153 +1,107 @@
-import { Coord } from './coord.js';
+import { DIRS, OPPOSITE, TURNS } from './board.js';
+
+// Boost tuning: a full tank lasts BOOST_DRAIN⁻¹ seconds and refills in BOOST_RECHARGE⁻¹ seconds.
+export const BOOST = {
+  multiplier: 1.75,
+  drain: 0.8,
+  recharge: 0.2,
+  minToStart: 0.25,
+};
+
+// AI tuning per difficulty.
+//   rethink:  chance per step to re-plan even when the way ahead looks clear
+//   lookahead: re-plan whenever a wall is this many cells ahead or closer
+//   cap:       flood-fill cell cap (higher sees traps sooner)
+//   wander:    chance per step of a random safe turn (avoids wall hugging)
+//   boost:     how eagerly the AI uses its boost
+const AI = {
+  1: { rethink: 0.03, lookahead: 1, cap: 120, wander: 0.02, boost: 0 },
+  2: { rethink: 0.3, lookahead: 3, cap: 700, wander: 0.01, boost: 0.01 },
+  3: { rethink: 1, lookahead: 6, cap: Infinity, wander: 0, boost: 0.05 },
+};
 
 export class Bike {
-  static DIFFS = {
-    "N": new Coord(-1, 0),
-    "E": new Coord(0, 1),
-    "S": new Coord(1, 0),
-    "W": new Coord(0, -1)
-  };
-
-  constructor(board, startPos, dir) {
-    this.dir = dir;
-    this.turning = false;
+  constructor(board, id, { x, y, dir }) {
     this.board = board;
+    this.id = id;
+    this.x = x;
+    this.y = y;
+    this.dir = dir;
+    this.turns = [];
     this.alive = true;
-    this.opponent = null;
-
-    const start = new Coord(startPos[0], startPos[1]);
-    this.segments = [start];
+    this.progress = 0;
+    this.energy = 1;
+    this.boostHeld = false;
+    this.boosting = false;
+    board.set(x, y, id);
   }
 
-  isOccupying(coord) {
-    return this.segments.some(segment => segment.equals(coord));
+  // Buffer up to two turns so quick inputs (e.g. a U-turn as two taps) aren't lost.
+  queueTurn(dir) {
+    const last = this.turns.length ? this.turns[this.turns.length - 1] : this.dir;
+    if (dir === last || dir === OPPOSITE[last] || this.turns.length >= 2) return;
+    this.turns.push(dir);
   }
 
-  head() {
-    return this.segments[this.segments.length - 1];
-  }
-
-  isValid(coord) {
-    if (!this.board.validPosition(coord)) return false;
-    // Check if bike runs into itself (excluding the head, as is typical)
-    for (let i = 0; i < this.segments.length - 1; i++) {
-      if (this.segments[i].equals(coord)) return false;
-    }
-    // Check collision with opponent
-    if (this.opponent && this.opponent.isOccupying(coord)) {
-      return false;
-    }
-    return true;
-  }
-
-  move() {
-    const nextCoord = this.head().plus(Bike.DIFFS[this.dir]);
-    this.segments.push(nextCoord);
-
-    this.turning = false;
-    if (!this.isValid(nextCoord)) {
-      this.alive = false;
-    }
-  }
-
-  turn(dir) {
-    if (Bike.DIFFS[dir].isOpposite(Bike.DIFFS[this.dir]) || this.turning) {
-      return;
+  updateBoost(dt) {
+    if (this.boostHeld && (this.boosting || this.energy >= BOOST.minToStart)) {
+      this.boosting = true;
+      this.energy = Math.max(0, this.energy - BOOST.drain * dt);
+      if (this.energy === 0) this.boosting = false;
     } else {
-      this.turning = true;
-      this.dir = dir;
+      this.boosting = false;
+      this.energy = Math.min(1, this.energy + BOOST.recharge * dt);
     }
   }
 
-  countFreeArea(startCoord) {
-    if (!this.isValid(startCoord)) return 0;
-    const visited = new Set();
-    const queue = [startCoord];
-    let count = 0;
+  speed(base) {
+    return this.boosting ? base * BOOST.multiplier : base;
+  }
 
-    while (queue.length > 0) {
-      const current = queue.shift();
-      const key = `${current.i},${current.j}`;
-      if (visited.has(key)) continue;
-      visited.add(key);
-      if (!this.isValid(current)) continue;
-      count++;
+  // Apply the next buffered turn and return the cell this bike is about to enter.
+  nextCell() {
+    if (this.turns.length) this.dir = this.turns.shift();
+    const d = DIRS[this.dir];
+    return { x: this.x + d.x, y: this.y + d.y };
+  }
 
-      // Explore neighbors
-      for (let diffKey in Bike.DIFFS) {
-        const neighbor = current.plus(Bike.DIFFS[diffKey]);
-        const neighborKey = `${neighbor.i},${neighbor.j}`;
-        if (!visited.has(neighborKey)) {
-          queue.push(neighbor);
+  think(opponent, difficulty) {
+    const ai = AI[difficulty];
+    const { board } = this;
+    const ahead = board.runLength(this.x, this.y, this.dir, ai.lookahead + 1);
+    const options = [this.dir, ...TURNS[this.dir]];
+
+    if (ahead > ai.lookahead && Math.random() < ai.wander) {
+      const safe = TURNS[this.dir].filter((d) => board.runLength(this.x, this.y, d, 3) >= 3);
+      if (safe.length) this.dir = safe[Math.floor(Math.random() * safe.length)];
+    } else if (ahead <= ai.lookahead || Math.random() < ai.rethink) {
+      let best = this.dir;
+      let bestScore = -1;
+      for (const d of options) {
+        const step = DIRS[d];
+        const nx = this.x + step.x;
+        const ny = this.y + step.y;
+        let score = board.floodArea(nx, ny, ai.cap);
+        if (score > 0 && difficulty === 3) {
+          // Among roomy options, lean towards the opponent to cut them off.
+          const dist = Math.abs(nx - opponent.x) + Math.abs(ny - opponent.y);
+          score += 1 / (1 + dist);
+        }
+        if (d === this.dir) score += 0.5; // Prefer going straight on ties.
+        if (score > bestScore) {
+          bestScore = score;
+          best = d;
         }
       }
-    }
-    return count;
-  }
-
-  // Decide direction based on largest free area among possible turns.
-  // This method looks in all directions: straight, left, right.
-  // You can tweak which directions to compare.
-  computerAdvancedAI() {
-    const possibleDirections = [];
-    // Straight
-    possibleDirections.push(this.dir);
-    // Left / Right relative to current
-    if (this.dir === "N" || this.dir === "S") {
-      possibleDirections.push("W");
-      possibleDirections.push("E");
-    } else {
-      possibleDirections.push("N");
-      possibleDirections.push("S");
+      this.dir = best;
     }
 
-    let bestDir = this.dir;
-    let bestArea = -1;
-    for (const d of possibleDirections) {
-      const nextCoord = this.head().plus(Bike.DIFFS[d]);
-      const area = this.countFreeArea(nextCoord);
-      if (area > bestArea) {
-        bestArea = area;
-        bestDir = d;
-      }
-    }
-    this.dir = bestDir;
-  }
-  
-  // Computer move with advanced AI plus a small random factor
-  computerMove() {
-    let nextCoord = this.head().plus(Bike.DIFFS[this.dir]);
-
-    // Occasionally do a quick logic check to see if we should pick a new direction
-    if (Math.random() > this.computerTurnFrequency()) {
-      this.computerAdvancedAI();
-    }
-
-    nextCoord = this.head().plus(Bike.DIFFS[this.dir]);
-
-    if (this.isValid(nextCoord)) {
-      this.segments.push(nextCoord);
-    } else {
-      // If that direction is no longer valid, try to choose again:
-      this.computerAdvancedAI();
-      nextCoord = this.head().plus(Bike.DIFFS[this.dir]);
-      if (this.isValid(nextCoord)) {
-        this.segments.push(nextCoord);
-      } else {
-        this.alive = false;
-      }
-    }
-  }
-
-  computerTurnFrequency() {
-    switch (this.board.difficulty) {
-      // Probability of skipping the look-ahead each step: lower = smarter AI.
-      case 1:
-        return 0.99;
-      case 2:
-        return 0.95;
-      default:
-        return 0.85;
+    const run = board.runLength(this.x, this.y, this.dir, 16);
+    if (this.boosting) {
+      this.boostHeld = run >= 6;
+    } else if (ai.boost && this.energy > 0.6 && run >= 12) {
+      const near = Math.abs(this.x - opponent.x) + Math.abs(this.y - opponent.y) < 24;
+      this.boostHeld = Math.random() < (near ? ai.boost * 4 : ai.boost);
     }
   }
 }

@@ -7,6 +7,22 @@ The player controls lander rotation and thrusters in order to safely land on the
 The player can land on marked areas to earn extra points and fuel.  
 The game goes on until no fuel is remaining.
 
+Before each flight, pick a difficulty and a terrain:
+
+* **Cadet** - low gravity, a 1500 unit tank, gentler crash penalties and looser landing limits
+* **Pilot** - the original game: lunar gravity and a 1000 unit tank
+* **Commander** - heavy gravity, an 800 unit tank, bigger crash penalties and stricter landings
+* **Classic** terrain is the original hand-made surface; **New every round** generates fresh terrain for each landing from a seed, so a run can be reproduced
+
+Your best score for each difficulty is saved in the browser.
+
+## Controls
+
+* **Left / Right arrows** - rotate
+* **Up arrow** - thrust
+* **P** or **Esc** - pause (the game also pauses when the tab is hidden)
+* On touch screens: on-screen rotate buttons, a Thrust button and Pause
+
 ![game](./images/start.png "game")  
 
 ## Technologies used
@@ -14,13 +30,13 @@ The game goes on until no fuel is remaining.
 * HTML5
 * JavaScript
 * WebGL
-* [three.js](https://threejs.org/)
+* [three.js](https://threejs.org/) r124, vendored in `vendor/three` (MIT license)
 
 ## Project architecture
 
 * `constants.js` - game, ui and particle parameters
 * `globals.js` - global variables
-* `terrainData.js` - terrain points
+* `terrainData.js` - the classic terrain and the seeded terrain generator
 * `sound.js` - sound effects
 * `hud.js` - HUD code
 * `particles.js` - particle systems
@@ -41,6 +57,10 @@ Between each pair of points, a quad is positioned, rotated and scaled to connect
 Once the altitude drops below a certain threshold, the camera zooms in and follows the center point between the lander and terrain directly below.
 It makes the game less static and helps with landing.
 
+The world never stretches: large screens show the whole 800x450 world with letterboxing, while small screens (such as a phone held upright) show its full height and scroll sideways with the lander.
+
+The simulation runs in fixed 60 Hz steps, independent of the display's refresh rate.
+
 ## Collision detection
 
 The shape of the lander is approximated with 3 circles which makes collision detection easier due to rotation.  
@@ -60,6 +80,7 @@ Upon collision, the landing is safe if 4 conditions are met:
 ## HUD
 
 The HUD is made with a separate scene and camera which are additively rendered on top of the world scene and world camera.
+It is drawn at the screen's pixel density and switches to short labels on narrow screens.
 It contains score and fuel information on the left, lander parameters on the right and some basic information in the middle.
 Bonus markings are rendered in world space.
 
@@ -76,7 +97,7 @@ The other one creates a circular explosion when the player crashes.
 
 ## Audio
 
-Audio is played through the HTML5 audio element.
+Audio is played through the HTML5 audio element, and only once a game has been started.
 There are 4 sounds in the game:
 
 * `crash.mp3` - played on crash

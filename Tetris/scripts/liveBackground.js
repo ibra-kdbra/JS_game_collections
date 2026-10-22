@@ -97,15 +97,6 @@ const LiveBackground = {
     }
   },
 
-  // Game state reactive properties
-  gameState: {
-    level: 1,
-    lines: 0,
-    score: 0,
-    isPlaying: false,
-    speed: 1
-  },
-
   // Initialize the background system
   init() {
     this.createCanvas();
@@ -142,45 +133,11 @@ const LiveBackground = {
     document.body.insertBefore(this.canvas, document.body.firstChild);
   },
 
-  // Setup event listeners
+  // Setup event listeners. Line clears arrive from the game through onLinesCleared().
   setupEventListeners() {
     window.addEventListener('resize', () => this.resize());
-    
-    // Listen for game events if available
-    if (typeof piece !== 'undefined') {
-      // We'll update game state from the main game loop
-      this.setupGameStateListener();
-    }
   },
 
-  // Setup game state monitoring
-  setupGameStateListener() {
-    // Override the original gameLoop to capture state changes
-    if (typeof gameLoop === 'function') {
-      const originalGameLoop = gameLoop;
-      window.gameLoop = () => {
-        originalGameLoop();
-        this.updateGameState();
-      };
-    }
-  },
-
-  // Update game state for reactive effects
-  updateGameState() {
-    if (typeof lines !== 'undefined') {
-      const newLines = lines;
-      if (newLines !== this.gameState.lines) {
-        this.onLinesCleared(newLines - this.gameState.lines);
-        this.gameState.lines = newLines;
-      }
-    }
-
-    if (typeof gameState !== 'undefined') {
-      this.gameState.isPlaying = (gameState === 0);
-    }
-  },
-
-  // React to line clears
   onLinesCleared(count) {
     if (count > 0) {
       this.createBurstEffect(count);

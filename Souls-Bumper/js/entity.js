@@ -1,3 +1,5 @@
+'use strict';
+
 function entity(w, h, x, y, angle, type, colour, scale, isButton = false, maxHP = 0) {
   this.scale = scale;
   this.type = type;
@@ -81,14 +83,14 @@ function entity(w, h, x, y, angle, type, colour, scale, isButton = false, maxHP 
       ctx.translate(this.x, this.y);
       ctx.globalAlpha = this.alpha;
 
-      img = this.image;
-      s   = this.scale;
-      mhw = this.mhWidth;
-      mhh = this.mhHeight;
-      hw  = this.hWidth;
-      hh  = this.hHeight;
-      w   = this.width;
-      h   = this.height;
+      const img = this.image;
+      const s   = this.scale;
+      const mhw = this.mhWidth;
+      const mhh = this.mhHeight;
+      const hw  = this.hWidth;
+      const hh  = this.hHeight;
+      const w   = this.width;
+      const h   = this.height;
 
       if(cart.shakeTime>0){
         cart.shakeTime-=delta/1000;
@@ -110,18 +112,15 @@ function entity(w, h, x, y, angle, type, colour, scale, isButton = false, maxHP 
         } else {
           ctx.scale(1, 1);
         }
-        f=0; // float
-        z=0; // hover
-
         if(this.angle > 0 || this.spin){
-          let z=24;
-          ctx.translate(z,z);
-          this.angle=this.spin?this.angle+=8+rndNo(0,5):this.angle;
+          const pivot=24;
+          ctx.translate(pivot,pivot);
+          this.angle=this.spin?this.angle+8+rndNo(0,5):this.angle;
           ctx.rotate(this.angle*Math.PI/180);
-          ctx.translate(-z,-z);
+          ctx.translate(-pivot,-pivot);
         }
 
-        ctx.drawImage(img, this.sx, this.sy, w, h, hw+z, hh+f, w * s, h * s);
+        ctx.drawImage(img, this.sx, this.sy, w, h, hw, hh, w * s, h * s);
       }
       ctx.restore();
     }

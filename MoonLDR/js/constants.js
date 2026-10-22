@@ -17,7 +17,6 @@ const velocityXSpawnMin = 30;
 const velocityXSpawnMax = 50;
 
 const landerScale = 8;
-const gravity = 1.62;
 const thrusterAccelerationMax = 4;
 const thrusterJerk = 4;
 const accelerationFalloffMultiplier = 2;
@@ -27,7 +26,6 @@ const horizontalDragCoef = 0.04;
 const mainScale = landerScale/2;
 const smallScale = landerScale/8;
 
-const startingFuel = 1000;
 const fuelConsumptionRateMin = 4;
 const fuelConsumptionRateMax = 14;
 const fuelPenaltyMin = 300;
@@ -37,8 +35,24 @@ const fuelGainMax = 50;
 const fuelGainExtra = 10;
 const fuelAlertThreshold = fuelPenaltyMin;
 
-const landingAngleTolerance = 6.7 * (Math.PI / 180);
-const landingVelocityTolerance = 5.0;
+// Difficulty presets. "pilot" is the original game.
+const difficulties = {
+    cadet: {name: "CADET", gravity: 1.2, startingFuel: 1500, fuelPenaltyScale: 0.7, landingAngleTolerance: 9 * (Math.PI / 180), landingVelocityTolerance: 6.5},
+    pilot: {name: "PILOT", gravity: 1.62, startingFuel: 1000, fuelPenaltyScale: 1, landingAngleTolerance: 6.7 * (Math.PI / 180), landingVelocityTolerance: 5.0},
+    commander: {name: "COMMANDER", gravity: 2.0, startingFuel: 800, fuelPenaltyScale: 1.2, landingAngleTolerance: 5 * (Math.PI / 180), landingVelocityTolerance: 4.0},
+};
+
+// Procedural terrain: flat landing pads between rough slopes, all in the 800x450 world.
+const terrainPadCountMin = 5;
+const terrainPadCountMax = 7;
+const terrainPadWidthMin = 16;
+const terrainPadWidthMax = 40;
+const terrainHeightMin = 10;
+const terrainHeightMax = 250;
+
+// Screens smaller than this many CSS pixels per world unit show the full world
+// height and follow the lander sideways instead of shrinking the whole world.
+const minWholeWorldScale = 1;
 
 const numOfStars = 100;
 
@@ -52,20 +66,17 @@ const scorePerLanding = 100;
 const scoreMultiplierChances = [0.4, 0.2, 0.15, 0.15, 0.1];
 
 const infoPanelFontSize = 20;
-const mainPanelFontSize = 30;
+const infoPanelCompactFontSize = 13;
+const compactHudWidth = 640;
+const hudShellClearance = 70;
 const statsPanelFontSize = 30;
 
 const infoPanelTextColor = "rgba(255,255,255,1)";
-const mainPanelTextColor = "rgba(255,255,255,1)";
 const statsPanelTextColor = "rgba(255,255,255,1)";
 
 const infoPanelRelativeOffsetX = 0.03;
 const infoPanelRelativeOffsetY = 0.07;
 const infoPanelRelativeOffsetYStep = 0.03;
-
-const mainPanelRelativeOffsetX = 0.5;
-const mainPanelRelativeOffsetY = 0.35;
-const mainPanelRelativeOffsetYStep = 0.05;
 
 const statsPanelRelativeOffsetX = 0.5;
 const statsPanelRelativeOffsetY = 0.30;

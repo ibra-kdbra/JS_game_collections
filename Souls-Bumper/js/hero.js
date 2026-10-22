@@ -1,6 +1,8 @@
+'use strict';
+
 function hero(w, h, x, y, angle, type, scale) {
   this.e = new entity(w, h, x, y, angle, type, "", scale, false, 100);
-  this.hereos = []
+  this.hereos = [];
   this.active=true;
   this.hp=2;
   this.particles=[];
@@ -39,7 +41,6 @@ function hero(w, h, x, y, angle, type, scale) {
   this.changeLevel=false;
 
   this.update = function(ctx, delta){
-    this.time+=delta;
     idle+=delta;
     // Add current position to Array
     if(Math.abs(prevPos.x - this.e.x) > 20 || Math.abs(prevPos.y - this.e.y) > 20){
@@ -185,7 +186,7 @@ function hero(w, h, x, y, angle, type, scale) {
         // check if new location would cause collision
         let arr = this.hereos[this.hereos.length-1];
         let body = arr.length == 1 ? arr[0] : arr[arr.length-2];
-        rec = new rectanlge(body.x, body.y, this.e.hb.w, this.e.hb.h);
+        const rec = new rectanlge(body.x, body.y, this.e.hb.w, this.e.hb.h);
 
         if(!rectColiding(this.e.hb,rec) || !this.active || this.trapped()){
           blockRewind=false;
@@ -233,16 +234,23 @@ function hero(w, h, x, y, angle, type, scale) {
     }
   }
 
-  this.reset = function(){
+  this.reset = function(lvl){
     this.doneTime=0;
     this.done=false;
+    this.changeLevel=false;
     this.hereos = [];
+    currentHero = [];
     this.particles=[];
     this.hp=2;
+    this.active=true;
+    respawnTime=0;
+    jumpTime=0;
+    speed=0;
     checkPos=null;
-    let lvl=cart.levels[this.e.curLevel];
+    this.e.sy=0;
     this.e.x=lvl.startPos[0];
     this.e.y=lvl.startPos[1];
+    this.e.updateHitbox(); // Collisions use the hitbox, which otherwise lags a step behind.
   }
 
   this.kill = function(){
@@ -267,9 +275,9 @@ function hero(w, h, x, y, angle, type, scale) {
 
   this.setCurrentTile = function(scaled){
     // Set Hero Current Tile
-    heroRow = Math.floor((this.e.y - this.e.mhHScaled) / scaled);
-    heroCol = Math.floor((this.e.x - this.e.mhWScaled) / scaled);
-    heroTileIndex = heroCol + (cart.levels[this.e.curLevel].cols*heroRow);
+    const heroRow = Math.floor((this.e.y - this.e.mhHScaled) / scaled);
+    const heroCol = Math.floor((this.e.x - this.e.mhWScaled) / scaled);
+    const heroTileIndex = heroCol + (cart.level.cols*heroRow);
     if(curTile != null) this.prevTile = curTile;
     curTile = cart.level.tiles[heroTileIndex];
 
@@ -318,14 +326,14 @@ function hero(w, h, x, y, angle, type, scale) {
   }
 
   this.grounded = function(){
-    rec = cloneRectanlge(this.e.hb);
+    const rec = cloneRectanlge(this.e.hb);
     rec.y += 2;
-    canJump = false;
+    let canJump = false;
 
-    for (var t = 0; t < this.e.colArr.length; t++) {
-      obj = this.e.colArr[t];
+    for (let t = 0; t < this.e.colArr.length; t++) {
+      const obj = this.e.colArr[t];
       if(obj!=null&&obj.entity!=null){
-        e = obj.entity;
+        const e = obj.entity;
         if(obj.isTile()){
           if(rectColiding(e.hb,rec) && obj.active && e.isSolid && rec.y > this.e.y){
             if(e.falls && !e.fall){
@@ -343,17 +351,17 @@ function hero(w, h, x, y, angle, type, scale) {
   }
 
   this.wRide = function(){
-    rec = cloneRectanlge(this.e.hb);
+    const rec = cloneRectanlge(this.e.hb);
     rec.x -= 8;  // Wall Jumping
     rec.w += 16; // Wall Jumping
     rec.y +=2;
     rec.h +=4;
-    canJump = false;
+    let canJump = false;
 
-    for (var t = 0; t < this.e.colArr.length; t++) {
-      obj = this.e.colArr[t];
+    for (let t = 0; t < this.e.colArr.length; t++) {
+      const obj = this.e.colArr[t];
       if(obj!=null&&obj.entity!=null){
-        e = obj.entity;
+        const e = obj.entity;
         if(obj.isTile() && obj.entity.type==types.DEAD){
           if(rectColiding(e.hb,rec) && obj.active && e.isSolid && rec.y > this.e.y){
             canJump = true;
@@ -379,20 +387,20 @@ function hero(w, h, x, y, angle, type, scale) {
 
     if(trap)spd=1;
 
-    rec = cloneRectanlge(this.e.hb);
+    const rec = cloneRectanlge(this.e.hb);
     rec.x += xx * spd;
     rec.y += yy * spd;
-    canMove = true;
-    amount = spd;
+    let canMove = true;
+    let amount = spd;
 
     // Move full amount and then try decreasing
-    for(var i = spd; i>0; i--){
+    for(let i = spd; i>0; i--){
       canMove = true;
 
-      for (var t = 0; t < this.e.colArr.length; t++) {
-        obj = this.e.colArr[t];
+      for (let t = 0; t < this.e.colArr.length; t++) {
+        const obj = this.e.colArr[t];
         if(obj!=null&&obj.entity!=null){
-          e = obj.entity;
+          const e = obj.entity;
 
           if(obj.isTile()){
             if(rectColiding(e.hb,rec)){
@@ -426,7 +434,7 @@ function hero(w, h, x, y, angle, type, scale) {
     }
   }
 
-  function drawDead(ctx, e, i, j) {
+  const drawDead = (ctx, e, i, j) => {
     // If the rewind is active show all the frames
     if(e.constructor === Array && showDeaths>0 && i == j){
       e.forEach((d,c) => drawDead(ctx, d, c, e.length-1));
@@ -440,7 +448,7 @@ function hero(w, h, x, y, angle, type, scale) {
       let last = e[e.length-1];
       if(last!=null) drawImg(ctx, this.e.image, 0, 16, this.e.width, this.e.height, last.x, last.y, .7, scale);
     }
-  }
+  };
 
   this.bloodDrip = function(c){
     for(let i=1;i<10;i++){

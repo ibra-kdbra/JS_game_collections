@@ -3,26 +3,21 @@
 
 class AudioManager {
   constructor() {
-    this.isMuted = localStorage.getItem('tetris-muted') === 'true';
     this.musicPlaying = false;
     this.audioContext = null;
 
-    this.initWebAudio();
     this.loadSounds();
     this.musicLoop = null;
     this.currentNote = 0;
     this.isPlaying = false;
   }
 
-  initWebAudio() {
-    try {
-      window.AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (window.AudioContext) {
-        this.audioContext = new AudioContext();
-      }
-    } catch (e) {
-      console.warn('Web Audio API not supported');
-    }
+  // Browsers only allow audio after a user gesture, so the context is
+  // created (or resumed) when a game starts.
+  unlock() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!this.audioContext && AC) this.audioContext = new AC();
+    if (this.audioContext && this.audioContext.state === 'suspended') this.audioContext.resume();
   }
 
   loadSounds() {
@@ -117,10 +112,7 @@ class AudioManager {
   }
 
   playSound(soundId) {
-    // Check global game settings if available
-    if (typeof settings !== 'undefined') {
-      if (settings.Sound === 0) return; // Sound Off
-    } else if (this.isMuted) return;
+    if (settings.Sound === 0) return; // Sound Off
 
     const soundDef = this.soundDefinitions[soundId];
     if (!soundDef) return;
@@ -142,11 +134,9 @@ class AudioManager {
         } else {
           this.createOscillator(soundDef.frequency, soundDef.duration, soundDef.type);
         }
-      } else {
-        this.fallbackBeep(soundId);
       }
     } catch (e) {
-      console.warn('Audio failed:', e);
+      // A sound that fails to play is not worth interrupting the game for.
     }
   }
 
@@ -177,21 +167,6 @@ class AudioManager {
 
     oscillator.start(this.audioContext.currentTime);
     oscillator.stop(this.audioContext.currentTime + duration);
-  }
-
-  fallbackBeep(soundId) {
-    // Simple beep for basic browsers
-    const freq = this.getBeepFrequency(soundId);
-    console.log('🔊', soundId, freq + 'Hz');
-  }
-
-  getBeepFrequency(soundId) {
-    const freqMap = {
-      'rotate': 440, 'move': 330, 'place': 220, 'harddrop': 660,
-      'hold': 550, 'line-single': 440, 'line-double': 523,
-      'line-triple': 659, 'line-tetris': 784, 'level-up': 880
-    };
-    return freqMap[soundId] || 440;
   }
 }
 

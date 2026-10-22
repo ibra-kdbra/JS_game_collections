@@ -1,69 +1,94 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <title>Tron</title>
-    <link rel="stylesheet" type="text/css" href="./css/bike.css">
-    <link href='https://fonts.googleapis.com/css?family=Orbitron|Audiowide' rel='stylesheet' type='text/css'>
-    <link href="./imgs/tron-favicon.ico" rel="icon" type="image/x-icon" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="stylesheet" href="./css/bike.css">
+    <link href="./imgs/tron-favicon.ico" rel="icon" type="image/x-icon">
   </head>
 
   <body>
-    <audio id="game-audio" loop>
-      <source src="./music/derezzed.mp3" type="audio/mpeg">
-    </audio>
-    <button class="mute-btn" id="mute-btn">🔊</button>
+    <header class="top">
+      <h1 class="tron-logo" aria-label="Tron">TRON</h1>
+      <div class="top-actions">
+        <button class="icon-btn" id="pause-btn" type="button" aria-label="Pause" hidden>II</button>
+        <button class="icon-btn" id="mute-btn" type="button" aria-label="Mute music">♪</button>
+      </div>
+    </header>
 
-    <div class="tron-logo">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/b/bb/TRON.png" />
+    <div class="hud" hidden>
+      <div class="hud-side blue">
+        <span class="hud-name" id="blue-name">You</span>
+        <span class="hud-score" id="blue-score">0</span>
+        <span class="meter" aria-hidden="true"><span id="blue-boost"></span></span>
+      </div>
+      <div class="hud-mid" id="hud-mid">Round 1</div>
+      <div class="hud-side orange">
+        <span class="hud-name" id="orange-name">CPU</span>
+        <span class="hud-score" id="orange-score">0</span>
+        <span class="meter" aria-hidden="true"><span id="orange-boost"></span></span>
+      </div>
     </div>
 
-    <div class="intro-outro">
-      <h1 class="start-display" id="instructions">Instructions</h1>
-      <div class="start-display" id="instructions">
-        Don't crash! You are the <span style="color: blue;">blue</span> light cycle.
-        Avoid the walls and trails of light left by you and your opponent.
-        Navigate your light cycle by the arrow keys.
-      </div>
-      <h1 class="start-display" id="start">START</h1>
-      <div class="start-display" id="instructions" style="padding-top: 60px">
-        Have a <span style="color: #FF4500;">Frenemy</span>?
-      </div>
-      <h1 class="start-display" id="two-player">2 PLAYERS</h1>
-      <div class="start-display" id="instructions" style="font-size: 18px;">
-        (<span style="color: #FF4500">Player 2</span> uses WASD)
-      </div>
+    <main class="stage" id="stage">
+      <canvas class="arena" id="arena" aria-label="Arena"></canvas>
 
-      <h1 class="end-display" id="you-win">You win!</h1>
-      <h1 class="end-display" id="computer-win">Computer wins!</h1>
-      <h1 class="end-display" id="player1-win">Player 1 wins!</h1>
-      <h1 class="end-display" id="player2-win">Player 2 wins!</h1>
-      <h1 class="end-display" id="replay">PLAY AGAIN</h1>
-    </div>
+      <section class="panel" id="menu">
+        <h2>Light cycles</h2>
+        <p class="lead">Don't crash! You are the <b class="c-blue">blue</b> cycle. Avoid the walls and every trail of light.</p>
 
-    <div class="display">
-      <div class="leftspace">
-        <div class="score" style="display: none;">
-          <h1 class="left-header"> Wins </h1>
-          <span class="blue-wins">0</span>  -
-          <span class="red-wins">0</span>
+        <div class="opt" role="group" aria-label="Mode">
+          <span class="opt-label">Mode</span>
+          <button type="button" data-opt="players" data-value="1">Vs computer</button>
+          <button type="button" data-opt="players" data-value="2">2 players</button>
+        </div>
+        <div class="opt" role="group" aria-label="Difficulty" id="difficulty-opt">
+          <span class="opt-label">Computer</span>
+          <button type="button" data-opt="difficulty" data-value="1">Easy</button>
+          <button type="button" data-opt="difficulty" data-value="2">Medium</button>
+          <button type="button" data-opt="difficulty" data-value="3">Hard</button>
+        </div>
+        <div class="opt" role="group" aria-label="Arena size">
+          <span class="opt-label">Arena</span>
+          <button type="button" data-opt="arena" data-value="small">Small</button>
+          <button type="button" data-opt="arena" data-value="medium">Medium</button>
+          <button type="button" data-opt="arena" data-value="large">Large</button>
+        </div>
+        <div class="opt" role="group" aria-label="Obstacles">
+          <span class="opt-label">Obstacles</span>
+          <button type="button" data-opt="layout" data-value="open">None</button>
+          <button type="button" data-opt="layout" data-value="pillars">Pillars</button>
+          <button type="button" data-opt="layout" data-value="gates">Gates</button>
+          <button type="button" data-opt="layout" data-value="bars">Bars</button>
+        </div>
+        <div class="opt" role="group" aria-label="Match">
+          <span class="opt-label">Match</span>
+          <button type="button" data-opt="match" data-value="1">Single round</button>
+          <button type="button" data-opt="match" data-value="5">Best of 5</button>
         </div>
 
-        <div class="difficulty" style="display: none;">
-          <h1 class="left-header"> Difficulty </h1>
-          <h1 class="easy">Easy</h1>
-          <h1 class="medium">Medium</h1>
-          <h1 class="hard">Hard</h1>
-        </div>
-      </div>
+        <button type="button" class="big-btn" id="start">START</button>
 
-      <figure class="tron-game">
-      </figure>
+        <p class="help keys-help"><span class="c-blue">Blue</span>: arrow keys, boost with Space / Enter. <span class="c-orange">Orange</span>: WASD, boost with Q. P or Esc pauses.</p>
+        <p class="help touch-help">Swipe on the arena or use the pad. Hold <b>Boost</b> for a burst of speed.</p>
+        <p class="help record" id="record"></p>
+      </section>
 
-      <div class="rightspace"></div>
-    </div>
-    
+      <section class="panel" id="pause" hidden>
+        <h2>Paused</h2>
+        <button type="button" class="big-btn" id="resume">RESUME</button>
+        <button type="button" class="link-btn" data-action="menu">Quit to menu</button>
+      </section>
+
+      <section class="panel" id="result" hidden>
+        <h2 id="result-title">You win!</h2>
+        <p class="lead" id="result-detail"></p>
+        <button type="button" class="big-btn" id="next">PLAY AGAIN</button>
+        <button type="button" class="link-btn" data-action="menu">Change settings</button>
+      </section>
+    </main>
+
     <script type="module" src="./js/main.js"></script>
   </body>
 </html>

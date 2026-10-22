@@ -2,10 +2,149 @@ body {
     margin: 0;
     background-color: #000000;
     overflow: hidden;
+    color: #ffffff;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+/* The play area. On touch screens it leaves room for the controls:
+   below it in portrait, beside it in landscape. */
+.stage {
+    position: fixed;
+    inset: 0;
+}
+
+.gk-has-touch .stage {
+    bottom: 200px;
+}
+
+@media (orientation: landscape) {
+    .gk-has-touch .stage {
+        bottom: 0;
+        left: 200px;
+        right: 200px;
+    }
 }
 
 canvas {
     display: block;
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
+}
+
+.menu {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 64px 16px 24px;
+    overflow-y: auto;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.72);
+}
+
+.menu[hidden] {
+    display: none;
+}
+
+.menu h1 {
+    margin: 0;
+    font-size: clamp(36px, 9vw, 64px);
+    font-weight: normal;
+    letter-spacing: 0.2em;
+    padding-left: 0.2em;
+}
+
+.tagline,
+.opt-note,
+.touch-keys,
+.best,
+.result {
+    margin: 0;
+    max-width: 34em;
+    font-size: 15px;
+    line-height: 1.4;
+}
+
+.opt-note {
+    font-size: 13px;
+    opacity: 0.7;
+}
+
+.result {
+    padding: 6px 12px;
+    border: 1px solid #ffffff;
+}
+
+.opt {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.opt-label {
+    width: 100%;
+    font-size: 13px;
+    opacity: 0.7;
+}
+
+.menu button {
+    min-height: 44px;
+    padding: 6px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: #000000;
+    color: #ffffff;
+    font: inherit;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.menu button[aria-pressed='true'] {
+    border-color: #ffffff;
+    background: #ffffff;
+    color: #000000;
+}
+
+.menu button:hover,
+.menu button:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+}
+
+.menu .start {
+    min-width: 200px;
+    border: 2px solid #ffffff;
+    font-size: 24px;
+    letter-spacing: 0.2em;
+}
+
+.keys {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 4px 16px;
+    margin: 0;
+    font-size: 15px;
+}
+
+.keys dt {
+    text-align: right;
+}
+
+.keys dd {
+    margin: 0;
+    text-align: left;
+}
+
+.touch-keys,
+.gk-has-touch .keys {
+    display: none;
+}
+
+.gk-has-touch .touch-keys {
+    display: block;
 }
