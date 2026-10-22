@@ -7,9 +7,38 @@ const gestures = {unknown:   0,
                   swypeDTD:  4,
                   swypeTDT:  5,
                   swypeTLRD: 6,
+                  slash:     7,
+                  backslash: 8,
+                  circle:    9,
 };
 
-const gestureColors = ['white', 'white', '#FF0000', '#2DE5E5', '#56A521', '#FFCC33', 'yellow'];
+const gestureColors = ['white', 'white', '#FF0000', '#2DE5E5', '#56A521', '#FFCC33', 'yellow', '#D24DFF', '#4D7CFF', '#FF9EC7'];
+
+// One straight stroke: a line, or a diagonal ('/' or '\').
+function straightGesture(orient){
+  if (orient.x && !orient.y){
+    return gestures.swypeLR;
+  }
+  if (!orient.x && orient.y){
+    return gestures.swypeTD;
+  }
+  return orient.x * orient.y < 0 ? gestures.slash : gestures.backslash;
+}
+
+// A loop that ends near where it started and is big enough to be deliberate.
+function isCircle(path, orientCount){
+  if (orientCount < 4){
+    return false;
+  }
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (let p of path){
+    minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+    minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+  }
+  let size = Math.max(maxX - minX, maxY - minY);
+  let gap  = getDistance(path[0], path[path.length - 1]);
+  return Math.min(maxX - minX, maxY - minY) > 30 && gap < Math.pow(size * 0.35, 2);
+}
 
 function getDistance(a, b) {
   return (Math.pow(a.x-b.x, 2) + Math.pow(a.y-b.y, 2));
@@ -44,13 +73,7 @@ function cogniteGesture(path){
       result = gestures.click;
     }
     else{
-      orients.push(getSectionOrient(path[0], path[1]));
-      if (orients[0].x && !orients[0].y){
-        result = gestures.swypeLR;
-      }
-      else if (!orients[0].x && orients[0].y){
-        result = gestures.swypeTD;
-      }
+      result = straightGesture(getSectionOrient(path[0], path[1]));
     }
   }
   else{
@@ -65,7 +88,13 @@ function cogniteGesture(path){
 
     ol = orients.length;
 
-    if (orients.length == 2 && Math.abs(orients[0].y + orients[1].y) == 2 && Math.abs(orients[0].x + orients[1].x) <= 1){
+    if (ol == 1){
+      result = straightGesture(orients[0]);
+    }
+    else if (isCircle(path, ol)){
+      result = gestures.circle;
+    }
+    else if (orients.length == 2 && Math.abs(orients[0].y + orients[1].y) == 2 && Math.abs(orients[0].x + orients[1].x) <= 1){
       result = gestures.swypeTD;
     }
     else if ((orients.length == 2 || orients.length == 3)
@@ -86,7 +115,6 @@ function cogniteGesture(path){
         result = gestures.swypeTLRD;
       }
     }
-    //console.log(orients);
   }
 
   return result;
@@ -113,22 +141,16 @@ let simplifyPath = function( points, tolerance ) {
     this.p1 = p1;
     this.p2 = p2;
     
+    // Perpendicular distance to the line through p1 and p2 (works for
+    // vertical lines and for closed strokes where p1 == p2).
     this.distanceToPoint = function( point ) {
-      // slope
-      let m = ( this.p2.y - this.p1.y ) / ( this.p2.x - this.p1.x ),
-        // y offset
-        b = this.p1.y - ( m * this.p1.x ),
-        d = [];
-      // distance to the linear equation
-      d.push( Math.abs( point.y - ( m * point.x ) - b ) / Math.sqrt( Math.pow( m, 2 ) + 1 ) );
-      // distance to p1
-      d.push( Math.sqrt( Math.pow( ( point.x - this.p1.x ), 2 ) + Math.pow( ( point.y - this.p1.y ), 2 ) ) );
-      // distance to p2
-      d.push( Math.sqrt( Math.pow( ( point.x - this.p2.x ), 2 ) + Math.pow( ( point.y - this.p2.y ), 2 ) ) );
-      // return the smallest distance
-      return d.sort( function( a, b ) {
-        return ( a - b ); //causes an array to be sorted numerically and ascending
-      } )[0];
+      let dx = this.p2.x - this.p1.x,
+        dy = this.p2.y - this.p1.y,
+        length = Math.sqrt( dx * dx + dy * dy );
+      if ( length === 0 ) {
+        return Math.sqrt( Math.pow( point.x - this.p1.x, 2 ) + Math.pow( point.y - this.p1.y, 2 ) );
+      }
+      return Math.abs( dy * point.x - dx * point.y + this.p2.x * this.p1.y - this.p2.y * this.p1.x ) / length;
     };
   };
   
@@ -142,8 +164,7 @@ let simplifyPath = function( points, tolerance ) {
       line = new Line( points[0], points[points.length - 1] ),
       // find the largest distance from intermediate poitns to this line
       maxDistance = 0,
-      maxDistanceIndex = 0,
-      p;
+      maxDistanceIndex = 0;
     for( i = 1; i <= points.length - 2; i++ ) {
       let distance = line.distanceToPoint( points[ i ] );
       if( distance > maxDistance ) {
@@ -153,16 +174,11 @@ let simplifyPath = function( points, tolerance ) {
     }
     // check if the max distance is greater than our tollerance allows 
     if ( maxDistance >= tolerance ) {
-      p = points[maxDistanceIndex];
-      line.distanceToPoint( p, true );
       // include this point in the output 
       returnPoints = returnPoints.concat( douglasPeucker( points.slice( 0, maxDistanceIndex + 1 ), tolerance ) );
-      // returnPoints.push( points[maxDistanceIndex] );
       returnPoints = returnPoints.concat( douglasPeucker( points.slice( maxDistanceIndex, points.length ), tolerance ) );
     } else {
       // ditching this point
-      p = points[maxDistanceIndex];
-      line.distanceToPoint( p, true );
       returnPoints = [points[0]];
     }
     return returnPoints;

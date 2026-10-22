@@ -12,6 +12,91 @@ const bonusType = {
   apple:  1,
 }
 
+// Pixel glyphs (10x10) for symbols that are not in the sprite atlas.
+const GLYPHS = {
+  [gestures.slash]: [
+    '........##', '.......##.', '......##..', '.....##...', '....##....',
+    '...##.....', '..##......', '.##.......', '##........', '#.........'],
+  [gestures.backslash]: [
+    '##........', '.##.......', '..##......', '...##.....', '....##....',
+    '.....##...', '......##..', '.......##.', '........##', '.........#'],
+  [gestures.circle]: [
+    '..######..', '.##....##.', '##......##', '##......##', '##......##',
+    '##......##', '##......##', '##......##', '.##....##.', '..######..'],
+};
+
+let glyphCache = {};
+let tintCache  = {};
+
+function glyphImage(token){
+  if (!glyphCache[token]){
+    let c = document.createElement('canvas');
+    c.width = 10; c.height = 10;
+    let g = c.getContext('2d');
+    g.fillStyle = gestureColors[token];
+    GLYPHS[token].forEach((row, y) => {
+      for (let x = 0; x < row.length; x++){
+        if (row[x] == '#'){ g.fillRect(x, y, 1, 1); }
+      }
+    });
+    glyphCache[token] = c;
+  }
+  return glyphCache[token];
+}
+
+// A copy of the atlas with every opaque pixel recoloured (for enemy kinds).
+function tintedAtlas(color){
+  if (!tintCache[color]){
+    let c = document.createElement('canvas');
+    c.width = atlas.width; c.height = atlas.height;
+    let g = c.getContext('2d');
+    g.drawImage(atlas, 0, 0);
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = color;
+    g.fillRect(0, 0, c.width, c.height);
+    tintCache[color] = c;
+  }
+  return tintCache[color];
+}
+
+function symbolWidth(token){
+  return token == gestures.swypeTD ? 8 : 13;
+}
+
+// Draw one symbol at device pixel (x, y), `scale` device pixels per map unit.
+function drawSymbol(ctx, token, x, y, scale){
+  if (token == gestures.swypeTLRD){
+    ctx.drawImage(atlas, 0, 150, 10, 10, x, y, 13*scale, 13*scale);
+  }
+  else if (token == gestures.swypeTD){
+    ctx.drawImage(atlas, 142, 88, 6, 10, x, y, 8*scale, 13*scale);
+  }
+  else if (GLYPHS[token]){
+    ctx.drawImage(glyphImage(token), 0, 0, 10, 10, x, y, 13*scale, 13*scale);
+  }
+  else{
+    ctx.drawImage(atlas, (7*tileXsize + (token>>2)*10), 78 + 10*(token&1), 10, 10, x, y, 13*scale, 13*scale);
+  }
+}
+
+// The row of symbols above an enemy or bonus; remembers its footprint for clear().
+function drawTokenRow(sprite){
+  let i, x, y, width = 0;
+  for (i = sprite.tokens.length - 1; i >= 0; i--) {
+    width += symbolWidth(sprite.tokens[i]);
+  }
+  sprite.tokensOffsetY = width ? 10 : 0;
+  sprite.tokensOffsetX = Math.ceil((width - tileXsize)/2);
+  x = sprite.x - sprite.tokensOffsetX;
+  y = sprite.y - sprite.tokensOffsetY;
+  for (i = sprite.tokens.length - 1; i >= 0; i--) {
+    drawSymbol(ctxA, sprite.tokens[i], map.offsetX + x*map.scale, map.offsetY + y*map.scale, map.scale);
+    x += symbolWidth(sprite.tokens[i]);
+  }
+}
+
+let stepToward = (from, to, speed) => Math.sign(to - from) * Math.min(speed, Math.abs(to - from));
+
 class Sprite{
   constructor(x, y,width, height, orient){
     this.x = x;
@@ -104,19 +189,19 @@ class Ghost extends Sprite{
   }
 }
 
+// kind: {speed, tint, points}; speed is map units per actor step.
 class Pacman extends Sprite{
-  constructor(x, y, orient, tx, ty, tokens, pact = act.move){
+  constructor(x, y, orient, tx, ty, tokens, pact = act.move, kind = {speed: 2, tint: null, points: 0}){
     super(x, y, 20, 20, orient);
     this.tokens = tokens;
     this.tokensWidth   = 0;
     this.tokensOffsetX = 0;
     this.tokensOffsetY = 0;
+    this.kind  = kind;
+    this.sheet = kind.tint ? tintedAtlas(kind.tint) : atlas;
 
     this.targetX = tx == x ? x: tx > x ? tx - tileXsize + 5 : tx + tileXsize - 5;
     this.targetY = ty == y ? y: ty > y ? ty - tileYsize + 5 : ty + tileYsize - 5;
-
-    if (this.targetX&1 != this.x&1){this.newX++;}
-    if (this.targetY&1 != this.y&1){this.newY++;}
 
     this.action = pact;
   }
@@ -136,39 +221,7 @@ class Pacman extends Sprite{
   }
 
   drawTokens(){
-    let i, x, y, width = 0;
-    for (i = this.tokens.length - 1; i >= 0; i--) {
-      if (this.tokens[i] == gestures.swypeTD){
-        width += 8;
-      }
-      else{
-        width += 13;
-      }
-    }
-    this.tokensOffsetY = width ? 10 : 0;
-    this.tokensOffsetX = Math.ceil((width - tileXsize)/2);
-    x = this.x - this.tokensOffsetX;
-    y = this.y - this.tokensOffsetY;
-    for (i = this.tokens.length - 1; i >= 0; i--) {
-      if (this.tokens[i] == gestures.swypeTLRD){
-        width = 13;
-        ctxA.drawImage(atlas, 0, 150, 10, 10,
-          map.offsetX + x*map.scale, map.offsetY + y*map.scale, 13*map.scale, 13*map.scale);
-        x += width;
-      }
-      else if (this.tokens[i] == gestures.swypeTD){
-        width = 8;
-        ctxA.drawImage(atlas, 142, 88, 6, 10,
-          map.offsetX + x*map.scale, map.offsetY + y*map.scale, width*map.scale, 13*map.scale);
-        x += width;
-      }
-      else{
-        width = 13;
-        ctxA.drawImage(atlas, (7*tileXsize + (this.tokens[i]>>2)*10), 78 + 10*(this.tokens[i]&1), 10, 10,
-          map.offsetX + x*map.scale, map.offsetY + y*map.scale, 13*map.scale, 13*map.scale);
-        x += width;
-      }
-    }
+    drawTokenRow(this);
   }
 
   draw(){
@@ -176,11 +229,11 @@ class Pacman extends Sprite{
       this.x = this.newX;
       this.y = this.newY;
       if (this.action == act.die){
-        ctxA.drawImage(atlas, (this.frame & 7)*tileXsize, (3 + (this.frame>>3))*tileYsize,  tileXsize, tileYsize,
+        ctxA.drawImage(this.sheet, (this.frame & 7)*tileXsize, (3 + (this.frame>>3))*tileYsize,  tileXsize, tileYsize,
           map.offsetX + this.x*map.scale, map.offsetY + this.y*map.scale, this.width*map.scale, this.height*map.scale);
       }
       else{
-        ctxA.drawImage(atlas, ((this.orient*2)+this.frame)*tileXsize, tileYsize*2,  tileXsize, tileYsize,
+        ctxA.drawImage(this.sheet, ((this.orient*2)+this.frame)*tileXsize, tileYsize*2,  tileXsize, tileYsize,
           map.offsetX + this.x*map.scale, map.offsetY + this.y*map.scale, this.width*map.scale, this.height*map.scale);
         this.drawTokens();
       }
@@ -236,10 +289,8 @@ class Pacman extends Sprite{
           }
           else {
             if (this.action == act.move){
-              if (this.newX < this.targetX){this.newX+=2;}
-              else if (this.newX > this.targetX){this.newX-=2;}
-              if (this.newY < this.targetY){this.newY+=2;}
-              else if (this.newY > this.targetY){this.newY-=2;}
+              this.newX += stepToward(this.newX, this.targetX, this.kind.speed);
+              this.newY += stepToward(this.newY, this.targetY, this.kind.speed);
             }
 
             this.frame^=1;
@@ -262,9 +313,6 @@ class Bonus extends Sprite{
     this.type = type;
     this.liveTime = time;
 
-    if (this.targetX&1 != this.x&1){this.newX++;}
-    if (this.targetY&1 != this.y&1){this.newY++;}
-
     this.action = act.idle;
   }
 
@@ -284,39 +332,7 @@ class Bonus extends Sprite{
   }
 
   drawTokens(){
-    let i, x, y, width = 0;
-    for (i = this.tokens.length - 1; i >= 0; i--) {
-      if (this.tokens[i] == gestures.swypeTD){
-        width += 8;
-      }
-      else{
-        width += 13;
-      }
-    }
-    this.tokensOffsetY = width ? 10 : 0;
-    this.tokensOffsetX = Math.ceil((width - tileXsize)/2);
-    x = this.x - this.tokensOffsetX;
-    y = this.y - this.tokensOffsetY;
-    for (i = this.tokens.length - 1; i >= 0; i--) {
-      if (this.tokens[i] == gestures.swypeTLRD){
-        width = 13;
-        ctxA.drawImage(atlas, 0, 150, 10, 10,
-          map.offsetX + x*map.scale, map.offsetY + y*map.scale, 13*map.scale, 13*map.scale);
-        x += width;
-      }
-      else if (this.tokens[i] == gestures.swypeTD){
-        width = 8;
-        ctxA.drawImage(atlas, 142, 88, 6, 10,
-          map.offsetX + x*map.scale, map.offsetY + y*map.scale, width*map.scale, 13*map.scale);
-        x += width;
-      }
-      else{
-        width = 13;
-        ctxA.drawImage(atlas, (7*tileXsize + (this.tokens[i]>>2)*10), 78 + 10*(this.tokens[i]&1), 10, 10,
-          map.offsetX + x*map.scale, map.offsetY + y*map.scale, 13*map.scale, 13*map.scale);
-        x += width;
-      }
-    }
+    drawTokenRow(this);
   }
 
   draw(){
