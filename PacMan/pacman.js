@@ -384,25 +384,40 @@ var getHighScore = function() {
 var setHighScore = function(highScore) {
     highScores[getScoreIndex()] = highScore;
     saveHighScores();
+    recordHighScore(getScoreIndex());
 };
-// High Score Persistence
+// High Score Persistence (Game Lab kit storage: "pacman.highScores")
+
+var HIGH_SCORE_MODES = [
+    ['pacman', 'Pac-Man'], ['pacman-turbo', 'Pac-Man turbo'],
+    ['mspacman', 'Ms. Pac-Man'], ['mspacman-turbo', 'Ms. Pac-Man turbo'],
+    ['cookie', 'Cookie-Man'], ['cookie-turbo', 'Cookie-Man turbo'],
+    ['otto', 'Crazy Otto'], ['otto-turbo', 'Crazy Otto turbo'],
+];
+var DEFAULT_HIGH_SCORE = 10000;
+var scoreStore;
+
+// Mirror a personal high score (one that beat the arcade default) to the hub.
+var recordHighScore = function(i) {
+    var mode = HIGH_SCORE_MODES[i];
+    if (mode && highScores[i] > DEFAULT_HIGH_SCORE) {
+        GameKit.recordBest('pacman', highScores[i], { mode: mode[0], label: highScores[i] + ' in ' + mode[1] });
+    }
+};
 
 var loadHighScores = function() {
     var hs;
-    var hslen;
     var i;
-    if (localStorage && localStorage.highScores) {
-        hs = JSON.parse(localStorage.highScores);
-        hslen = hs.length;
-        for (i=0; i<hslen; i++) {
-            highScores[i] = Math.max(highScores[i],hs[i]);
-        }
+    scoreStore = GameKit.createStore('pacman');
+    GameKit.migrateKey(scoreStore, 'highScores', 'highScores', { parse: JSON.parse });
+    hs = scoreStore.get('highScores', []);
+    for (i=0; i<hs.length; i++) {
+        highScores[i] = Math.max(highScores[i],hs[i]);
+        recordHighScore(i);
     }
 };
 var saveHighScores = function() {
-    if (localStorage) {
-        localStorage.highScores = JSON.stringify(highScores);
-    }
+    scoreStore.set('highScores', highScores);
 };
 //@line 1 "src/direction.js"
 //////////////////////////////////////////////////////////////////////////////////////
@@ -3104,13 +3119,41 @@ var initRenderer = function(){
         resets++;
     };
 
+    // Space taken by the Game Lab kit: its back button (top-left) and, on
+    // touch screens, the on-screen D-pad (bottom-left).
+    var SHELL_HEIGHT = 56;
+    var SHELL_WIDTH = 110;
+    var getTouchPad = function() {
+        var pad = document.querySelector('.gk-touch:not([hidden]) .gk-dpad');
+        if (!pad) {
+            return null;
+        }
+        var rect = pad.getBoundingClientRect();
+        return { width: rect.width + 24, height: rect.height + 24 };
+    };
+
     // get the target scale that will cause the canvas to fit the window
+    // (and the top margin that keeps it clear of the back button)
+    var getLayout = function() {
+        var w = window.innerWidth - 10;
+        var h = window.innerHeight - 10;
+        var fit = function(w, h) { return Math.min(w / screenWidth, h / screenHeight); };
+        var top = 0;
+        var s = fit(w, h);
+        if ((window.innerWidth - screenWidth*s)/2 < SHELL_WIDTH) {
+            top = SHELL_HEIGHT;
+            h -= top;
+            s = fit(w, h);
+        }
+        var pad = getTouchPad();
+        if (pad) {
+            // the maze goes beside the D-pad or above it, whichever is bigger
+            s = Math.max(fit(w - 2*pad.width, h), fit(w, h - pad.height));
+        }
+        return { scale: s * getDevicePixelRatio(), top: top };
+    };
     var getTargetScale = function() {
-        var sx = (window.innerWidth - 10) / screenWidth;
-        var sy = (window.innerHeight - 10) / screenHeight;
-        var s = Math.min(sx,sy);
-        s *= getDevicePixelRatio();
-        return s;
+        return getLayout().scale;
     };
 
     // maximize the scale to fit the window
@@ -3138,6 +3181,7 @@ var initRenderer = function(){
         console.log(canvas.style.left);
         */
         document.body.style.marginLeft = (window.innerWidth - w)/2 + "px";
+        document.body.style.paddingTop = getLayout().top + "px";
     };
 
     // create foreground and background canvases
@@ -9449,6 +9493,19 @@ var executive = (function(){
             var that = this;
             window.addEventListener('focus', function() {that.start();});
             window.addEventListener('blur', function() {that.stop();});
+            // A hidden tab pauses too: mid-game it opens the pause menu, so
+            // coming back never drops the player straight into danger.
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    if (hud.isValidState() && !inGameMenu.isOpen()) {
+                        inGameMenu.getMenuButton().onclick();
+                    }
+                    that.stop();
+                }
+                else {
+                    that.start();
+                }
+            });
             this.start();
         },
         start: function() {
@@ -11316,8 +11373,18 @@ var initSwipe = function() {
 
     // minimum distance from anchor before direction is registered
     var r = 4;
-    
+
+    // touches on the Game Lab kit's own buttons (back link, D-pad) are not swipes
+    var onKitControls = false;
+    var isKitControl = function(event) {
+        return !!(event.target.closest && event.target.closest('.gk-touch, .gk-shell'));
+    };
+
     var touchStart = function(event) {
+        onKitControls = isKitControl(event);
+        if (onKitControls) {
+            return;
+        }
         event.preventDefault();
         var fingerCount = event.touches.length;
         if (fingerCount == 1) {
@@ -11333,6 +11400,9 @@ var initSwipe = function() {
     };
 
     var touchMove = function(event) {
+        if (onKitControls) {
+            return;
+        }
         event.preventDefault();
         var fingerCount = event.touches.length;
         if (fingerCount == 1) {
@@ -11363,6 +11433,9 @@ var initSwipe = function() {
     };
 
     var touchEnd = function(event) {
+        if (onKitControls) {
+            return;
+        }
         event.preventDefault();
     };
 

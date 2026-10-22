@@ -252,23 +252,38 @@ var getHighScore = function() {
 var setHighScore = function(highScore) {
     highScores[getScoreIndex()] = highScore;
     saveHighScores();
+    recordHighScore(getScoreIndex());
 };
-// High Score Persistence
+// High Score Persistence (Game Lab kit storage: "pacman.highScores")
+
+var HIGH_SCORE_MODES = [
+    ['pacman', 'Pac-Man'], ['pacman-turbo', 'Pac-Man turbo'],
+    ['mspacman', 'Ms. Pac-Man'], ['mspacman-turbo', 'Ms. Pac-Man turbo'],
+    ['cookie', 'Cookie-Man'], ['cookie-turbo', 'Cookie-Man turbo'],
+    ['otto', 'Crazy Otto'], ['otto-turbo', 'Crazy Otto turbo'],
+];
+var DEFAULT_HIGH_SCORE = 10000;
+var scoreStore;
+
+// Mirror a personal high score (one that beat the arcade default) to the hub.
+var recordHighScore = function(i) {
+    var mode = HIGH_SCORE_MODES[i];
+    if (mode && highScores[i] > DEFAULT_HIGH_SCORE) {
+        GameKit.recordBest('pacman', highScores[i], { mode: mode[0], label: highScores[i] + ' in ' + mode[1] });
+    }
+};
 
 var loadHighScores = function() {
     let hs;
-    let hslen;
     let i;
-    if (localStorage && localStorage.highScores) {
-        hs = JSON.parse(localStorage.highScores);
-        hslen = hs.length;
-        for (i=0; i<hslen; i++) {
-            highScores[i] = Math.max(highScores[i],hs[i]);
-        }
+    scoreStore = GameKit.createStore('pacman');
+    GameKit.migrateKey(scoreStore, 'highScores', 'highScores', { parse: JSON.parse });
+    hs = scoreStore.get('highScores', []);
+    for (i=0; i<hs.length; i++) {
+        highScores[i] = Math.max(highScores[i],hs[i]);
+        recordHighScore(i);
     }
 };
 var saveHighScores = function() {
-    if (localStorage) {
-        localStorage.highScores = JSON.stringify(highScores);
-    }
+    scoreStore.set('highScores', highScores);
 };

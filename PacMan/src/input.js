@@ -203,8 +203,18 @@ var initSwipe = function() {
 
     // minimum distance from anchor before direction is registered
     var r = 4;
-    
+
+    // touches on the Game Lab kit's own buttons (back link, D-pad) are not swipes
+    var onKitControls = false;
+    var isKitControl = function(event) {
+        return !!(event.target.closest && event.target.closest('.gk-touch, .gk-shell'));
+    };
+
     var touchStart = function(event) {
+        onKitControls = isKitControl(event);
+        if (onKitControls) {
+            return;
+        }
         event.preventDefault();
         var fingerCount = event.touches.length;
         if (fingerCount == 1) {
@@ -220,6 +230,9 @@ var initSwipe = function() {
     };
 
     var touchMove = function(event) {
+        if (onKitControls) {
+            return;
+        }
         event.preventDefault();
         var fingerCount = event.touches.length;
         if (fingerCount == 1) {
@@ -250,6 +263,9 @@ var initSwipe = function() {
     };
 
     var touchEnd = function(event) {
+        if (onKitControls) {
+            return;
+        }
         event.preventDefault();
     };
 

@@ -31,6 +31,14 @@
             font-size: 1.5em;
         }
     </style>
+<script type="module" src="../assets/kit/index.js"></script>
+<script type="module">
+    GameKit.initShell({ slug: 'pacman' });
+    // Phones get a D-pad next to swiping; it also moves through menus.
+    GameKit.createTouchControls({
+        dpad: { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' },
+    });
+</script>
 <script src="pacman.js"></script>
 </head>
 <body>

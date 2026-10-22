@@ -80,13 +80,41 @@ var initRenderer = function(){
         resets++;
     };
 
+    // Space taken by the Game Lab kit: its back button (top-left) and, on
+    // touch screens, the on-screen D-pad (bottom-left).
+    var SHELL_HEIGHT = 56;
+    var SHELL_WIDTH = 110;
+    var getTouchPad = function() {
+        var pad = document.querySelector('.gk-touch:not([hidden]) .gk-dpad');
+        if (!pad) {
+            return null;
+        }
+        var rect = pad.getBoundingClientRect();
+        return { width: rect.width + 24, height: rect.height + 24 };
+    };
+
     // get the target scale that will cause the canvas to fit the window
+    // (and the top margin that keeps it clear of the back button)
+    var getLayout = function() {
+        var w = window.innerWidth - 10;
+        var h = window.innerHeight - 10;
+        var fit = function(w, h) { return Math.min(w / screenWidth, h / screenHeight); };
+        var top = 0;
+        var s = fit(w, h);
+        if ((window.innerWidth - screenWidth*s)/2 < SHELL_WIDTH) {
+            top = SHELL_HEIGHT;
+            h -= top;
+            s = fit(w, h);
+        }
+        var pad = getTouchPad();
+        if (pad) {
+            // the maze goes beside the D-pad or above it, whichever is bigger
+            s = Math.max(fit(w - 2*pad.width, h), fit(w, h - pad.height));
+        }
+        return { scale: s * getDevicePixelRatio(), top: top };
+    };
     var getTargetScale = function() {
-        var sx = (window.innerWidth - 10) / screenWidth;
-        var sy = (window.innerHeight - 10) / screenHeight;
-        var s = Math.min(sx,sy);
-        s *= getDevicePixelRatio();
-        return s;
+        return getLayout().scale;
     };
 
     // maximize the scale to fit the window
@@ -114,6 +142,7 @@ var initRenderer = function(){
         console.log(canvas.style.left);
         */
         document.body.style.marginLeft = (window.innerWidth - w)/2 + "px";
+        document.body.style.paddingTop = getLayout().top + "px";
     };
 
     // create foreground and background canvases

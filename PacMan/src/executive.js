@@ -114,6 +114,19 @@ var executive = (function(){
             var that = this;
             window.addEventListener('focus', function() {that.start();});
             window.addEventListener('blur', function() {that.stop();});
+            // A hidden tab pauses too: mid-game it opens the pause menu, so
+            // coming back never drops the player straight into danger.
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    if (hud.isValidState() && !inGameMenu.isOpen()) {
+                        inGameMenu.getMenuButton().onclick();
+                    }
+                    that.stop();
+                }
+                else {
+                    that.start();
+                }
+            });
             this.start();
         },
         start: function() {
