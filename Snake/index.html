@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#09090b" />
+    <meta name="description" content="Snake for Game Lab: Classic, Wrap, 20 arenas, a daily board and Zen. Plays with keys, swipes or a d-pad." />
+    <title>Snake · Game Lab</title>
+    <link rel="icon" href="../assets/icons/video_game.svg" type="image/svg+xml" />
+    <link rel="preload" href="fonts/martian-mono-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="css/snake.css" />
+  </head>
+  <body>
+    <div class="app" id="app">
+      <header class="hud" id="hud">
+        <div class="hud-mode">
+          <span class="hud-mode-name" id="hud-mode">Classic</span>
+          <span class="hud-mode-sub" id="hud-sub"></span>
+        </div>
+        <dl class="hud-stats">
+          <div class="stat"><dt id="stat-a-label">Score</dt><dd id="stat-a">0</dd></div>
+          <div class="stat"><dt id="stat-b-label">Length</dt><dd id="stat-b">4</dd></div>
+          <div class="stat stat--best"><dt id="stat-c-label">Best</dt><dd id="stat-c">0</dd></div>
+        </dl>
+        <div class="hud-actions">
+          <button type="button" class="icon-btn" id="btn-mute" aria-pressed="false" aria-label="Sound on (M)" title="Sound (M)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path class="ic-speaker" d="M4 9h4l5-4v14l-5-4H4z" /><path class="ic-waves" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" /><path class="ic-cross" d="M16 9l6 6M22 9l-6 6" /></svg>
+          </button>
+          <button type="button" class="icon-btn" id="btn-pause" aria-label="Pause (P)" title="Pause (P)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" /></svg>
+          </button>
+        </div>
+        <div class="boost" id="boost" hidden><span class="boost-fill" id="boost-fill"></span></div>
+      </header>
+
+      <main class="stage" id="stage">
+        <canvas id="board" role="img" aria-label="Snake board"></canvas>
+        <p class="ready" id="ready" hidden></p>
+        <p class="replay-tag" id="replay-tag" hidden><span class="rec" aria-hidden="true"></span>Replay · last 3 seconds <kbd>any key</kbd></p>
+      </main>
+
+      <p class="keys-hint" id="keys-hint">Arrows / WASD steer · P pause · M mute</p>
+
+      <!-- Title -->
+      <section class="screen screen--title" data-screen="title" aria-labelledby="title-h" hidden>
+        <div class="card card--title">
+          <div class="title-head">
+            <p class="eyebrow">Game Lab · Arcade</p>
+            <h1 class="wordmark" id="title-h">snake<span class="caret" aria-hidden="true">_</span></h1>
+            <p class="tagline">Eat. Grow. Never look back.</p>
+          </div>
+          <ol class="mode-list" id="mode-list">
+            <li><button type="button" class="mode" data-nav data-mode="classic"><span class="mode-idx">01</span><span class="mode-name">Classic</span><span class="mode-desc"></span><span class="mode-best"></span></button></li>
+            <li><button type="button" class="mode" data-nav data-mode="wrap"><span class="mode-idx">02</span><span class="mode-name">Wrap</span><span class="mode-desc"></span><span class="mode-best"></span></button></li>
+            <li><button type="button" class="mode" data-nav data-mode="arena"><span class="mode-idx">03</span><span class="mode-name">Arenas</span><span class="mode-desc"></span><span class="mode-best"></span></button></li>
+            <li><button type="button" class="mode" data-nav data-mode="daily"><span class="mode-idx">04</span><span class="mode-name">Daily</span><span class="mode-desc"></span><span class="mode-best"></span></button></li>
+            <li><button type="button" class="mode" data-nav data-mode="zen"><span class="mode-idx">05</span><span class="mode-name">Zen</span><span class="mode-desc"></span><span class="mode-best"></span></button></li>
+          </ol>
+          <div class="row">
+            <button type="button" class="btn btn--ghost" data-nav data-go="settings">Settings</button>
+            <button type="button" class="btn btn--ghost" data-nav data-go="help">How to play</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Arena select -->
+      <section class="screen" data-screen="arenas" aria-labelledby="arenas-h" hidden>
+        <div class="card card--wide">
+          <div class="card-head">
+            <h2 id="arenas-h">Arenas</h2>
+            <p class="muted" id="arenas-progress"></p>
+          </div>
+          <ol class="arena-grid" id="arena-grid"></ol>
+          <div class="row"><button type="button" class="btn btn--ghost" data-nav data-go="title">Back <kbd>Esc</kbd></button></div>
+        </div>
+      </section>
+
+      <!-- Pause -->
+      <section class="screen" data-screen="paused" aria-labelledby="pause-h" hidden>
+        <div class="card card--small">
+          <h2 id="pause-h">Paused</h2>
+          <p class="muted" id="pause-sub"></p>
+          <div class="stack">
+            <button type="button" class="btn btn--primary" data-nav data-action="resume">Resume</button>
+            <button type="button" class="btn" data-nav data-action="restart">Restart</button>
+            <button type="button" class="btn" data-nav data-go="settings">Settings</button>
+            <button type="button" class="btn btn--ghost" data-nav data-action="quit">Quit to menu</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Game over / cleared -->
+      <section class="screen screen--over" data-screen="over" aria-labelledby="over-h" hidden>
+        <div class="card card--small">
+          <p class="eyebrow" id="over-eyebrow"></p>
+          <h2 id="over-h"></h2>
+          <p class="over-cause" id="over-cause"></p>
+          <dl class="result">
+            <div><dt id="res-a-label">Score</dt><dd id="res-a"></dd></div>
+            <div><dt id="res-b-label">Best</dt><dd id="res-b"></dd></div>
+          </dl>
+          <p class="new-best" id="new-best" hidden>New personal best</p>
+          <div class="stack">
+            <button type="button" class="btn btn--primary" data-nav data-action="next" id="btn-next" hidden>Next arena</button>
+            <button type="button" class="btn" data-nav data-action="restart" id="btn-again">Play again <kbd>Enter</kbd></button>
+            <button type="button" class="btn" data-nav data-action="replay" id="btn-replay">Watch replay <kbd>R</kbd></button>
+            <button type="button" class="btn btn--ghost" data-nav data-action="quit">Menu <kbd>Esc</kbd></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Settings -->
+      <section class="screen" data-screen="settings" aria-labelledby="settings-h" hidden>
+        <div class="card card--small">
+          <h2 id="settings-h">Settings</h2>
+          <div class="stack">
+            <button type="button" class="btn toggle" data-nav role="switch" data-setting="sound" aria-checked="true"><span>Sound</span><span class="toggle-state"></span></button>
+            <button type="button" class="btn toggle" data-nav role="switch" data-setting="dpad" aria-checked="false"><span>On-screen d-pad</span><span class="toggle-state"></span></button>
+            <button type="button" class="btn toggle" data-nav data-setting="motion"><span>Motion</span><span class="toggle-state"></span></button>
+            <button type="button" class="btn btn--ghost" data-nav data-action="back">Back <kbd>Esc</kbd></button>
+          </div>
+          <p class="muted small">Swipes always steer on touch screens. The d-pad is there if you prefer buttons. Motion follows your system setting unless you pick one.</p>
+        </div>
+      </section>
+
+      <!-- Help -->
+      <section class="screen" data-screen="help" aria-labelledby="help-h" hidden>
+        <div class="card card--wide">
+          <h2 id="help-h">How to play</h2>
+          <div class="help-cols">
+            <div>
+              <h3>Steer</h3>
+              <p>Arrow keys or WASD. Two turns can be queued, so a quick double tap makes a tight U.</p>
+              <p>On a phone, swipe anywhere. Each swipe is one turn; keep your finger down and swipe again to chain turns. The snake never reverses into itself.</p>
+              <p><kbd>P</kbd> or <kbd>Esc</kbd> pause · <kbd>M</kbd> mute · <kbd>R</kbd> replay after a crash.</p>
+            </div>
+            <div>
+              <h3>On the board</h3>
+              <ul class="legend">
+                <li><span class="sw sw--food" aria-hidden="true"></span>Food: +1 length, 10 points.</li>
+                <li><span class="sw sw--gold" aria-hidden="true"></span>Golden bonus: +3 length, 50 points. Its ring is a timer.</li>
+                <li><span class="sw sw--fast" aria-hidden="true"></span>Speed-up for 6 s. Food scores double while it lasts.</li>
+                <li><span class="sw sw--slow" aria-hidden="true"></span>Slow-down for 6 s.</li>
+                <li><span class="sw sw--portal" aria-hidden="true"></span>Portal: enter one, leave from its twin, same direction.</li>
+                <li><span class="sw sw--edge" aria-hidden="true"></span>Solid edges kill; dashed edges wrap.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="row"><button type="button" class="btn btn--ghost" data-nav data-action="back">Back <kbd>Esc</kbd></button></div>
+        </div>
+      </section>
+    </div>
+    <p class="sr-only" id="announce" aria-live="polite"></p>
+    <noscript><p class="noscript">Snake needs JavaScript to run.</p></noscript>
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>
