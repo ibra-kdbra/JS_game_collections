@@ -13,6 +13,11 @@
       <div class="menul"></div>
       <div class="menur"></div>
     </div>
-    <script src="./script.js"></script>
+    <script type="module">
+      import { initShell } from "../assets/kit/shell.js";
+      initShell({ slug: "wahdatio", position: "bottom-left" });
+    </script>
+    <script type="module" src="../assets/kit/index.js"></script>
+    <script defer src="./script.js"></script>
   </body>
 </html>

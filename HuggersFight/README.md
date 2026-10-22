@@ -1,4 +1,4 @@
-![Huggers Fight](/screenshot.png)
+![Huggers Fight](./captured.png)
 
 The empire is spreading like a plague across the galaxy and building outposts on remote planets.
 You are an elite rebel soldier tasked with wiping out those bases.
@@ -13,10 +13,12 @@ Good luck, have fun, and give space a hug for me.
 - X or Middle click - Roll - brief invulnerability, does damage, gives a boost, puts out fire
 - C or Right click - Grenade - 3 per life, use wisely
 - You can also use a Xbox or SNES style controller, connect up to 4 for co-op play!
+- On touch screens, use the on-screen D-pad plus Jump, Shoot, Roll and Grenade buttons
+- P or Esc pauses (the game also pauses when the tab is hidden); the furthest level you reach is saved
 - Kill all enemies to complete the level
 - A radar along the bottom of the screen shows nearby enemies
 - You start with 10 lives and get 3 more for completing each level
-- For an optimal play experience please use Chrome in full screen mode
+- For an optimal play experience use full screen; on phones, landscape shows more of the level
 - There is no end, but for a challenge, try beating the first 5 levels
 
 # Gameplay Tips
@@ -54,7 +56,7 @@ Good luck, have fun, and give space a hug for me.
 - Input processing system for keyboard, mouse, gamepads, and touch
 - Math library with Vector2, Color and Timer utility classes
 - Audio with ZzFX has ability to attenuate sounds by distance
-- Debug visualization system not in JS13K build. (press ~ to enter debug mode)
+- Debug visualization system (enable by setting `debug = 1` in `engine/engineDebug.js`, then press ~)
 
 # Enemy Types
 - Recruit (Green) - A bit shorter, more hesitant, takes only 1 hit
@@ -73,11 +75,6 @@ Good luck, have fun, and give space a hug for me.
 - Rock (Color Varies) - Heavy and very hard to destroy, can't burn, can crush enemies
 - Lava Rock (Glowing Red & Orange) - Anything that touches it is lit on fire
 
-# Tools Used
-- [Roadroller](https://github.com/lifthrasiir/roadroller)
-- [Google Closure Compiler](https://github.com/google/closure-compiler)
-- [UglifyJS](https://github.com/mishoo/UglifyJS)
-- [Imagemin](https://github.com/imagemin/imagemin)
-- [Efficient Compression Tool](https://github.com/fhanau/Efficient-Compression-Tool)
-- [Advzip](https://www.npmjs.com/package/advzip-bin)
-- [ZzFX](https://github.com/KilledByAPixel/ZzFX)
+# Credits
+- Built on [LittleJS](https://github.com/KilledByAPixel/LittleJS) v0.74 by Frank Force (vendored in `engine/`), and derived from his JS13K game Space Huggers
+- Sounds by [ZzFX](https://github.com/KilledByAPixel/ZzFX)

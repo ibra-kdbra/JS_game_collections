@@ -1,52 +1,34 @@
+// Arrow keys or WASD to move, Enter or Space to roll.
+const KEY_ALIASES = {
+  ArrowDown: "ArrowDown",
+  ArrowUp: "ArrowUp",
+  ArrowLeft: "ArrowLeft",
+  ArrowRight: "ArrowRight",
+  Enter: "Enter",
+  " ": "Enter",
+  w: "ArrowUp",
+  a: "ArrowLeft",
+  s: "ArrowDown",
+  d: "ArrowRight",
+};
+const toAction = (e) => KEY_ALIASES[e.key.length === 1 ? e.key.toLowerCase() : e.key];
+
 export class InputHandler {
-    constructor(game) {
-      this.game = game;
-      this.keys = [];
-      this.touchY = '';
-      this.touchThreshold = 30;
-      window.addEventListener("keydown", (e) => {
-        if (
-          (e.key === "ArrowDown" ||
-            e.key === "ArrowUp" ||
-            e.key === "ArrowLeft" ||
-            e.key === "ArrowRight" ||
-            e.key === "Enter") &&
-          this.keys.indexOf(e.key) === -1
-        ) {
-          this.keys.push(e.key);
-        }else if(e.key === 'd') this.game.debug = !this.game.debug;
-
-      });
-      window.addEventListener("keyup", (e) => {
-        if (
-          e.key === "ArrowDown" ||
-          e.key === "ArrowUp" ||
-          e.key === "ArrowLeft" ||
-          e.key === "ArrowRight" ||
-          e.key === "Enter"
-        ) {
-          this.keys.splice(this.keys.indexOf(e.key), 1);
-        }
-      });
-
-      window.addEventListener('touchstart', e=>{
-        this.touchY = e.changedTouches[0].pageY;
-      });
-      window.addEventListener('touchmove', e=>{
-        const swipeDistance = e.changedTouches[0].pageY - this.touchY;
-        if(swipeDistance < -this.touchThreshold &&
-          this.keys.indexOf('swipe up') === -1) this.keys.push('swipe up');
-        else if(swipeDistance > this.touchThreshold &&
-          this.keys.indexOf('swipe down') === -1){
-            this.keys.push('swipe down');
-          }
-      });
-      window.addEventListener('touchend', e=>{
-        // Only remove swipes that are present; splice(-1, 1) would drop the last held key.
-        this.keys = this.keys.filter(key => key !== 'swipe up' && key !== 'swipe down');
-
-      });
-
-
-    }
+  constructor() {
+    this.keys = [];
+    window.addEventListener("keydown", (e) => {
+      const key = toAction(e);
+      // Let Enter/Space activate a focused menu button instead of rolling.
+      if (!key || e.target.closest?.("button, a")) return;
+      e.preventDefault();
+      if (this.keys.indexOf(key) === -1) this.keys.push(key);
+    });
+    window.addEventListener("keyup", (e) => {
+      const index = this.keys.indexOf(toAction(e));
+      if (index !== -1) this.keys.splice(index, 1);
+    });
   }
+  reset() {
+    this.keys.length = 0;
+  }
+}

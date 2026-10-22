@@ -8,8 +8,29 @@
 <meta name="description" content="A run and gun roguelike platformer with destructible environments"></meta>
 <meta name=viewport content='width=device-width,initial-scale=1,user-scalable=0'>
 <meta charset=utf-8>
+<link rel=stylesheet href=style.css>
 </head>
 <body>
+<section id=title class=screen aria-labelledby=title-heading>
+    <h1 id=title-heading>Huggers Fight</h1>
+    <p class=byline>A fighter game by ibra-kdbra</p>
+    <p class=lead>Wipe out every enemy outpost on the planet. Almost everything breaks, some things burn.</p>
+    <button id=start type=button>Start</button>
+    <p id=best class=best></p>
+    <ul class=keys>
+        <li><kbd>WASD</kbd> / <kbd>Arrows</kbd> move, jump, climb</li>
+        <li><kbd>Z</kbd> / left click shoot &middot; <kbd>X</kbd> / middle click roll &middot; <kbd>C</kbd> / right click grenade</li>
+        <li><kbd>P</kbd> / <kbd>Esc</kbd> pause &middot; <kbd>R</kbd> restart &middot; up to 4 gamepads for co-op</li>
+    </ul>
+    <p class=touch-help>D-pad to move and climb. Roll puts out fire and does melee damage. Grenade jumps reach high places.</p>
+</section>
+<section id=pause class=screen aria-labelledby=pause-heading hidden>
+    <h2 id=pause-heading>Paused</h2>
+    <div class=actions>
+        <button id=resume type=button>Resume</button>
+        <button id=restart type=button>Restart</button>
+    </div>
+</section>
 <script src=engine/engineUtil.js></script>
 <script src=engine/engineDebug.js></script>
 <script src=engine/engine.js></script>
@@ -25,5 +46,6 @@
 <script src=appEffects.js></script>
 <script src=appLevel.js></script>
 <script src=app.js></script>
+<script type=module src=appMenu.js></script>
 </body>
 </html>

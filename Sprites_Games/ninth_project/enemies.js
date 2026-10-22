@@ -2,7 +2,6 @@ class Enemy {
     constructor() {
       this.frameX = 0;
       this.frameY = 0;
-    //   this.maxFrame = 5;
       this.FPS = 20;
       this.frameInterval = 1000 / this.FPS;
       this.frameTimer = 0;
@@ -23,7 +22,6 @@ class Enemy {
         if(this.x + this.width < 0) this.markedForDeletion = true;
     }
     draw(context) {
-        if(this.game.debug) context.strokeRect(this.x, this.y, this.width, this.height);
         context.drawImage(this.image, this.frameX * this.width, 0, this.width, this.height, 
             this.x, this.y, this.width, this.height);
     }

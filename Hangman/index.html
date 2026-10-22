@@ -34,20 +34,10 @@
 			<div class="modal-content drop-down">
 				<div class="menu-container">
 					<button class="menu-button start-game">Play!</button>
+					<button class="menu-button daily-button">Daily word</button>
 					<div class="category-list">
 						<button class="menu-button category-button">Category</button>
-						<ul class="list closed-list">
-							<li>Food</li>
-							<li>Sports</li>
-							<li>Instruments</li>
-							<li>Pokemons</li>
-							<li>Software</li>
-							<li>Sciences</li>
-							<li>Planets</li>
-							<li>Countries</li>
-							<li>Animals</li>
-							<li>Superheroes</li>
-						</ul>
+						<ul class="list closed-list"></ul>
 					</div>
 					<div class="difficulty-list">
 						<button class="menu-button difficulty-button">Difficulty</button>
@@ -57,14 +47,20 @@
 							<li>Hard</li>
 						</ul>
 					</div>
+					<button class="menu-button bonus-button" aria-pressed="false">Online bonus words: off</button>
+					<p class="menu-status" role="status"></p>
+					<button class="menu-button retry-button" hidden>Retry</button>
+					<p class="menu-tip">Type letters on your keyboard. Enter for the next word, ? for a hint.</p>
+					<p class="menu-credits">Made by <a href="https://github.com/ibra-kdbra" target="_blank" rel="noopener">ibra-kdbra</a></p>
 				</div>
 			</div>
 		</section>
 		<main class="main-content blur-in">
 			<nav class="nav-bar">
 				<div class="home-container">
-					<button class="home-button"></button>
-					<button class="sound-button"></button>
+					<button class="home-button" aria-label="Menu"></button>
+					<button class="sound-button" aria-label="Mute sound"></button>
+					<button class="hint-button" disabled>Hint <small>-15</small></button>
 				</div>
 				<div class="category"><span>FOOD</span><span>medium</span></div>
 				<div class="score-container">
@@ -106,6 +102,12 @@
 				<div class="gameover-content">
 					<h1 class="text">GAME OVER</h1>
 					<div class="gameover-data">
+						<p class="gameover-word">The word was <b></b></p>
+						<p class="daily-note" hidden>A new daily word arrives tomorrow.</p>
+						<div class="streak-cont">
+							<span class="streak-label">Words in a row:</span>
+							<span class="streak">0</span>
+						</div>
 						<div class="score-cont">
 							<span>Score:</span>
 							<span class="score">0</span>
@@ -116,28 +118,20 @@
 						</div>
 					</div>
 					<div class="buttons">
-						<button class="main-menu"></button>
-						<button class="play-again"></button>
+						<button class="main-menu" aria-label="Main menu"></button>
+						<button class="play-again" aria-label="Play again"></button>
 					</div>
 				</div>
 			</div>
 		</section>
-    <div class="credits">
-      <img
-        src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
-        alt="GitHub Logo"
-      />
-      <p>
-        Made by
-        <a href="https://github.com/ibra-kdbra" target="_blank" rel="noopener"
-          >ibra-kdbra</a
-        >
-      </p>
-    </div>
-    <script defer src="https://code.createjs.com/1.0.0/preloadjs.min.js"></script>
-    <script defer src="./libs/gsap-latest-beta.min.js"></script>
+    <script type="module" src="../assets/kit/index.js"></script>
+    <script type="module">
+      import { initShell } from "../assets/kit/shell.js";
+      initShell({ slug: "hangman" });
+    </script>
+    <script defer src="./libs/gsap-3.12.6.min.js"></script>
     <script defer src="./scripts/loader.js"></script>
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/parallax/3.1.0/parallax.min.js"></script>
+    <script defer src="./scripts/parallax.js"></script>
     <script defer src="./scripts/rope.js"></script>
     <script defer src="./scripts/main.js"></script>
   </body>

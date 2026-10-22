@@ -21,7 +21,7 @@ let players=[], playerLives, tileLayer, tileBackgroundLayer, totalKills;
 let levelSize, level, levelSeed, levelEnemyCount, levelWarmup;
 let levelColor, levelBackgroundColor, levelSkyColor, levelSkyHorizonColor, levelGroundColor;
 let skyParticles, skyRain, skySoundTimer = new Timer;
-let gameTimer = new Timer, levelTimer = new Timer, levelEndTimer = new Timer;
+let levelTimer = new Timer, levelEndTimer = new Timer;
 
 let tileBackground;
 const setTileBackgroundData = (pos, data=0)=>
@@ -34,7 +34,7 @@ const getTileBackgroundData = (pos)=>
 const resetGame=()=>
 {
     levelEndTimer.unset();
-    gameTimer.set(totalKills = level = 0);
+    totalKills = level = 0;
     nextLevel(playerLives = 6);
 }
 
@@ -514,12 +514,9 @@ function nextLevel()
         }
     });
 
-    // hack, subtract off warm up time from main game timer
-    //gameTimer.time += warmUpTime;
     levelTimer.set();
 
     // spawn player
     players = [];
     new Player(checkpointPos);
-    //new Enemy(checkpointPos.add(vec2(3))); // test enemy
 }

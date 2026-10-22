@@ -100,6 +100,15 @@ div.loading-screen {
 	background-position: top right;
 	overflow: hidden;
 }
+.bg-container > [data-depth] {
+	display: block;
+	position: absolute;
+	left: 0;
+	top: 0;
+}
+.bg-container > [data-depth]:first-child {
+	position: relative;
+}
 .hill-right {
 	height: 100%;
 	width: 100%;
@@ -516,6 +525,7 @@ li.letter {
 	display: flex;
 	justify-content: center;
 	align-items: center;
+	overflow: hidden;
 	transition: opacity 600ms;
 }
 .drop-down {
@@ -698,6 +708,7 @@ li.letter {
 	height: 100vh;
 	width: 100%;
 	background: rgba(17, 3, 32, 0.4);
+	overflow: hidden;
 	z-index: 100;
 }
 .gameover-box {
@@ -1491,27 +1502,116 @@ li.letter {
 	}
 }
 
-.credits {
-	position: fixed;
-	bottom: 10px;
-	right: 10px;
-	padding: 5px 10px;
-	background-color: rgba(0, 0, 0, 0.7);
-	border-radius: 5px;
-	color: #ffffff;
-	font-size: 14px;
+[hidden] {
+	display: none !important;
+}
+.score-container {
+	padding-top: 44px;
+}
+.home-container .hint-button {
+	cursor: pointer;
+	margin-right: 5%;
+	padding: 4px 12px;
+	min-height: 32px;
+	border: none;
+	border-radius: 7px;
+	background-color: var(--second-button-color);
+	color: var(--dark-main-color);
+	font-size: 1rem;
+	font-weight: bold;
+	transition: opacity 150ms, background-color 150ms;
+}
+.home-container .hint-button small {
+	font-size: 0.75rem;
+	opacity: 0.75;
+}
+.home-container .hint-button:hover:not(:disabled) {
+	background-color: rgb(231, 87, 188);
+}
+.home-container .hint-button:disabled {
+	cursor: default;
+	opacity: 0.35;
+}
+.menu-button:disabled {
+	cursor: default;
+	opacity: 0.6;
+	transform: none;
+	box-shadow: none;
+}
+.daily-button,
+.bonus-button {
+	font-size: 0.95rem;
+}
+.bonus-button {
+	background-color: rgb(73, 47, 102);
+	color: white;
+}
+.bonus-button[aria-pressed="true"] {
+	background-color: #37b666;
+	color: var(--dark-main-color);
+}
+.menu-status {
+	max-width: 260px;
+	min-height: 1.2em;
+	color: rgb(231, 87, 188);
+	font-size: 0.9rem;
+	text-align: center;
+}
+.menu-tip,
+.menu-credits {
+	max-width: 280px;
+	margin-top: 8px;
+	color: rgba(234, 214, 255, 0.6);
+	font-size: 0.85rem;
+	text-align: center;
+}
+.menu-credits a {
+	color: inherit;
+}
+.gameover-word,
+.daily-note {
+	margin-bottom: 6px;
+	color: rgb(234, 214, 255);
+	font-size: 1.1rem;
+	text-align: center;
+}
+.gameover-word b {
+	color: var(--second-button-color);
+	letter-spacing: 1px;
+}
+.streak-cont {
+	width: 80%;
+	margin: 10px 0;
 	display: flex;
-	align-items: center;
-	gap: 5px;
+	justify-content: space-between;
+	font-size: 1.3rem;
+	color: rgb(234, 214, 255);
 }
-.credits a {
-	color: #ffffff;
-	text-decoration: none;
+.gameover-data .streak {
+	color: var(--second-button-color);
 }
-.credits a:hover {
-	text-decoration: underline;
+@media (pointer: coarse) {
+	.menu-tip {
+		display: none;
+	}
 }
-.credits img {
-	width: 16px;
-	height: 16px;
+@media screen and (max-width: 480px) {
+	.score-container {
+		padding-top: 48px;
+	}
+	.home-container .hint-button {
+		min-height: 36px;
+		margin-right: 10%;
+	}
+	.streak-cont {
+		font-size: 1rem;
+	}
+	li.letter {
+		min-width: 0;
+		font-size: min(1rem, calc(64vw / var(--letters, 8)));
+	}
+	.gameover-word,
+	.daily-note {
+		font-size: 0.95rem;
+	}
 }
