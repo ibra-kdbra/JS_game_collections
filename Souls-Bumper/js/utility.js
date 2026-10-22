@@ -1,3 +1,5 @@
+'use strict';
+
 // Useful Functions and classes
 
 function rectanlge(x, y, w, h) {
@@ -10,17 +12,17 @@ function rectanlge(x, y, w, h) {
 function ranColor() {
   let l = '0123456789ABCDEF';
   let c = '#';
-  for (var i = 0; i < 6; i++) {
+  for (let i = 0; i < 6; i++) {
     c += l[Math.floor(Math.random() * 16)];
   }
   return c;
 }
 
-let voices = speechSynthesis.getVoices();
 function speak(t) {
-	let s = new SpeechSynthesisUtterance();
-	s.text = t;
-  s.voice = speechSynthesis.getVoices().filter(function(voice) {return voice.name == "Google UK English Female"; })[0];
+  if (!window.speechSynthesis || musicOff) return;
+  const s = new SpeechSynthesisUtterance(t);
+  const voice = speechSynthesis.getVoices().find((v) => v.name == "Google UK English Female");
+  if (voice) s.voice = voice;
   speechSynthesis.speak(s);
 }
 
@@ -32,28 +34,11 @@ function cloneRectanlge(rec) {
   return new rectanlge(rec.x, rec.y, rec.w, rec.h);
 }
 
-function collision(rx, ry, rw, rh, r2x, r2y, r2w, r2h) {
-  return (rx < r2x + r2w &&
-    rx + rw > r2x &&
-    ry < r2y + r2h &&
-    ry + rh > r2y);
-}
-
 function rectColiding(rec1, rec2) {
   return (rec1.x < rec2.x + rec2.w &&
     rec1.x + rec1.w > rec2.x &&
     rec1.y < rec2.y + rec2.h &&
     rec1.y + rec1.h > rec2.y)
-}
-
-function vec2(x,y){
-  this.x = x;
-  this.y = y;
-
-  this.set = function(x,y) {
-    this.x = x;
-    this.y = y;
-  }
 }
 
 function drawImg(ctx, img, sx, sy, w, h, x, y, alpha, scale, angle=0){
@@ -67,38 +52,6 @@ function drawImg(ctx, img, sx, sy, w, h, x, y, alpha, scale, angle=0){
   }
   ctx.drawImage(img, sx, sy, w, h, w/2, h/2, w * scale, h * scale);
   ctx.restore();
-}
-
-function drawRect(ctx, ox, oy, x, y, w, h, col, alpha){
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.translate(ox, oy);
-  ctx.fillStyle = col;
-  ctx.fillRect(x,y,w,h);
-  ctx.restore();
-}
-
-function resizeCanvas(){
-  // // Needs to handle screens smaller than 800x600
-  // let totalWidth = 1216; // Tiles are 16x16 scaled up by 4 with 19 columns
-  // let totalHeight = 832; // 13 Rows
-  //
-  // canvasW = window.innerWidth;
-  // canvasH = window.innerHeight;
-  //
-  // let widthToHeight = 4 / 3;
-  // let newWidthToHeight = canvasW / canvasH;
-  // let ratio=0;
-  //
-  // if (newWidthToHeight > widthToHeight) {
-  //   canvasW = canvasH * widthToHeight;
-  //   ratio=canvasW / totalWidth;
-  // } else {
-  //   canvasH = canvasW / widthToHeight;
-  //   ratio=canvasH / totalHeight;
-  // }
-  //
-  // cart.scale = ratio * scale.scale;
 }
 
 function partDir(p) {

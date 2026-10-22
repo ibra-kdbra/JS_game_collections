@@ -1,13 +1,20 @@
-// Sound
-var audioCtx;
-var oscArr = [];
+'use strict';
+
+// Sound effects, synthesised sample by sample into short buffers.
+let audioCtx = null;
+const sfxCache = new Map();
 
 function playSound(name, vol){
-  m = audioCtx.createBuffer(1,96e3,48e3);
-  gainNode = audioCtx.createGain();
-  b = m.getChannelData(0)
-  for(i=96e3;i--;){ b[i]=getSound(name,i);}
-  s = audioCtx.createBufferSource();
+  if(audioCtx == null) return;
+  let m = sfxCache.get(name);
+  if(!m){
+    m = audioCtx.createBuffer(1,96e3,48e3);
+    const b = m.getChannelData(0);
+    for(let i=96e3;i--;){ b[i]=getSound(name,i);}
+    sfxCache.set(name, m);
+  }
+  const gainNode = audioCtx.createGain();
+  const s = audioCtx.createBufferSource();
   s.buffer = m;
   s.connect(gainNode);
   gainNode.connect(audioCtx.destination);
@@ -15,8 +22,8 @@ function playSound(name, vol){
   s.start();
 }
 
-getSound = function (name,i){
-  var val;
+function getSound(name,i){
+  let val;
   switch(name) {
   case NOISEFX:
     val = getNoise(i);
@@ -50,9 +57,7 @@ getSound = function (name,i){
 
 function getNoise(i){
   var n=7e4;
-  t=(i,n)=>(n-i)/n;
   if (i > n) return null;
-  var q = t(i,n);
   return Math.sin(i*0.001*Math.sin(0.009*i)+Math.sin(i/100));
 }
 
@@ -97,16 +102,14 @@ function getDie(i){
 function getShoot(i){
   var n=2e3;
   if (i > n) return null;
-  t=(i,n)=>(n-i)/n;
-  var q = t(i,n);
+  var q = (n-i)/n;
   return (Math.pow(i*50,0.7)&33)?q:-q;
 }
 
 function levelChange(i){
   var n=2e4;
-  t=(i,n)=>(n-i)/n;
   if (i > n) return null;
-  var q = t(i,n);
+  var q = (n-i)/n;
   i=i*0.04;
   return Math.sin(-i*0.03*Math.sin(0.09*i+Math.sin(i/200))+Math.sin(i/100))*q;
 }

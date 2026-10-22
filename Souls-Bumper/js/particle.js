@@ -1,3 +1,5 @@
+'use strict';
+
 function particle(w, h, x, y, angle, type, win, lastDir=RIGHT) {
   this.time=0;
   this.x=x;

@@ -1,3 +1,5 @@
+'use strict';
+
 // KEYS
 var LEFT = 37;
 var RIGHT = 39;

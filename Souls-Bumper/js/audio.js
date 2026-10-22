@@ -1,7 +1,8 @@
+'use strict';
+
 // Song data
 var audio;
 var songLoaded = false;
-var ready = false;
 
 // This music has been exported by SoundBox. You can use it with
 // http://sb.bitsnbites.eu/player-small.js in your own product.
@@ -739,22 +740,21 @@ var song = {
  };
 
 
+// Render the song in small slices so the page stays responsive, then stop.
 function genAudio() {
     var player = new CPlayer();
     player.init(song);
 
-    setInterval(function() {
-        if (songLoaded) {
-            return;
-        }
+    var timer = setInterval(function() {
         songLoaded = player.generate() >= 1;
         if (songLoaded) {
+            clearInterval(timer);
             var wave = player.createWave();
             audio = document.createElement("audio");
+            audio.loop = true;
             audio.src = URL.createObjectURL(new Blob([wave], {
                 type: "audio/wav"
             }));
-            ready = true;
         }
     }, 0);
 }
