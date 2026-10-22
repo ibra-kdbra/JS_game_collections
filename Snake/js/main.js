@@ -901,18 +901,3 @@ applyDpad();
 show('title');
 loop.start();
 document.fonts?.ready.then(() => layout());
-
-// For automated checks: read-only peek at the current state.
-Object.defineProperty(window, '__snake', {
-  value: {
-    get screen() {
-      return screen;
-    },
-    get game() {
-      return game;
-    },
-    get demo() {
-      return demo;
-    },
-  },
-});

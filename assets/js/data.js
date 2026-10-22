@@ -189,6 +189,15 @@ export const games = [
     inputs: ['keyboard', 'mouse', 'touch'],
     mobile: true,
   },
+  {
+    slug: 'snake',
+    title: 'Snake',
+    href: 'Snake/index.html',
+    blurb: 'The classic Snake with Classic, Wrap, Zen and daily modes, plus 20 hand-built arenas with portals.',
+    genre: 'arcade',
+    inputs: ['keyboard', 'touch'],
+    mobile: true,
+  },
 ];
 
 export const experiments = [
