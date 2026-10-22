@@ -335,6 +335,7 @@ const showResult = (title, delay) => {
 	document.querySelector(".gameover-data .score").innerText = score;
 	document.querySelector(".gameover-data .best-score").innerText = bestScore;
 	document.querySelector(".gameover-data .streak").innerText = streak;
+	document.querySelector(".streak-label").innerText = mode === "daily" ? "Daily streak:" : "Words in a row:";
 	document.querySelector(".gameover-data .daily-note").hidden = mode !== "daily";
 	document.querySelector(".score-cont").hidden = mode === "daily";
 	document.querySelector(".best-score-cont").hidden = mode === "daily";
