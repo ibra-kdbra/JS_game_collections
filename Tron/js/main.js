@@ -344,8 +344,14 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => held.delete(e.code || e.key));
 window.addEventListener('blur', () => held.clear());
 
+// Hiding the tab pauses a round and silences the music until you come back.
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) pause();
+  if (document.hidden) {
+    pause();
+    synth.suspend();
+  } else if (state !== 'paused') {
+    synth.resume();
+  }
 });
 
 onSwipe(stage, (dir) => steer({ up: 'N', right: 'E', down: 'S', left: 'W' }[dir]), { preventScroll: false });
