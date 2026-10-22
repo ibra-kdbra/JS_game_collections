@@ -243,6 +243,7 @@
       var ready;
       ready = () => {
         snd.volume(this.get('volume', 0.03125));
+        recordProgress();
         return this.loadMenu();
       };
       if (this.store.get('migrated')) {
@@ -839,6 +840,9 @@
     won = levelList.filter(function(l) {
       return l.name !== 'menu' && pref.get(l.name);
     }).length;
+    if (won === 0) {
+      return;
+    }
     return GameKit.recordBest('wahdatio', won, {
       label: `${won} level${won === 1 ? '' : 's'} won`
     });
