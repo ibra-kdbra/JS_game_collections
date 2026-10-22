@@ -1,5 +1,20 @@
 // this will be run in a web worker
 
+// Report download progress of the machine-learning model (fetched by the
+// WASM module with XHR) so the page can show it.
+const openRequest = XMLHttpRequest.prototype.open;
+XMLHttpRequest.prototype.open = function (method, url) {
+    if (String(url).endsWith("model.bmp")) {
+        this.addEventListener("progress", (e) => {
+            postMessage({ model: { loaded: e.loaded, total: e.lengthComputable ? e.total : 0 } });
+        });
+        this.addEventListener("loadend", () => {
+            postMessage({ model: { done: true, ok: this.status === 200 } });
+        });
+    }
+    return openRequest.apply(this, arguments);
+};
+
 var Module = {  // using let will cause issues with redefinition of Module
     onRuntimeInitialized: function () {
         const controller = new AiController();
@@ -11,7 +26,7 @@ var Module = {  // using let will cause issues with redefinition of Module
             } else if (messageType === 1) {
                 const board = e.data[1];
                 const move = controller.pick_move(board);
-                postMessage(move);
+                postMessage({ id: e.data[2], move: move });
             } else if (messageType === 2) {
                 const board = e.data[1];
                 console.log(`Score: ${Module.score_heuristic(board)}\n` +

@@ -1,4 +1,6 @@
 function HTMLActuator() {
+  this.gameContainer    = document.querySelector(".game-container");
+  this.gridContainer    = document.querySelector(".grid-container");
   this.tileContainer    = document.querySelector(".tile-container");
   this.scoreContainer   = document.querySelector(".score-container");
   this.bestContainer    = document.querySelector(".best-container");
@@ -11,6 +13,7 @@ HTMLActuator.prototype.actuate = function (grid, metadata) {
   var self = this;
 
   window.requestAnimationFrame(function () {
+    self.setupGrid(grid.size);
     self.clearContainer(self.tileContainer);
 
     grid.cells.forEach(function (column) {
@@ -33,6 +36,22 @@ HTMLActuator.prototype.actuate = function (grid, metadata) {
     }
 
   });
+};
+
+// Build the background cells for a size x size board
+HTMLActuator.prototype.setupGrid = function (size) {
+  if (this.gridSize === size) return;
+  this.gridSize = size;
+  this.gameContainer.style.setProperty("--n", size);
+  this.gameContainer.setAttribute("aria-label", size + " by " + size + " board");
+
+  if (this.gridContainer.querySelectorAll(".grid-cell").length === size * size) return;
+  this.clearContainer(this.gridContainer);
+  for (var i = 0; i < size * size; i++) {
+    var cell = document.createElement("div");
+    cell.className = "grid-cell";
+    this.gridContainer.appendChild(cell);
+  }
 };
 
 // Continues the game (both restart and keep playing)
@@ -58,8 +77,11 @@ HTMLActuator.prototype.addTile = function (tile) {
   var classes = ["tile", "tile-" + tile.value, positionClass];
 
   if (tile.value > 2048) classes.push("tile-super");
+  if (tile.value >= 1024) classes.push("tile-digits-4");
+  else if (tile.value >= 128) classes.push("tile-digits-3");
 
   this.applyClasses(wrapper, classes);
+  this.applyPosition(wrapper, position);
 
   inner.classList.add("tile-inner");
   inner.textContent = tile.value;
@@ -69,6 +91,7 @@ HTMLActuator.prototype.addTile = function (tile) {
     window.requestAnimationFrame(function () {
       classes[2] = self.positionClass({ x: tile.x, y: tile.y });
       self.applyClasses(wrapper, classes); // Update the position
+      self.applyPosition(wrapper, tile);
     });
   } else if (tile.mergedFrom) {
     classes.push("tile-merged");
@@ -92,6 +115,11 @@ HTMLActuator.prototype.addTile = function (tile) {
 
 HTMLActuator.prototype.applyClasses = function (element, classes) {
   element.setAttribute("class", classes.join(" "));
+};
+
+HTMLActuator.prototype.applyPosition = function (element, position) {
+  element.style.setProperty("--x", position.x);
+  element.style.setProperty("--y", position.y);
 };
 
 HTMLActuator.prototype.normalizePosition = function (position) {
@@ -140,6 +168,8 @@ HTMLActuator.prototype.clearMessage = function () {
 
 function DummyActuator() {}
 DummyActuator.prototype.actuate = function (grid, metadata) {}
+DummyActuator.prototype.setupGrid = function (size) {}
+DummyActuator.prototype.applyPosition = function (element, position) {}
 DummyActuator.prototype.continueGame = function () {}
 DummyActuator.prototype.clearContainer = function (container) {}
 DummyActuator.prototype.addTile = function (tile) {}

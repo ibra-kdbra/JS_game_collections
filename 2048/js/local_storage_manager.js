@@ -1,65 +1,35 @@
-window.fakeStorage = {
-  _data: {},
-
-  setItem: function (id, val) {
-    return this._data[id] = String(val);
-  },
-
-  getItem: function (id) {
-    return this._data.hasOwnProperty(id) ? this._data[id] : undefined;
-  },
-
-  removeItem: function (id) {
-    return delete this._data[id];
-  },
-
-  clear: function () {
-    return this._data = {};
-  }
-};
-
+// Saves are namespaced by the Game Lab kit (window.GameKit) as "2048.<key>",
+// with one game state and one best score per board size.
 function LocalStorageManager() {
-  this.bestScoreKey     = "bestScore";
-  this.gameStateKey     = "gameState";
+  this.store = GameKit.createStore("2048");
 
-  var supported = this.localStorageSupported();
-  this.storage = supported ? window.localStorage : window.fakeStorage;
+  // Older builds kept a single 4x4 game under un-namespaced keys.
+  GameKit.migrateKey(this.store, "bestScore", "best-4", { parse: Number });
+  GameKit.migrateKey(this.store, "gameState", "state-4", { parse: JSON.parse });
 }
 
-LocalStorageManager.prototype.localStorageSupported = function () {
-  var testKey = "test";
-
-  try {
-    var storage = window.localStorage;
-    storage.setItem(testKey, "1");
-    storage.removeItem(testKey);
-    return true;
-  } catch (error) {
-    return false;
-  }
+LocalStorageManager.prototype.getBestScore = function (size) {
+  return Number(this.store.get("best-" + size, 0)) || 0;
 };
 
-// Best score getters/setters
-LocalStorageManager.prototype.getBestScore = function () {
-  return this.storage.getItem(this.bestScoreKey) || 0;
+LocalStorageManager.prototype.setBestScore = function (size, score) {
+  this.store.set("best-" + size, score);
+  GameKit.recordBest("2048", score, {
+    mode: size + "x" + size,
+    label: score + " on " + size + "×" + size
+  });
 };
 
-LocalStorageManager.prototype.setBestScore = function (score) {
-  this.storage.setItem(this.bestScoreKey, score);
+LocalStorageManager.prototype.getGameState = function (size) {
+  return this.store.get("state-" + size);
 };
 
-// Game state getters/setters and clearing
-LocalStorageManager.prototype.getGameState = function () {
-  var stateJSON = this.storage.getItem(this.gameStateKey);
-  return stateJSON ? JSON.parse(stateJSON) : null;
+LocalStorageManager.prototype.setGameState = function (size, gameState) {
+  this.store.set("state-" + size, gameState);
 };
 
-LocalStorageManager.prototype.setGameState = function (gameState) {
-  this.storage.setItem(this.gameStateKey, JSON.stringify(gameState));
-};
-
-LocalStorageManager.prototype.clearGameState = function () {
-  this.storage.removeItem(this.gameStateKey);
+LocalStorageManager.prototype.clearGameState = function (size) {
+  this.store.remove("state-" + size);
 };
 
 function DummyStorageManager() {}

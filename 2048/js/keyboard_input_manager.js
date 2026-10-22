@@ -54,6 +54,21 @@ KeyboardInputManager.prototype.listen = function () {
     var modifiers = event.altKey || event.ctrlKey || event.metaKey ||
                     event.shiftKey;
     var mapped    = map[event.which];
+    var target    = event.target;
+
+    // Let people type in the settings fields.
+    if (target.isContentEditable || target.tagName === "TEXTAREA" ||
+        (target.tagName === "INPUT" && target.type !== "radio" && target.type !== "checkbox")) {
+      return;
+    }
+
+    // U or Ctrl/Cmd+Z undoes the last move
+    if ((!modifiers && event.which === 85) ||
+        ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.which === 90)) {
+      event.preventDefault();
+      self.emit("undo");
+      return;
+    }
 
     if (!modifiers) {
       if (mapped !== undefined) {
