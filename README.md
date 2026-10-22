@@ -1,6 +1,6 @@
 # JavaScript Game Collection
 
-![Game Lab hub](assets/imgs/captured.webp)
+![Main Screenshot](assets/imgs/captured.png)
 
 <div style="text-align: center;">
   <a href="LICENSE">

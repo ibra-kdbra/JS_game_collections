@@ -1,77 +1,635 @@
-/* Art Lab page. Builds on tokens.css and the shared layout in hub.css. */
+/* Inherit base variables from main theme */
+@import './cyberpunk.css';
 
-.marquee--compact {
-  padding-bottom: var(--space-7);
+/* ---------- Art Lab Custom Properties ---------- */
+:root {
+  /* Art Lab specific palette - High-Contrast Cyber Yellow */
+  --artlab-primary: #facc15;
+  --artlab-primary-light: #fef08a;
+  --artlab-secondary: #ff9900;
+  --artlab-accent: #00f0ff;
+
+  /* Art Lab background gradient */
+  --artlab-bg-start: #09090b;
+  --artlab-bg-mid: #12131a;
+  --artlab-bg-end: #1a1c24;
+
+  /* Glass effects */
+  --artlab-glass: rgba(250, 204, 21, 0.05);
+  --artlab-glass-border: rgba(250, 204, 21, 0.2);
 }
 
-.hero--single {
-  grid-template-columns: minmax(0, 1fr);
+/* ---------- Art Lab Body ---------- */
+body#artlab-body {
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--artlab-bg-start);
 }
 
-@media (min-width: 960px) {
-  .hero--single {
-    grid-template-columns: minmax(0, 1fr);
-    padding-top: var(--space-7);
-  }
+/* ---------- Dedicated Procedural Art Lab Lighting Surface ---------- */
+.artlab-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-color: #09090b;
+  background-image: 
+    radial-gradient(ellipse 85% 60% at 50% -10%, rgba(250, 204, 21, 0.25) 0%, transparent 70%),
+    radial-gradient(ellipse 65% 55% at 85% 75%, rgba(0, 240, 255, 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 10% 80%, rgba(255, 153, 0, 0.1) 0%, transparent 55%);
+  background-attachment: fixed;
 }
 
-.hero--single .lede {
-  max-width: 48ch;
+/* ---------- Minimal Corner Navigation ---------- */
+.corner-nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.25rem;
+  pointer-events: none;
 }
 
-.topnav-back {
-  gap: var(--space-2);
+.corner-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(18, 19, 26, 0.6);
+  border: 1px solid rgba(250, 204, 21, 0.2);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  pointer-events: auto;
+  transition: all var(--transition-fast);
 }
 
-#page-title {
-  font-size: var(--step-4);
+.corner-back:hover {
+  background: rgba(250, 204, 21, 0.15);
+  border-color: var(--artlab-primary);
+  color: var(--artlab-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 0 15px rgba(250, 204, 21, 0.3);
+}
+
+.corner-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  pointer-events: auto;
+  transition: transform var(--transition-fast);
+}
+
+.corner-logo:hover {
+  transform: translateY(-1px);
+}
+
+.logo-icon {
+  font-size: 1.5rem;
+  filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.6));
+}
+
+.logo-text {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--artlab-primary);
+  text-shadow: 0 0 12px rgba(250, 204, 21, 0.35);
+}
+
+.corner-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(18, 19, 26, 0.6);
+  border: 1px solid rgba(250, 204, 21, 0.2);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 1.1rem;
+  pointer-events: auto;
+  transition: all 0.3s ease;
+}
+
+.corner-link:hover {
+  background: rgba(250, 204, 21, 0.2);
+  border-color: var(--artlab-primary);
+  color: var(--text-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(250, 204, 21, 0.2);
+}
+
+/* ---------- Art Lab Hero Section ---------- */
+.artlab-hero {
+  min-height: 75vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 6rem 2rem 3rem;
+  text-align: center;
+  position: relative;
+}
+
+.artlab-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  background: rgba(250, 204, 21, 0.1);
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  color: var(--artlab-primary-light);
   text-transform: uppercase;
-  letter-spacing: -0.015em;
-  line-height: 0.85;
+  letter-spacing: 0.12em;
+  margin-bottom: 1.5rem;
 }
 
-#experiments {
-  padding-top: var(--space-8);
+.artlab-hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 9vw, 5rem);
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 1.25rem;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  text-wrap: balance;
 }
 
-.gallery {
-  display: grid;
-  gap: var(--space-8) var(--space-6);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.artlab-hero-subtitle {
+  font-size: clamp(1rem, 2.5vw, 1.2rem);
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin: 0 auto 2.5rem;
+  line-height: 1.7;
 }
 
-@media (min-width: 800px) {
-  .gallery {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.artlab-hero-cta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn-artlab {
+  background: var(--artlab-primary);
+  color: #09090b;
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-radius: var(--radius-md);
+  padding: 0.875rem 1.75rem;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.btn-artlab:hover {
+  background: var(--artlab-primary-light);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+
+/* ---------- Modern Centered Carousel Section ---------- */
+.carousel-section {
+  padding: 2rem 0 4rem;
+  position: relative;
+}
+
+.carousel-container {
+  width: 100%;
+  max-width: 100%;
+  position: relative;
+  padding: 0 2rem;
+}
+
+.carousel-track {
+  display: flex;
+  gap: 2rem;
+  padding: 1rem 0 2rem;
+  min-height: 420px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  align-items: stretch;
+}
+
+.carousel-track::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes card-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.experiment-card {
+  flex: 0 0 auto;
+  width: 340px;
+  scroll-snap-align: center;
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .experiment-card {
+    animation: card-fade-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+.experiment-card:hover {
+  transform: translateY(-12px) scale(1.02);
+}
+
+.experiment-card-inner {
+  background: rgba(18, 19, 26, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(250, 204, 21, 0.15);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.experiment-card:hover .experiment-card-inner {
+  border-color: var(--artlab-primary);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(250, 204, 21, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.experiment-card-preview {
+  height: 220px;
+  overflow: hidden;
+  position: relative;
+}
+
+.experiment-card-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Image hover scale removed in compliance with Impeccable guidelines */
+
+.experiment-card-preview::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(18, 19, 26, 1) 0%, rgba(18, 19, 26, 0.5) 30%, transparent 60%);
+  pointer-events: none;
+}
+
+.experiment-number {
+  position: absolute;
+  top: 0.875rem;
+  left: 0.875rem;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: var(--blur-sm);
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--artlab-primary-light);
+  z-index: 2;
+}
+
+.experiment-card-content {
+  padding: 1.25rem;
+}
+
+.experiment-card-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.experiment-card-description {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 1rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.experiment-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.875rem;
+}
+
+.experiment-tag {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--radius-full);
+  background: rgba(250, 204, 21, 0.1);
+  color: var(--artlab-primary-light);
+  border: 1px solid rgba(250, 204, 21, 0.25);
+}
+
+.experiment-card-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.experiment-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--artlab-primary-light);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.experiment-card:hover .experiment-link {
+  gap: 0.7rem;
+}
+
+/* ---------- Modern Carousel Navigation (Desktop) ---------- */
+.carousel-nav {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-between;
+  padding: 0 1rem;
+  /* Space from screen edges */
+  pointer-events: none;
+  /* Let clicks pass through container to buttons */
+  z-index: 10;
+  margin-top: 0;
+}
+
+.carousel-btn {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(250, 204, 21, 0.1);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: none;
+  /* No border as requested */
+  border-radius: 50%;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 1.5rem;
+  /* Larger icon */
+  pointer-events: auto;
+  /* Re-enable clicks on buttons */
+}
+
+.carousel-btn:hover {
+  background: rgba(250, 204, 21, 0.3);
+  /* Subtle hover bg */
+  color: var(--artlab-primary-light);
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(250, 204, 21, 0.2);
+}
+
+
+/* ---------- Minimal Art Lab Footer ---------- */
+.artlab-footer {
+  position: relative;
+  padding: 2rem 2rem;
+  text-align: center;
+  background: rgba(12, 12, 29, 0.6);
+}
+
+.artlab-footer-text {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  position: relative;
+  z-index: 1;
+}
+
+.artlab-footer-link {
+  color: var(--artlab-primary);
+  text-decoration: none;
+  font-weight: 600;
+  position: relative;
+  transition: color var(--transition-fast);
+}
+
+.artlab-footer-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--artlab-primary);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--transition-fast);
+}
+
+.artlab-footer-link:hover {
+  color: var(--artlab-primary-light);
+}
+
+.artlab-footer-link:hover::after {
+  transform: scaleX(1);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1024px) {
+  .corner-nav {
+    padding: 0.6rem 1rem;
   }
 
-  .exp--lead {
-    grid-column: 1 / -1;
+  .corner-link,
+  .corner-back {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+
+  .carousel-section {
+    padding: 3rem 0;
   }
 }
 
-.gallery .exp-title {
-  font-size: var(--step-3);
-}
-
-.gallery .exp--lead .exp-title {
-  font-size: var(--step-4);
-  line-height: 0.9;
-}
-
-.gallery .exp-blurb {
-  max-width: 60ch;
-  font-size: var(--step-0);
-}
-
-@media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  .gallery .exp-thumb {
-    transition: transform var(--dur-mid) var(--ease-out);
+@media (max-width: 768px) {
+  .corner-nav {
+    padding: 0.5rem 0.75rem;
   }
 
-  .gallery .exp:hover .exp-thumb {
-    transform: translateY(-4px);
+  .logo-text {
+    font-size: 0.95rem;
   }
+
+  .logo-icon {
+    font-size: 1.25rem;
+  }
+
+  .corner-link,
+  .corner-back {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
+
+  .experiment-card {
+    width: 85vw;
+    max-width: 340px;
+  }
+
+  .carousel-container {
+    padding: 0 1.5rem;
+  }
+
+  /* Vertical Stack for Mobile */
+  .carousel-track {
+    flex-direction: column;
+    align-items: center;
+    overflow-x: visible;
+    overflow-y: visible;
+    gap: 2.5rem;
+    min-height: auto;
+    padding-bottom: 0;
+    scroll-snap-type: none;
+  }
+
+  /* Hide horizontal navigation arrows on mobile */
+  .carousel-nav {
+    display: none;
+  }
+
+  .carousel-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 1rem;
+  }
+
+  .artlab-hero {
+    min-height: auto;
+    padding-top: 4rem;
+    padding-bottom: 2rem;
+  }
+
+  .artlab-hero-title {
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .corner-nav {
+    padding: 0.4rem 0.5rem;
+  }
+
+  .corner-logo {
+    gap: 0.3rem;
+  }
+
+  .logo-text {
+    font-size: 0.85rem;
+  }
+
+  .logo-icon {
+    font-size: 1rem;
+  }
+
+  .corner-link,
+  .corner-back {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+
+  .experiment-card {
+    width: 90vw;
+    max-width: 320px;
+  }
+
+  .carousel-container {
+    padding: 0 1rem;
+  }
+
+  .carousel-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .artlab-hero-title {
+    font-size: 2rem;
+  }
+
+  .artlab-hero-cta {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Whole experiment card is one link. */
+.experiment-card-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 24px;
+}
+
+.experiment-card-link:focus-visible {
+  outline: 2px solid var(--artlab-primary);
+  outline-offset: 4px;
+}
+
+.carousel-track:focus-visible {
+  outline: 2px solid var(--artlab-primary);
+  outline-offset: -2px;
 }

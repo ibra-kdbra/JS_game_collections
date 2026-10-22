@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Pre-renders the registry (assets/js/data.js) into the static pages so the
- * hub and Art Lab work, and are indexable, before any JavaScript runs.
+ * Pre-renders the registry (assets/js/data.js) into the static pages, so the
+ * game grid, Art Lab showcase and experiment carousel are in the HTML before
+ * any JavaScript runs (faster first paint, works without JS, indexable).
  *
  * Usage: node tools/render-pages.mjs          (writes files)
  *        node tools/render-pages.mjs --check  (exits 1 if output is stale; for CI)
@@ -14,100 +15,98 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { games, experiments, GENRES, INPUTS, thumbSet } = await import(
+const { games, experiments, GENRES, thumbSet, platformTags } = await import(
   pathToFileURL(path.join(root, 'assets/js/data.js')).href
 );
 
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
-const icon = (id, cls = 'icon') =>
-  `<svg class="${cls}" aria-hidden="true"><use href="{base}assets/icons/sprite.svg#i-${id}"></use></svg>`;
+const TAG = {
+  pc: '<span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span>',
+  mobile: '<span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span>',
+};
 
-const numberWords = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
-  'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
-const spell = (n) => numberWords[n] ?? String(n);
-const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-
-function inputList(game) {
-  const label = game.inputs.map((i) => INPUTS[i]).join(', ');
-  return `<span class="inputs" role="img" aria-label="Controls: ${esc(label)}">${game.inputs
-    .map((i) => icon(i === 'touch' ? 'touch' : i))
-    .join('')}</span>`;
-}
-
-function gameCard(game) {
+function gameCard(game, index) {
   const t = thumbSet(game.slug, '{base}');
-  const wide = !!game.featured;
+  const tags = platformTags(game);
   const search = [game.title, game.blurb, GENRES[game.genre], ...game.inputs].join(' ').toLowerCase();
   return `
-          <li class="game${wide ? ' game--wide' : ''}" data-slug="${esc(game.slug)}" data-genre="${esc(game.genre)}" data-mobile="${game.mobile}" data-search="${esc(search)}">
-            <img class="game-thumb" src="${t.src}" srcset="${t.srcset}" sizes="(min-width: 1100px) ${wide ? '48vw' : '32vw'}, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
-            <h3 class="game-title"><a class="game-link" href="{base}${esc(game.href)}">${esc(game.title)}</a></h3>
-            <p class="game-blurb">${esc(game.blurb)}</p>
-            <p class="game-meta"><span class="genre">${esc(GENRES[game.genre])}</span>${game.mobile ? '<span class="phone-ok">Plays on phone</span>' : ''}${inputList(game)}</p>
-          </li>`;
-}
-
-function experimentCard(exp) {
-  const t = thumbSet(exp.slug, '{base}');
-  return `
-          <li class="exp">
-            <img class="exp-thumb" src="${t.src}" srcset="${t.srcset}" sizes="(min-width: 700px) 320px, 75vw" width="480" height="300" alt="" loading="lazy" decoding="async">
-            <h3 class="exp-title"><a class="exp-link" href="{base}${esc(exp.href)}">${esc(exp.title)}</a></h3>
-            <p class="exp-blurb">${esc(exp.blurb)}</p>
-            <p class="exp-tags">${exp.tags.map((t) => `<span>${esc(t)}</span>`).join('')}</p>
-          </li>`;
-}
-
-function galleryCard(exp, index) {
-  const t = thumbSet(exp.slug, '{base}');
-  return `
-          <li class="exp${index === 0 ? ' exp--lead' : ''}">
-            <img class="exp-thumb" src="${t.src}" srcset="${t.srcset}" sizes="${index === 0 ? '(min-width: 1320px) 1320px, 100vw' : '(min-width: 800px) 50vw, 100vw'}" width="960" height="600" alt="" loading="${index < 3 ? 'eager' : 'lazy'}" decoding="async">
-            <h2 class="exp-title"><a class="exp-link" href="{base}${esc(exp.href)}">${esc(exp.title)}</a></h2>
-            <p class="exp-blurb">${esc(exp.blurb)}</p>
-            <p class="exp-tags">${exp.tags.map((t) => `<span>${esc(t)}</span>`).join('')}</p>
-          </li>`;
-}
-
-function pick(game) {
-  const t = thumbSet(game.slug, '{base}');
-  return `
-        <a class="pick-shot" href="{base}${esc(game.href)}" tabindex="-1" aria-hidden="true">
-          <img src="${t.src}" srcset="${t.srcset}" sizes="(min-width: 960px) 55vw, 100vw" width="960" height="600" alt="" fetchpriority="high" decoding="async">
-        </a>
-        <figcaption class="pick-caption">
-          <p class="pick-label">Today’s pick <span aria-hidden="true">·</span> <span data-pick-genre>${esc(GENRES[game.genre])}</span></p>
-          <h2 class="pick-title" data-pick-title>${esc(game.title)}</h2>
-          <p class="pick-blurb" data-pick-blurb>${esc(game.blurb)}</p>
-          <div class="pick-actions">
-            <a class="btn btn-ink" href="{base}${esc(game.href)}" data-pick-play>${icon('play')}<span>Play <span data-pick-name>${esc(game.title)}</span></span></a>
-            <button class="pick-next" type="button" data-pick-next hidden>Another pick ${icon('arrow-right')}</button>
+        <a class="game-card" href="{base}${esc(game.href)}" target="_blank" rel="noopener" data-slug="${esc(game.slug)}" data-genre="${esc(game.genre)}" data-platforms="${tags.join(' ')}" data-search="${esc(search)}">
+          <div class="game-card-inner">
+            <div class="game-card-preview">
+              <div class="game-card-tags">${tags.map((tag) => TAG[tag]).join('')}</div>
+              <img src="${t.src}" srcset="${t.srcset}" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="${index < 3 ? 'eager' : 'lazy'}" decoding="async">
+            </div>
+            <div class="game-card-content">
+              <h3 class="game-card-title">${esc(game.title)}</h3>
+              <p class="game-card-description">${esc(game.blurb)}</p>
+              <div class="game-card-action">
+                <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+                <span class="game-card-genre">${esc(GENRES[game.genre])}</span>
+              </div>
+            </div>
           </div>
-        </figcaption>`;
+        </a>`;
 }
 
-// Rhythm on wide screens: a pair of featured games (half width each), then a row
-// of three regular ones, repeated. Leftovers of either kind follow in order.
-function interleave(list) {
-  const featured = list.filter((g) => g.featured);
-  const regular = list.filter((g) => !g.featured);
-  const out = [];
-  while (featured.length || regular.length) {
-    out.push(...featured.splice(0, 2), ...regular.splice(0, 3));
-  }
-  return out;
+function artlabShowcase() {
+  return `
+        <a href="{base}Art_Lab/index.html" class="artlab-main-card">
+          <div class="artlab-card-glow"></div>
+          <div class="artlab-card-content">
+            <div class="artlab-icon"><i class="fas fa-flask" aria-hidden="true"></i></div>
+            <h3 class="artlab-card-title">Art Lab</h3>
+            <p class="artlab-card-desc">Math with Art create wonders</p>
+            <div class="artlab-stats">
+              <span><i class="fas fa-layer-group" aria-hidden="true"></i> ${experiments.length} Experiments</span>
+            </div>
+            <div class="artlab-enter-btn">
+              <span>Explore Collection</span>
+              <i class="fas fa-arrow-right" aria-hidden="true"></i>
+            </div>
+          </div>
+          <div class="artlab-preview-strip">${experiments
+            .map((exp) => {
+              const t = thumbSet(exp.slug, '{base}');
+              return `
+            <div class="strip-item" data-link="{base}${esc(exp.href)}" title="${esc(exp.title)}">
+              <img src="${t.src}" width="85" height="85" alt="${esc(exp.title)}" loading="lazy" decoding="async">
+            </div>`;
+            })
+            .join('')}
+          </div>
+        </a>
+      `;
 }
 
-const ordered = interleave(games);
+function experimentCard(exp, i) {
+  const t = thumbSet(exp.slug, '{base}');
+  return `
+          <article class="experiment-card" style="animation-delay: ${(i * 0.08).toFixed(2)}s;">
+            <a href="{base}${esc(exp.href)}" target="_blank" rel="noopener" class="experiment-card-link">
+              <div class="experiment-card-inner">
+                <div class="experiment-card-preview">
+                  <span class="experiment-number">${String(i + 1).padStart(2, '0')}</span>
+                  <img src="${t.src}" srcset="${t.srcset}" sizes="340px" width="480" height="300" alt="" loading="${i < 4 ? 'eager' : 'lazy'}" decoding="async">
+                </div>
+                <div class="experiment-card-content">
+                  <h3 class="experiment-card-title">${esc(exp.title)}</h3>
+                  <p class="experiment-card-description">${esc(exp.blurb)}</p>
+                  <div class="experiment-tags">${exp.tags.map((tag) => `<span class="experiment-tag">${esc(tag)}</span>`).join('')}</div>
+                  <div class="experiment-card-action">
+                    <span class="experiment-link">View Experiment <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+                  </div>
+                </div>
+              </div>
+            </a>
+          </article>`;
+}
 
 const blocks = {
-  games: ordered.map(gameCard).join('') + '\n        ',
+  games: games.map(gameCard).join('') + '\n      ',
+  'artlab-showcase': artlabShowcase(),
   experiments: experiments.map(experimentCard).join('') + '\n        ',
-  gallery: experiments.map(galleryCard).join('') + '\n        ',
-  pick: pick(games.find((g) => g.featured)) + '\n      ',
-  lede: `${capitalize(spell(games.length))} browser games and ${spell(experiments.length)} art experiments, hand-built in plain JavaScript. Free to play, nothing to install.`,
   'game-count': String(games.length),
   'exp-count': String(experiments.length),
 };

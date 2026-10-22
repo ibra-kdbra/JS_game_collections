@@ -1,159 +1,256 @@
 import { feedbackAPI } from './feedbackAPI.js';
 
-const PROFANITY = /b[i1]tch|f[u*]ck|sh[i1]t|c[u*]nt|asshole|dick|cock|pussy|whore|slut|wanker/i;
+/** Feedback comes from the public; never let it be parsed as HTML. */
+const escapeHTML = (value) =>
+    String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
-/**
- * Community feedback in a native <dialog>: focus is trapped and restored,
- * Escape closes it, and everything from the server is rendered as text.
- */
 export class FeedbackUI {
-  constructor(pageId, { spriteBase }) {
-    this.pageId = pageId;
-    this.icon = (id) => `<svg class="icon" aria-hidden="true"><use href="${spriteBase}#i-${id}"></use></svg>`;
-    this.dialog = this.build();
-    document.body.append(this.dialog);
-  }
+    constructor(gameId) {
+        this.gameId = gameId;
+        this.isOpen = false;
 
-  build() {
-    const dialog = document.createElement('dialog');
-    dialog.className = 'feedback';
-    dialog.setAttribute('aria-labelledby', 'feedback-title');
-    dialog.innerHTML = `
-      <div class="feedback-head">
-        <h2 id="feedback-title">Feedback</h2>
-        <p class="feedback-stats" data-stats aria-live="polite"></p>
-        <button class="icon-btn feedback-close" type="button" aria-label="Close">${this.icon('close')}</button>
-      </div>
+        // Bad-word filter. No `g` flag: a global regex keeps lastIndex between test() calls.
+        this.profanityRegex = /b[i1]tch|f[u*]ck|sh[i1]t|c[u*]nt|asshole|dick|cock|pussy|whore|slut|wanker/i;
 
-      <form class="feedback-form" novalidate>
-        <fieldset class="feedback-rating">
-          <legend>Your rating</legend>
-          ${[1, 2, 3, 4, 5]
-            .map(
-              (n) => `<label><input type="radio" name="rating" value="${n}" required>${this.icon('star')}<span class="visually-hidden">${n} star${n > 1 ? 's' : ''}</span></label>`,
-            )
-            .join('')}
-        </fieldset>
-
-        <label class="feedback-field">
-          <span>Name</span>
-          <input name="author" type="text" maxlength="40" autocomplete="nickname" required>
-        </label>
-
-        <label class="feedback-field">
-          <span>What should we keep, fix or add?</span>
-          <textarea name="comment" rows="3" maxlength="600" required></textarea>
-        </label>
-
-        <div class="feedback-submit">
-          <button class="btn btn-accent" type="submit">Post feedback</button>
-          <p class="feedback-message" data-message role="status"></p>
-        </div>
-      </form>
-
-      <h3 class="feedback-list-title">Recent feedback</h3>
-      <ul class="feedback-list" data-list aria-busy="true"></ul>`;
-
-    dialog.querySelector('.feedback-close').addEventListener('click', () => dialog.close());
-    // Clicking the backdrop (the dialog element itself, outside its content) closes it.
-    dialog.addEventListener('click', (e) => {
-      if (e.target === dialog) dialog.close();
-    });
-    dialog.addEventListener('close', () => this.opener?.focus());
-    dialog.querySelector('form').addEventListener('submit', (e) => this.submit(e));
-    return dialog;
-  }
-
-  open(opener) {
-    this.opener = opener;
-    this.dialog.showModal();
-    this.load();
-  }
-
-  message(text, kind = '') {
-    const el = this.dialog.querySelector('[data-message]');
-    el.textContent = text;
-    el.dataset.kind = kind;
-  }
-
-  async submit(e) {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const rating = Number(form.elements.rating.value);
-    const author = form.elements.author.value.trim();
-    const comment = form.elements.comment.value.trim();
-
-    if (!rating) return this.message('Pick a rating from one to five stars.', 'error');
-    if (!author) return this.message('Add a name so others know who wrote it.', 'error');
-    if (!comment) return this.message('Write a few words about what you think.', 'error');
-    if (PROFANITY.test(author) || PROFANITY.test(comment)) {
-      return this.message('Please keep it friendly.', 'error');
+        this.init();
     }
 
-    const button = form.querySelector('[type="submit"]');
-    button.disabled = true;
-    this.message('Posting…');
-    try {
-      await feedbackAPI.submitFeedback(this.pageId, rating, comment, author);
-      form.reset();
-      this.message('Thanks, your feedback is posted.', 'success');
-      this.load();
-    } catch {
-      this.message('Couldn’t post right now. Check your connection and try again.', 'error');
-    } finally {
-      button.disabled = false;
-    }
-  }
+    init() {
+        // 1. Create Modal DOM
+        this.createModal();
 
-  async load() {
-    const list = this.dialog.querySelector('[data-list]');
-    const stats = this.dialog.querySelector('[data-stats]');
-    list.setAttribute('aria-busy', 'true');
-
-    const { items } = await feedbackAPI.getFeedback(this.pageId);
-    list.removeAttribute('aria-busy');
-
-    if (items.length === 0) {
-      stats.textContent = 'No ratings yet';
-      list.replaceChildren(Object.assign(document.createElement('li'), {
-        className: 'feedback-empty',
-        textContent: 'Nothing here yet. Be the first to leave a note.',
-      }));
-      return;
+        // 2. Inject Trigger Button if configured
+        this.autoAttach();
     }
 
-    const average = items.reduce((sum, item) => sum + (Number(item.rating) || 0), 0) / items.length;
-    stats.textContent = `${average.toFixed(1)} out of 5 · ${items.length} ${items.length === 1 ? 'review' : 'reviews'}`;
-    list.replaceChildren(...items.map((item) => this.item(item)));
-  }
+    autoAttach() {
+        // Try to attach to corner-nav in both layouts
+        const nav = document.querySelector('.corner-nav');
+        if (nav) {
+            // Check if already attached
+            if (nav.querySelector('.feedback-trigger')) return;
 
-  /** Builds one entry with textContent only: comments come from the public and must never be parsed as HTML. */
-  item(entry) {
-    const li = document.createElement('li');
-    li.className = 'feedback-item';
+            // If a group container exists, append there (keeps icons together)
+            const group = nav.querySelector('.nav-icons-group');
+            const target = group || nav;
 
-    const head = document.createElement('p');
-    head.className = 'feedback-item-head';
-    const name = document.createElement('strong');
-    name.textContent = entry.author_name || 'Anonymous';
-    const date = document.createElement('time');
-    const created = new Date(entry.created_at);
-    if (!Number.isNaN(created.getTime())) {
-      date.dateTime = created.toISOString();
-      date.textContent = created.toLocaleDateString();
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'corner-link feedback-trigger';
+            btn.innerHTML = '<i class="fas fa-comments" aria-hidden="true"></i>';
+            btn.title = 'Community Feedback';
+            btn.setAttribute('aria-label', 'Community feedback');
+            btn.setAttribute('aria-haspopup', 'dialog');
+
+            btn.addEventListener('click', () => {
+                this.opener = btn;
+                this.toggle();
+            });
+
+            // Insert at the end
+            target.appendChild(btn);
+        }
     }
-    head.append(name, date);
 
-    const rating = Math.max(0, Math.min(5, Math.round(Number(entry.rating) || 0)));
-    const stars = document.createElement('p');
-    stars.className = 'feedback-item-stars';
-    stars.textContent = '★'.repeat(rating) + '☆'.repeat(5 - rating);
-    stars.setAttribute('aria-label', `${rating} out of 5`);
+    createModal() {
+        // Remove existing if any
+        const existing = document.getElementById('feedback-modal');
+        if (existing) existing.remove();
 
-    const text = document.createElement('p');
-    text.textContent = entry.comment ?? '';
+        const modal = document.createElement('div');
+        modal.id = 'feedback-modal';
+        modal.className = 'feedback-modal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-labelledby', 'feedback-title');
+        modal.innerHTML = `
+            <div class="feedback-modal-content">
+                <button type="button" class="modal-close" aria-label="Close feedback">&times;</button>
+                
+                <div class="feedback-header">
+                    <h3 id="feedback-title"><i class="fas fa-comments" aria-hidden="true"></i> Community Feedback</h3>
+                    <div class="feedback-stats" id="feedback-stats">
+                        <span>Loading stats...</span>
+                    </div>
+                </div>
 
-    li.append(head, stars, text);
-    return li;
-  }
+                <div class="feedback-body">
+                    <form id="feedback-form" class="feedback-form">
+                        <div class="rating-input" role="radiogroup" aria-label="Rating">
+                            <span aria-hidden="true">Rate:</span>
+                            <div class="stars">
+                                <input type="radio" name="rating" value="5" id="star5"><label for="star5">★</label>
+                                <input type="radio" name="rating" value="4" id="star4"><label for="star4">★</label>
+                                <input type="radio" name="rating" value="3" id="star3"><label for="star3">★</label>
+                                <input type="radio" name="rating" value="2" id="star2"><label for="star2">★</label>
+                                <input type="radio" name="rating" value="1" id="star1"><label for="star1">★</label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <input type="text" id="author-name" placeholder="Your Name (Required)" aria-label="Your name" class="feedback-input" maxlength="40" autocomplete="nickname" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <textarea id="feedback-comment" placeholder="Share your thoughts..." aria-label="Your feedback" class="feedback-input" rows="3" maxlength="600" required></textarea>
+                        </div>
+
+                        <button type="submit" class="btn-submit">Post Feedback</button>
+                        <div id="form-message" class="form-message" role="status"></div>
+                    </form>
+
+                    <div class="feedback-list-container">
+                        <div id="feedback-list" class="feedback-list">
+                            <div class="loading-spinner"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Event Listeners
+        const closeBtn = modal.querySelector('.modal-close');
+        closeBtn.onclick = () => this.close();
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) this.close();
+        });
+
+        // ESC key to close
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isOpen) this.close();
+        });
+
+        const form = modal.querySelector('#feedback-form');
+        form.addEventListener('submit', (e) => this.handleSubmit(e));
+
+        this.modal = modal;
+    }
+
+    toggle() {
+        if (this.isOpen) this.close();
+        else this.open();
+    }
+
+    open() {
+        this.modal.classList.add('active');
+        this.isOpen = true;
+        this.loadFeedback();
+        document.body.style.overflow = 'hidden'; // Prevent background scroll
+        this.modal.querySelector('.modal-close').focus();
+    }
+
+    close() {
+        this.modal.classList.remove('active');
+        this.isOpen = false;
+        document.body.style.overflow = '';
+        this.opener?.focus();
+    }
+
+    validateInput(text) {
+        if (this.profanityRegex.test(text)) {
+            return false;
+        }
+        return true;
+    }
+
+    async handleSubmit(e) {
+        e.preventDefault();
+        const btn = this.modal.querySelector('.btn-submit');
+
+        // Get values
+        const ratingEl = this.modal.querySelector('input[name="rating"]:checked');
+        const rating = ratingEl ? parseInt(ratingEl.value) : null;
+        const comment = this.modal.querySelector('#feedback-comment').value;
+        const author = this.modal.querySelector('#author-name').value.trim();
+
+        // Validation
+        if (!rating) {
+            this.showMessage('Please select a rating', 'error');
+            return;
+        }
+        if (!author) {
+            this.showMessage('Name is required', 'error');
+            return;
+        }
+        if (!this.validateInput(author) || !this.validateInput(comment)) {
+            this.showMessage('Please express yourself politely.', 'error');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Posting...';
+
+        try {
+            await feedbackAPI.submitFeedback(this.gameId, rating, comment, author);
+            this.showMessage('Thanks for your feedback!', 'success');
+            e.target.reset();
+            this.loadFeedback(); // Reload list
+        } catch (error) {
+            console.error(error);
+            this.showMessage('Failed to post feedback. Try again.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Post Feedback';
+        }
+    }
+
+    showMessage(text, type) {
+        const el = this.modal.querySelector('#form-message');
+        el.textContent = text;
+        el.className = `form-message ${type}`;
+        setTimeout(() => el.textContent = '', 3000);
+    }
+
+    async loadFeedback() {
+        const listContainer = this.modal.querySelector('#feedback-list');
+        const statsContainer = this.modal.querySelector('#feedback-stats');
+
+        try {
+            // Load list
+            const result = await feedbackAPI.getFeedback(this.gameId);
+
+            if (!result.items || result.items.length === 0) {
+                listContainer.innerHTML = '<div class="empty-state">No feedback yet. Be the first!</div>';
+            } else {
+                listContainer.innerHTML = result.items.map(item => this.createFeedbackItem(item)).join('');
+            }
+
+            // Load stats
+            const stats = await feedbackAPI.getStats(this.gameId);
+            const statsData = stats.items ? stats.items[0] : { count: 0, average: 0 };
+
+            const count = statsData.count || 0;
+            const avg = statsData.average ? parseFloat(statsData.average).toFixed(1) : '0.0';
+
+            statsContainer.innerHTML = `
+                <div class="stat-badge"><i class="fas fa-star" aria-hidden="true"></i> ${escapeHTML(avg)}</div>
+                <div class="stat-count">${Number(count)} reviews</div>
+            `;
+
+        } catch (error) {
+            console.error('Check your config.js or network.', error);
+            listContainer.innerHTML = '<div class="error-state">Failed to load feedback.</div>';
+        }
+    }
+
+    createFeedbackItem(item) {
+        const created = new Date(item.created_at);
+        const date = Number.isNaN(created.getTime()) ? '' : created.toLocaleDateString();
+        const rating = Math.max(0, Math.min(5, Math.round(Number(item.rating) || 0)));
+        const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+
+        return `
+            <div class="feedback-item">
+                <div class="feedback-item-header">
+                    <span class="author">${escapeHTML(item.author_name || 'Anonymous')}</span>
+                    <span class="date">${escapeHTML(date)}</span>
+                </div>
+                <div class="star-display" aria-label="${rating} out of 5">${stars}</div>
+                <p class="comment-text">${escapeHTML(item.comment)}</p>
+            </div>
+        `;
+    }
 }

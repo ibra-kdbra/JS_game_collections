@@ -18,8 +18,9 @@ The audit behind this plan ran every page in headless Chromium at 390×844 (touc
 - **Time-based simulation.** Game logic advances by elapsed time (fixed-step accumulator),
   never by frames, so 120/144 Hz screens don't double the speed.
 - **Namespaced storage.** Every `localStorage` key is `<game>.<key>`; reads are guarded.
-- **Design taste filter.** The hub redesign follows the impeccable craft floor and the
-  UI UX Pro Max accessibility checklist (see Phase 1).
+- **Keep the identity.** The Cyber Yellow & Obsidian design is the collection's identity. The
+  impeccable and UI UX Pro Max checklists are used for accessibility, polish and performance,
+  not to restyle it.
 
 ## Phase 0: Stop the bleeding (done)
 
@@ -41,60 +42,44 @@ Bugs that were confirmed in a browser and have small, safe fixes.
 | Sprites #9 | Swipe-down threw `ReferenceError: gameOver`. `touchend` removed the wrong key. |
 | Hub registry | Brainy Warrior is hidden until Phase 2 fixes it (it crashed on import and had a missing stylesheet, textures and thumbnail). ReWire's `#Mobile` tag is removed until it has touch input. |
 
-## Phase 1: Hub redesign and platform
+## Phase 1: Hub upgrades and platform
 
-The landing page is the front door; it gets rebuilt rather than restyled.
+**Goal:** keep the Cyber Yellow & Obsidian identity exactly as designed, and fix what is
+underneath it.
 
-**Problems today**
-- Sections and cards start at `opacity: 0` and depend on GSAP ScrollTrigger to appear. With
-  JS slow or blocked, the page is an empty black screen (confirmed in headless runs).
-- Generic "AI template" tells: an eyebrow pill above the hero, a hero stats row ("17+ / 7 / 100%"),
-  glow text-shadows, glassmorphism on every card, an identical card grid, and the "near-black + neon accent" look.
-- Thumbnails weigh up to 5.6 MB (Art Lab), 2.6 MB (Tetris) and 2.3 MB (Adaptive).
-- A three.js background is loaded from a CDN on every visit. Font Awesome comes from a CDN. A
-  YouTube iframe autoplays.
-- The service worker caches every response forever under `v1`, including 46 MB `model.bmp`.
-- `cyberpunk.css` imports two files twice. Dead code: `initParticles`, `initNavScroll`,
-  `.artlab-feature` animations target elements that no longer exist.
-
-**Direction** (Experience mode: the games are the hero, the interface recedes)
-- Lead with real gameplay: a large featured game, then an index that varies scale instead of
-  a uniform card grid. Thumbnails are real captures in WebP/AVIF at 2 sizes with fixed aspect.
-- One display face plus one text face, picked for this product rather than from the reflex
-  list. Tabular numerals for scores and counts.
-- Palette chosen from the use scene, not the "gaming = neon" reflex. OKLCH tokens, a
-  committed color strategy, light and dark both designed.
-- Content visible by default; one authored entrance moment; full `prefers-reduced-motion` path.
-- Filters by genre (Arcade, Puzzle, Strategy, Action, Art), input (touch / keyboard / gamepad)
-  and session length, plus search. "Continue playing" and personal bests read from each game's namespaced storage.
-- Inline SVG icon sprite (drop Font Awesome), self-hosted fonts, no autoplaying media; the music player becomes opt-in.
-- Accessibility floor: 4.5:1 text, visible focus ring, skip link, 44px targets, landmarks,
-  no horizontal scroll at 320px, zoom allowed.
-- Service worker rewritten: versioned precache of the hub shell only, runtime cache with size
-  limits, and never caching large media or the 2048 model.
+**Problems found**
+- Cards and the Art Lab showcase were built entirely by JavaScript, so a slow or failed
+  script left the page empty.
+- Thumbnails weighed up to 5.6 MB (Art Lab), 2.6 MB (Tetris) and 2.3 MB (Adaptive).
+- three.js, Font Awesome and the fonts came from CDNs on every visit.
+- The service worker cached every response forever under `v1`, including the 46 MB `model.bmp`.
+- `cyberpunk.css` imported two files twice; dead code in the hub script.
 
 **What shipped** (branch `upgrade/phase-1-landing-redesign`)
-- Rebuilt hub and Art Lab pages. Signal-orange marquee band with today's pick (one per day,
-  "Another pick" cycles), a genre-grouped index whose rhythm alternates pairs of featured games
-  with rows of three, an Art Lab strip, and a "Jump back in" row of recently played games.
-- Search uses word-prefix matching; genre chips and a "Plays on phone" switch; the filter
-  state is kept in the URL so a filtered view can be shared; `/` focuses search.
-- Pages are pre-rendered from `assets/js/data.js` by `tools/render-pages.mjs`, so everything is
-  visible without JavaScript. Run it after editing the registry (`--check` for CI).
-- Big Shoulders Display + Atkinson Hyperlegible, self-hosted (~64 KB). An SVG icon sprite
-  replaces Font Awesome. OKLCH tokens with designed light and dark themes; every text pair is
-  at least 5.2:1 and control borders are at least 3.6:1.
-- 16:10 WebP thumbnails at two widths (1.2 MB total). Weak ones replaced with real gameplay captures.
-- First load on a phone: 181 KB, 18 requests, CLS 0. No three.js, GSAP or Font Awesome, and
-  no YouTube on load.
-- Music is opt-in: nothing loads until the music button is pressed, and closing the panel
-  stops playback. Custom video or playlist links work without the YouTube Data API key.
-- Feedback moved to a native `<dialog>`. **Fixed a stored XSS**: names and comments from the
-  public API were inserted as HTML; they are now rendered as text.
+
+The Cyber Yellow & Obsidian design stays: hero, glass game cards, Art Lab showcase, WebGL
+particle background, music circle and feedback modal. The work is underneath it.
+- Game cards, the Art Lab showcase and the Art Lab carousel are pre-rendered from
+  `assets/js/data.js` by `tools/render-pages.mjs`, so they appear before any JavaScript runs.
+  Run it after editing the registry (`--check` for CI).
+- Filters: the PC / Mobile row plus a genre row (Arcade, Puzzle, Action, Strategy). Search
+  matches word starts. The filter state is kept in the URL and `/` focuses search. A "Continue
+  playing" row shows the games recently opened in this browser.
+- Thumbnails are the original game images, compressed to 16:10 WebP at two widths (1.1 MB total).
+- Fonts (Albert Sans, Chakra Petch), Font Awesome (subset of the icons used, under 6 KB),
+  three.js and GSAP are all self-hosted, so no CDN is needed to render the page.
+- Particle background: starts after the page loads, falls back to the CSS gradient without
+  WebGL, and draws a still frame under `prefers-reduced-motion`.
+- Accessibility: skip link, visible focus rings in the theme yellow, labelled icon buttons, a
+  keyboard-operable music circle, `aria-pressed` filters, dialog semantics with focus return,
+  muted text raised to 4.5:1 contrast.
+- Feedback: **fixed a stored XSS** (names and comments from the public API were inserted as
+  HTML), and fixed the profanity filter, whose global regex let every second match through.
+- Music player: debug logging removed, storage guarded, Escape closes the playlist dialog.
 - Service worker v2: versioned shell precache, network-first with a bounded runtime cache
-  (300 entries, 5 MB per file), and no range or cross-origin requests. Old caches are purged.
-- Removed the legacy hub CSS/JS (cyberpunk theme modules, three.js background, lazy loader,
-  old music player, GSAP vendor bundle).
+  (300 entries, 5 MB per file), skips range and cross-origin requests, purges the old cache.
+- Art Lab palette: leftover purple accents unified to the Cyber Yellow palette.
+- Removed: the duplicate CSS imports, the unused lazy-loader, and dead code in the hub script.
 
 **Moved to the start of Phase 2:** the shared game kit below, since each part is only
 proven once a game adopts it.
@@ -179,7 +164,7 @@ Each one is built on the shared kit from day one, as the reference implementatio
 ## Tracking
 
 - [x] Phase 0: confirmed bug fixes
-- [x] Phase 1: hub redesign, Art Lab page, service worker, feedback XSS fix
+- [x] Phase 1: hub and Art Lab upgrades on the original design, service worker, feedback XSS fix
 - [ ] Shared game kit (start of Phase 2)
 - [ ] Phase 2A · 2B · 2C · 2D
 - [ ] Phase 3: new games
