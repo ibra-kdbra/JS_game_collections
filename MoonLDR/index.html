@@ -2,13 +2,44 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
         <title>Moon LDR</title>
         <link type="text/css" rel="stylesheet" href="css/main.css">
     </head>
     <body>
-        <script src="https://unpkg.com/three@0.124.0"></script>
+        <main id="stage" class="stage"></main>
+
+        <section id="menu" class="menu" aria-labelledby="menu-title">
+            <h1 id="menu-title">MOON LDR</h1>
+            <p class="tagline">Touch down gently on flat ground. Marked pads pay extra points and fuel. The flight lasts until the tank runs dry.</p>
+            <p id="result" class="result" hidden></p>
+
+            <div class="opt" role="group" aria-label="Difficulty">
+                <span class="opt-label">DIFFICULTY</span>
+                <button type="button" data-opt="difficulty" data-value="cadet">CADET</button>
+                <button type="button" data-opt="difficulty" data-value="pilot">PILOT</button>
+                <button type="button" data-opt="difficulty" data-value="commander">COMMANDER</button>
+            </div>
+            <p class="opt-note">Cadet: low gravity, big tank. Commander: heavy gravity, small tank, strict landings.</p>
+            <div class="opt" role="group" aria-label="Terrain">
+                <span class="opt-label">TERRAIN</span>
+                <button type="button" data-opt="terrain" data-value="classic">CLASSIC</button>
+                <button type="button" data-opt="terrain" data-value="random">NEW EVERY ROUND</button>
+            </div>
+
+            <button type="button" id="start" class="start">START</button>
+            <p id="best" class="best"></p>
+
+            <dl class="keys">
+                <dt>← →</dt><dd>ROTATE</dd>
+                <dt>↑</dt><dd>THRUST</dd>
+                <dt>P</dt><dd>PAUSE</dd>
+            </dl>
+            <p class="touch-keys">Rotate with the arrows, hold THRUST to fire the engine.</p>
+        </section>
+
+        <script type="module" src="../assets/kit/index.js"></script>
+        <script src="vendor/three/three.min.js"></script>
         <script src="js/constants.js"></script>
         <script src="js/globals.js"></script>
         <script src="js/terrainData.js"></script>

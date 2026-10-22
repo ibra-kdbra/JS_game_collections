@@ -1,189 +1,161 @@
+// The HUD is a 2D canvas drawn as a texture on a full-screen quad, rendered
+// over the world with its own scene and camera. It is created once; resizing
+// only resizes the canvas and swaps the texture.
 function initHud() {
-    hudWidth = window.innerWidth;
-    hudHeight = window.innerHeight;
-
-    cameraHud = new THREE.OrthographicCamera(
-        -halfWidth, 
-        halfWidth, 
-        halfHeight, 
-        -halfHeight, 
-        0, 
-        1000 );
+    cameraHud = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 10);
     sceneHud = new THREE.Scene();
     hudCanvas = document.createElement('canvas');
     hudContext = hudCanvas.getContext('2d');
-    hudCanvas.width = hudWidth;
-    hudCanvas.height = hudHeight;
 
-    hudTexture = new THREE.Texture(hudCanvas);
-    const hudMaterial = new THREE.MeshBasicMaterial( {map: hudTexture} );
+    hudMaterial = new THREE.MeshBasicMaterial();
     hudMaterial.transparent = true;
 
-    const planeGeometry = new THREE.PlaneGeometry(gameWidth, gameHeight);
-    const hudPlane = new THREE.Mesh(planeGeometry, hudMaterial);
+    const hudPlane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), hudMaterial);
     sceneHud.add(hudPlane);
+    resizeHud();
+}
+
+function resizeHud() {
+    const pixelRatio = renderer.getPixelRatio();
+    hudWidth = stage.clientWidth;
+    hudHeight = stage.clientHeight;
+    hudCanvas.width = Math.round(hudWidth * pixelRatio);
+    hudCanvas.height = Math.round(hudHeight * pixelRatio);
+    hudContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+
+    if(hudTexture) hudTexture.dispose();
+    hudTexture = new THREE.Texture(hudCanvas);
+    hudTexture.minFilter = THREE.LinearFilter;
+    hudMaterial.map = hudTexture;
+    hudMaterial.needsUpdate = true;
 }
 
 function renderHud() {
     hudContext.clearRect(0, 0, hudWidth, hudHeight);
 
-    fillLeftInfoPanel();
-    fillRightInfoPanel();
-    fillMainPanel();
-
-    drawMultipliers();
+    if(!isGameOver) {
+        fillLeftInfoPanel();
+        fillRightInfoPanel();
+        fillMainPanel();
+        drawMultipliers();
+    }
 
     hudTexture.needsUpdate = true;
     renderer.render(sceneHud, cameraHud);
 }
 
+function isCompactHud() {
+    return hudWidth < compactHudWidth;
+}
+
+function infoFont() {
+    return "Normal " + (isCompactHud() ? infoPanelCompactFontSize : infoPanelFontSize) + "px 'Courier New', monospace";
+}
+
+// Info lines start below the Game Lab buttons in the top-left corner.
+function infoLineY(line) {
+    const step = Math.max(hudHeight * infoPanelRelativeOffsetYStep, (isCompactHud() ? infoPanelCompactFontSize : infoPanelFontSize) * 1.3);
+    return Math.max(hudHeight * infoPanelRelativeOffsetY, hudShellClearance) + line * step;
+}
+
+function formatClock(seconds) {
+    const whole = Math.floor(seconds);
+    return Math.floor(whole / 60) + ":" + String(whole % 60).padStart(2, "0");
+}
+
 function fillLeftInfoPanel() {
     hudContext.textAlign = 'left';
     hudContext.fillStyle = infoPanelTextColor;
-    hudContext.font = "Normal "+infoPanelFontSize+"px Courier New";
-    hudContext.fillText(
-        "SCORE".padEnd(7, " ") + currentScore.toString().padStart(4, "0"), 
-        hudWidth*infoPanelRelativeOffsetX, 
-        hudHeight*(infoPanelRelativeOffsetY+0*infoPanelRelativeOffsetYStep));
-    hudContext.fillText(
-        "TIME".padEnd(7, " ") + (currentTime/59 | 0).toString().padStart(1, "0")+":"+(currentTime%59).toFixed(0).padStart(2, "0"), 
-        hudWidth*infoPanelRelativeOffsetX, 
-        hudHeight*(infoPanelRelativeOffsetY+1*infoPanelRelativeOffsetYStep));
-    hudContext.fillText(
-        "FUEL".padEnd(7, " ") + currentFuel.toFixed(0).padStart(4, "0"), 
-        hudWidth*infoPanelRelativeOffsetX, 
-        hudHeight*(infoPanelRelativeOffsetY+2*infoPanelRelativeOffsetYStep));
+    hudContext.font = infoFont();
+    const x = hudWidth * infoPanelRelativeOffsetX;
+    const pad = isCompactHud() ? 6 : 7;
+    hudContext.fillText("SCORE".padEnd(pad, " ") + currentScore.toString().padStart(4, "0"), x, infoLineY(0));
+    hudContext.fillText("TIME".padEnd(pad, " ") + formatClock(currentTime), x, infoLineY(1));
+    hudContext.fillText("FUEL".padEnd(pad, " ") + currentFuel.toFixed(0).padStart(4, "0"), x, infoLineY(2));
     if(isAlerted) {
-        let fuelAlertText;
-        if(hasFuel) {
-            fuelAlertText = "LOW ON FUEL";
-        }
-        else{
-            fuelAlertText = "OUT OF FUEL";
-        }
-        hudContext.fillText(
-            fuelAlertText, 
-            hudWidth*infoPanelRelativeOffsetX, 
-            hudHeight*(infoPanelRelativeOffsetY+3*infoPanelRelativeOffsetYStep));
+        hudContext.fillText(hasFuel ? "LOW ON FUEL" : "OUT OF FUEL", x, infoLineY(3));
     }
 }
 
 function fillRightInfoPanel() {
     hudContext.textAlign = 'right';
     hudContext.fillStyle = infoPanelTextColor;
-    hudContext.font = "Normal "+infoPanelFontSize+"px Courier New";
-    hudContext.fillText(
-        "ALTITUDE".padEnd(20, " ") + altitude.toFixed(0).padStart(4, "0"), 
-        hudWidth*(1-infoPanelRelativeOffsetX), 
-        hudHeight*(infoPanelRelativeOffsetY+0*infoPanelRelativeOffsetYStep));
-    hudContext.fillText(
-        "HORIZONTAL SPEED".padEnd(18, " ") + velocityX.toFixed(1).padStart(6, " "), 
-        hudWidth*(1-infoPanelRelativeOffsetX), 
-        hudHeight*(infoPanelRelativeOffsetY+1*infoPanelRelativeOffsetYStep));
-    hudContext.fillText(
-        "VERTICAL SPEED".padEnd(18, " ") + (-velocityY).toFixed(1).padStart(6, " "), 
-        hudWidth*(1-infoPanelRelativeOffsetX), 
-        hudHeight*(infoPanelRelativeOffsetY+2*infoPanelRelativeOffsetYStep));
-    hudContext.fillText(
-        "ROTATION ANGLE".padEnd(18, " ") + (-lander.rotation.z * (180/Math.PI)).toFixed(1).padStart(6, " "), 
-        hudWidth*(1-infoPanelRelativeOffsetX), 
-        hudHeight*(infoPanelRelativeOffsetY+3*infoPanelRelativeOffsetYStep));
+    hudContext.font = infoFont();
+    const x = hudWidth * (1 - infoPanelRelativeOffsetX);
+    const compact = isCompactHud();
+    const labels = compact
+        ? ["ALT", "H SPD", "V SPD", "ANGLE"]
+        : ["ALTITUDE", "HORIZONTAL SPEED", "VERTICAL SPEED", "ROTATION ANGLE"];
+    const pad = compact ? 6 : 18;
+    hudContext.fillText(labels[0].padEnd(compact ? pad : 20, " ") + altitude.toFixed(0).padStart(4, "0"), x, infoLineY(0));
+    hudContext.fillText(labels[1].padEnd(pad, " ") + velocityX.toFixed(1).padStart(6, " "), x, infoLineY(1));
+    hudContext.fillText(labels[2].padEnd(pad, " ") + (-velocityY).toFixed(1).padStart(6, " "), x, infoLineY(2));
+    hudContext.fillText(labels[3].padEnd(pad, " ") + (-lander.rotation.z * (180/Math.PI)).toFixed(1).padStart(6, " "), x, infoLineY(3));
 }
 
 function fillMainPanel() {
     hudContext.textAlign = 'center';
+    const fontSize = Math.min(statsPanelFontSize, hudWidth / 22);
+    hudContext.font = "Normal " + fontSize + "px 'Courier New', monospace";
+    hudContext.fillStyle = statsPanelTextColor;
+    const x = hudWidth * statsPanelRelativeOffsetX;
+    const lineY = (line) => hudHeight * statsPanelRelativeOffsetY + line * Math.max(hudHeight * statsPanelRelativeOffsetYStep, fontSize * 1.3);
 
-    if(isGameOver) {
-        hudContext.font = "Normal "+mainPanelFontSize+"px Courier New";
-        hudContext.fillStyle = mainPanelTextColor;
-
-        hudContext.fillText(
-            "PRESS ANY KEY TO PLAY", 
-            hudWidth*mainPanelRelativeOffsetX, 
-            hudHeight*(mainPanelRelativeOffsetY+0*mainPanelRelativeOffsetYStep));
-        hudContext.fillText(
-            "ARROW KEYS TO MOVE", 
-            hudWidth*mainPanelRelativeOffsetX, 
-            hudHeight*(mainPanelRelativeOffsetY+1*mainPanelRelativeOffsetYStep));
+    if(isPaused && !isBetweenRounds) {
+        hudContext.fillText("PAUSED", x, lineY(0));
+        hudContext.fillText(controls && !controls.el.hidden ? "TAP PAUSE TO CONTINUE" : "PRESS P TO CONTINUE", x, lineY(1));
+        return;
     }
-    else if(isBetweenRounds) {
-        hudContext.font = "Normal "+statsPanelFontSize+"px Courier New";
-        hudContext.fillStyle = statsPanelTextColor;
+    if(!isBetweenRounds) return;
 
-        let landingText, scoreText, fuelText, gameOverText;
-
-        gameOverText = "";
-        if(hasLanded) {
-            landingText = "SUCCESSFULLY LANDED";
-            fuelText = fuelChange.toFixed(0) + " FUEL UNITS GAINED";
-            scoreText = scoreChange + " POINTS GAINED";
-        }
-        else {
-            landingText = "LANDER DESTROYED";
-            fuelText = fuelChange.toFixed(0) + " FUEL UNITS LOST";
-            scoreText = crashInfo;
-            if(!hasFuel) {
-                fuelText = "OUT OF FUEL";
-                gameOverText = "GAME OVER";
-            }
-        }
-
-        hudContext.fillText(
-            landingText, 
-            hudWidth*statsPanelRelativeOffsetX, 
-            hudHeight*(statsPanelRelativeOffsetY+0*statsPanelRelativeOffsetYStep));
-        hudContext.fillText(
-            scoreText, 
-            hudWidth*statsPanelRelativeOffsetX, 
-            hudHeight*(statsPanelRelativeOffsetY+1*statsPanelRelativeOffsetYStep));
-        hudContext.fillText(
-            fuelText, 
-            hudWidth*statsPanelRelativeOffsetX, 
-            hudHeight*(statsPanelRelativeOffsetY+2*statsPanelRelativeOffsetYStep));
-        hudContext.fillText(
-            gameOverText, 
-            hudWidth*statsPanelRelativeOffsetX, 
-            hudHeight*(statsPanelRelativeOffsetY+3*statsPanelRelativeOffsetYStep));        
+    let landingText, scoreText, fuelText;
+    let gameOverText = "";
+    if(hasLanded) {
+        landingText = "SUCCESSFULLY LANDED";
+        fuelText = fuelChange.toFixed(0) + " FUEL UNITS GAINED";
+        scoreText = scoreChange + " POINTS GAINED";
     }
+    else {
+        landingText = "LANDER DESTROYED";
+        fuelText = fuelChange.toFixed(0) + " FUEL UNITS LOST";
+        scoreText = crashInfo;
+        if(!hasFuel) {
+            fuelText = "OUT OF FUEL";
+            gameOverText = "GAME OVER";
+        }
+    }
+
+    hudContext.fillText(landingText, x, lineY(0));
+    hudContext.fillText(scoreText, x, lineY(1));
+    hudContext.fillText(fuelText, x, lineY(2));
+    hudContext.fillText(gameOverText, x, lineY(3));
 }
 
 function drawMultipliers() {
-    if(isGameOver) return;
-
     hudContext.textAlign = 'center';
     hudContext.fillStyle = multiplierFontColor;
 
-    let fontSize = multiplierFontSize;
+    let fontSize = multiplierFontSize * Math.min(1.2, Math.max(0.85, viewScale));
     if(isZoomed) fontSize *= zoom;
-    hudContext.font = "Normal "+fontSize+"px Courier New";
-    var i;
-    for(i = 0; i < scoreMultipliers.length; i++) {
+    hudContext.font = "Normal " + fontSize + "px 'Courier New', monospace";
+    for(let i = 0; i < scoreMultipliers.length; i++) {
         let mul = scoreMultipliers[i];
         if(mul < 2) continue;
 
         let leftVector = lineSegments[i][0];
         let rightVector = lineSegments[i][1];
-        let pointX, pointY;
-        pointX = (leftVector.x + rightVector.x) / 2;
-        pointY = leftVector.y;
-
-        let hudPoint = worldToHudCoord(pointX, pointY);
-        hudContext.fillText("X"+mul, hudPoint[0], hudPoint[1] + fontSize);
+        let hudPoint = worldToHudCoord((leftVector.x + rightVector.x) / 2, leftVector.y);
+        // Labels sit under their pad, or above it when the pad is at the bottom edge.
+        let labelY = hudPoint[1] + fontSize;
+        if(labelY > hudHeight - 2) labelY = hudPoint[1] - fontSize * 0.4;
+        hudContext.fillText("X" + mul, hudPoint[0], labelY);
     }
 }
 
+const hudProjection = new THREE.Vector3();
+
+// World position to HUD pixels, through the world camera (handles zoom and follow).
 function worldToHudCoord(wx, wy) {
-    let hx, hy;
-
-    if(isZoomed) {
-        wx -= camera.position.x;
-        wy -= camera.position.y;
-        wx *= zoom;
-        wy *= zoom;
-    }
-
-    hx = (wx / gameWidth + 0.5) * hudWidth;
-    hy = (1 - (wy / gameHeight + 0.5)) * hudHeight;
-
-    return [hx, hy];
+    hudProjection.set(wx, wy, 0).project(camera);
+    return [(hudProjection.x + 1) / 2 * hudWidth, (1 - hudProjection.y) / 2 * hudHeight];
 }
