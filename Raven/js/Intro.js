@@ -31,7 +31,7 @@ class Intro {
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i];
 
-            while (game.ctx.measureText(line).width > game.canvas.width - 30) {
+            while (game.ctx.measureText(line).width > game.viewW - 30) {
                 line = line.split(' ').slice(0, -1).join(' ');
             }
 
@@ -46,7 +46,7 @@ class Intro {
 
         // Interactivity indicator
         if (this._chars === this._text.length) {
-            Util.renderTogglePrompt(game.canvas.width - 20, game.canvas.height - 20);
+            Util.renderTogglePrompt(game.viewW - 20, game.viewH - 20);
         }
     }
 

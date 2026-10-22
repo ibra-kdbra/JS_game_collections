@@ -2,18 +2,18 @@
 <tileset name="raven" tilewidth="32" tileheight="32" tilecount="5" columns="0">
  <grid orientation="orthogonal" width="1" height="1"/>
  <tile id="0">
-  <image width="32" height="32" source="../assets/_wall.png"/>
+  <image width="32" height="32" source="tiles/_wall.png"/>
  </tile>
  <tile id="1">
-  <image width="32" height="32" source="../assets/_floor.png"/>
+  <image width="32" height="32" source="tiles/_floor.png"/>
  </tile>
  <tile id="2">
-  <image width="32" height="32" source="../assets/_enter.png"/>
+  <image width="32" height="32" source="tiles/_enter.png"/>
  </tile>
  <tile id="3">
-  <image width="32" height="32" source="../assets/_exit.png"/>
+  <image width="32" height="32" source="tiles/_exit.png"/>
  </tile>
  <tile id="6">
-  <image width="32" height="32" source="../assets/_door.png"/>
+  <image width="32" height="32" source="tiles/_door.png"/>
  </tile>
 </tileset>

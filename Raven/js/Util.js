@@ -46,6 +46,13 @@ const Util = {
         return Math.floor(Math.random() * x);
     },
 
+    // milliseconds to m:ss.t
+    formatTime(ms) {
+        const tenths = Math.floor(ms / 100);
+        const s = Math.floor(tenths / 10);
+        return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + '.' + (tenths % 10);
+    },
+
     //
     // Points
     //
@@ -186,7 +193,6 @@ const Util = {
         // than ~1sec.
         //
         // TODO: jitter is disabled, it doesn't look quite right.
-        //let jitter = (game.framems % 1000) / 1000;
 
         let polygon = [];
 

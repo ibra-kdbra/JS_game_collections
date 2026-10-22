@@ -1,8 +1,9 @@
 /**
- * Audio handles background music and sound effects.
+ * RavenAudio handles background music and sound effects.
+ * (Not called Audio, which would hide the browser's built-in Audio constructor.)
  */
-class Audio {
-    constructor() {
+class RavenAudio {
+    constructor(volume = 1) {
         let ctxClass = (window.AudioContext || window.webkitAudioContext);
         if (ctxClass) {
             this.ctx = new ctxClass();
@@ -10,6 +11,21 @@ class Audio {
             this.disabled = true;
             return;
         }
+
+        // Master volume, set from the pause menu.
+        this.master = this.ctx.createGain();
+        this.master.gain.value = volume;
+        this.master.connect(this.ctx.destination);
+
+        // Browsers keep audio suspended until the first user gesture; stay quiet in background tabs.
+        const resume = () => {
+            if (!document.hidden && this.ctx.state === 'suspended') this.ctx.resume();
+        };
+        ['pointerdown', 'keydown'].forEach(type => document.addEventListener(type, resume, true));
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) this.ctx.suspend();
+            else resume();
+        });
 
         // Create a gain node for each sound type we'll be playing.
         this._sounds = {};
@@ -25,7 +41,7 @@ class Audio {
         ].forEach(([name, volume, parent]) => {
             this._sounds[name] = this.ctx.createGain();
             this._sounds[name].gain.value = volume;
-            this._sounds[name].connect(parent ? this._sounds[parent] : this.ctx.destination);
+            this._sounds[name].connect(parent ? this._sounds[parent] : this.master);
         });
 
         // We rotate musical notes between 3 separate gain nodes, so we can control gain on
@@ -164,6 +180,11 @@ class Audio {
         this._nextTick = this._tickLength;
     }
 
+    setVolume(volume) {
+        if (this.disabled) return;
+        this.master.gain.setValueAtTime(volume, this.ctx.currentTime);
+    }
+
     update(delta) {
         if (this.disabled) return;
 
@@ -191,7 +212,7 @@ class Audio {
             this._tick++;
 
             // If we go into the background, the Audio Context's currentTime will keep increasing,
-            // but Audio.update will stop running (because we only run when the next animation
+            // but RavenAudio.update will stop running (because we only run when the next animation
             // frame is received). This "automatically" stops our bg music when switching tabs,
             // which I think is a feature-not-a-bug. However, when we come back, we need to
             // make sure we don't spend a bunch of frames slowly catching back up to the

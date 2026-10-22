@@ -9,6 +9,7 @@ const LevelMetadata = {
     level01: {
         name: '01 Rear Security Annex',
         hint: '! Look around with the mouse, move with W/A/S/D.',
+        touchHint: '! Left thumb moves, right thumb looks around.',
         intro:
             '[SEC REF 672.A]\n\n' +
             'Thank you for arriving quickly. As you can see, the facility has been breached, and our ' +
@@ -59,6 +60,20 @@ const LevelMetadata = {
     level10: {
         name: '10 Facility Parking',
         hint: '! So many choices...'
+    },
+    level11: {
+        name: '11 Server Vault',
+        hint: '! A camera can hold one Raven while you watch another.'
+    },
+    level12: {
+        name: '12 Cooling Tunnels',
+        hint: '! Patrols keep moving until someone sees them.',
+        chx: 0,
+        chy: 32
+    },
+    level13: {
+        name: '13 Uplink Array',
+        hint: '! Two terminals, two cameras, three Raven.'
     },
     outro:
         '[SEC REF 672.C]\n\n' +

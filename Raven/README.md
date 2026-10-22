@@ -4,7 +4,13 @@
 
 In this 2D top-down action-puzzle game, the security cameras for a secret facility have been taken offline, and it is YOUR job to fix the problem. Take on a series of floors overrun by mysterious enemies known only as "Raven" -- although harmless as long as you can see them, they are deadly if you turn your back.
 
-Playable on the desktop in Chrome, Firefox, and Safari. Use your mouse or touchpad to look around, and W/A/S/D or the arrow keys to move.
+Use your mouse or touchpad to look around, and W/A/S/D or the arrow keys to move. Space or Enter uses terminals and Esc pauses. On a phone or tablet, drag with your left thumb to move and your right thumb to look; on-screen buttons pause and use terminals.
+
+The game has 13 levels. Pick any level you have reached from **Select Level**, which also shows your best clear time for each one. Volume is in the start and pause menus.
+
+## Making levels
+
+Levels are drawn in [Tiled](https://www.mapeditor.org/) (`levels/level*.json`, tileset `levels/raven.tsx`). Names, hints and intro text live in `Level_MetaData_Packer/level-metadata.js`. The packer in `Level_MetaData_Packer/level-packer.js` merges both into `js/LevelCache.js`; it needs Node.js and the `glob` package.
 
 ## Postmortem
 

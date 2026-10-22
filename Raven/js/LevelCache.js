@@ -5,6 +5,7 @@ const LevelCache = [
     data: 'uTv=,%$-$-$-$-$%,v=,v=,%$-$-$-$-$%,v=,M4M,%$-$%$#$%$-$%,M$#$M,M$#$M,%$-$%$#$%$-$%,M$#$M<-T-4+$-$C$-$;$-$C$-$;<C<+',
     name: '01 Rear Security Annex',
     hint: '! Look around with the mouse, move with W/A/S/D.',
+    touchHint: '! Left thumb moves, right thumb looks around.',
     intro: '[SEC REF 672.A]\n' +
       '\n' +
       'Thank you for arriving quickly. As you can see, the facility has been breached, and our security monitoring is offline. Containment and establishment of vision are our top priorities.\n' +
@@ -286,6 +287,66 @@ const LevelCache = [
       { u: 13, v: 19, control: 'B', facing: 170, enabled: false },
       { u: 16, v: 8, control: 'A', facing: 175, enabled: false },
       { u: 7, v: 8, control: 'C', facing: 120, enabled: false }
+    ]
+  },
+  {
+    width: 16,
+    height: 16,
+    data: 'uL-$v,-$v,-$v,v5,=L=,=$;$=,=$;$=,=$;$=,=L=,v5,v5L-e;$-$t#$-$t#<[',
+    name: '11 Server Vault',
+    hint: '! A camera can hold one Raven while you watch another.',
+    enter: { p1: { x: 160, y: 416 }, p2: { x: 224, y: 480 } },
+    exit: { p1: { x: 32, y: 32 }, p2: { x: 96, y: 96 } },
+    d: [
+      { u: 1, v: 3, exitDoor: true },
+      { u: 5, v: 12, entranceDoor: true }
+    ],
+    e: [ { x: 368, y: 368 }, { x: 272, y: 80, wake: 'los' } ],
+    t: [ { u: 1, v: 7, control: 'A' } ],
+    c: [ { u: 14, v: 8, control: 'A', facing: 150, enabled: false } ]
+  },
+  {
+    width: 22,
+    height: 14,
+    data: 'uu$-$vM,-$vM,-$-<5<=,E$+$5$+$=,E$+$5$+$=,E<5<=,vf,vf,vfuL-<t;$-$tS$-$tS<3',
+    name: '12 Cooling Tunnels',
+    hint: '! Patrols keep moving until someone sees them.',
+    chx: 0,
+    chy: 32,
+    enter: { p1: { x: 32, y: 32 }, p2: { x: 96, y: 96 } },
+    exit: { p1: { x: 512, y: 352 }, p2: { x: 576, y: 416 } },
+    d: [
+      { u: 1, v: 3, entranceDoor: true },
+      { u: 16, v: 10, exitDoor: true }
+    ],
+    e: [
+      { x: 112, y: 272, wake: 'los', patrolDX: 384, patrolDY: 0 },
+      { x: 624, y: 80, wakeRadius: 256 }
+    ],
+    t: [ { u: 10, v: 4, control: 'A' } ],
+    c: [ { u: 20, v: 8, control: 'A', facing: 180, enabled: false } ]
+  },
+  {
+    width: 24,
+    height: 17,
+    data: 'l<td$-$td$-$lu-u$vv,vv,5<^<5,5$+$^$+$5,5<5,5<5,n,n,vvLv-L;$v-$dT-Lt;$-$td$-$td<l',
+    name: '13 Uplink Array',
+    hint: '! Two terminals, two cameras, three Raven.',
+    enter: { p1: { x: 352, y: 448 }, p2: { x: 416, y: 512 } },
+    exit: { p1: { x: 352, y: 32 }, p2: { x: 416, y: 96 } },
+    d: [
+      { u: 11, v: 3, exitDoor: true },
+      { u: 11, v: 13, entranceDoor: true }
+    ],
+    e: [
+      { x: 80, y: 176, wakeRadius: 160 },
+      { x: 688, y: 176, wakeRadius: 160 },
+      { x: 208, y: 400, wake: 'los' }
+    ],
+    t: [ { u: 1, v: 9, control: 'A' }, { u: 22, v: 9, control: 'B' } ],
+    c: [
+      { u: 9, v: 4, control: 'A', facing: 160, enabled: false },
+      { u: 14, v: 4, control: 'B', facing: 20, enabled: false }
     ]
   }
 ];
