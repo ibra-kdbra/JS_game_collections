@@ -8,7 +8,7 @@
  */
 
 import { GEN } from './config.js';
-import { countMines, neighbours, solve } from './solver.js';
+import { countMines, floodOpen, neighbours, solve } from './solver.js';
 
 /** Cells that must stay clear for a given first click. */
 export function safeZone(w, h, mines, start) {
@@ -61,10 +61,11 @@ function repair(w, h, mines, result, zone, rng) {
  * @param {() => number} o.rng
  * @param {boolean} [o.noGuess=true]
  * @param {number} [o.minPair=0]   require at least this many pair deductions (puzzle mode)
+ * @param {number} [o.maxOpen=1]   largest share of the safe cells the first click may open (puzzle mode)
  * @param {number} [o.timeBudget]
  * @returns {{ mines: Uint8Array, counts: Int8Array, noGuess: boolean, attempts: number, ms: number, steps?: object }}
  */
-export function generate({ w, h, mines: count, start, rng, noGuess = true, minPair = 0, timeBudget = GEN.timeBudget }) {
+export function generate({ w, h, mines: count, start, rng, noGuess = true, minPair = 0, maxOpen = 1, timeBudget = GEN.timeBudget }) {
   const t0 = now();
   const zone = safeZone(w, h, count, start);
   let attempts = 0;
@@ -75,15 +76,20 @@ export function generate({ w, h, mines: count, start, rng, noGuess = true, minPa
     if (!noGuess) {
       return { mines, counts: countMines(w, h, mines), noGuess: false, attempts, ms: now() - t0 };
     }
+    if (maxOpen < 1) {
+      const opening = floodOpen(w, h, countMines(w, h, mines), new Uint8Array(w * h), start).length;
+      if (opening > maxOpen * (w * h - count) && attempts < GEN.maxAttempts && now() - t0 < timeBudget) continue;
+    }
     for (let r = 0; r <= GEN.repairs; r++) {
       const counts = countMines(w, h, mines);
       const res = solve(w, h, mines, start, { counts });
       if (res.solved) {
-        if (res.steps.pair >= minPair) {
+        const opening = maxOpen < 1 ? floodOpen(w, h, counts, new Uint8Array(w * h), start).length : 0;
+        if (res.steps.pair >= minPair && opening <= maxOpen * (w * h - count)) {
           return { mines, counts, noGuess: true, attempts, ms: now() - t0, steps: res.steps };
         }
         best ??= { mines: mines.slice(), counts, steps: res.steps };
-        break;
+        break; // solvable but off target: reroll rather than repair
       }
       if (!repair(w, h, mines, res, zone, rng)) break;
     }

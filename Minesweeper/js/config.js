@@ -17,15 +17,17 @@ export const CUSTOM = {
   minMines: 1,
   /** Cells kept clear around the first click (3x3). */
   safeZone: 9,
-  /** Above this density, no-guess generation is very unlikely to succeed. */
-  noGuessMaxDensity: 0.22,
+  /** Above these densities no-guess generation may run out of time (measured, see README). */
+  noGuessMaxDensity: 0.3,
+  noGuessMaxDensityLarge: 0.22,
+  largeBoard: 1000,
 };
 
 export const GEN = {
   /** Hard ceiling on whole-board retries before giving up on no-guess. */
   maxAttempts: 20000,
   /** Wall-clock budget for one no-guess generation, in ms. */
-  timeBudget: 4000,
+  timeBudget: 1500,
   /** Mine moves tried per attempt to repair a board where the solver stalls. */
   repairs: 40,
 };
@@ -68,20 +70,22 @@ export const VIEW = {
  * a stronger logic requirement, so the curve reads at a glance in the level list.
  *   pair: minimum rounds of pair/subset reasoning the solution must need
  *         (tuned to roughly the 75th-90th percentile for that size and density).
+ *   open: largest share of the safe cells the starting area may reveal, so the
+ *         first levels are not half solved before the player moves.
  */
 export const PUZZLES = [
-  { w: 8, h: 8, mines: 7, pair: 0 },
-  { w: 8, h: 8, mines: 9, pair: 0 },
-  { w: 9, h: 9, mines: 11, pair: 1 },
-  { w: 10, h: 10, mines: 14, pair: 1 },
-  { w: 10, h: 10, mines: 16, pair: 2 },
-  { w: 12, h: 10, mines: 20, pair: 2 },
-  { w: 12, h: 12, mines: 25, pair: 2 },
-  { w: 14, h: 12, mines: 30, pair: 3 },
-  { w: 14, h: 14, mines: 36, pair: 3 },
-  { w: 16, h: 14, mines: 42, pair: 3 },
-  { w: 16, h: 16, mines: 48, pair: 4 },
-  { w: 20, h: 16, mines: 62, pair: 4 },
+  { w: 8, h: 8, mines: 7, pair: 0, open: 0.5 },
+  { w: 8, h: 8, mines: 9, pair: 0, open: 0.45 },
+  { w: 9, h: 9, mines: 11, pair: 1, open: 0.4 },
+  { w: 10, h: 10, mines: 14, pair: 1, open: 0.4 },
+  { w: 10, h: 10, mines: 16, pair: 2, open: 0.35 },
+  { w: 12, h: 10, mines: 20, pair: 2, open: 0.35 },
+  { w: 12, h: 12, mines: 25, pair: 2, open: 0.3 },
+  { w: 14, h: 12, mines: 30, pair: 3, open: 0.3 },
+  { w: 14, h: 14, mines: 36, pair: 3, open: 0.3 },
+  { w: 16, h: 14, mines: 42, pair: 3, open: 0.25 },
+  { w: 16, h: 16, mines: 48, pair: 4, open: 0.25 },
+  { w: 20, h: 16, mines: 62, pair: 4, open: 0.25 },
 ];
 
 export const DAILY = { w: 16, h: 16, mines: 40 };

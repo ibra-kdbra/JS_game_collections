@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { PRESETS, PUZZLES, DAILY } from '../js/config.js';
 import { generate, safeZone } from '../js/generator.js';
-import { solve, deduce, countMines } from '../js/solver.js';
+import { solve, deduce, countMines, floodOpen } from '../js/solver.js';
 import { seeded, mulberry32 } from '../js/rng.js';
 
 const PER = Number(process.argv[2]) || 200;
@@ -85,14 +85,18 @@ check('daily board is identical for the same date', () => {
 });
 check('puzzle ladder: every level solvable and meets its logic target', () => {
   const t0 = Date.now();
+  const rows = [];
   PUZZLES.forEach((p, i) => {
     const start = Math.floor(p.h / 2) * p.w + Math.floor(p.w / 2);
-    const g = generate({ w: p.w, h: p.h, mines: p.mines, start, rng: seeded(`puzzle-${i + 1}`), minPair: p.pair });
+    const g = generate({ w: p.w, h: p.h, mines: p.mines, start, rng: seeded(`puzzle-${i + 1}`), minPair: p.pair, maxOpen: p.open });
     assert.ok(g.noGuess && !g.failed, `level ${i + 1} not no-guess`);
     assert.ok(!g.relaxed, `level ${i + 1} missed pair target ${p.pair}`);
     assert.ok(solve(p.w, p.h, g.mines, start).solved, `level ${i + 1} unsolvable`);
+    const opening = floodOpen(p.w, p.h, g.counts, new Uint8Array(p.w * p.h), start).length;
+    assert.ok(opening <= p.open * (p.w * p.h - p.mines), `level ${i + 1} opens ${opening} cells at the start`);
+    rows.push(`${i + 1}:${p.w}x${p.h}/${p.mines} open ${opening} pair ${g.steps.pair}`);
   });
-  console.log(`       ${PUZZLES.length} levels in ${Date.now() - t0} ms`);
+  console.log(`       ${PUZZLES.length} levels in ${Date.now() - t0} ms\n       ${rows.join('\n       ')}`);
 });
 
 console.log(failures ? `\n${failures} failing` : '\nall passed');
