@@ -4,7 +4,7 @@ const createGame = () => {
 
     const createLevel = (levelData, resources, onLevelFinish) => {
 
-        const [canvas, context] = createCanvas(1280, 720);
+        const [canvas, context] = createStageCanvas();
         const space = createSpace();
 
         let cancelFrameLoop;
@@ -23,11 +23,6 @@ const createGame = () => {
             onLevelFinish();
         });
         const mouseDragSystem = createMouseDragSystem(inputControl);
-
-
-        // uncomment this lines and the line at the bottom to enable editor mode
-        // const levelEditorSystem = createLevelEditorSystem(space, inputControl);
-        // space.registerSystem(levelEditorSystem);
 
 
         space.registerSystem(spoolRenderSystem);
@@ -87,7 +82,6 @@ const createGame = () => {
             pos: { x: levelData.finish[0], y: levelData.finish[1] }
         };
 
-        //TODO: render layers
         space.addEntity(start);
         space.addEntity(finish);
         space.addEntity(end);
@@ -96,20 +90,17 @@ const createGame = () => {
         const update = (time) => {
             mouseDragSystem.update(time);
             spoolSystem.update(time);
-            // levelEditorSystem.update(time);
         };
 
         const render = (time) => {
+            fitStageCanvas(canvas, context);
             context.drawImage(background, 0, 0);
 
             cableRenderSystem.render(context, time);
             spoolRenderSystem.render(context, time);
         };
 
-        cancelFrameLoop = startFrameLoop(time => {
-            update(time);
-            render(time);
-        });
+        cancelFrameLoop = startFrameLoop(update, render);
         return {
             canvas,
             shutdown

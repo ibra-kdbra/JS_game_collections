@@ -1,3 +1,36 @@
+/* Outfit 5.2.5 from @fontsource/outfit, SIL Open Font License (vendor/outfit-5.2.5/OFL.txt) */
+@font-face {
+    font-family: 'Outfit';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 300;
+    src: url(../vendor/outfit-5.2.5/outfit-latin-300-normal.woff2) format('woff2');
+}
+
+@font-face {
+    font-family: 'Outfit';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 400;
+    src: url(../vendor/outfit-5.2.5/outfit-latin-400-normal.woff2) format('woff2');
+}
+
+@font-face {
+    font-family: 'Outfit';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 600;
+    src: url(../vendor/outfit-5.2.5/outfit-latin-600-normal.woff2) format('woff2');
+}
+
+@font-face {
+    font-family: 'Outfit';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 700;
+    src: url(../vendor/outfit-5.2.5/outfit-latin-700-normal.woff2) format('woff2');
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -5,11 +38,17 @@
     box-sizing: border-box;
 }
 
+html, body {
+    height: 100%;
+}
+
 body {
     background: #020406;
     overflow: hidden;
     width: 100vw;
-    height: 100vh;
+    height: 100dvh;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -83,9 +122,12 @@ body::after {
     width: 1280px;
     height: 720px;
     border: 1px solid rgba(62, 127, 249, 0.2);
-    position: relative;
+    /* Fixed so the unscaled 1280px box never widens the page on phones */
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    margin: -360px 0 0 -640px;
     transform-origin: center center;
-    flex-shrink: 0;
     border-radius: 4px;
     overflow: hidden;
 }
@@ -267,6 +309,19 @@ body::after {
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
+#description .status-line {
+    font-size: 10px;
+    color: #3e7ff9;
+    letter-spacing: 4px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+}
+
+#description .status-line span {
+    color: #ff4444;
+    animation: flicker 0.5s infinite;
+}
+
 #description h2 {
     font-size: 24px;
     font-weight: 400;
@@ -363,58 +418,46 @@ body::after {
     right: 20px;
     bottom: 20px;
     display: flex;
-    flex-direction: column;
-    align-items: center;
     gap: 12px;
     z-index: 200;
     opacity: 0;
     animation: fadeIn 1s ease-out 1.5s forwards;
 }
 
-.settings-menu {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    height: 0;
-    overflow: hidden;
-    transition: height 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    padding-bottom: 0;
-}
-
-#settings-container:hover .settings-menu {
-    height: 104px; /* (44px + 12px gap) * 2 - gap = 100ish, let's use 104 */
-    padding-bottom: 8px;
-}
-
 .settings-btn {
     background: rgba(62, 127, 249, 0.1);
     border: 1px solid rgba(62, 127, 249, 0.3);
-    color: rgba(255, 255, 255, 0.6);
-    width: 44px;
-    height: 44px;
+    color: rgba(255, 255, 255, 0.7);
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
     transition: all 0.3s ease;
     backdrop-filter: blur(5px);
-    text-decoration: none;
-    box-sizing: border-box;
 }
 
-.settings-btn:hover {
+.settings-btn svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.settings-btn .slash {
+    display: none;
+}
+
+.settings-btn:hover, .settings-btn:focus-visible {
     background: rgba(62, 127, 249, 0.2);
     border-color: #3e7ff9;
     color: #fff;
     box-shadow: 0 0 15px rgba(62, 127, 249, 0.4);
-    transform: scale(1.05);
-}
-
-.settings-btn.main {
-    font-size: 24px;
-    background: rgba(62, 127, 249, 0.15);
 }
 
 .settings-btn.muted {
@@ -422,10 +465,87 @@ body::after {
     border-color: rgba(255, 68, 68, 0.3);
 }
 
-#settings-trigger i {
-    transition: transform 0.4s ease;
+.settings-btn.muted .slash {
+    display: inline;
 }
 
-#settings-container:hover #settings-trigger i {
-    transform: rotate(360deg);
+.settings-btn.muted .wave {
+    display: none;
+}
+
+/* Level select */
+#levelSelect {
+    width: 900px;
+    padding: 40px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.75);
+    border: 1px solid rgba(62, 127, 249, 0.3);
+    border-radius: 4px;
+    backdrop-filter: blur(15px);
+    z-index: 150;
+}
+
+#levelSelect h2 {
+    font-size: 36px;
+    font-weight: 300;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    margin-bottom: 30px;
+}
+
+#levelGrid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 14px;
+    margin-bottom: 30px;
+}
+
+#levelGrid button {
+    font-family: 'Outfit', sans-serif;
+    font-size: 26px;
+    font-weight: 600;
+    height: 76px;
+    color: #fff;
+    background: rgba(62, 127, 249, 0.08);
+    border: 1px solid rgba(62, 127, 249, 0.35);
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+}
+
+#levelGrid button:hover:not(:disabled), #levelGrid button:focus-visible {
+    background: rgba(62, 127, 249, 0.3);
+    border-color: #3e7ff9;
+}
+
+#levelGrid button.solved {
+    border-color: rgba(80, 220, 120, 0.7);
+    box-shadow: inset 0 0 18px rgba(80, 220, 120, 0.25);
+}
+
+#levelGrid button.solved::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #50dc78;
+    box-shadow: 0 0 8px #50dc78;
+}
+
+#levelGrid button.current {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+#levelGrid button:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+#closeLevelsBtn {
+    display: inline-block;
+    width: 240px;
 }

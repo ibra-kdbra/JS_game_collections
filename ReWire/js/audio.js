@@ -18,17 +18,16 @@ const initAudio = () => {
         
         fxGain = audioCtx.createGain();
         fxGain.connect(audioCtx.destination);
-        fxGain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-        
-        console.log("Audio Context Initialized");
+        fxGain.gain.setValueAtTime(isFxMuted ? 0 : 0.5, audioCtx.currentTime);
     } catch (e) {
-        console.error("Web Audio API not supported", e);
+        audioCtx = null;
     }
 };
 
 const playSound = (params) => {
-    if (isFxMuted) return;
+    if (isFxMuted || document.hidden) return;
     initAudio();
+    if (!audioCtx) return;
     if (audioCtx.state === 'suspended') audioCtx.resume();
     
     const [
@@ -97,6 +96,7 @@ const playAmbient = (level) => {
 
 const playMusic = () => {
     initAudio();
+    if (!audioCtx) return;
     if (audioCtx.state === 'suspended') {
         audioCtx.resume().then(() => startMusicInternal());
     } else {
@@ -106,9 +106,7 @@ const playMusic = () => {
 
 const startMusicInternal = () => {
     if (oscillators.length > 0) return;
-    
-    console.log("Starting procedural music...");
-    
+
     const addOsc = (freq, type, vol) => {
         const osc = audioCtx.createOscillator();
         const g = audioCtx.createGain();
@@ -127,8 +125,8 @@ const startMusicInternal = () => {
     addOsc(220, 'triangle', 0.05); // A3
 
     const playBlip = () => {
-        if (isMusicMuted || !audioCtx) return;
-        const notes = [440, 523.25, 659.25, 880]; 
+        if (!audioCtx) return;
+        const notes = [440, 523.25, 659.25, 880];
         const f = notes[Math.floor(Math.random() * notes.length)];
         const osc = audioCtx.createOscillator();
         const g = audioCtx.createGain();
@@ -152,7 +150,7 @@ const startMusicInternal = () => {
 
 const toggleMusic = () => {
     isMusicMuted = !isMusicMuted;
-    initAudio();
+    if (!audioCtx) return isMusicMuted;
     audioCtx.resume().then(() => {
         if (oscillators.length === 0 && !isMusicMuted) {
             playMusic();
@@ -170,3 +168,10 @@ const toggleFx = () => {
     }
     return isFxMuted;
 };
+
+// Silence everything while the tab is hidden
+document.addEventListener('visibilitychange', () => {
+    if (!audioCtx) return;
+    if (document.hidden) audioCtx.suspend();
+    else audioCtx.resume();
+});

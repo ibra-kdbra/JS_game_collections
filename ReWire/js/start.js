@@ -1,21 +1,27 @@
 const showEndScreen = () => {
+    const solved = loadSolved().length;
     nextMsg.innerHTML = 'Thanks for playing!';
-    nextBtn.innerHTML = 'AGAIN';
+    nextBtn.innerHTML = solved < gameData.levels.length ? `AGAIN (${solved} / ${gameData.levels.length} SOLVED)` : 'AGAIN';
+    hideElement(resetElement);
     showElement(levelDoneElement, () => {
-        nextBtn.addEventListener('click', e => {
+        nextBtn.onclick = (e) => {
+            e.preventDefault();
             location.reload();
-        });
+        };
     });
     saveLevel(0);
 };
+
+// Set while a game is running: jumps to another level
+let jumpToLevel = null;
 
 const startGame = (parent, resources, startLevel) => {
     const game = createGame();
     let currentLevel = startLevel;
 
     const startNextLevel = () => {
-        console.log('start level ' + currentLevel);
         playAmbient(currentLevel);
+        saveLevel(currentLevel);
 
         let tutorial;
         if (currentLevel == 0) {
@@ -29,18 +35,27 @@ const startGame = (parent, resources, startLevel) => {
             showElement(tutorial);
         }
 
-        const level = game.createLevel(gameData.levels[currentLevel], resources, () => {
+        const removeTutorial = () => {
             if (tutorial) {
-                hideElement(tutorial, () => {
-                    removeElement(tutorial);
+                const t = tutorial;
+                tutorial = null;
+                hideElement(t, () => {
+                    removeElement(t);
                 });
             }
+        };
+
+        const level = game.createLevel(gameData.levels[currentLevel], resources, () => {
+            removeTutorial();
+            jumpToLevel = null;
+            markSolved(currentLevel);
             if (currentLevel < gameData.levels.length - 1) {
                 currentLevel++;
                 saveLevel(currentLevel);
                 hideElement(resetElement);
                 showElement([levelDoneElement], () => {
-                    nextBtn.onclick = () => {
+                    nextBtn.onclick = (e) => {
+                        e.preventDefault();
                         nextBtn.onclick = null;
                         hideElement([levelDoneElement, level.canvas, levelInfo, nodeInfo], () => {
                             removeElement(level.canvas);
@@ -55,15 +70,12 @@ const startGame = (parent, resources, startLevel) => {
         });
 
         parent.appendChild(level.canvas);
-        levelInfo.innerHTML = 'Level ' + (currentLevel + 1);
+        levelInfo.innerHTML = 'Level ' + (currentLevel + 1) + (loadSolved().includes(currentLevel) ? ' &#10003;' : '');
         showElement([level.canvas, resetElement, levelInfo, nodeInfo]);
 
         const resetLevel = () => {
-            if (tutorial) {
-                hideElement(tutorial, () => {
-                    removeElement(tutorial);
-                });
-            }
+            removeTutorial();
+            jumpToLevel = null;
             backBtn.onclick = skipBtn.onclick = resetBtn.onclick = null;
             hideElement([level.canvas, resetElement, levelInfo, nodeInfo], () => {
                 level.shutdown();
@@ -73,15 +85,25 @@ const startGame = (parent, resources, startLevel) => {
 
         };
 
-        resetBtn.onclick = resetLevel;
-        skipBtn.onclick = () => {
+        jumpToLevel = (index) => {
+            currentLevel = index;
+            resetLevel();
+        };
+
+        resetBtn.onclick = (e) => {
+            e.preventDefault();
+            resetLevel();
+        };
+        skipBtn.onclick = (e) => {
+            e.preventDefault();
             if (currentLevel > gameData.levels.length - 2) {
                 return;
             }
             currentLevel++;
             resetLevel();
         };
-        backBtn.onclick = () => {
+        backBtn.onclick = (e) => {
+            e.preventDefault();
             if (currentLevel < 1) return;
             currentLevel--;
             resetLevel();
@@ -91,6 +113,29 @@ const startGame = (parent, resources, startLevel) => {
     };
 
     startNextLevel();
+};
+
+// Level list: every level can be played; solved ones are marked
+const openLevelSelect = (onPick) => {
+    const solved = loadSolved();
+    const current = loadLevel();
+    levelGrid.innerHTML = '';
+    gameData.levels.forEach((_, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = i + 1;
+        b.className = (solved.includes(i) ? 'solved ' : '') + (i === current ? 'current' : '');
+        b.setAttribute('aria-label', `Level ${i + 1}${solved.includes(i) ? ', solved' : ''}`);
+        b.onclick = () => {
+            hideElement(levelSelectElement, () => onPick(i));
+        };
+        levelGrid.appendChild(b);
+    });
+    closeLevelsBtn.onclick = (e) => {
+        e.preventDefault();
+        hideElement(levelSelectElement, () => onPick(null));
+    };
+    showElement(levelSelectElement);
 };
 
 const prepareGame = () => {
@@ -104,7 +149,7 @@ const prepareGame = () => {
     context.lineWidth = 1;
 
     context.strokeRect(0.5, 0.5, 199, 4);
-    generateResources(p => {
+    const generate = () => generateResources(p => {
         context.fillRect(0.5, 0.5, 199 / 100 * p, 4);
     }, (resources) => {
 
@@ -116,26 +161,50 @@ const prepareGame = () => {
 
             const hideUIandStartGame = (startLevel) => {
                 playMusic();
-                startBtn.onclick = continueBtn.onclick = null;
+                startBtn.onclick = continueBtn.onclick = menuLevelsBtn.onclick = null;
                 hideElement([titleElement, menuElement, descriptionElement, loadingElement], () => {
                     // Ensure buttons are fully gone
-                    startBtn.style.display = continueBtn.style.display = 'none';
+                    startBtn.style.display = continueBtn.style.display = menuLevelsBtn.style.display = 'none';
                     startGame(contentElement, resources, startLevel);
                 });
             };
-            startBtn.onclick = () => {
+            startBtn.onclick = (e) => {
+                e.preventDefault();
                 saveLevel(0);
                 hideUIandStartGame(0);
             };
 
-            continueBtn.onclick = () => {
+            continueBtn.onclick = (e) => {
+                e.preventDefault();
                 hideUIandStartGame(savedLevel);
             };
 
-            // hideUIandStartGame(10); // skip main menu and start with level
+            menuLevelsBtn.onclick = (e) => {
+                e.preventDefault();
+                hideElement([titleElement, menuElement, descriptionElement], () => {
+                    openLevelSelect((index) => {
+                        if (index === null) {
+                            showElement([titleElement, menuElement, descriptionElement]);
+                        } else {
+                            hideUIandStartGame(index);
+                        }
+                    });
+                });
+            };
         });
 
     });
+    document.fonts.load('20px Outfit').then(generate, generate);
 };
 
+levelsBtn.onclick = (e) => {
+    e.preventDefault();
+    if (!jumpToLevel) return;
+    const jump = jumpToLevel;
+    openLevelSelect((index) => {
+        if (index !== null) jump(index);
+    });
+};
+
+GameKit.initShell({ slug: 'rewire' });
 prepareGame();

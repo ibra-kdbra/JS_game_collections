@@ -1,20 +1,25 @@
 const nextFrame = requestAnimationFrame;
-const startFrameLoop = (callback) => {
 
-    let requestId;
-    let stopLoop = false;
-    let lastTime = 0;
-    const update = (time) => {
-        callback(time * 0.001);
-        if (!stopLoop) {
-            requestId = nextFrame(update);
+// Runs update(time) in fixed 1/60 s steps and render(time) once per frame;
+// time is game seconds, which stop while the tab is hidden. Returns a stop function.
+const startFrameLoop = (update, render) => {
+    let time = 0;
+    let stopped = false;
+    const loop = GameKit.createLoop({
+        update: (dt) => {
+            if (stopped) return;
+            time += dt;
+            update(time);
+        },
+        render: () => {
+            if (!stopped) render(time);
         }
-        lastTime = time;
-    };
-    requestId = nextFrame(update);
-
+    });
+    update(time);
+    loop.start();
     return () => {
-        stopLoop = true;
+        stopped = true;
+        loop.stop();
     };
 };
 
