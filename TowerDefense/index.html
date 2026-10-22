@@ -2,22 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Tower Defense</title>
     <link href="css/style.css" rel="stylesheet">
-    <link href="css/custom_import.css" rel="stylesheet">
     <link href="./imgs/tower.svg" rel="icon" type="image/svg+xml" />
     <link href="./imgs/tower.png" rel="icon" type="image/png" />
-    <!-- p5.js lib, sound lib, lz-string lib -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.2/p5.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.2/addons/p5.sound.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js" defer></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js@1.12.0/src/toastify.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/toastify-js@1.12.0/src/toastify.min.js"></script>
-    
+    <script type="module" src="../assets/kit/index.js"></script>
+    <script src="vendor/p5-1.11.2.min.js" defer></script>
+    <script src="vendor/lz-string-1.5.0.min.js" defer></script>
     <script src="scripts/utils.js" defer></script>
+    <script src="scripts/ui.js" defer></script>
+    <script src="scripts/audio.js" defer></script>
     <script src="scripts/enemy.js" defer></script>
     <script src="scripts/enemies.js" defer></script>
     <script src="scripts/particle.js" defer></script>
@@ -29,6 +24,7 @@
     <script src="scripts/missile.js" defer></script>
     <script src="scripts/maps.js" defer></script>
     <script src="scripts/tiles.js" defer></script>
+    <script src="scripts/waves.js" defer></script>
     <script src="scripts/sketch.js" defer></script>
   </head>
   <body>
@@ -37,80 +33,122 @@
     </header>
 
     <main>
-      <div id="left-asides">
-        <aside id="map-aside">
-          <div class="group">
-            <p><button class="io" onclick="showImportMapPrompt()">Import map (M)</button></p>
-            <p><button class="io" onclick="copyToClipboard(exportMap())">Export map (X)</button></p>
-          </div>
-          <p>Edit maps <a href="../td-editor/index.html" target="_blank">here</a>.</p>
-        </aside>
-        <aside id="store">
-          <h2>Store</h2>
-          <div class="group">
-            <p><button class="gun" onclick="setPlace('gun')">Gun Tower (1)</button></p>
-            <p><button class="laser" onclick="setPlace('laser')">Laser Tower (2)</button></p>
-            <p><button class="slow" onclick="setPlace('slow')">Slow Tower (3)</button></p>
-            <p><button class="sniper" onclick="setPlace('sniper')">Sniper Tower (4)</button></p>
-            <p><button class="rocket" onclick="setPlace('rocket')">Rocket Tower (5)</button></p>
-            <p><button class="bomb" onclick="setPlace('bomb')">Bomb Tower (6)</button></p>
-            <p><button class="tesla" onclick="setPlace('tesla')">Tesla Coil (7)</button></p>
-          </div>
-        </aside>
-      </div>
+      <aside id="store">
+        <h2>Store</h2>
+        <div class="store-grid">
+          <button class="gun" data-tower="gun"><span>Gun</span><b>$25</b><kbd>1</kbd></button>
+          <button class="laser" data-tower="laser"><span>Laser</span><b>$75</b><kbd>2</kbd></button>
+          <button class="slow" data-tower="slow"><span>Slow</span><b>$100</b><kbd>3</kbd></button>
+          <button class="sniper" data-tower="sniper"><span>Sniper</span><b>$150</b><kbd>4</kbd></button>
+          <button class="rocket" data-tower="rocket"><span>Rocket</span><b>$250</b><kbd>5</kbd></button>
+          <button class="bomb" data-tower="bomb"><span>Bomb</span><b>$250</b><kbd>6</kbd></button>
+          <button class="tesla" data-tower="tesla"><span>Tesla</span><b>$300</b><kbd>7</kbd></button>
+        </div>
+      </aside>
 
       <div id="sketch-holder"></div>
 
-      <div id="right-asides">
+      <div id="side">
         <aside id="status">
-          <p id="wave"></p>
-          <p id="health"></p>
-          <p id="cash"></p>
-          <div class="horiz-buttons">
-            <button id="pause" onclick="pause()">Start</button>
-            <button onclick="resetGame()">Restart</button>
+          <div class="stats">
+            <span id="wave">Wave 1</span>
+            <span id="health">&#9829; 40</span>
+            <span id="cash">$55</span>
           </div>
-          <p>
-            Map:
-            <select id="map">
-              <option value="empty2">Empty (2)</option>
-              <option value="empty3">Empty (3)</option>
-              <option value="sparse2" selected>Sparse (2)</option>
-              <option value="sparse3">Sparse (3)</option>
-              <option value="dense2">Dense (2)</option>
-              <option value="dense3">Dense (3)</option>
-              <option value="solid2">Solid (2)</option>
-              <option value="solid3">Solid (3)</option>
-              <option id="custom" value="custom">Custom</option>
-              <option value="loops">Loops</option>
-              <option value="spiral">Spiral</option>
-              <option value="branch">Branch</option>
-              <option value="branchAlt">Branch (Alt)</option>
-              <option value="city">City</option>
-              <option value="freeway">Freeway</option>
-              <option value="walls">Walls</option>
-              <option value="fork">Fork</option>
-            </select>
-          </p>
+          <div class="horiz-buttons">
+            <button id="pause">Start</button>
+            <button id="speed" title="Game speed (T)">1x</button>
+            <button id="next-wave" title="Call the next wave early for bonus cash (N)">Next</button>
+          </div>
+          <p id="wave-note"></p>
         </aside>
 
         <aside id="info">
           <div id="info-div">
             <h3 id="name"></h3>
-            <p id="cost"></p>
-            <p id="sellPrice"></p>
-            <p id="upPrice"></p>
-            <p id="damage"></p>
-            <p id="type"></p>
-            <p id="range"></p>
-            <p id="cooldown"></p>
+            <dl class="info-stats">
+              <dt>Damage</dt><dd id="damage"></dd>
+              <dt>Type</dt><dd id="type"></dd>
+              <dt>Range</dt><dd id="range"></dd>
+              <dt>Cooldown</dt><dd id="cooldown"></dd>
+              <dt>Value</dt><dd id="sellPrice"></dd>
+            </dl>
             <div class="horiz-buttons" id="info-buttons">
-              <button id="sell" onclick="if (selected) sell(selected)">Sell</button>
-              <button id="upgrade" onclick="if (selected && selected.upgrades.length > 0) upgrade(selected.upgrades[0])">Upgrade</button>
+              <button id="sell">Sell</button>
+              <button id="upgrade">Upgrade</button>
+            </div>
+            <div class="horiz-buttons" id="place-buttons">
+              <button id="cancel">Cancel (Esc)</button>
             </div>
           </div>
+          <p id="hint"></p>
         </aside>
+
+        <details id="options" open>
+          <summary>Game &amp; maps</summary>
+          <label>Map
+            <select id="map">
+              <optgroup label="Random">
+                <option value="empty2">Empty (2 spawns)</option>
+                <option value="empty3">Empty (3 spawns)</option>
+                <option value="sparse2" selected>Sparse (2 spawns)</option>
+                <option value="sparse3">Sparse (3 spawns)</option>
+                <option value="dense2">Dense (2 spawns)</option>
+                <option value="dense3">Dense (3 spawns)</option>
+                <option value="solid2">Solid (2 spawns)</option>
+                <option value="solid3">Solid (3 spawns)</option>
+              </optgroup>
+              <optgroup label="Designed">
+                <option value="spiral">Spiral</option>
+                <option value="loops">Loops</option>
+                <option value="branch">Branch</option>
+                <option value="branchAlt">Branch (Alt)</option>
+                <option value="fork">Fork</option>
+                <option value="walls">Walls</option>
+                <option value="city">City</option>
+                <option value="freeway">Freeway</option>
+              </optgroup>
+              <optgroup label="Yours">
+                <option id="custom" value="custom" disabled>Custom (import or editor)</option>
+              </optgroup>
+            </select>
+          </label>
+          <label>Mode
+            <select id="mode">
+              <option value="campaign" selected>Campaign (30 waves)</option>
+              <option value="endless">Endless (random waves)</option>
+            </select>
+          </label>
+          <label>Difficulty
+            <select id="difficulty">
+              <option value="easy">Easy</option>
+              <option value="normal" selected>Normal</option>
+              <option value="hard">Hard</option>
+            </select>
+          </label>
+          <p id="best"></p>
+          <div class="horiz-buttons">
+            <button id="restart">Restart (R)</button>
+            <button id="mute">Sound on</button>
+          </div>
+          <div class="horiz-buttons">
+            <button class="io" id="import">Import map</button>
+            <button class="io" id="export">Export map</button>
+          </div>
+          <p><a href="../td-editor/index.html">Open the map editor</a></p>
+        </details>
       </div>
     </main>
+
+    <dialog id="end-dialog" class="td-dialog">
+      <form method="dialog">
+        <h2 id="end-title"></h2>
+        <p id="end-text"></p>
+        <div class="dialog-buttons">
+          <button value="close" class="dialog-cancel">Look at the map</button>
+          <button value="retry" class="dialog-ok">Play again</button>
+        </div>
+      </form>
+    </dialog>
   </body>
 </html>

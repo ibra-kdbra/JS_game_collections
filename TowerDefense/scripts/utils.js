@@ -1,5 +1,3 @@
-new p5(); // p5.js global mode
-
 // Check if approximately at tile center
 const atTileCenter = (x, y, col, row) => {
     const c = center(col, row);
@@ -20,41 +18,12 @@ const center = (col, row) => createVector(col * ts + ts / 2, row * ts + ts / 2);
 // Copy 2D array
 const copyArray = (arr) => arr.map(row => [...row]);
 
-// Copy text to clipboard
-const copyToClipboard = (str) => {
-    const textArea = document.createElement('textarea');
-
-    // Ensure element is as invisible as possible
-    Object.assign(textArea.style, {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '2em',
-        height: '2em',
-        padding: 0,
-        border: 'none',
-        outline: 'none',
-        boxShadow: 'none',
-        background: 'transparent',
-    });
-
-    textArea.value = str;
-    document.body.appendChild(textArea);
-    textArea.select();
-
-    try {
-        const successful = document.execCommand('copy');
-        console.log(`Copying text was ${successful ? 'successful' : 'unsuccessful'}`);
-    } catch (err) {
-        console.log('Unable to copy to clipboard');
-        prompt('Map string:', str);
-    }
-
-    document.body.removeChild(textArea);
-};
-
 // Convert grid coordinates to string
 const cts = (col, row) => `${col},${row}`;
+
+// Short-lived shapes (shots, blasts) queued by game logic and drawn on the next frame
+const flashLine = (x1, y1, x2, y2, color, weight) => flashes.push({ line: [x1, y1, x2, y2], color, weight });
+const flashCircle = (x, y, d, color) => flashes.push({ circle: [x, y, d], color });
 
 // Returns an array of entities with a certain name
 const getByName = (entities, names) => {

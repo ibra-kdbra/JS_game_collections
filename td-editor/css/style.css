@@ -3,101 +3,109 @@
     src: url('../fonts/SourceCodePro-Regular.ttf');
 }
 
-::-webkit-scrollbar {
-    display: none;
+*, *::before, *::after {
+    box-sizing: border-box;
 }
 
 html, body {
     margin: 0;
     padding: 0;
+    height: 100%;
+    overflow: hidden;
 }
 
 body {
     background-color: #000;
     color: #00E640;
-    display: flex;
-    flex-direction: column;
     font-family: 'Source Code Pro', monospace;
-    max-height: 100vh;
-    min-height: 100vh;
+    height: 100dvh;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
 }
 
-
-/* Medium devices (tablets, 768px and below)
-@media (max-width: 1440px) {
-    body {
-        zoom: 0.9;
-        overflow: hidden; 
-    }
-} 
-*/
-
-
 /* Green borders, margins, and navy blue background */
-
 header, aside, #sketch-holder {
     border: 1px solid #00E640;
     border-radius: 10px;
-    margin: 2px;
 }
 
 header, aside {
     background-color: #013243;
 }
 
-
 /* Page content */
-
 header {
-    padding: 14px;
+    margin: 4px 4px 0;
+    padding: 10px 14px 10px 150px;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1, h2, h3 {
     margin: 0;
     text-align: center;
     text-shadow: 1px 1px 0 #000;
 }
 
+h1 {
+    font-size: 1.6em;
+}
+
+h2 {
+    font-size: 1.1em;
+    margin: 10px 0 6px;
+}
+
 main {
-    display: flex;
-    flex: 1;
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr) 240px;
+    grid-template-areas: "tiles sketch side";
+    gap: 4px;
+    padding: 4px;
+    min-height: 0;
 }
 
 aside {
-    overflow-y: scroll;
-    padding: 14px;
+    overflow-y: auto;
+    padding: 10px 12px;
+    scrollbar-width: thin;
 }
 
 p {
-    margin: 8px 0;
+    margin: 6px 0;
 }
 
-.group p:first-of-type {
-    margin-bottom: 0;
+.group {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
-.group p + p:not(:last-of-type) {
+.group p {
     margin: 0;
 }
 
-.group p:last-of-type {
-    margin-top: 0;
+#tiles {
+    grid-area: tiles;
 }
 
-#tiles button, #utils button {
+#tiles button, #utils button, #status button {
     color: #000;
-    min-width: 100%;
+    width: 100%;
     text-align: center;
     text-shadow: none;
 }
 
+#tiles button.active {
+    outline: 3px solid #fff;
+    outline-offset: -3px;
+    font-weight: 700;
+}
+
 #sketch-holder {
+    grid-area: sketch;
     background-color: #000;
-    flex: 1;
-    margin: 2px;
     overflow: hidden;
     position: relative;
+    min-height: 0;
 }
 
 canvas {
@@ -108,36 +116,78 @@ canvas {
     position: absolute;
     right: 0;
     top: 0;
+    touch-action: none;
 }
 
 button, select {
     background-color: #22313F;
+    border: 1px solid rgba(0, 0, 0, 0.6);
+    border-radius: 4px;
     color: #00E640;
     font-family: 'Source Code Pro', monospace;
     font-size: 0.85em;
     text-shadow: 1px 1px 0 #000;
+    cursor: pointer;
 }
 
 button {
-    height: 30px;
+    min-height: 30px;
+}
+
+button:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
 }
 
 .aside-holder {
+    grid-area: side;
     display: flex;
     flex-direction: column;
-    margin-right: 2px;
+    gap: 4px;
+    min-height: 0;
 }
 
 #status {
     font-size: 0.95em;
+    flex: none;
+}
+
+#status h2 {
+    margin-top: 0;
+}
+
+.size-row {
+    display: grid;
+    grid-template-columns: 1fr 44px 44px;
+    gap: 4px;
+    align-items: center;
+    margin: 4px 0;
+}
+
+#status .size-row button {
+    font-size: 1.1em;
+}
+
+#status .play {
+    min-height: 40px;
+    font-size: 1em;
+    font-weight: 700;
+}
+
+.play {
+    background-color: #00E640;
 }
 
 #utils {
     flex: 1;
 }
 
-#tiles {
-    width: 180px;
+#utils h2 {
+    margin-top: 0;
+}
+
+#utils .group + .group, #utils .group + p {
+    margin-top: 8px;
 }
 
 #deco-picker {
@@ -146,6 +196,144 @@ button {
 
 .light {
     color: #FFF !important;
+}
+
+/* Phones and narrow tablets in portrait: map on top, tools below */
+@media (max-width: 899px) and (orientation: portrait) {
+    header {
+        padding: 8px 8px 8px 112px;
+    }
+
+    h1 {
+        font-size: 1.2em;
+        text-align: left;
+    }
+
+    main {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: minmax(0, 1fr) minmax(0, 40%);
+        grid-template-areas: "sketch sketch" "tiles side";
+    }
+
+    .aside-holder {
+        overflow-y: auto;
+    }
+
+    #status, #utils {
+        overflow: visible;
+    }
+
+    h2 {
+        font-size: 1em;
+    }
+}
+
+/* Phones in landscape: tools in two side columns, no header */
+@media (max-height: 560px) and (orientation: landscape) {
+    body {
+        grid-template-rows: minmax(0, 1fr);
+    }
+
+    header {
+        display: none;
+    }
+
+    main {
+        grid-template-columns: 180px minmax(0, 1fr) 200px;
+    }
+
+    #tiles {
+        padding-top: 56px;
+    }
+
+    .aside-holder {
+        overflow-y: auto;
+    }
+
+    #status, #utils {
+        overflow: visible;
+    }
+}
+
+/* Dialogs and toasts (../TowerDefense/scripts/ui.js) */
+.td-dialog {
+    background-color: #013243;
+    border: 1px solid #00E640;
+    border-radius: 10px;
+    color: #00E640;
+    font-family: 'Source Code Pro', monospace;
+    width: min(440px, calc(100vw - 32px));
+    padding: 18px;
+}
+
+.td-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.td-dialog form {
+    margin: 0;
+}
+
+.td-dialog textarea {
+    width: 100%;
+    background: #000;
+    color: #fff;
+    border: 1px solid #00E640;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.8em;
+    padding: 8px;
+    resize: vertical;
+    word-break: break-all;
+}
+
+.dialog-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.dialog-buttons button {
+    flex: 1;
+    min-height: 42px;
+    color: #000;
+    text-shadow: none;
+    font-size: 0.95em;
+}
+
+.dialog-ok {
+    background-color: #00E640;
+}
+
+.dialog-cancel {
+    background-color: #95a5a6;
+}
+
+#toasts {
+    position: fixed;
+    left: 50%;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    z-index: 2147483100;
+    pointer-events: none;
+}
+
+.toast {
+    background: #013243;
+    border: 1px solid #00E640;
+    border-radius: 8px;
+    color: #fff;
+    padding: 8px 14px;
+    font-size: 0.85em;
+    max-width: calc(100vw - 32px);
+}
+
+.toast-error {
+    border-color: #ff6b6b;
 }
 
 

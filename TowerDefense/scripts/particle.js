@@ -19,11 +19,6 @@ class Particle {
         return this.lifespan < 0;
     }
 
-    run() {
-        if (!paused) this.update();
-        this.draw();
-    }
-
     update() {
         this.pos.add(this.vel);
         this.lifespan -= this.decay;

@@ -12,10 +12,14 @@ class ParticleSystem {
         return this.particles.length === 0;
     }
 
-    run() {
+    draw() {
+        this.particles.forEach(p => p.draw());
+    }
+
+    update() {
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
-            p.run();
+            p.update();
             if (p.isDead()) this.particles.splice(i, 1);
         }
     }

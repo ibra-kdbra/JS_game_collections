@@ -12,35 +12,6 @@ const center = (col, row) => createVector(col * ts + ts / 2, row * ts + ts / 2);
 // Copy 2d array
 const copyArray = (arr) => arr.map(row => [...row]);
 
-// Copy text to clipboard
-const copyToClipboard = (str) => {
-    const textArea = document.createElement('textarea');
-    textArea.style.position = 'fixed';
-    textArea.style.top = 0;
-    textArea.style.left = 0;
-    textArea.style.width = '2em';
-    textArea.style.height = '2em';
-    textArea.style.padding = 0;
-    textArea.style.border = 'none';
-    textArea.style.outline = 'none';
-    textArea.style.boxShadow = 'none';
-    textArea.style.background = 'transparent';
-
-    textArea.value = str;
-    document.body.appendChild(textArea);
-    textArea.select();
-
-    try {
-        const successful = document.execCommand('copy');
-        console.log(`Copying text was ${successful ? 'successful' : 'unsuccessful'}`);
-    } catch (err) {
-        console.log('Unable to copy to clipboard');
-        prompt('Map string:', str);
-    }
-
-    document.body.removeChild(textArea);
-};
-
 // Convert grid coordinates to string
 const cts = (col, row) => `${col},${row}`;
 

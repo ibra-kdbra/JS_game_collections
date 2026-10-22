@@ -44,12 +44,10 @@ class Missile {
     }
 
     explode() {
-        if (!muteSounds) sounds.boom.play();
+        playSound('boom');
         this.kill();
         const { x, y } = this.pos;
         const inRadius = getInRange(x, y, this.blastRadius, enemies);
-        noStroke();
-        fill(...this.color, 127);
         const r = (this.blastRadius + 0.5) * ts * 2;
         if (showEffects) {
             const s = new RocketExplosion(x, y);
@@ -58,7 +56,7 @@ class Missile {
             }
             systems.push(s);
         }
-        ellipse(x, y, r, r);
+        flashCircle(x, y, r, [...this.color, 127]);
         inRadius.forEach((e) => {
             const damage = Math.round(random(this.damageMax, this.damageMin));
             e.dealDamage(damage, 'explosion');

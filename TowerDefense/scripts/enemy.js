@@ -90,9 +90,7 @@ class Enemy {
         if (this.alive) {
             cash += this.cash;
             this.kill();
-            if (!muteSounds && sounds.hasOwnProperty(this.sound)) {
-                sounds[this.sound].play();
-            }
+            playSound(this.sound);
         }
     }
 
@@ -124,7 +122,19 @@ class Enemy {
         }
         this.vel.limit(96 / ts);
         this.vel.limit(this.pxSpeed());
-        this.pos.add(this.vel);
+
+        // Stop exactly on the tile center instead of stepping past it, so
+        // steering never misses a turn whatever the tile size or speed.
+        const t = gridPos(this.pos.x, this.pos.y);
+        const c = center(t.x, t.y);
+        const dx = c.x - this.pos.x;
+        const dy = c.y - this.pos.y;
+        const ahead = dx * this.vel.x + dy * this.vel.y > 0;
+        if (ahead && dx * dx + dy * dy <= this.vel.magSq()) {
+            this.pos.set(c.x, c.y);
+        } else {
+            this.pos.add(this.vel);
+        }
     }
 }
 

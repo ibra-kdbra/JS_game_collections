@@ -3,100 +3,94 @@
     src: url('../fonts/SourceCodePro-Regular.ttf');
 }
 
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
 html, body {
     margin: 0;
     padding: 0;
+    height: 100%;
+    overflow: hidden;
 }
 
 body {
     background-color: #000;
     color: #00E640;
-    display: flex;
-    flex-direction: column;
     font-family: 'Source Code Pro', monospace;
-    max-height: 100vh;
-    min-height: 100vh;
+    height: 100dvh;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 /* Green borders, margins, and navy blue background */
-header, aside, #sketch-holder {
+header, aside, #sketch-holder, #options {
     border: 1px solid #00E640;
     border-radius: 10px;
-    margin: 2px;
 }
 
-header, aside {
+header, aside, #options {
     background-color: #013243;
 }
 
-/* Page content */
 header {
-    padding: 14px;
+    margin: 4px 4px 0;
+    padding: 10px 14px 10px 150px;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1, h2, h3 {
     margin: 0;
     text-align: center;
     text-shadow: 1px 1px 0 #000;
 }
 
-main {
-    display: flex;
-    flex: 1;
-    flex-direction: row;
+h1 {
+    font-size: 1.6em;
+}
+
+h2 {
+    font-size: 1.1em;
+    margin-bottom: 8px;
 }
 
 a:link, a:visited {
     color: #00E640;
 }
 
-#left-asides, #right-asides {
-    display: flex;
-    flex-direction: column;
-}
-
-#left-asides {
-    margin-left: 2px;
-}
-
-#right-asides {
-    margin-right: 2px;
-    min-width: 195px;
+main {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr) 290px;
+    grid-template-areas: "store sketch side";
+    gap: 4px;
+    padding: 4px;
+    min-height: 0;
 }
 
 aside {
-    padding: 14px;
-}
-
-.group p:first-of-type {
-    margin-bottom: 0;
-}
-
-.group p + p:not(:last-of-type) {
-    margin: 0;
-}
-
-.group p:last-of-type {
-    margin-top: 0;
+    padding: 12px;
 }
 
 #store {
-    flex: 1;
-}
-
-#store button, #map-aside button {
-    color: #000;
-    min-width: 100%;
-    text-align: center;
-    text-shadow: none;
+    grid-area: store;
+    overflow-y: auto;
 }
 
 #sketch-holder {
+    grid-area: sketch;
     background-color: #000;
-    flex: 1;
-    margin: 2px;
     overflow: hidden;
     position: relative;
+    min-height: 0;
+}
+
+#side {
+    grid-area: side;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 canvas {
@@ -107,62 +101,182 @@ canvas {
     position: absolute;
     right: 0;
     top: 0;
+    touch-action: none;
 }
 
 button, select {
     background-color: #22313F;
+    border: 1px solid #4a6378;
+    border-radius: 4px;
     color: #00E640;
     font-family: 'Source Code Pro', monospace;
     font-size: 0.85em;
     text-shadow: 1px 1px 0 #000;
+    cursor: pointer;
 }
 
 button {
-    height: 30px;
+    min-height: 34px;
+    padding: 0 6px;
+}
+
+button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+button:focus-visible, select:focus-visible, summary:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+select {
+    min-height: 32px;
+    width: 100%;
 }
 
 .horiz-buttons {
     display: flex;
-    flex-direction: row;
-    min-width: 100%;
+    gap: 4px;
+    margin-top: 6px;
 }
 
 .horiz-buttons button {
-    display: block;
     flex: 1;
-    text-align: center;
 }
 
-#status {
-    font-size: 0.95em;
+/* Store */
+.store-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 5px;
 }
 
+.store-grid button {
+    color: #000;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 6px;
+    min-height: 38px;
+    text-align: left;
+    text-shadow: none;
+    border: 1px solid rgba(0, 0, 0, 0.6);
+}
+
+.store-grid b {
+    font-weight: 700;
+}
+
+.store-grid kbd {
+    font-family: inherit;
+    font-size: 0.8em;
+    opacity: 0.7;
+}
+
+.store-grid button.poor, #upgrade.poor {
+    opacity: 0.5;
+}
+
+/* Status */
+#status .stats {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 1em;
+}
+
+#health {
+    color: #ff6b6b;
+}
+
+#cash {
+    color: #f9bf3b;
+}
+
+#wave-note {
+    margin: 6px 0 0;
+    font-size: 0.8em;
+    min-height: 1.2em;
+    color: #9fdcb0;
+}
+
+/* Tower info */
 #info {
     flex: 1;
 }
 
 #info-div {
     display: none;
-    margin: 0;
 }
 
-#info p {
+#name {
+    font-size: 1em;
+}
+
+.info-stats {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 10px;
     font-size: 0.8em;
+    margin: 6px 0 0;
 }
 
-#info-buttons {
-    display: none;
+.info-stats dt {
+    color: #9fdcb0;
+}
+
+.info-stats dd {
+    margin: 0;
+    text-align: right;
 }
 
 #info-buttons button {
     color: #000;
-    font-size: 0.8em;
     text-shadow: none;
+}
+
+#hint {
+    font-size: 0.8em;
+    color: #9fdcb0;
+    margin: 6px 0 0;
+}
+
+#hint:empty {
+    display: none;
+}
+
+/* Options */
+#options {
+    padding: 0 12px;
+    font-size: 0.9em;
+}
+
+#options[open] {
+    padding-bottom: 12px;
+}
+
+#options summary {
+    cursor: pointer;
+    padding: 10px 0;
+    font-weight: 700;
+}
+
+#options label {
+    display: block;
+    margin: 6px 0;
+}
+
+#options p {
+    margin: 8px 0 0;
+    font-size: 0.85em;
 }
 
 /* Misc. buttons */
 .io {
     background-color: rgb(224, 130, 131);
+    color: #000;
+    text-shadow: none;
 }
 
 #sell {
@@ -202,70 +316,238 @@ button {
     background-color: rgb(255, 255, 0);
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-    main {
-        flex-direction: column;
-    }
-
-    #left-asides, #right-asides {
-        flex-direction: row;
-        flex-wrap: wrap;
-    }
-
-    #right-asides {
-        min-width: auto;
-    }
-
-    aside {
-        flex: 1 1 45%;
-        margin: 5px;
-    }
-
-    #sketch-holder {
-        order: -1;
-    }
-
-    .horiz-buttons {
-        flex-direction: column;
-    }
-
-    .horiz-buttons button {
-        margin: 5px 0;
-    }
-
-    #store button, #map-aside button {
-        min-width: auto;
-    }
+/* Dialogs and toasts (scripts/ui.js) */
+.td-dialog {
+    background-color: #013243;
+    border: 1px solid #00E640;
+    border-radius: 10px;
+    color: #00E640;
+    font-family: 'Source Code Pro', monospace;
+    width: min(440px, calc(100vw - 32px));
+    padding: 18px;
 }
 
-@media (max-width: 480px) {
+.td-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.td-dialog form {
+    margin: 0;
+}
+
+.td-dialog textarea {
+    width: 100%;
+    background: #000;
+    color: #fff;
+    border: 1px solid #00E640;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.8em;
+    padding: 8px;
+    resize: vertical;
+    word-break: break-all;
+}
+
+.td-dialog p {
+    color: #fff;
+}
+
+.dialog-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.dialog-buttons button {
+    flex: 1;
+    min-height: 42px;
+    color: #000;
+    text-shadow: none;
+    font-size: 0.95em;
+}
+
+.dialog-ok {
+    background-color: #00E640;
+}
+
+.dialog-cancel {
+    background-color: #95a5a6;
+}
+
+#toasts {
+    position: fixed;
+    left: 50%;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    z-index: 2147483100;
+    pointer-events: none;
+}
+
+.toast {
+    background: #013243;
+    border: 1px solid #00E640;
+    border-radius: 8px;
+    color: #fff;
+    padding: 8px 14px;
+    font-size: 0.85em;
+    max-width: calc(100vw - 32px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.toast-error {
+    border-color: #ff6b6b;
+}
+
+/* Tablets and phones in portrait: map on top, controls underneath */
+@media (max-width: 899px) and (orientation: portrait) {
     header {
-        padding: 10px;
+        padding: 8px 8px 8px 112px;
     }
 
     h1 {
-        font-size: 1.5em;
+        font-size: 1.2em;
+        text-align: left;
+    }
+
+    main {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) auto auto;
+        grid-template-areas: "sketch" "side" "store";
+    }
+
+    #store h2 {
+        display: none;
     }
 
     aside {
-        flex: 1 1 100%;
-        margin: 5px 0;
+        padding: 8px;
     }
 
-    button, select {
+    .store-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .store-grid button {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        text-align: center;
+        gap: 0;
+        min-height: 44px;
+        padding: 2px;
         font-size: 0.75em;
     }
 
+    .store-grid kbd {
+        display: none;
+    }
+
+    #side {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        overflow: visible;
+    }
+
     #status {
-        font-size: 0.85em;
+        grid-column: 1 / -1;
     }
 
-    #info p {
+    #status .horiz-buttons {
+        margin-top: 4px;
+    }
+
+    #wave-note {
+        display: none;
+    }
+
+    #info {
+        grid-column: 1 / -1;
+        min-height: 132px;
+    }
+
+    #info-div {
+        font-size: 0.9em;
+    }
+
+    .info-stats {
+        grid-template-columns: repeat(4, auto);
+    }
+
+    #name {
+        text-align: left;
+    }
+
+    #options {
+        grid-column: 1 / -1;
+        position: relative;
+    }
+
+    #options[open] > :not(summary) {
+        max-width: 100%;
+    }
+
+    #options[open] {
+        position: fixed;
+        left: 8px;
+        right: 8px;
+        bottom: max(8px, env(safe-area-inset-bottom));
+        z-index: 10;
+        box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.7);
+    }
+}
+
+/* Phones in landscape: controls in a column on the left, map on the right */
+@media (max-height: 560px) and (orientation: landscape) {
+    body {
+        grid-template-rows: minmax(0, 1fr);
+    }
+
+    header {
+        display: none;
+    }
+
+    main {
+        grid-template-columns: 240px minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+        grid-template-areas: "store sketch" "side sketch";
+        padding-top: 4px;
+    }
+
+    #store {
+        padding: 56px 8px 8px;
+        overflow: visible;
+    }
+
+    #store h2 {
+        display: none;
+    }
+
+    .store-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px;
+    }
+
+    .store-grid button {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        gap: 0;
+        min-height: 40px;
+        padding: 2px;
         font-size: 0.7em;
     }
 
-    #info-buttons button {
-        font-size: 0.7em;
+    .store-grid kbd {
+        display: none;
+    }
+
+    aside {
+        padding: 8px;
+    }
+
+    #wave-note {
+        display: none;
     }
 }

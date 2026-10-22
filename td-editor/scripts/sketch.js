@@ -37,26 +37,17 @@ const arrow = () => {
     line(-length / 2, 0, -back, width / 2);
 };
 
+// Return map string, or null (with a message) if the map is not playable yet
 const exportMap = () => {
     if (!spawnpoints || spawnpoints.length === 0) {
-        Toastify({
-            text: "Warning: No spawnpoints defined!",
-            backgroundColor: "red",
-            duration: 3000
-        }).showToast();
-        return;
+        toast('Add at least one spawnpoint first', 'error');
+        return null;
     }
-    if (!exit || !exit.x || !exit.y) {
-        Toastify({
-            text: "Warning: No exit defined!",
-            backgroundColor: "red",
-            duration: 3000
-        }).showToast();
-        return;
+    if (!exit) {
+        toast('Add an exit point first', 'error');
+        return null;
     }
 
-    // Convert spawnpoints into a JSON-friendly format
-    const spawns = spawnpoints.map(s => [s.x, s.y]);
     const mapData = {
         // Grids
         display,
@@ -66,7 +57,7 @@ const exportMap = () => {
         paths,
         // Important tiles
         exit: [exit.x, exit.y],
-        spawnpoints: spawns,
+        spawnpoints: spawnpoints.map(s => [s.x, s.y]),
         // Colors
         bg,
         border,
@@ -76,16 +67,7 @@ const exportMap = () => {
         rows
     };
 
-    const compressedMap = LZString.compressToBase64(JSON.stringify(mapData));
-
-    // Display success notification
-    Toastify({
-        text: "Map exported successfully!",
-        backgroundColor: "green",
-        duration: 3000
-    }).showToast();
-
-    return compressedMap;
+    return LZString.compressToBase64(JSON.stringify(mapData));
 };
 
 // Generate display layer
@@ -137,66 +119,58 @@ const importMap = (str) => {
         rows = m.rows;
 
         resizeFit();
-
-        // Display success notification
-        Toastify({
-            text: "Map imported successfully!",
-            backgroundColor: "green",
-            duration: 3000
-        }).showToast();
+        toast('Map imported', 'ok');
     } catch (err) {
-        console.error('Error importing map:', err);
-
-        // Display error notification
-        Toastify({
-            text: "Failed to import map. Please check the input.",
-            backgroundColor: "red",
-            duration: 3000
-        }).showToast();
+        toast('That is not a valid map string', 'error');
     }
 };
 
 function showImportMapPrompt() {
-    Swal.fire({
-        title: 'Input map string:',
-        input: 'textarea',
-        inputPlaceholder: 'Paste your map string here...',
-        showCancelButton: true,
-        confirmButtonText: 'Import',
-        cancelButtonText: 'Cancel',
-        inputValidator: (value) => {
-            if (!value) {
-                return 'Please enter a map string!';
-            }
-        },
-        customClass: {
-            popup: 'custom-swal-popup',
-            header: 'custom-swal-header',
-            title: 'custom-swal-title',
-            input: 'custom-swal-input',
-            cancelButton: 'custom-swal-cancel-btn',
-            confirmButton: 'custom-swal-confirm-btn',
-            actions: 'custom-swal-actions'
-        },
-        background: '#013243',
-        color: '#fff',
-        buttonsStyling: false,
-        width: '400px'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const mapString = result.value;
-            importMap(mapString);
-        }
+    textDialog({
+        title: 'Paste a map string',
+        placeholder: 'Map string from the game or this editor',
+        confirmLabel: 'Import'
+    }).then(str => {
+        if (str) importMap(str);
     });
 }
 
+function showExportMap() {
+    const str = exportMap();
+    if (str) textDialog({ title: 'Map string', value: str, readOnly: true });
+}
 
+// Check that every spawnpoint can reach the exit, then open the map in the game
+function playMap() {
+    if (!exit || spawnpoints.length === 0) {
+        exportMap();
+        return;
+    }
+    const walk = getWalkMap();
+    const seen = new Set([vts(exit)]);
+    const frontier = [vts(exit)];
+    while (frontier.length) {
+        const t = stv(frontier.shift());
+        neighbors(walk, t.x, t.y, true).forEach(n => {
+            if (!seen.has(n)) {
+                seen.add(n);
+                frontier.push(n);
+            }
+        });
+    }
+    if (spawnpoints.some(s => !seen.has(vts(s)))) {
+        toast('A spawnpoint cannot reach the exit', 'error');
+        return;
+    }
+    GameKit.createStore('tower-defense').set('customMap', exportMap());
+    location.href = '../TowerDefense/index.html?map=custom';
+}
 
 // Recalculate pathfinding maps
 // Algorithm from https://www.redblobgames.com/pathfinding/tower-defense/
 function recalculate() {
     if (!exit) return;
-    walkMap = getWalkMap();
+    const walkMap = getWalkMap();
     const frontier = [];
     const target = vts(exit);
     frontier.push(target);
@@ -264,9 +238,10 @@ function resetMap(t) {
 // Changes tile size to fit everything onscreen
 function resizeFit() {
     const div = document.getElementById('sketch-holder');
-    const ts1 = Math.floor(div.offsetWidth / cols);
-    const ts2 = Math.floor(div.offsetHeight / rows);
-    ts = Math.min(ts1, ts2);
+    if (!div.clientWidth || !div.clientHeight) return;
+    const ts1 = Math.floor(div.clientWidth / cols);
+    const ts2 = Math.floor(div.clientHeight / rows);
+    ts = Math.max(2, Math.min(ts1, ts2));
     resizeCanvas(cols * ts, rows * ts, true);
     updateStatus();
 }
@@ -274,10 +249,34 @@ function resizeFit() {
 // Resizes cols, rows, and canvas based on tile size
 function resizeMax() {
     const div = document.getElementById('sketch-holder');
-    cols = Math.floor(div.offsetWidth / ts);
-    rows = Math.floor(div.offsetHeight / ts);
+    cols = Math.max(4, Math.floor(div.clientWidth / ts));
+    rows = Math.max(4, Math.floor(div.clientHeight / ts));
     resizeCanvas(cols * ts, rows * ts, true);
     updateStatus();
+}
+
+// Add or remove columns and rows (resets the map)
+function changeSize(dc, dr) {
+    cols = constrain(cols + dc, 4, 60);
+    rows = constrain(rows + dr, 4, 60);
+    resizeFit();
+    resetMap(0);
+}
+
+function resetZoom() {
+    ts = zoomDefault;
+    resizeMax();
+    resetMap(0);
+}
+
+function toggleDispMode() {
+    dispMode = !dispMode;
+    updateDivs();
+}
+
+function toggleAutogen() {
+    autogen = !autogen;
+    document.getElementById('autogen').textContent = `Turn Autogen ${autogen ? 'Off' : 'On'} (D)`;
 }
 
 // Store selected tile in appropriate location
@@ -287,6 +286,13 @@ function selectTile(t, d) {
     } else {
         dispMode ? deco = d : tile = t;
     }
+    markSelected();
+}
+
+// Highlight the buttons of the current tile and decoration
+function markSelected() {
+    document.querySelectorAll('[data-tile]').forEach(b => b.classList.toggle('active', b.dataset.tile === tile));
+    document.querySelectorAll('[data-deco]').forEach(b => b.classList.toggle('active', b.dataset.deco === deco));
 }
 
 // Update tile- and decoration-selection divs
@@ -304,13 +310,13 @@ function updateDivs() {
 
 // Update map status display
 function updateStatus() {
-    document.getElementById('dim').innerHTML = `Dim: ${cols}x${rows}`;
+    document.getElementById('dim').textContent = `Size: ${cols} x ${rows}`;
 }
 
-// User drawing on map
-function userDraw() {
-    if (!mouseInMap()) return;
-    const p = gridPos(mouseX, mouseY);
+// User drawing on map at a canvas pixel position
+function userDraw(x, y) {
+    const p = gridPos(x, y);
+    if (p.x < 0 || p.y < 0 || p.x >= cols || p.y >= rows) return;
     const g = grid[p.x][p.y];
 
     if (dispMode) {
@@ -377,21 +383,51 @@ const walkable = (col, row) => grid[col][row] !== 1 && grid[col][row] !== 3;
 // Main p5 functions
 function setup() {
     const div = document.getElementById('sketch-holder');
-    const canvas = createCanvas(div.offsetWidth, div.offsetHeight);
+    const canvas = createCanvas(div.clientWidth || 300, div.clientHeight || 300);
     canvas.parent('sketch-holder');
     resizeMax();
     resetMap(0);
+    markSelected();
+
+    // Paint with mouse, pen or finger
+    const el = canvas.elt;
+    const toCanvas = (e) => {
+        const r = el.getBoundingClientRect();
+        return [(e.clientX - r.left) * width / r.width, (e.clientY - r.top) * height / r.height];
+    };
+    let painting = false;
+    let last = null;
+    // Paint every tile between two pointer positions so fast strokes leave no gaps
+    const paintTo = (x, y) => {
+        const steps = last ? Math.ceil(Math.max(Math.abs(x - last[0]), Math.abs(y - last[1])) / (ts / 2)) : 0;
+        for (let i = 1; i <= steps; i++) {
+            userDraw(lerp(last[0], x, i / steps), lerp(last[1], y, i / steps));
+        }
+        if (!steps) userDraw(x, y);
+        last = [x, y];
+    };
+    el.addEventListener('pointerdown', e => {
+        if (e.button !== 0) return;
+        painting = true;
+        last = null;
+        el.setPointerCapture(e.pointerId);
+        paintTo(...toCanvas(e));
+    });
+    el.addEventListener('pointermove', e => {
+        const [x, y] = toCanvas(e);
+        const t = gridPos(x, y);
+        if (t.x >= 0 && t.y >= 0 && t.x < cols && t.y < rows) {
+            document.getElementById('coord').textContent = `Tile: (${t.x}, ${t.y})`;
+        }
+        if (painting) paintTo(x, y);
+    });
+    ['pointerup', 'pointercancel'].forEach(type => el.addEventListener(type, () => { painting = false; }));
+
+    new ResizeObserver(() => resizeFit()).observe(div);
 }
 
 function draw() {
     background(dispMode ? bg : 255);
-
-    // Update mouse coordinates
-    if (mouseInMap()) {
-        const t = gridPos(mouseX, mouseY);
-        const coordText = `Mouse: (${t.x}, ${t.y})`;
-        document.getElementById('coord').innerHTML = coordText;
-    }
 
     // Draw basic tiles
     for (let x = 0; x < cols; x++) {
@@ -455,12 +491,26 @@ function draw() {
 
 // User input
 
-function keyPressed() {
-    switch (keyCode) {
+document.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (document.querySelector('dialog[open]')) return;
+    if (e.target.closest && e.target.closest('input, textarea, select')) return;
+    if (e.key === ' ') e.preventDefault();
+    onKey(e.keyCode, e.shiftKey);
+});
+
+document.querySelectorAll('[data-tile]').forEach(b => {
+    b.addEventListener('click', () => { tile = b.dataset.tile; markSelected(); });
+});
+document.querySelectorAll('[data-deco]').forEach(b => {
+    b.addEventListener('click', () => { deco = b.dataset.deco; markSelected(); });
+});
+
+function onKey(code, shift) {
+    switch (code) {
         case 32:
             // Spacebar
-            dispMode = !dispMode;
-            updateDivs();
+            toggleDispMode();
             break;
         case 37:
             // Left arrow
@@ -512,7 +562,10 @@ function keyPressed() {
             break;
         case 56:
             // 8
-            if (dispMode) deco = 'sidewalk';
+            if (dispMode) {
+                deco = 'sidewalk';
+                markSelected();
+            }
             break;
         case 67:
             // C
@@ -521,10 +574,7 @@ function keyPressed() {
             break;
         case 68:
             // D
-            autogen = !autogen;
-            var state = autogen ? 'Off' : 'On';
-            var a = document.getElementById('autogen');
-            a.innerHTML = 'Turn Autogen ' + state + ' (D)';
+            toggleAutogen();
             break;
         case 70:
             // F
@@ -536,7 +586,7 @@ function keyPressed() {
             break;
         case 77:
             // M
-            importMap(prompt('Input map string:'));
+            showImportMapPrompt();
             break;
         case 80:
             // P
@@ -560,47 +610,21 @@ function keyPressed() {
             break;
         case 88:
             // X
-            copyToClipboard(exportMap());
+            showExportMap();
             break;
         case 90:
             // Z
-            ts = zoomDefault;
-            resizeMax();
-            resetMap(0);
+            resetZoom();
             break;
         case 219:
             // Left bracket
-            if (keyIsDown(SHIFT)) {
-                if (rows > 1) {
-                    rows--;
-                    resizeFit();
-                    resetMap(0);
-                }
-            } else {
-                if (cols > 1) {
-                    cols--;
-                    resizeFit();
-                    resetMap(0);
-                }
-            }
+            shift ? changeSize(0, -1) : changeSize(-1, 0);
             break;
         case 221:
             // Right bracket
-            if (keyIsDown(SHIFT)) {
-                rows++;
-            } else {
-                cols++;
-            }
-            resizeFit();
-            resetMap(0);
+            shift ? changeSize(0, 1) : changeSize(1, 0);
             break;
     }
 }
 
-function mouseDragged() {
-    userDraw();
-}
-
-function mousePressed() {
-    userDraw();
-}
+GameKit.initShell();

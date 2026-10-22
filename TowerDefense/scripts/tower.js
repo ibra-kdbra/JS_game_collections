@@ -46,9 +46,7 @@ class Tower {
     attack(e) {
         const damage = Math.round(Math.random() * (this.damageMax - this.damageMin) + this.damageMin);
         e.dealDamage(damage, this.type);
-        if (!muteSounds && sounds.hasOwnProperty(this.sound)) {
-            sounds[this.sound].play();
-        }
+        playSound(this.sound);
         this.onHit(e);
     }
 
@@ -113,10 +111,7 @@ class Tower {
         this.attack(e);
         // Draw line to target
         if (!this.drawLine) return;
-        stroke(this.color);
-        strokeWeight(this.weight);
-        line(this.pos.x, this.pos.y, e.pos.x, e.pos.y);
-        strokeWeight(1);
+        flashLine(this.pos.x, this.pos.y, e.pos.x, e.pos.y, this.color, this.weight);
     }
 
     onCreate() {

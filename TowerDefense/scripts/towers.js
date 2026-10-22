@@ -133,10 +133,8 @@ const tower = {
             if (entities.length === 0) return;
             if (!this.canFire()) return;
             this.resetCooldown();
-            noStroke();
-            fill(this.color[0], this.color[1], this.color[2], 127);
             const r = this.range * 2 + 1;
-            ellipse(this.pos.x, this.pos.y, r * ts, r * ts);
+            flashCircle(this.pos.x, this.pos.y, r * ts, [...this.color, 127]);
             entities.forEach((entity) => {
                 this.onAim(entity);
             });
@@ -243,9 +241,7 @@ const tower = {
                 onHit(e) {
                     const blastRadius = 1;
                     const inRadius = getInRange(e.pos.x, e.pos.y, blastRadius, enemies);
-                    noStroke();
-                    fill(this.color[0], this.color[1], this.color[2], 127);
-                    ellipse(e.pos.x, e.pos.y, ts * 2.5, ts * 2.5);
+                    flashCircle(e.pos.x, e.pos.y, ts * 2.5, [...this.color, 127]);
                     if (showEffects) {
                         const s = new ShrapnelExplosion(e.pos.x, e.pos.y);
                         for (let i = 0; i < particleAmt; i++) {
@@ -319,9 +315,7 @@ tower.rocket = {
         if (!this.canFire()) return;
         this.resetCooldown();
         projectiles.push(new Missile(this.pos.x, this.pos.y, e));
-        if (!muteSounds && sounds.hasOwnProperty(this.sound)) {
-            sounds[this.sound].play();
-        }
+        playSound(this.sound);
     },
     
     // Upgrades
@@ -378,9 +372,7 @@ tower.rocket = {
                 m.accAmt = 0.7;
                 m.topSpeed = (6 * 24) / ts;
                 projectiles.push(m);
-                if (!muteSounds && sounds.hasOwnProperty(this.sound)) {
-                    sounds[this.sound].play();
-                }
+                playSound(this.sound);
             }
         }
     ]
@@ -419,9 +411,7 @@ tower.bomb = {
     onHit(e) {
         const blastRadius = 1;
         const inRadius = getInRange(e.pos.x, e.pos.y, blastRadius, enemies);
-        noStroke();
-        fill(191, 85, 236, 127);
-        ellipse(e.pos.x, e.pos.y, ts * 2.5, ts * 2.5);
+        flashCircle(e.pos.x, e.pos.y, ts * 2.5, [191, 85, 236, 127]);
         if (showEffects) {
             const s = new BombExplosion(e.pos.x, e.pos.y);
             for (let i = 0; i < particleAmt; i++) {
@@ -463,9 +453,7 @@ tower.bomb = {
             onHit(e) {
                 const blastRadius = 1;
                 const inRadius = getInRange(e.pos.x, e.pos.y, blastRadius, enemies);
-                noStroke();
-                fill(191, 85, 236, 127);
-                ellipse(e.pos.x, e.pos.y, ts * 2.5, ts * 2.5);
+                flashCircle(e.pos.x, e.pos.y, ts * 2.5, [191, 85, 236, 127]);
                 if (showEffects) {
                     const s = new BombExplosion(e.pos.x, e.pos.y);
                     for (let i = 0; i < particleAmt / 2; i++) {
@@ -531,9 +519,7 @@ tower.tesla = {
     onHit(e) {
         const amt = round(random(this.damageMin, this.damageMax));
         e.dealDamage(amt, this.type);
-        if (!muteSounds && sounds.hasOwnProperty(this.sound)) {
-            sounds[this.sound].play();
-        }
+        playSound(this.sound);
     },
     
     upgrades: [
@@ -569,9 +555,7 @@ tower.tesla = {
             onHit(e) {
                 const amt = round(random(this.damageMin, this.damageMax));
                 e.dealDamage(amt, this.type);
-                if (!muteSounds && sounds.hasOwnProperty(this.sound)) {
-                    sounds[this.sound].play();
-                }
+                playSound(this.sound);
             }
         }
     ]

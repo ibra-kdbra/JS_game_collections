@@ -219,9 +219,7 @@ enemy.spawner = {
         if (this.alive) {
             cash += this.cash;
             this.kill();
-            if (!muteSounds && sounds.hasOwnProperty(this.sound)) {
-                sounds[this.sound].play();
-            }
+            playSound(this.sound);
 
             // Add new temporary spawnpoint
             const c = gridPos(this.pos.x, this.pos.y);

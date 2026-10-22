@@ -5,13 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Map Editor</title>
     <link href="css/style.css" rel="stylesheet">
-    <link href="css/custom_import.css" rel="stylesheet">
     <link href="../assets/icons/map.svg" rel="icon" type="image/svg+xml" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.2/p5.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js@1.12.0/src/toastify.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/toastify-js@1.12.0/src/toastify.min.js"></script>
+    <script type="module" src="../assets/kit/index.js"></script>
+    <script src="../TowerDefense/vendor/p5-1.11.2.min.js" defer></script>
+    <script src="../TowerDefense/vendor/lz-string-1.5.0.min.js" defer></script>
+    <script src="../TowerDefense/scripts/ui.js" defer></script>
     <script src="scripts/utils.js" defer></script>
     <script src="scripts/tiles.js" defer></script>
     <script src="scripts/sketch.js" defer></script>
@@ -26,84 +24,84 @@
         <div id="tile-picker">
           <h2>Tiles</h2>
           <div class="group">
-            <p><button class="empty" onclick="tile='empty'">Empty Tile (1)</button></p>
-            <p><button class="wall" onclick="tile='wall'">Wall Tile (2)</button></p>
-            <p><button class="path" onclick="tile='path'">Path Tile (3)</button></p>
-            <p><button class="tower" onclick="tile='tower'">Tower Tile (4)</button></p>
-            <p><button class="enemy" onclick="tile='enemy'">Enemy-Only Tile (5)</button></p>
+            <p><button class="empty" data-tile="empty">Empty Tile (1)</button></p>
+            <p><button class="wall" data-tile="wall">Wall Tile (2)</button></p>
+            <p><button class="path" data-tile="path">Path Tile (3)</button></p>
+            <p><button class="tower" data-tile="tower">Tower Tile (4)</button></p>
+            <p><button class="enemy" data-tile="enemy">Enemy-Only Tile (5)</button></p>
           </div>
   
           <h2>Special</h2>
           <div class="group">
-            <p><button class="spawn" onclick="tile='spawn'">Spawnpoint (6)</button></p>
-            <p><button class="exit" onclick="tile='exit'">Exit Point (7)</button></p>
+            <p><button class="spawn" data-tile="spawn">Spawnpoint (6)</button></p>
+            <p><button class="exit" data-tile="exit">Exit Point (7)</button></p>
           </div>
   
           <h2>Paths</h2>
           <div class="group">
-            <p><button class="dir" onclick="tile='none'">No Path (0)</button></p>
-            <p><button class="dir" onclick="tile='left'">Left Path (left)</button></p>
-            <p><button class="dir" onclick="tile='up'">Up Path (up)</button></p>
-            <p><button class="dir" onclick="tile='right'">Right Path (right)</button></p>
-            <p><button class="dir" onclick="tile='down'">Down Path (down)</button></p>
+            <p><button class="dir" data-tile="none">No Path (0)</button></p>
+            <p><button class="dir" data-tile="left">Left Path (left)</button></p>
+            <p><button class="dir" data-tile="up">Up Path (up)</button></p>
+            <p><button class="dir" data-tile="right">Right Path (right)</button></p>
+            <p><button class="dir" data-tile="down">Down Path (down)</button></p>
           </div>
         </div>
         <div id="deco-picker">
           <h2>Decorative</h2>
           <div class="group">
-            <p><button class="emptyD light" onclick="deco='empty'">Empty Tile (1)</button></p>
-            <p><button class="wallD light" onclick="deco='wall'">Wall Tile (2)</button></p>
-            <p><button class="towerD light" onclick="deco='tower'">Tower Tile (3)</button></p>
+            <p><button class="emptyD light" data-deco="empty">Empty Tile (1)</button></p>
+            <p><button class="wallD light" data-deco="wall">Wall Tile (2)</button></p>
+            <p><button class="towerD light" data-deco="tower">Tower Tile (3)</button></p>
           </div>
 
           <h2>Direction</h2>
           <div class="group">
-            <p><button class="dir" onclick="deco='none'">None (0)</button></p>
-            <p><button class="dir" onclick="deco='left'">Left (left)</button></p>
-            <p><button class="dir" onclick="deco='up'">Up (up)</button></p>
-            <p><button class="dir" onclick="deco='right'">Right (right)</button></p>
-            <p><button class="dir" onclick="deco='down'">Down (down)</button></p>
+            <p><button class="dir" data-deco="none">None (0)</button></p>
+            <p><button class="dir" data-deco="left">Left (left)</button></p>
+            <p><button class="dir" data-deco="up">Up (up)</button></p>
+            <p><button class="dir" data-deco="right">Right (right)</button></p>
+            <p><button class="dir" data-deco="down">Down (down)</button></p>
           </div>
 
           <h2>City</h2>
           <div class="group">
-            <p><button class="grass" onclick="deco='grass'">Grass (4)</button></p>
-            <p><button class="road" onclick="deco='road'">Road Tile (5)</button></p>
-            <p><button class="road" onclick="deco='lCorner'">Left Corner (6)</button></p>
-            <p><button class="road" onclick="deco='rCorner'">Right Corner (7)</button></p>
-            <p><button class="sidewalk" onclick="deco='sidewalk'">Sidewalk (8)</button></p>
+            <p><button class="grass" data-deco="grass">Grass (4)</button></p>
+            <p><button class="road" data-deco="road">Road Tile (5)</button></p>
+            <p><button class="road" data-deco="lCorner">Left Corner (6)</button></p>
+            <p><button class="road" data-deco="rCorner">Right Corner (7)</button></p>
+            <p><button class="sidewalk" data-deco="sidewalk">Sidewalk (8)</button></p>
           </div>
 
           <h2>Neon</h2>
           <div class="group">
-            <p><button class="neon_pink" onclick="deco='neon_pink'">Pink</button></p>
-            <p><button class="neon_yellow" onclick="deco='neon_yellow'">Yellow</button></p>
-            <p><button class="neon_green" onclick="deco='neon_green'">Green</button></p>
-            <p><button class="neon_orange" onclick="deco='neon_orange'">Orange</button></p>
-            <p><button class="neon_purple light" onclick="deco='neon_purple'">Purple</button></p>
+            <p><button class="neon_pink" data-deco="neon_pink">Pink</button></p>
+            <p><button class="neon_yellow" data-deco="neon_yellow">Yellow</button></p>
+            <p><button class="neon_green" data-deco="neon_green">Green</button></p>
+            <p><button class="neon_orange" data-deco="neon_orange">Orange</button></p>
+            <p><button class="neon_purple light" data-deco="neon_purple">Purple</button></p>
           </div>
 
           <h2>Colors</h2>
           <div class="group">
-            <p><button class="c0_lightBrown" onclick="deco='c0_lightBrown'">Light Brown</button></p>
-            <p><button class="c0_lightPurple" onclick="deco='c0_lightPurple'">Light Purple</button></p>
-            <p><button class="c0_mediumPurple light" onclick="deco='c0_mediumPurple'">Medium Purple</button></p>
-            <p><button class="c0_darkPurple light" onclick="deco='c0_darkPurple'">Dark Purple</button></p>
-            <p><button class="c0_paleGreen" onclick="deco='c0_paleGreen'">Pale Green</button></p>
+            <p><button class="c0_lightBrown" data-deco="c0_lightBrown">Light Brown</button></p>
+            <p><button class="c0_lightPurple" data-deco="c0_lightPurple">Light Purple</button></p>
+            <p><button class="c0_mediumPurple light" data-deco="c0_mediumPurple">Medium Purple</button></p>
+            <p><button class="c0_darkPurple light" data-deco="c0_darkPurple">Dark Purple</button></p>
+            <p><button class="c0_paleGreen" data-deco="c0_paleGreen">Pale Green</button></p>
           </div>
           <div class="group">
-            <p><button class="c1_darkBlue light" onclick="deco='c1_darkBlue'">Dark Blue</button></p>
-            <p><button class="c1_mediumBlue light" onclick="deco='c1_mediumBlue'">Medium Blue</button></p>
-            <p><button class="c1_lightBlue" onclick="deco='c1_lightBlue'">Light Blue</button></p>
-            <p><button class="c1_darkPurple light" onclick="deco='c1_darkPurple'">Dark Purple</button></p>
-            <p><button class="c1_neonPink" onclick="deco='c1_neonPink'">Neon Pink</button></p>
+            <p><button class="c1_darkBlue light" data-deco="c1_darkBlue">Dark Blue</button></p>
+            <p><button class="c1_mediumBlue light" data-deco="c1_mediumBlue">Medium Blue</button></p>
+            <p><button class="c1_lightBlue" data-deco="c1_lightBlue">Light Blue</button></p>
+            <p><button class="c1_darkPurple light" data-deco="c1_darkPurple">Dark Purple</button></p>
+            <p><button class="c1_neonPink" data-deco="c1_neonPink">Neon Pink</button></p>
           </div>
           <div class="group">
-            <p><button class="c2_darkRed light" onclick="deco='c2_darkRed'">Dark Red</button></p>
-            <p><button class="c2_navyBlue light" onclick="deco='c2_navyBlue'">Navy Blue</button></p>
-            <p><button class="c2_darkBlue light" onclick="deco='c2_darkBlue'">Dark Blue</button></p>
-            <p><button class="c2_paleYellow" onclick="deco='c2_paleYellow'">Pale Yellow</button></p>
-            <p><button class="c2_lightYellow" onclick="deco='c2_lightYellow'">Light Yellow</button></p>
+            <p><button class="c2_darkRed light" data-deco="c2_darkRed">Dark Red</button></p>
+            <p><button class="c2_navyBlue light" data-deco="c2_navyBlue">Navy Blue</button></p>
+            <p><button class="c2_darkBlue light" data-deco="c2_darkBlue">Dark Blue</button></p>
+            <p><button class="c2_paleYellow" data-deco="c2_paleYellow">Pale Yellow</button></p>
+            <p><button class="c2_lightYellow" data-deco="c2_lightYellow">Light Yellow</button></p>
           </div>
         </div>
       </aside>
@@ -112,9 +110,20 @@
 
       <div class="aside-holder">
         <aside id="status">
-          <h2>Status</h2>
+          <h2>Map</h2>
           <p id="dim"></p>
-          <p id="coord">Mouse: (0, 0)</p>
+          <p id="coord">Tile: (0, 0)</p>
+          <div class="size-row">
+            <span>Columns</span>
+            <button class="zoom" onclick="changeSize(-1, 0)" aria-label="Fewer columns">&minus;</button>
+            <button class="zoom" onclick="changeSize(1, 0)" aria-label="More columns">+</button>
+          </div>
+          <div class="size-row">
+            <span>Rows</span>
+            <button class="zoom" onclick="changeSize(0, -1)" aria-label="Fewer rows">&minus;</button>
+            <button class="zoom" onclick="changeSize(0, 1)" aria-label="More rows">+</button>
+          </div>
+          <p><button class="play" onclick="playMap()">Play this map</button></p>
         </aside>
 
         <aside id="utils">
@@ -125,21 +134,21 @@
           </div>
           <div class="group">
             <p><button class="io" onclick="showImportMapPrompt()">Import map (M)</button></p>
-            <p><button class="io" onclick="copyToClipboard(exportMap())">Export map (X)</button></p>
+            <p><button class="io" onclick="showExportMap()">Export map (X)</button></p>
           </div>
           <div class="group">
             <p><button class="dir" onclick="recalculate()">Auto-Pathfind (P)</button></p>
-            <p><button class="dir" onclick="paths=buildArray(cols,rows,null)">Clear Pathfinding (Q)</button></p>
-          </div class="group">
+            <p><button class="dir" onclick="paths=buildArray(cols,rows,0)">Clear Pathfinding (Q)</button></p>
+          </div>
           <div class="group">
-            <p><button class="disp" onclick="dispMode=!dispMode;updateDivs()">Display Mode (Space)</button></p>
-            <p><button class="disp" id="autogen" onclick="autogen=!autogen;var state=autogen?'Off':'On';document.getElementById('autogen').innerHTML='Turn Autogen '+state+' (D)'">Turn Autogen Off (D)</button></p>
-            <p><button class="disp" onclick="autogenDisplay()">Update Display (U)</button></p>
+            <p><button class="disp" onclick="toggleDispMode()">Display Mode (Space)</button></p>
+            <p><button class="disp" id="autogen" onclick="toggleAutogen()">Turn Autogen Off (D)</button></p>
+            <p><button class="disp" onclick="genDisplay()">Update Display (U)</button></p>
             <p><button class="disp" onclick="displayDir=copyArray(paths)">Display Paths (L)</button></p>
             <p><button class="disp" onclick="display=buildArray(cols,rows,'empty');displayDir=buildArray(cols,rows,0)">Clear Display (C)</button></p>
           </div>
           <p><button class="spawn" onclick="spawnpoints=[]">Clear Spawns (S)</button></p>
-          <p><button class="zoom" onclick="ts=zoomDefault;resizeMax();resetMap(0)">Reset Zoom (Z)</button></p>
+          <p><button class="zoom" onclick="resetZoom()">Reset Zoom (Z)</button></p>
         </aside>
       </div>
     </main>
