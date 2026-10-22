@@ -180,6 +180,15 @@ export const games = [
     inputs: ['mouse', 'keyboard', 'touch'],
     mobile: true,
   },
+  {
+    slug: 'sokoban',
+    title: 'Crate Lab',
+    href: 'Sokoban/index.html',
+    blurb: 'A Sokoban-style puzzle: push every crate onto a pad across 40 original levels, and try to match the solver-proven par.',
+    genre: 'puzzle',
+    inputs: ['keyboard', 'mouse', 'touch'],
+    mobile: true,
+  },
 ];
 
 export const experiments = [
