@@ -25,7 +25,6 @@ export class Player{
         this.currentState = null;
     }
     draw(context){
-        if(this.game.debug) context.strokeRect(this.x, this.y, this.width, this.height);
         context.drawImage(this.image, this.frameX * this.width, this.frameY * this.height , this.width, this.height, 
             this.x, this.y, this.width, this.height);
     }
@@ -83,7 +82,7 @@ export class Player{
                     this.game.floatingMessages.push(new FloatingMessages('+1', enemy.x, enemy.y, 150, 50));
                 }else{
                     this.setState(6, 0);
-                    this.game.score -= 5;
+                    this.game.score = Math.max(0, this.game.score - 5);
                     this.game.lives--;
                     if(this.game.lives <= 0) this.game.gameOver = true;
                 }

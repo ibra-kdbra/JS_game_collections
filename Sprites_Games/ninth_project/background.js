@@ -40,7 +40,7 @@ export class Background {
       this.width,
       this.height,
       0,
-      this.layer5Image
+      this.layer1Image
     );
     this.layer2 = new Layer(
       this.game,

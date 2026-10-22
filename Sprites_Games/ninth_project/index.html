@@ -3,26 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Final_Project</title>
+    <title>Shadow Dog Runner</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Creepster&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <canvas id="canvas1"></canvas>
-    <img src="./images/player.png" id="player">
-    <img src="./images/forest_background/layer-1.png" id="layer1">
-    <img src="./images/forest_background/layer-2.png" id="layer2">
-    <img src="./images/forest_background/layer-3.png" id="layer3">
-    <img src="./images/forest_background/layer-4.png" id="layer4">
-    <img src="./images/forest_background/layer-5.png" id="layer5">
-    <img src="./images/enemy_plant.png" id="enemy_plant">
-    <img src="./images/enemy_spider_big.png" id="enemy_big_spider">
-    <img src="./images/enemy_fly.png" id="enemy_fly">
-    <img src="./images/fire.png" id="fire">
-    <img src="./images/boom.png" id="boom">
-    <img src="./images/heart.png" id="heart">
+    <main class="stage">
+        <canvas id="canvas1" tabindex="-1" aria-label="Shadow Dog Runner"></canvas>
+
+        <section class="screen" id="menu" aria-labelledby="menu-title">
+            <h1 id="menu-title">Shadow Dog Runner</h1>
+            <p class="lead">Roll through the creatures of the night. Touching them any other way costs a life.</p>
+            <div class="modes">
+                <button type="button" data-start="classic">
+                    <strong>Classic</strong>
+                    <span>40 points in 30 seconds</span>
+                    <small>Best: <b data-best="classic">-</b></small>
+                </button>
+                <button type="button" data-start="endless">
+                    <strong>Endless</strong>
+                    <span>Survive as long as you can</span>
+                    <small>Best: <b data-best="endless">-</b></small>
+                </button>
+            </div>
+            <ul class="howto">
+                <li><kbd>&larr;</kbd><kbd>&rarr;</kbd> run, <kbd>&uarr;</kbd> jump, <kbd>&darr;</kbd> sit / dive</li>
+                <li><kbd>Enter</kbd> or <kbd>Space</kbd> (hold) roll: the only way to hit enemies safely</li>
+                <li>Roll + <kbd>&uarr;</kbd> to jump while rolling, <kbd>&darr;</kbd> in the air to dive</li>
+                <li><kbd>P</kbd> / <kbd>Esc</kbd> pause, <kbd>R</kbd> restart</li>
+            </ul>
+            <p class="howto-touch">Use the arrows to run, jump and dive. Hold <b>Roll</b> to attack.</p>
+        </section>
+
+        <section class="screen" id="pause" hidden aria-labelledby="pause-title">
+            <h2 id="pause-title">Paused</h2>
+            <div class="actions">
+                <button type="button" id="resume">Resume</button>
+                <button type="button" data-menu>Menu</button>
+            </div>
+        </section>
+
+        <section class="screen" id="gameover" hidden aria-labelledby="result-title">
+            <h2 id="result-title"></h2>
+            <p id="result-text" class="lead"></p>
+            <p class="score">Score <b id="result-score">0</b> <span id="result-best" hidden>New best!</span></p>
+            <div class="actions">
+                <button type="button" id="again">Play again</button>
+                <button type="button" data-menu>Menu</button>
+            </div>
+        </section>
+    </main>
+
+    <img src="./images/player.png" id="player" alt="">
+    <img src="./images/forest_background/layer-1.png" id="layer1" alt="">
+    <img src="./images/forest_background/layer-2.png" id="layer2" alt="">
+    <img src="./images/forest_background/layer-3.png" id="layer3" alt="">
+    <img src="./images/forest_background/layer-4.png" id="layer4" alt="">
+    <img src="./images/forest_background/layer-5.png" id="layer5" alt="">
+    <img src="./images/enemy_plant.png" id="enemy_plant" alt="">
+    <img src="./images/enemy_spider_big.png" id="enemy_big_spider" alt="">
+    <img src="./images/enemy_fly.png" id="enemy_fly" alt="">
+    <img src="./images/fire.png" id="fire" alt="">
+    <img src="./images/boom.png" id="boom" alt="">
+    <img src="./images/heart.png" id="heart" alt="">
 
     <script type="module" src="main.js"></script>
 </body>
