@@ -171,6 +171,15 @@ export const games = [
     inputs: ['keyboard', 'touch'],
     mobile: true,
   },
+  {
+    slug: 'minesweeper',
+    title: 'Minesweeper',
+    href: 'Minesweeper/index.html',
+    blurb: 'Classic Minesweeper where every board can be solved by logic, with a daily board, a puzzle ladder, hints and stats.',
+    genre: 'puzzle',
+    inputs: ['mouse', 'keyboard', 'touch'],
+    mobile: true,
+  },
 ];
 
 export const experiments = [
