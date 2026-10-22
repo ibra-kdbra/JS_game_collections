@@ -1,131 +1,245 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Art Lab · Game Lab</title>
-    <meta
-      name="description"
-      content="Generative art experiments in JavaScript: flow fields, particle systems, WebGL shaders and pure CSS animation. Interactive, and most of them export what you make."
-    />
-    <meta name="author" content="ibra-kdbra" />
-    <meta name="theme-color" content="#fd703b" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#f8612e" media="(prefers-color-scheme: light)" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#09090b" />
     <link rel="canonical" href="https://jsgamelab.ibrakdbra.me/Art_Lab/" />
+    <title>Art Lab | Creative Code Experiments</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Where mathematics meets creativity. Explore mesmerizing flow fields, particle systems, and generative art experiments built with JavaScript and Canvas." />
+    <meta name="keywords" content="generative art, creative coding, flow fields, particle systems, JavaScript art, canvas experiments" />
+    <meta name="author" content="ibra-kdbra" />
+    
+    <!-- Icons -->
+    <link href="../assets/icons/video_game.ico" rel="icon" type="image/x-icon" />
+    <link href="../assets/icons/video_game.svg" rel="icon" type="image/svg+xml" />
+    <link href="../assets/icons/video_game.png" rel="icon" type="image/png" />
+    
+    <!-- Fonts (self-hosted) -->
+    <link rel="preload" href="../assets/fonts/chakra-petch-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="../assets/fonts/albert-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
 
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="Art Lab · Game Lab" />
-    <meta property="og:description" content="Generative art experiments in plain JavaScript." />
-    <meta property="og:image" content="https://jsgamelab.ibrakdbra.me/assets/thumbs/lsd-960.webp" />
-
-    <link rel="icon" href="../assets/icons/video_game.svg" type="image/svg+xml" />
-    <link rel="icon" href="../assets/icons/video_game.png" type="image/png" />
-
-    <link rel="preload" href="../assets/fonts/big-shoulders-display-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="../assets/fonts/atkinson-hyperlegible-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
-
-    <script>
-      try {
-        const theme = localStorage.getItem('gamelab.theme');
-        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
-      } catch (e) {}
-    </script>
-
-    <link rel="stylesheet" href="../assets/css/tokens.css" />
-    <link rel="stylesheet" href="../assets/css/hub.css" />
+    <!-- Styles -->
     <link rel="stylesheet" href="../assets/css/artlab.css" />
-    <script type="module" src="../assets/js/artlab.js"></script>
+    <link rel="stylesheet" href="../assets/vendor/fontawesome/fontawesome.css" />
+    <link rel="stylesheet" href="../assets/css/feedback.css" />
+    
+    <!-- GSAP for animations -->
+    <script src="../assets/vendor/gsap/gsap.min.js" defer></script>
   </head>
-
-  <body>
+  <body id="artlab-body">
     <a class="skip-link" href="#experiments">Skip to experiments</a>
 
-    <div class="marquee marquee--compact">
-      <header class="topbar">
-        <nav class="topnav" aria-label="Primary">
-          <a class="topnav-back" href="../index.html">
-            <svg class="icon" aria-hidden="true"><use href="../assets/icons/sprite.svg#i-arrow-left"></use></svg>
-            Game Lab
-          </a>
-          <a class="topnav-source" href="https://github.com/ibra-kdbra/JS_game_collections/tree/main/Art_Lab">Source</a>
-        </nav>
-        <div class="toolbar-actions">
-          <button class="icon-btn" type="button" data-feedback-open aria-label="Feedback">
-            <svg class="icon" aria-hidden="true"><use href="../assets/icons/sprite.svg#i-message"></use></svg>
-          </button>
-          <button class="icon-btn" type="button" data-theme-toggle aria-label="Switch to light theme">
-            <svg class="icon" aria-hidden="true"><use href="../assets/icons/sprite.svg#i-sun"></use></svg>
-          </button>
-        </div>
-      </header>
+    <!-- Animated Background (the WebGL wave layer is added by dropEffect.js) -->
+    <div class="artlab-bg" aria-hidden="true"></div>
 
-      <section class="hero hero--single" aria-labelledby="page-title">
-        <div class="hero-copy">
-          <h1 id="page-title">Art Lab</h1>
-          <p class="lede">Flow fields, shaders and particle systems built in plain JavaScript. Move the mouse, tweak the controls, and most of them will export what you make.</p>
-        </div>
-      </section>
-    </div>
+    <!-- Corner Navigation (back + icons) -->
+    <nav class="corner-nav artlab-nav" aria-label="Site">
+      <a href="../index.html" class="corner-back" aria-label="Back to Game Lab">
+        <i class="fas fa-arrow-left" aria-hidden="true"></i>
+      </a>
+      <div class="nav-icons-group">
+        <a href="https://github.com/ibra-kdbra/JS_game_collections/tree/main/Art_Lab" class="corner-link" target="_blank" rel="noopener" aria-label="Art Lab source on GitHub">
+          <i class="fab fa-github" aria-hidden="true"></i>
+        </a>
+        <!-- Feedback icon added dynamically here -->
+      </div>
+    </nav>
 
     <main>
-      <section id="experiments" class="section" aria-label="Experiments">
-        <ul class="gallery"><!-- render:gallery -->
-          <li class="exp exp--lead">
-            <img class="exp-thumb" src="../assets/thumbs/blossoming-flowers-480.webp" srcset="../assets/thumbs/blossoming-flowers-480.webp 480w, ../assets/thumbs/blossoming-flowers-960.webp 960w" sizes="(min-width: 1320px) 1320px, 100vw" width="960" height="600" alt="" loading="eager" decoding="async">
-            <h2 class="exp-title"><a class="exp-link" href="../Art_Lab/BlossomingFlowers/index.html">Blossoming Flowers</a></h2>
-            <p class="exp-blurb">Petals unfold in a loop of pure CSS animation.</p>
-            <p class="exp-tags"><span>CSS</span><span>Animation</span></p>
-          </li>
-          <li class="exp">
-            <img class="exp-thumb" src="../assets/thumbs/flow-fields-480.webp" srcset="../assets/thumbs/flow-fields-480.webp 480w, ../assets/thumbs/flow-fields-960.webp 960w" sizes="(min-width: 800px) 50vw, 100vw" width="960" height="600" alt="" loading="eager" decoding="async">
-            <h2 class="exp-title"><a class="exp-link" href="../Art_Lab/Simple/index.html">Flow Fields</a></h2>
-            <p class="exp-blurb">Particles drift through an invisible vector field. Press D, or double-tap, to see it.</p>
-            <p class="exp-tags"><span>Canvas</span><span>Particles</span></p>
-          </li>
-          <li class="exp">
-            <img class="exp-thumb" src="../assets/thumbs/text-fields-480.webp" srcset="../assets/thumbs/text-fields-480.webp 480w, ../assets/thumbs/text-fields-960.webp 960w" sizes="(min-width: 800px) 50vw, 100vw" width="960" height="600" alt="" loading="eager" decoding="async">
-            <h2 class="exp-title"><a class="exp-link" href="../Art_Lab/Text_Fields/index.html">Text Fields</a></h2>
-            <p class="exp-blurb">Type becomes a particle system that flows through the field.</p>
-            <p class="exp-tags"><span>Typography</span><span>Canvas</span></p>
-          </li>
-          <li class="exp">
-            <img class="exp-thumb" src="../assets/thumbs/experimental-math-480.webp" srcset="../assets/thumbs/experimental-math-480.webp 480w, ../assets/thumbs/experimental-math-960.webp 960w" sizes="(min-width: 800px) 50vw, 100vw" width="960" height="600" alt="" loading="lazy" decoding="async">
-            <h2 class="exp-title"><a class="exp-link" href="../Art_Lab/Experimental_math/index.html">Experimental Math</a></h2>
-            <p class="exp-blurb">Equations plotted as motion, one vector at a time.</p>
-            <p class="exp-tags"><span>Math</span><span>Generative</span></p>
-          </li>
-          <li class="exp">
-            <img class="exp-thumb" src="../assets/thumbs/adaptive-fields-480.webp" srcset="../assets/thumbs/adaptive-fields-480.webp 480w, ../assets/thumbs/adaptive-fields-960.webp 960w" sizes="(min-width: 800px) 50vw, 100vw" width="960" height="600" alt="" loading="lazy" decoding="async">
-            <h2 class="exp-title"><a class="exp-link" href="../Art_Lab/Adaptive/index.html">Adaptive Fields</a></h2>
-            <p class="exp-blurb">Tune color, noise and density and export the result.</p>
-            <p class="exp-tags"><span>Interactive</span><span>p5.js</span></p>
-          </li>
-          <li class="exp">
-            <img class="exp-thumb" src="../assets/thumbs/lsd-480.webp" srcset="../assets/thumbs/lsd-480.webp 480w, ../assets/thumbs/lsd-960.webp 960w" sizes="(min-width: 800px) 50vw, 100vw" width="960" height="600" alt="" loading="lazy" decoding="async">
-            <h2 class="exp-title"><a class="exp-link" href="../Art_Lab/LSD/index.html">Liquid Shapes</a></h2>
-            <p class="exp-blurb">A fragment shader you can steer in real time, with video export.</p>
-            <p class="exp-tags"><span>WebGL</span><span>Shader</span></p>
-          </li>
-          <li class="exp">
-            <img class="exp-thumb" src="../assets/thumbs/particular-drift-480.webp" srcset="../assets/thumbs/particular-drift-480.webp 480w, ../assets/thumbs/particular-drift-960.webp 960w" sizes="(min-width: 800px) 50vw, 100vw" width="960" height="600" alt="" loading="lazy" decoding="async">
-            <h2 class="exp-title"><a class="exp-link" href="../Art_Lab/ParticularDrift/index.html">Particular Drift</a></h2>
-            <p class="exp-blurb">Any image dissolves into tens of thousands of drifting particles.</p>
-            <p class="exp-tags"><span>WebGL</span><span>Particles</span></p>
-          </li>
-        <!-- /render:gallery --></ul>
-      </section>
-    </main>
-
-    <footer class="footer">
-      <div class="footer-inner">
-        <p class="footer-brand">Game Lab</p>
-        <p>Made by <a href="https://github.com/ibra-kdbra">ibra-kdbra</a>. Every experiment runs on plain JavaScript, HTML and CSS, and the code is open under the MIT license.</p>
-        <ul class="footer-links">
-          <li><a href="../index.html">All games</a></li>
-          <li><a href="https://github.com/ibra-kdbra/JS_game_collections"><svg class="icon" aria-hidden="true"><use href="../assets/icons/sprite.svg#i-github"></use></svg> Source on GitHub</a></li>
-          <li><a href="https://github.com/ibra-kdbra/JS_game_collections/issues/new">Report a bug</a></li>
-        </ul>
+    <!-- Hero Section -->
+    <section class="artlab-hero">
+      <div class="artlab-hero-badge">
+        <i class="fas fa-flask" aria-hidden="true"></i>
+        Creative Coding Lab
       </div>
+      
+      <h1 class="artlab-hero-title">Art Lab</h1>
+      
+      <p class="artlab-hero-subtitle">
+        Where <span style="color: var(--artlab-primary);">mathematics</span> meets 
+        <span style="color: var(--artlab-secondary);">creativity</span>. 
+        Explore mesmerizing flow fields, particle systems, and generative art experiments 
+        that push the boundaries of what's possible with code.
+      </p>
+      
+      <div class="artlab-hero-cta">
+        <a href="#experiments" class="btn btn-artlab">
+          <i class="fas fa-eye" aria-hidden="true"></i>
+          View Experiments
+        </a>
+      </div>
+    </section>
+    
+    <!-- Experiments Carousel Section -->
+    <section class="carousel-section" id="experiments" aria-label="Experiments">
+      <div class="carousel-container">
+        <div class="carousel-track" id="carousel-track"><!-- render:experiments -->
+          <article class="experiment-card" style="animation-delay: 0.00s;">
+            <a href="../Art_Lab/BlossomingFlowers/index.html" target="_blank" rel="noopener" class="experiment-card-link">
+              <div class="experiment-card-inner">
+                <div class="experiment-card-preview">
+                  <span class="experiment-number">01</span>
+                  <img src="../assets/thumbs/blossoming-flowers-480.webp" srcset="../assets/thumbs/blossoming-flowers-480.webp 480w, ../assets/thumbs/blossoming-flowers-960.webp 960w" sizes="340px" width="480" height="300" alt="" loading="eager" decoding="async">
+                </div>
+                <div class="experiment-card-content">
+                  <h3 class="experiment-card-title">Blossoming Flowers</h3>
+                  <p class="experiment-card-description">Pure CSS blossoming flowers animation. Watch as petals unfold in a mesmerizing dance of color and motion.</p>
+                  <div class="experiment-tags"><span class="experiment-tag">CSS Art</span><span class="experiment-tag">Animation</span></div>
+                  <div class="experiment-card-action">
+                    <span class="experiment-link">View Experiment <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+                  </div>
+                </div>
+              </div>
+            </a>
+          </article>
+          <article class="experiment-card" style="animation-delay: 0.08s;">
+            <a href="../Art_Lab/Simple/index.html" target="_blank" rel="noopener" class="experiment-card-link">
+              <div class="experiment-card-inner">
+                <div class="experiment-card-preview">
+                  <span class="experiment-number">02</span>
+                  <img src="../assets/thumbs/flow-fields-480.webp" srcset="../assets/thumbs/flow-fields-480.webp 480w, ../assets/thumbs/flow-fields-960.webp 960w" sizes="340px" width="480" height="300" alt="" loading="eager" decoding="async">
+                </div>
+                <div class="experiment-card-content">
+                  <h3 class="experiment-card-title">Flow Fields</h3>
+                  <p class="experiment-card-description">Experiment with flow fields. Press D to debug or double touch. Watch particles dance through invisible currents.</p>
+                  <div class="experiment-tags"><span class="experiment-tag">Canvas</span><span class="experiment-tag">Particles</span></div>
+                  <div class="experiment-card-action">
+                    <span class="experiment-link">View Experiment <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+                  </div>
+                </div>
+              </div>
+            </a>
+          </article>
+          <article class="experiment-card" style="animation-delay: 0.16s;">
+            <a href="../Art_Lab/Text_Fields/index.html" target="_blank" rel="noopener" class="experiment-card-link">
+              <div class="experiment-card-inner">
+                <div class="experiment-card-preview">
+                  <span class="experiment-number">03</span>
+                  <img src="../assets/thumbs/text-fields-480.webp" srcset="../assets/thumbs/text-fields-480.webp 480w, ../assets/thumbs/text-fields-960.webp 960w" sizes="340px" width="480" height="300" alt="" loading="eager" decoding="async">
+                </div>
+                <div class="experiment-card-content">
+                  <h3 class="experiment-card-title">Text Fields</h3>
+                  <p class="experiment-card-description">Typography meets generative art. Text rendered as particle systems moving through flow fields.</p>
+                  <div class="experiment-tags"><span class="experiment-tag">Typography</span><span class="experiment-tag">Canvas</span></div>
+                  <div class="experiment-card-action">
+                    <span class="experiment-link">View Experiment <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+                  </div>
+                </div>
+              </div>
+            </a>
+          </article>
+          <article class="experiment-card" style="animation-delay: 0.24s;">
+            <a href="../Art_Lab/Experimental_math/index.html" target="_blank" rel="noopener" class="experiment-card-link">
+              <div class="experiment-card-inner">
+                <div class="experiment-card-preview">
+                  <span class="experiment-number">04</span>
+                  <img src="../assets/thumbs/experimental-math-480.webp" srcset="../assets/thumbs/experimental-math-480.webp 480w, ../assets/thumbs/experimental-math-960.webp 960w" sizes="340px" width="480" height="300" alt="" loading="eager" decoding="async">
+                </div>
+                <div class="experiment-card-content">
+                  <h3 class="experiment-card-title">Experimental Math</h3>
+                  <p class="experiment-card-description">Low-level mathematical explorations with flow fields. Visualize equations in motion.</p>
+                  <div class="experiment-tags"><span class="experiment-tag">Math</span><span class="experiment-tag">Generative</span></div>
+                  <div class="experiment-card-action">
+                    <span class="experiment-link">View Experiment <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+                  </div>
+                </div>
+              </div>
+            </a>
+          </article>
+          <article class="experiment-card" style="animation-delay: 0.32s;">
+            <a href="../Art_Lab/Adaptive/index.html" target="_blank" rel="noopener" class="experiment-card-link">
+              <div class="experiment-card-inner">
+                <div class="experiment-card-preview">
+                  <span class="experiment-number">05</span>
+                  <img src="../assets/thumbs/adaptive-fields-480.webp" srcset="../assets/thumbs/adaptive-fields-480.webp 480w, ../assets/thumbs/adaptive-fields-960.webp 960w" sizes="340px" width="480" height="300" alt="" loading="lazy" decoding="async">
+                </div>
+                <div class="experiment-card-content">
+                  <h3 class="experiment-card-title">Adaptive Fields</h3>
+                  <p class="experiment-card-description">Try multiple variations with adaptive flow fields that respond to your interaction.</p>
+                  <div class="experiment-tags"><span class="experiment-tag">Interactive</span><span class="experiment-tag">Canvas</span></div>
+                  <div class="experiment-card-action">
+                    <span class="experiment-link">View Experiment <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+                  </div>
+                </div>
+              </div>
+            </a>
+          </article>
+          <article class="experiment-card" style="animation-delay: 0.40s;">
+            <a href="../Art_Lab/LSD/index.html" target="_blank" rel="noopener" class="experiment-card-link">
+              <div class="experiment-card-inner">
+                <div class="experiment-card-preview">
+                  <span class="experiment-number">06</span>
+                  <img src="../assets/thumbs/lsd-480.webp" srcset="../assets/thumbs/lsd-480.webp 480w, ../assets/thumbs/lsd-960.webp 960w" sizes="340px" width="480" height="300" alt="" loading="lazy" decoding="async">
+                </div>
+                <div class="experiment-card-content">
+                  <h3 class="experiment-card-title">LSD</h3>
+                  <p class="experiment-card-description">Create psychedelic animations in real-time. A trip through color and form.</p>
+                  <div class="experiment-tags"><span class="experiment-tag">Psychedelic</span><span class="experiment-tag">Real-time</span></div>
+                  <div class="experiment-card-action">
+                    <span class="experiment-link">View Experiment <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+                  </div>
+                </div>
+              </div>
+            </a>
+          </article>
+          <article class="experiment-card" style="animation-delay: 0.48s;">
+            <a href="../Art_Lab/ParticularDrift/index.html" target="_blank" rel="noopener" class="experiment-card-link">
+              <div class="experiment-card-inner">
+                <div class="experiment-card-preview">
+                  <span class="experiment-number">07</span>
+                  <img src="../assets/thumbs/particular-drift-480.webp" srcset="../assets/thumbs/particular-drift-480.webp 480w, ../assets/thumbs/particular-drift-960.webp 960w" sizes="340px" width="480" height="300" alt="" loading="lazy" decoding="async">
+                </div>
+                <div class="experiment-card-content">
+                  <h3 class="experiment-card-title">Particular Drift</h3>
+                  <p class="experiment-card-description">Watch particles drift through space in this meditative visual experience.</p>
+                  <div class="experiment-tags"><span class="experiment-tag">Particles</span><span class="experiment-tag">Ambient</span></div>
+                  <div class="experiment-card-action">
+                    <span class="experiment-link">View Experiment <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+                  </div>
+                </div>
+              </div>
+            </a>
+          </article>
+        <!-- /render:experiments --></div>
+
+        <div class="carousel-nav">
+          <button type="button" class="carousel-btn" id="carousel-prev" aria-label="Previous experiments" aria-controls="carousel-track">
+            <i class="fas fa-chevron-left" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="carousel-btn" id="carousel-next" aria-label="Next experiments" aria-controls="carousel-track">
+            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="artlab-footer">
+      <p class="artlab-footer-text">
+        Made by <a class="artlab-footer-link" href="https://github.com/ibra-kdbra" target="_blank" rel="noopener">ibra-kdbra</a>
+      </p>
     </footer>
+    
+    <!-- Initialize Music Player -->
+    <script type="module">
+      import { VideoPlayerComponent } from '../assets/js/videoPlayer.js';
+      // Inject player into the icons group
+      new VideoPlayerComponent().render('.nav-icons-group');
+    </script>
+    <script type="module" src="../assets/js/musicPlayer.js"></script>
+
+    <script type="module" src="../assets/js/dropEffect.js"></script>
+    <script type="module" src="../assets/js/artlab.js"></script>
+    
+    <!-- Initialize Feedback (Modal Mode) -->
+    <script type="module">
+      import { FeedbackUI } from '../assets/js/feedback/FeedbackUI.js';
+      // Only initialize, it auto-attaches button to navbar
+      new FeedbackUI('art_lab_hub');
+    </script>
   </body>
 </html>
