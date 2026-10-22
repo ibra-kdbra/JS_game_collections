@@ -891,8 +891,39 @@ kbd {
 /* Short landscape: title splits into two columns so nothing scrolls. */
 @media (orientation: landscape) and (max-height: 560px) {
   .screen {
-    padding-top: calc(12px + var(--safe-t));
-    padding-left: calc(112px + var(--safe-l));
+    padding-top: calc(10px + var(--safe-t));
+    padding-bottom: calc(10px + var(--safe-b));
+    /* Clear the kit's Game Lab and fullscreen pills on the left. */
+    padding-left: calc(186px + var(--safe-l));
+  }
+
+  .card {
+    padding: 14px 16px;
+  }
+
+  .wordmark {
+    font-size: 40px;
+  }
+
+  .tagline {
+    margin-bottom: 0 !important;
+  }
+
+  .mode-desc {
+    display: none;
+  }
+
+  .mode-list {
+    margin-bottom: 10px;
+  }
+
+  .stack {
+    margin-top: 10px;
+    gap: 6px;
+  }
+
+  .btn {
+    min-height: 40px;
   }
 
   .card--title {
