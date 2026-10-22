@@ -12,6 +12,15 @@ Hangman is a word game in which one player has to guess a word that the other pl
 
 The game is responsive to different window sizes, built with HTML, CSS3, and vanilla javascript.
 
+## How to play
+
+- Pick a category (14 of them) and a difficulty, then guess letters by clicking/tapping them or typing on your keyboard.
+- Every correct letter is worth 10 points. Five wrong guesses and the rope is pulled tight.
+- Solve a word to move on (Enter, the arrow button, or swipe left on touch screens). Your score and words-in-a-row streak carry over until you lose.
+- **Hint** (or the `?` key) reveals one hidden letter, once per word. It costs 15 points, or one guess when you can't afford it.
+- **Daily word**: one puzzle per day, the same for everyone (seeded by the date). Solve it on consecutive days to build a daily streak.
+- Best score and streaks are saved in your browser.
+
 </br>
 
 # Project Files Description
@@ -23,9 +32,10 @@ The entry point of the project.
 
 ### **`main.js`**
 The main JavaScript file that handles:
-- Game logic.
+- Game logic, hints, the daily word and keyboard input.
 - Animations.
-- Fetching data from APIs used in the project.
+- Loading the offline word lists from `data/words.json` (at least 60 family-friendly words per category).
+- Optionally ("Online bonus words" in the menu, off by default) adding extra words from the [Datamuse](https://www.datamuse.com/api/) and [PokéAPI](https://pokeapi.co/) APIs. The game never depends on them.
 
 ---
 
@@ -53,7 +63,17 @@ You can tweak the following parameters (declared at the beginning of the file) t
 ---
 
 ### **`loader.js`**
-Handles the loading animation while preloading all media assets (images and sounds) using [PreloadJS](https://createjs.com/preloadjs).
+Handles the loading animation while preloading all media assets (images and sounds) with plain `Image`/`Audio` objects. Each asset has a timeout, and a missing file never blocks the game.
+
+---
+
+### **`parallax.js`**
+A small pointer / device-tilt parallax for the layered background (replaces Parallax.js). It is disabled when the system asks for reduced motion.
+
+---
+
+### **`libs/gsap-3.12.6.min.js`**
+[GSAP](https://gsap.com) 3.12.6, vendored. Subject to the [GSAP standard license](https://gsap.com/standard-license).
 
 --- 
 

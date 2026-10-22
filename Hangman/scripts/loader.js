@@ -44,85 +44,81 @@ const animateLoading = () => {
 	mainTimeLine.add(initLoading()).add(loading());
 };
 animateLoading();
-let correctAudio;
-let wrongAudio;
-let winAudio;
-let loseAudio;
-let rotateAudio;
-let pullupAudio;
-let hangAudio;
-const handleLoadComplete = (id, item) => {
-	let right = document.getElementsByClassName("hill-right")[0];
-	let left = document.getElementsByClassName("hill-left")[0];
-	let mid = document.getElementsByClassName("hill-middle")[0];
-	let city = document.getElementsByClassName("city")[0];
-	let mountains = document.getElementsByClassName("mountains")[0];
-	let bgContainer = document.getElementsByClassName("bg-container")[0];
-	switch (id) {
-		case "right":
-			right.append(item);
-			break;
-		case "left":
-			left.append(item);
-			break;
-		case "mid":
-			mid.append(item);
-			break;
-		case "city":
-			city.append(item);
-			break;
-		case "mountains":
-			mountains.append(item);
-			break;
-		case "sky":
-			bgContainer.style.backgroundImage = `url(${item})`;
-			break;
-		case "correct":
-			correctAudio = item;
-			break;
-		case "wrong":
-			wrongAudio = item;
-			break;
-		case "win":
-			winAudio = item;
-			break;
-		case "lose":
-			loseAudio = item;
-			break;
-		case "rotate":
-			rotateAudio = item;
-			break;
-		case "pullup":
-			pullupAudio = item;
-			break;
-		case "hang":
-			hangAudio = item;
-			break;
-	}
+
+// Sounds start as silent placeholders so gameplay never waits on (or crashes over) audio.
+const sounds = {
+	correct: new Audio(),
+	wrong: new Audio(),
+	win: new Audio(),
+	lose: new Audio(),
+	rotate: new Audio(),
+	pullup: new Audio(),
+	hang: new Audio(),
 };
+const playSound = (name, volume = 1) => {
+	const audio = sounds[name];
+	if (!allowAudio || !audio.src) return;
+	audio.volume = volume;
+	audio.currentTime = 0;
+	audio.play().catch(() => {});
+};
+const stopSound = (name) => {
+	sounds[name].pause();
+};
+
+const ASSET_TIMEOUT_MS = 8000;
+const LAYER_IMAGES = {
+	mountains: "./images/mountains.png",
+	city: "./images/city.png",
+	"hill-middle": "./images/middle.png",
+	"hill-left": "./images/left.png",
+	"hill-right": "./images/right.png",
+};
+
+// Resolves either way: a missing image or sound degrades the scene, it never blocks the game.
+const withTimeout = (promise) =>
+	Promise.race([
+		promise,
+		new Promise((resolve) => setTimeout(() => resolve(null), ASSET_TIMEOUT_MS)),
+	]);
+const loadImage = (src) =>
+	withTimeout(
+		new Promise((resolve) => {
+			const img = new Image();
+			img.alt = "";
+			img.onload = () => resolve(img);
+			img.onerror = () => resolve(null);
+			img.src = src;
+		})
+	);
+const loadSound = (name) =>
+	withTimeout(
+		new Promise((resolve) => {
+			const audio = sounds[name];
+			const done = () => resolve(audio);
+			audio.preload = "auto";
+			audio.addEventListener("canplaythrough", done, { once: true });
+			audio.addEventListener("error", () => resolve(null), { once: true });
+			audio.src = `./audio/${name}.mp3`;
+			// Mobile browsers often refuse to buffer audio before a tap; don't wait for them.
+			setTimeout(done, 1500);
+		})
+	);
+
 const loadData = () => {
-	let queue = new createjs.LoadQueue(false);
-	queue.loadFile({ id: "sky", src: "./images/sky.png" });
-	queue.loadFile({ id: "city", src: "./images/city.png" });
-	queue.loadFile({ id: "right", src: "./images/right.png" });
-	queue.loadFile({ id: "left", src: "./images/left.png" });
-	queue.loadFile({ id: "mid", src: "./images/middle.png" });
-	queue.loadFile({ id: "mountains", src: "./images/mountains.png" });
-	queue.loadFile({ id: "correct", src: "./audio/correct.mp3" });
-	queue.loadFile({ id: "wrong", src: "./audio/wrong.mp3" });
-	queue.loadFile({ id: "win", src: "./audio/win.mp3" });
-	queue.loadFile({ id: "lose", src: "./audio/lose.mp3" });
-	queue.loadFile({ id: "rotate", src: "./audio/rotate.mp3" });
-	queue.loadFile({ id: "pullup", src: "./audio/pullup.mp3" });
-	queue.loadFile({ id: "hang", src: "./audio/hang.mp3" });
-	queue.on("fileload", (event) => {
-		if (event.item.id === "sky") {
-			handleLoadComplete(event.item.id, queue.getResult("sky").src);
-		} else {
-			handleLoadComplete(event.item.id, event.result);
-		}
-	});
-	queue.on("complete", () => {
+	const bgContainer = document.querySelector(".bg-container");
+	const images = [
+		loadImage("./images/sky.png").then((img) => {
+			if (img) bgContainer.style.backgroundImage = `url(${img.src})`;
+		}),
+		...Object.entries(LAYER_IMAGES).map(([layer, src]) =>
+			loadImage(src).then((img) => {
+				if (img) document.querySelector(`.${layer}`).append(img);
+			})
+		),
+	];
+	const audio = Object.keys(sounds).map(loadSound);
+	Promise.all([...images, ...audio]).then(() => {
 		loaded = true;
 	});
 };

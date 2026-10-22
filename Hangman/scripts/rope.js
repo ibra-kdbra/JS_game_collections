@@ -17,20 +17,8 @@ const stiffness = 1.7;
 const springRestLength = step;
 const dampingCoef = 0.155;
 
-// Time settings...
-let now = 0;
-let then = 0;
-let delta = 0;
-const setDelta = () => {
-	now = Date.now();
-	delta = (now - then) / 16.7;
-	then = now;
-};
-const mouse = { x: canvas.width / 2, y: canvas.height / 2 };
-window.addEventListener("mousemove", (e) => {
-	mouse.x = e.x;
-	mouse.y = e.y;
-});
+// The spring constants are tuned per 1/60 s step, so physics always runs at 60 steps per second.
+const physics = GameKit.createStepper(60);
 class Vector {
 	constructor(x, y) {
 		this.x = x;
@@ -38,10 +26,6 @@ class Vector {
 	}
 	get magnitude() {
 		return Math.sqrt(this.x * this.x + this.y * this.y);
-	}
-	get direction() {
-		if (head instanceof Vector) {
-		}
 	}
 	add(vector) {
 		if (vector instanceof Vector) {
@@ -58,10 +42,6 @@ class Vector {
 	substract(scalar1, scalar2) {
 		this.x -= scalar1;
 		this.y -= scalar2;
-	}
-	multiply(scalar1, scalar2) {
-		this.x *= scalar1;
-		this.y *= scalar2;
 	}
 	multiply(scalar) {
 		this.x *= scalar;
@@ -129,14 +109,9 @@ class Point {
 		context.fill();
 	}
 	update() {
-		// Update Velocity...
-		//this.velocity.multiply(delta);
 		this.velocity.add(this.acceleration);
-		// Move Point...
 		this.location.add(this.velocity);
 		this.acceleration.reset();
-		// Draw...
-		this.draw();
 	}
 }
 class Spring {
@@ -144,8 +119,8 @@ class Spring {
 		this.stiffness = stiffness;
 		this.restLength = restLength;
 		this.dampingCoef = dampingCoef;
-		this.beginAttach = new Vector(0, 0);
-		this.endAttach = new Vector(0, 0);
+		this.beginAttach = null;
+		this.endAttach = null;
 	}
 	calculateSpringForce(point, reverseDir) {
 		let springForce;
@@ -169,6 +144,7 @@ class Spring {
 		return springForce;
 	}
 	draw() {
+		if (!this.beginAttach) return;
 		context.beginPath();
 		context.moveTo(this.beginAttach.x, this.beginAttach.y);
 		context.lineTo(this.endAttach.x, this.endAttach.y);
@@ -183,14 +159,10 @@ class Spring {
 			startPoint.applyForce(this.calculateSpringForce(startPoint, true));
 			endPoint.applyForce(this.calculateSpringForce(endPoint));
 		} else if (!applyToStart && applyToEnd) {
-			// Error
 			endPoint.applyForce(this.calculateSpringForce(endPoint));
 		} else if (applyToStart && !applyToEnd) {
 			startPoint.applyForce(this.calculateSpringForce(startPoint, true));
 		}
-	}
-	update() {
-		this.draw();
 	}
 }
 class Rope {
@@ -264,7 +236,6 @@ class Rope {
 						true
 					);
 				}
-				this.springs[i].update();
 				if (i < this.particles.length) {
 					this.particles[i].applyForce(this.gravityForce);
 					this.particles[i].update();
@@ -287,11 +258,15 @@ class Rope {
 						true
 					);
 				}
-				this.springs[i].update();
 				this.particles[i].applyForce(this.gravityForce);
 				this.particles[i].update();
 			}
 		}
+	}
+	draw() {
+		const springCount = this.anchor2 ? this.particles.length + 1 : this.particles.length;
+		for (let i = 0; i < springCount; i++) this.springs[i].draw();
+		this.particles.forEach((particle) => particle.draw());
 	}
 }
 // Setup...
@@ -344,15 +319,22 @@ const rollerAnimation = gsap.to(angle, {
 	ease: "none",
 });
 rollerAnimation.pause().progress(0);
-const loop = () => {
+const stepPhysics = () => {
+	ropeMid.gravityForce = new Vector(0, ropeMid.gravity * mass);
+	ropeMid.update();
+	ropeLeft.update(false, animateVictim);
+	ropeRight.update();
+	victimAnchor.update();
+};
+const loop = (now) => {
 	requestId = undefined;
 	context.clearRect(0, 0, canvas.width, canvas.height);
 	if (gallowsLoaded && victimLoaded && rollerLoaded) {
-		ropeMid.gravityForce = new Vector(0, ropeMid.gravity * mass);
-		ropeMid.update();
-		ropeLeft.update(false, animateVictim);
-		ropeRight.update();
-		victimAnchor.update();
+		physics.advance(now, stepPhysics);
+		ropeMid.draw();
+		ropeLeft.draw();
+		ropeRight.draw();
+		victimAnchor.draw();
 		context.drawImage(gallows, -200, 0, canvas.width + 400, canvas.height);
 		context.drawImage(
 			victim,
@@ -378,6 +360,7 @@ const loop = () => {
 // Animation...
 const animateRope = () => {
 	if (!requestId) {
+		physics.reset();
 		requestId = requestAnimationFrame(loop);
 	}
 };
@@ -401,21 +384,16 @@ const pullUp = () => {
 		ropeMid.gravity -= 0.034;
 		ropeMid.particles.splice(ropeMid.particles.length - 3, 2);
 		ropeRight.particles.splice(1, 3);
-		rotateAudio.volume = 0.1;
-		pullupAudio.volume = 0.2;
-		hangAudio.volume = 0.2;
 		rollerAnimation.play();
-		if (allowAudio) {
-			rotateAudio.play();
-			pullupAudio.play();
-		}
+		playSound("rotate", 0.1);
+		playSound("pullup", 0.2);
 		setTimeout(() => {
-			rotateAudio.pause();
-			pullupAudio.pause();
+			stopSound("rotate");
+			stopSound("pullup");
 			rollerAnimation.pause();
 		}, 2500);
 		if (ropeMid.gravity <= 0) {
-			if (allowAudio) hangAudio.play();
+			playSound("hang", 0.2);
 			new Promise((resolve) => {
 				setTimeout(() => resolve(), 500);
 			})
