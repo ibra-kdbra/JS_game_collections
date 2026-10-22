@@ -51,18 +51,20 @@ The game's name and mechanics reflect the philosophical concept of "Wahdat al-Wu
 
 ## How to Play
 
-1. **Rotation**: Click and drag anywhere on the sphere to rotate the view
-2. **Selection**: Click on your blue nodes to select them
-3. **Attack**: Drag from your node to an enemy node to send processes
-4. **Strategy**: Manage your resources and capture territory strategically
-5. **Victory**: Eliminate all enemy nodes to win
+1. **Rotation**: Drag anywhere on the sphere (mouse or one finger) to rotate the view
+2. **Attack**: Drag from one of your blue nodes to another node to send half of its processes
+3. **Strategy**: Manage your resources and capture territory strategically
+4. **Victory**: Deactivate all red nodes to win
 
 ## Controls
 
-- **Mouse Drag**: Rotate the sphere view
-- **Click + Drag**: Send processes between nodes
-- **Space/Escape**: Pause game
-- **R**: Reset current level
+- **Mouse / touch drag** on empty space: rotate the sphere
+- **Drag from your node**: send processes (on touch screens you can start a little beside a node)
+- **Space / Escape**: pause
+- **R**: restart the current level
+- **OPTIONS > BOT**: bot difficulty (EASY, NORMAL, HARD). It scales how long the bot waits between moves.
+
+Won levels, volume and difficulty are saved in the browser (Game Lab storage). Progress from earlier versions, which used IndexedDB, is copied over automatically the first time the game loads.
 
 ## Development
 
@@ -71,6 +73,12 @@ The game is built using vanilla JavaScript with advanced mathematical concepts i
 - Quaternion rotations
 - Procedural audio synthesis
 - Real-time graphics rendering
+
+### Source of truth
+
+`script.js` is the source of truth and is edited directly; there is no build step.
+
+The original CoffeeScript sources are kept in `src/` for the record only. `script.js` was regenerated from them once with CoffeeScript 2.7.0 (all files joined in this order and compiled as one unit: vec, quat, pref, synt, snd, glob, sprk, line, dot, grph, bot, menu, lvls, load, main), after fixing a stray quote in `menu.coffee`. Everything since then (touch input, time-based unit growth, bot difficulty, storage) exists only in `script.js`.
 
 ---
 

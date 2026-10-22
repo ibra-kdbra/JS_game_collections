@@ -1,5 +1,5 @@
 (function() {
-  var Bot, Dot, Grph, Line, Pref, Quat, Snd, Sprk, Synt, Vec, add, anim, app, arc, bot, brightness, choice, clamp, d2r, delTmpl, elem, fontSize, forceLevel, grph, hint, index, initLevel, isFullscreen, j, level, levelList, levels, loadLevel, loadNext, main, menu, menuAbout, menuVolume, menus, mouse, msg, opt, pause, popup, pref, r2d, randomLevel, randr, ref, rotq, s2u, screen, setHover, showMenu, size, snd, svg, toggleFullscreen, u2s, vec, visibility, win, world, zero,
+  var Bot, TOUCH_SLACK, dotAt, endDrag, BOT_PACE, MAX_FRAME_MS, UNIT_INTERVAL_MS, botPace, recordProgress, Dot, Grph, Line, Pref, readLegacyPrefs, Quat, Snd, Sprk, Synt, Vec, add, anim, app, arc, bot, brightness, choice, clamp, d2r, delTmpl, elem, fontSize, forceLevel, grph, hint, index, initLevel, isFullscreen, j, level, levelList, levels, loadLevel, loadNext, main, menu, menuAbout, menuVolume, menus, mouse, msg, opt, pause, popup, pref, r2d, randomLevel, randr, ref, rotq, s2u, screen, setHover, showMenu, size, snd, svg, toggleFullscreen, u2s, vec, visibility, win, world, zero,
     indexOf = [].indexOf;
 
   randr = function(a, b) {
@@ -230,87 +230,55 @@
 
   };
 
+  // Settings and progress live in the Game Lab kit store ("wahdatio.prefs" in localStorage).
+  // Earlier versions kept them in IndexedDB (named "wahdatio", before that "konekt");
+  // load() copies anything found there once, then never touches IndexedDB again.
   Pref = class Pref {
-    constructor() {}
-
-    load() {
-      var err;
-      this.cache = {
-        prefs: 'prefs',
-        volume: 0.03125
-      };
-      try {
-        this.req = window.indexedDB.open('wahdatio', 3);
-        this.req.onerror = (e) => {
-          return this.loadMenu('open error');
-        };
-        this.req.onsuccess = (e) => {
-          this.db = e.target.result;
-          return this.read();
-        };
-        return this.req.onupgradeneeded = (e) => {
-          var db, req, store;
-          db = e.target.result;
-          store = db.createObjectStore("prefs", {
-            keyPath: 'prefs'
-          });
-          return req = store.put(this.cache);
-        };
-      } catch (error) {
-        err = error;
-        return this.loadMenu('prefs catch');
-      }
+    constructor() {
+      this.store = GameKit.createStore('wahdatio');
+      this.cache = this.store.get('prefs', {});
     }
 
-    loadMenu(from) {
+    load() {
+      var ready;
+      ready = () => {
+        snd.volume(this.get('volume', 0.03125));
+        return this.loadMenu();
+      };
+      if (this.store.get('migrated')) {
+        return ready();
+      }
+      return Promise.all(['konekt', 'wahdatio'].map(readLegacyPrefs)).then((found) => {
+        this.cache = Object.assign({}, ...found, this.cache);
+        delete this.cache.prefs;
+        this.store.set('migrated', true);
+        this.write();
+        return ready();
+      });
+    }
+
+    loadMenu() {
       var ref;
-      
       if ((typeof world !== "undefined" && world !== null ? world.level : void 0) === void 0 || ((ref = world.level) != null ? ref.name : void 0) === 'menu') {
         return loadLevel('menu');
       }
     }
 
-    read() {
-      var req, store, trans;
-      trans = this.db.transaction(["prefs"], 'readonly');
-      store = trans.objectStore("prefs");
-      req = store.get('prefs');
-      req.onerror = (e) => {
-        return this.loadMenu('read error');
-      };
-      return req.onsuccess = (e) => {
-        if (!req.result) {
-          this.write();
-          return this.loadMenu('empty');
-        } else {
-          this.cache = req.result;
-          snd.volume(this.cache.volume);
-          return this.loadMenu('read');
-        }
-      };
-    }
-
     write() {
-      var req, store, trans;
-      trans = this.db.transaction(["prefs"], 'readwrite');
-      store = trans.objectStore('prefs');
-      return req = store.put(this.cache);
+      return this.store.set('prefs', this.cache);
     }
 
     clear() {
-      var ref;
       this.cache = {
-        prefs: 'prefs',
-        volume: (ref = this.cache.volume) != null ? ref : 0.03125
+        volume: this.cache.volume,
+        difficulty: this.cache.difficulty
       };
       return this.write();
     }
 
     set(key, value) {
       this.cache[key] = value;
-      if (this.db) {
-        return this.write();
-      }
+      return this.write();
     }
 
     get(key, v) {
@@ -318,6 +286,43 @@
       return (ref = this.cache[key]) != null ? ref : v;
     }
 
+  };
+
+  // Resolves with the old prefs object from an IndexedDB database, or null.
+  // Opening a database that doesn't exist would create it, so that upgrade is aborted.
+  readLegacyPrefs = function(name) {
+    return new Promise(function(resolve) {
+      var req;
+      setTimeout(resolve, 1500, null);
+      try {
+        req = window.indexedDB.open(name);
+      } catch (error) {
+        return resolve(null);
+      }
+      req.onupgradeneeded = function(e) {
+        return e.target.transaction.abort();
+      };
+      req.onerror = function() {
+        return resolve(null);
+      };
+      return req.onsuccess = function(e) {
+        var db, get;
+        db = e.target.result;
+        if (!db.objectStoreNames.contains('prefs')) {
+          db.close();
+          return resolve(null);
+        }
+        get = db.transaction(['prefs'], 'readonly').objectStore('prefs').get('prefs');
+        get.onsuccess = function() {
+          db.close();
+          return resolve(get.result || null);
+        };
+        return get.onerror = function() {
+          db.close();
+          return resolve(null);
+        };
+      };
+    });
   };
 
   // piano1, piano2, piano3, piano4, piano5
@@ -799,7 +804,7 @@
     update: 0,
     time: 0,
     delta: 0,
-    ticks: 0,
+    unitClock: 0,
     dots: [],
     sparks: [],
     lines: [],
@@ -809,6 +814,34 @@
     inertRot: new Quat(),
     circle: null,
     rotSum: vec()
+  };
+
+  // Tuning levers.
+  // Every owned, linked node gains `addUnit` processes once per UNIT_INTERVAL_MS of play.
+  UNIT_INTERVAL_MS = 1000;
+  // Longest frame the simulation will advance in one go (a stalled tab must not fast-forward).
+  MAX_FRAME_MS = 100;
+  // Multiplies the seconds the bot waits between moves: higher is easier.
+  BOT_PACE = {
+    EASY: 1.6,
+    NORMAL: 1,
+    HARD: 0.6
+  };
+
+  botPace = function() {
+    var ref;
+    return (ref = BOT_PACE[pref.get('difficulty', 'NORMAL')]) != null ? ref : 1;
+  };
+
+  // Levels won, mirrored to the Game Lab hub as a personal best.
+  recordProgress = function() {
+    var won;
+    won = levelList.filter(function(l) {
+      return l.name !== 'menu' && pref.get(l.name);
+    }).length;
+    return GameKit.recordBest('wahdatio', won, {
+      label: `${won} level${won === 1 ? '' : 's'} won`
+    });
   };
 
   
@@ -848,7 +881,7 @@
       this.g.setAttribute('transform', `translate(${p.x}, ${p.y})`);
       z = 0.5 + this.dot.depth() * 0.5;
       if (!world.pause) {
-        this.ticks += 1;
+        this.ticks += world.delta;
       }
       mu = Math.max(5 * this.units, 120);
       if (this.ticks > mu) {
@@ -1334,6 +1367,18 @@
         }
       },
       {
+        BOT: {
+          class: 'choice',
+          values: Object.keys(BOT_PACE),
+          selected: function() {
+            return pref.get('difficulty', 'NORMAL');
+          },
+          cb: function(c) {
+            return pref.set('difficulty', c);
+          }
+        }
+      },
+      {
         ABOUT: {
           click: function() {
             return menuAbout();
@@ -1572,6 +1617,9 @@
         text: c,
         click: chose(info, c)
       }, menu.left);
+      if (info.selected && info.selected() === c) {
+        menu.buttons[c].classList.add('highlight');
+      }
       if (c === 'VOL') {
         results.push(menuVolume(snd.vol));
       } else {
@@ -2441,6 +2489,10 @@
   };
 
   loadLevel = function(level) {
+    world.dots.forEach(function(d) {
+      return clearInterval(d.timer);
+    });
+    world.sparks = [];
     svg.innerHTML = '';
     menu.bot.innerHTML = '';
     menu.usr.innerHTML = '';
@@ -2451,7 +2503,7 @@
       r: screen.radius
     });
     world.circle.v = vec();
-    world.ticks = 0;
+    world.unitClock = 0;
     world.dots = [];
     world.lines = [];
     world.update = 1;
@@ -2526,9 +2578,7 @@
       l = world.dots.length;
       i = (l + level.bot.i) % l;
       bot = new Bot(world.dots[i]);
-      if (level.bot.speed) {
-        bot.speed = level.bot.speed;
-      }
+      bot.speed = (level.bot.speed || bot.speed) * botPace();
     }
     if (level.msg) {
       msg(level.msg);
@@ -2592,7 +2642,7 @@
     b = world.dots[world.dots.length - 1];
     b.setOwn('bot');
     bot = new Bot();
-    bot.speed = parseInt(randr(2, 6));
+    bot.speed = parseInt(randr(2, 6)) * botPace();
     snd.setSynt({
       usr: {
         instrument: `bell${parseInt(randr(1, 5))}`
@@ -2613,9 +2663,9 @@
           case 'msg':
             return screen.radius / 6;
           case 'hint':
-            return screen.radius / 20;
+            return Math.max(14, screen.radius / 20);
           case 'menu':
-            return Math.max(12, screen.radius / 30);
+            return Math.max(15, screen.radius / 30);
         }
       })();
       return e.style.fontSize = `${parseInt(s)}px`;
@@ -2627,7 +2677,7 @@
     br = svg.getBoundingClientRect();
     screen.size = vec(br.width, br.height);
     screen.center = vec(br.width / 2, br.height / 2);
-    screen.radius = 0.4 * Math.min(screen.size.x, screen.size.y);
+    screen.radius = (screen.size.x < 600 ? 0.46 : 0.4) * Math.min(screen.size.x, screen.size.y);
     world.update = 1;
     if (world.circle) {
       world.circle.setAttribute('cx', screen.center.x);
@@ -2643,18 +2693,52 @@
 
   size();
 
-  win.addEventListener('mousemove', function(e) {
-    var d, len, ref1, u;
+  // Pointer Events cover mouse, touch and pen. Touch pointers have no hover and stay
+  // captured by the element they started on, so the dot under the pointer is found
+  // by hit-testing, with extra reach for fingers.
+  TOUCH_SLACK = 28;
+
+  dotAt = function(x, y, slack) {
+    var best, bestDist, el;
+    el = document.elementFromPoint(x, y);
+    if (el != null ? el.dot : void 0) {
+      return el.dot;
+    }
+    best = null;
+    bestDist = slack;
+    world.dots.forEach(function(d) {
+      var dist, p;
+      if (d.depth() < 0.5) {
+        return;
+      }
+      p = u2s(d.v);
+      dist = Math.hypot(p.x - x, p.y - y) - 1.3 * d.radius();
+      if (dist < bestDist) {
+        best = d;
+        return bestDist = dist;
+      }
+    });
+    return best;
+  };
+
+  win.addEventListener('pointermove', function(e) {
+    var d, dx, dy, len, ref1, u;
+    if (!e.isPrimary) {
+      return;
+    }
+    dx = e.clientX - mouse.pos.x;
+    dy = e.clientY - mouse.pos.y;
     mouse.pos = vec(e.clientX, e.clientY);
+    mouse.touch = dotAt(e.clientX, e.clientY, e.pointerType === 'mouse' ? 0 : TOUCH_SLACK);
     if (mouse.drag === 'rot') {
-      world.userRot = rotq(vec(e.movementX, e.movementY));
+      world.userRot = rotq(vec(dx, dy));
       ref1 = world.dots;
       for (u = 0, len = ref1.length; u < len; u++) {
         d = ref1[u];
         d.rot(world.userRot);
         world.update = 1;
       }
-      return world.rotSum.add(vec(e.movementX / 10, e.movementY / 10));
+      return world.rotSum.add(vec(dx / 10, dy / 10));
     } else if (mouse.drag) {
       switch (e.buttons) {
         case 1:
@@ -2676,7 +2760,14 @@
     return delete world.tmpline[o];
   };
 
-  win.addEventListener('mousedown', function(e) {
+  win.addEventListener('pointerdown', function(e) {
+    var target;
+    if (!e.isPrimary || !world.level) {
+      return;
+    }
+    mouse.pos = vec(e.clientX, e.clientY);
+    // Fingers may land beside a dot, or on the text floating above the sphere.
+    target = e.target.dot || (e.pointerType !== 'mouse' && !e.target.closest('.button, .about, a') ? dotAt(e.clientX, e.clientY, TOUCH_SLACK) : void 0);
     delTmpl('usr');
     world.inertRot = new Quat();
     hint();
@@ -2687,7 +2778,7 @@
       loadNext();
       return;
     }
-    if (mouse.drag = e.target.dot) {
+    if (mouse.drag = target) {
       if (world.level.name === 'menu') {
         if (e.buttons === 1) {
           loadLevel(mouse.drag.level);
@@ -2697,6 +2788,7 @@
       if (!world.pause) {
         if (mouse.drag.c.classList.contains('linked')) {
           if (mouse.drag.own !== 'bot') {
+            mouse.drag.c.classList.add('src');
             return;
           }
         }
@@ -2705,12 +2797,15 @@
     return mouse.drag = 'rot';
   });
 
-  win.addEventListener('mouseup', function(e) {
+  endDrag = function(e) {
+    if (!e.isPrimary) {
+      return;
+    }
     if (mouse.drag === 'rot') {
       world.inertRot = rotq(world.rotSum);
     } else if (mouse.drag) {
       world.inertRot = new Quat();
-      if (world.tmpline.usr && world.tmpline.usr.e.c) {
+      if (e.type === 'pointerup' && world.tmpline.usr && world.tmpline.usr.e.c) {
         mouse.drag.link(world.tmpline.usr.e);
       }
       mouse.drag.c.classList.remove('src');
@@ -2718,13 +2813,16 @@
     delTmpl('usr');
     mouse.drag = null;
     return world.update = 1;
-  });
+  };
+
+  win.addEventListener('pointerup', endDrag);
+
+  win.addEventListener('pointercancel', endDrag);
 
   
-  svg.addEventListener('mouseover', function(e) {
+  svg.addEventListener('pointerover', function(e) {
     var d;
-    mouse.touch = e.target.dot;
-    if (mouse.drag) {
+    if (e.pointerType !== 'mouse' || mouse.drag) {
       return;
     }
     if (d = e.target.dot) {
@@ -2754,9 +2852,11 @@
     return mouse.hover = a;
   };
 
-  svg.addEventListener('mouseout', function(e) {
+  svg.addEventListener('pointerout', function(e) {
     var d;
-    mouse.touch = null;
+    if (e.pointerType !== 'mouse') {
+      return;
+    }
     if (d = e.target.dot) {
       if (d === mouse.hover) {
         setHover(null, d !== mouse.drag);
@@ -2801,14 +2901,16 @@
       win.requestAnimationFrame(anim);
       return now;
     };
-    world.delta = (now - world.time) / 16;
+    // Frames' worth of time at 60 Hz, capped so a stalled tab can't fast-forward the game.
+    world.delta = Math.min(now - world.time, MAX_FRAME_MS) / 16;
     world.time = now;
     if (!world.level) {
       return nextTick();
     }
     if (!world.pause && world.level.name !== 'menu') {
-      world.ticks += 1;
-      if (world.ticks % 60 === 0) {
+      world.unitClock += world.delta * 16;
+      if (world.unitClock >= UNIT_INTERVAL_MS) {
+        world.unitClock -= UNIT_INTERVAL_MS;
         ref1 = ['usr', 'bot'];
         for (u = 0, len = ref1.length; u < len; u++) {
           ow = ref1[u];
@@ -2827,6 +2929,7 @@
               world.winner = 'usr';
               pause('ONLINE!', 'usr');
               pref.set(world.level.name, true);
+              recordProgress();
             } else {
               world.winner = 'bot';
               pause('OFFLINE!', 'bot');
@@ -2853,7 +2956,7 @@
         bot.anim(world.delta);
       }
     }
-    world.rotSum.mul(0.8);
+    world.rotSum.mul(Math.pow(0.8, world.delta));
     world.inertRot.slerp(new Quat(), 0.01 * world.delta);
     if (!world.inertRot.zero() || world.update) {
       ref3 = world.dots;
