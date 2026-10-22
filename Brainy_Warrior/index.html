@@ -4,65 +4,82 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Brainy Warrior 3D</title>
-    <meta name="description" content="A 3D sliding logic puzzle game based on Brainy Warrior. Slide the hero to defeat all enemies.">
+    <meta name="description" content="A 3D sliding logic puzzle. Slide the hero to defeat every enemy without falling into the water.">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <!-- Three.js Library via CDN -->
-    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
     <script type="importmap">
       {
         "imports": {
-          "three": "https://unpkg.com/three@0.150.1/build/three.module.js",
-          "three/addons/": "https://unpkg.com/three@0.150.1/examples/jsm/"
+          "three": "./vendor/three-0.150.1/three.module.js"
         }
       }
     </script>
 </head>
 <body>
-    <!-- 3D Canvas Container -->
-    <div id="game-container"></div>
+    <div class="layout">
+        <aside class="sidebar">
+            <header class="glass-panel hud">
+                <h1 class="title">Brainy Warrior 3D</h1>
+                <p id="level-name" class="level-name"></p>
+                <div class="stats">
+                    <div class="stat-box">
+                        <span class="stat-label">Moves</span>
+                        <span id="move-count" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Par</span>
+                        <span id="par-count" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Enemies</span>
+                        <span id="enemy-count" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Swords</span>
+                        <span id="sword-count" class="stat-value">0</span>
+                    </div>
+                </div>
+                <p id="level-hint" class="hint"></p>
+                <p class="controls-help">
+                    <b>Arrows / WASD</b> slide &middot; <b>Space</b> wizard &middot; <b>Z</b> undo &middot; <b>R</b> restart &middot; <b>H</b> solution &middot; <b>L</b> levels
+                </p>
+            </header>
 
-    <!-- UI Overlay -->
-    <div id="ui-layer">
-        <div class="glass-panel info-panel">
-            <h1 class="title">Brainy Warrior 3D</h1>
-            <p class="subtitle">Defeat all enemies without falling!</p>
-            <div class="stats">
-                <div class="stat-box">
-                    <span class="stat-label">Moves</span>
-                    <span id="move-count" class="stat-value">0</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-label">Enemies</span>
-                    <span id="enemy-count" class="stat-value">0</span>
-                </div>
+            <nav class="glass-panel actions" aria-label="Level actions">
+                <button id="btn-undo" class="action-btn" type="button">Undo</button>
+                <button id="btn-restart" class="action-btn" type="button">Restart</button>
+                <button id="btn-wizard" class="action-btn wizard-btn" type="button" hidden>Wizard</button>
+                <button id="btn-solve" class="action-btn" type="button">Show solution</button>
+                <button id="btn-levels" class="action-btn" type="button">Levels</button>
+            </nav>
+        </aside>
+
+        <main id="game-container" aria-label="Puzzle board. Use the arrow keys or swipe to slide."></main>
+    </div>
+
+    <div id="toast" class="toast" role="status" hidden></div>
+
+    <div id="won-overlay" class="overlay" hidden>
+        <div class="glass-panel center-panel" role="dialog" aria-labelledby="won-title">
+            <h2 id="won-title" class="massive-text">Level cleared!</h2>
+            <p id="won-text"></p>
+            <p id="won-best" class="badge" hidden>New best!</p>
+            <div class="dialog-actions">
+                <button id="btn-replay" class="action-btn" type="button">Replay</button>
+                <button id="btn-next" class="action-btn primary-btn" type="button">Next level</button>
             </div>
-            <p class="controls-help">
-                <b>Controls:</b> Arrow Keys or WASD to Slide.<br>
-                You slide until you hit an obstacle or enemy.
-            </p>
-        </div>
-
-        <div class="glass-panel controls-panel">
-            <button id="btn-restart" class="action-btn">
-                <span class="btn-icon">🔄</span> Restart Level
-            </button>
-            <button id="btn-solve" class="action-btn primary-btn">
-                <span class="btn-icon">🧠</span> Auto-Solve API
-            </button>
-        </div>
-    </div>
-    
-    <!-- Game Won Overlay -->
-    <div id="won-overlay" class="hidden">
-        <div class="glass-panel center-panel">
-            <h2 class="massive-text">LEVEL CLEARED!</h2>
-            <p>You have outsmarted the enemies.</p>
-            <button id="btn-next" class="action-btn primary-btn">Next Level ➔</button>
         </div>
     </div>
 
-    <!-- Main Game Script -->
+    <div id="levels-overlay" class="overlay" hidden>
+        <div class="glass-panel center-panel levels-panel" role="dialog" aria-labelledby="levels-title">
+            <h2 id="levels-title">Levels</h2>
+            <p class="levels-note">Clear a level to unlock the next. Match par for a perfect clear.</p>
+            <div id="level-grid" class="level-grid"></div>
+            <button id="btn-close-levels" class="action-btn" type="button">Close</button>
+        </div>
+    </div>
+
     <script type="module" src="js/game.js"></script>
 </body>
 </html>

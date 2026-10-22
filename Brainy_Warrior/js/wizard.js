@@ -1,42 +1,48 @@
-import * as THREE from 'three';
+import { makeWizardMesh } from './level.js';
 
+const TELEPORT_TIME = 0.3;
+
+/** The wizard's mesh: hovers in place and shrinks/grows when it teleports. */
 export class Wizard {
-    constructor(scene, positions) {
-        this.scene = scene;
-        this.positions = positions || [];
-        this.currentIndex = 0;
+    constructor(parent, positions) {
+        this.positions = positions;
+        this.mesh = makeWizardMesh();
+        this.time = 0;
+        this.teleport = 0;
+        this.index = 0;
+        parent.add(this.mesh);
+        this.place(0);
+    }
 
-        const geo = new THREE.CapsuleGeometry(0.3, 0.4, 4, 8);
-        const mat = new THREE.MeshStandardMaterial({ 
-            color: 0x8b5cf6, 
-            emissive: 0x4c1d95,
-            emissiveIntensity: 0.5
-        });
-        this.mesh = new THREE.Mesh(geo, mat);
-        this.mesh.castShadow = true;
-        
-        if (this.positions.length > 0) {
-            this.scene.add(this.mesh);
-            this.updatePosition();
+    place(index) {
+        this.index = index;
+        const pos = this.positions[index];
+        this.mesh.position.set(pos.x, 0.06, pos.z);
+        this.mesh.scale.setScalar(1);
+        this.teleport = 0;
+    }
+
+    moveTo(index) {
+        if (index === this.index) return;
+        this.target = index;
+        this.teleport = TELEPORT_TIME;
+    }
+
+    update(dt) {
+        this.time += dt;
+        this.mesh.rotation.y = Math.sin(this.time * 1.5) * 0.4;
+        if (this.teleport <= 0) return;
+        this.teleport -= dt;
+        const half = TELEPORT_TIME / 2;
+        if (this.teleport > half) {
+            this.mesh.scale.setScalar((this.teleport - half) / half);
+        } else {
+            if (this.index !== this.target) {
+                this.index = this.target;
+                const pos = this.positions[this.index];
+                this.mesh.position.set(pos.x, 0.06, pos.z);
+            }
+            this.mesh.scale.setScalar(this.teleport > 0 ? 1 - this.teleport / half : 1);
         }
-    }
-
-    toggle() {
-        if (this.positions.length < 2) return;
-        this.currentIndex = (this.currentIndex + 1) % this.positions.length;
-        this.updatePosition();
-    }
-
-    updatePosition() {
-        const pos = this.positions[this.currentIndex];
-        this.mesh.position.set(pos.x, 0.5, pos.z);
-    }
-
-    getPosition() {
-        return this.positions[this.currentIndex];
-    }
-
-    destroy() {
-        this.scene.remove(this.mesh);
     }
 }
