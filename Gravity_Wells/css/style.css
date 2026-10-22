@@ -50,3 +50,154 @@ canvas {
     height: 1.3rem;
   }
 }
+
+/* HUD: puzzle list and mute, top-right so the kit's back button keeps top-left. */
+.gw-hud {
+  position: fixed;
+  top: max(8px, env(safe-area-inset-top));
+  right: max(8px, env(safe-area-inset-right));
+  z-index: 1000;
+  display: flex;
+  gap: 6px;
+}
+
+.gw-btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid #4B8495;
+  border-radius: 8px;
+  background: #16272C;
+  color: #F2F7F6;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gw-btn:hover,
+.gw-btn:focus-visible {
+  background: #1F363D;
+}
+
+.gw-btn:focus-visible,
+.gw-level:focus-visible {
+  outline: 2px solid #F2F7F6;
+  outline-offset: 2px;
+}
+
+.gw-btn svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gw-levels {
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 16px;
+  border: 1px solid #4B8495;
+  border-radius: 12px;
+  background: #0E181B;
+  color: #F2F7F6;
+  font-family: monospace;
+  box-sizing: border-box;
+}
+
+.gw-levels::backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.gw-levels-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: 12px;
+  margin-bottom: 12px;
+}
+
+.gw-levels-head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.gw-levels-count {
+  grid-row: 2;
+  margin: 4px 0 0;
+  color: #AECBD6;
+}
+
+.gw-close {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+}
+
+.gw-levels-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gw-level {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 60px;
+  padding: 6px 2px;
+  border: 1px solid #4B8495;
+  border-radius: 8px;
+  background: transparent;
+  color: #F2F7F6;
+  font: inherit;
+  cursor: pointer;
+}
+
+.gw-level.is-solved {
+  background: #4B8495;
+}
+
+.gw-level[aria-current] {
+  border: 2px solid #F2F7F6;
+}
+
+.gw-level:hover {
+  background: #1F363D;
+}
+
+.gw-level.is-solved:hover {
+  background: #5C99AB;
+}
+
+.gw-level-n {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.gw-level-name {
+  font-size: 11px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gw-levels-help {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: #AECBD6;
+}
+
+@media (pointer: coarse) {
+  .gw-levels-help {
+    display: none;
+  }
+}

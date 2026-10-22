@@ -6,14 +6,34 @@ let delayEffect = undefined;
 let feedback = undefined;
 let delayVolume = undefined;
 let index = 0;
+let muted = false;
+
+let silent = () => muted || document.hidden;
+
+// Keep the context asleep while muted or while the tab is in the background.
+let syncContext = () => {
+    if (ctx === undefined || ctx.state === 'closed') {
+        return;
+    }
+    if (silent()) {
+        ctx.suspend();
+    } else {
+        ctx.resume();
+    }
+};
+
+document.addEventListener('visibilitychange', syncContext);
+
+let setMuted = value => {
+    muted = value;
+    syncContext();
+};
 
 let playSong = (options = {}) => {
 
-    /*
-    if (muted) {
-        return;
+    if (silent()) {
+        return ctx;
     }
-    */
 
     let notes = 'AbBCdDeEFgGa';
 
@@ -63,7 +83,11 @@ let playSong = (options = {}) => {
     let mLooped = !melody;
     let bLooped = !bass;
 
-    if (ctx === undefined || ctx.state !== 'running') {
+    if (ctx !== undefined && ctx.state === 'suspended') {
+        ctx.resume();
+    }
+
+    if (ctx === undefined || ctx.state === 'closed') {
         ctx = new AudioContext();
         if (/(iPhone|iPad)/i.test(navigator.userAgent) &&
             ctx.sampleRate !== 48000) {
@@ -80,7 +104,6 @@ let playSong = (options = {}) => {
         biquadFilter.connect(ctx.destination);
         biquadFilter.type = 'lowpass';
         biquadFilter.frequency.value = 920;
-        //biquadFilter.gain.value = 25;
 
         musicVolume = ctx.createGain();
         musicVolume.connect(biquadFilter);
@@ -120,7 +143,6 @@ let playSong = (options = {}) => {
             return;
         }
         if (stopTime !== 0 && ctx.currentTime > stopTime) {
-            //ctx.close();
             return;
         }
         if ((!mLooped && ctx.currentTime > nextNoteTick + .35) || (!bLooped && ctx.currentTime > nextPluckTick + .35)) {
@@ -160,5 +182,6 @@ let playSong = (options = {}) => {
 };
 
 export default Object.freeze({
-    playSong
+    playSong,
+    setMuted
 });

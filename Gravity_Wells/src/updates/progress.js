@@ -1,19 +1,15 @@
-import dataSystem from '../data.js';
+import puzzleSystem from './puzzle.js';
 
-let update = (entities, entity, time, delta) => {
-    let solved = dataSystem.load('solved') || [];
-    let sequence = (
-        dataSystem.load('payed')
-    ) ? entities.game.levels.wm : entities.game.levels.sequence;
-    let current = entities.game.levels.current;
-    let currentPuzzleId = sequence[current];
+let update = (entities, entity) => {
+    let sequence = entities.game.levels.sequence;
+    let currentPuzzleId = sequence[entities.game.levels.current];
     let dots = [];
     let puzzleIds = [];
     sequence.forEach(puzzleId => {
         let puzzle = entities[puzzleId].puzzle;
         if (puzzle.grid.length) {
             let dot = 0;
-            if (solved.indexOf(puzzleId) > -1) {
+            if (puzzleSystem.isSolved(puzzleId)) {
                 dot = dot + 1;
             }
             if (puzzleId === currentPuzzleId) {
@@ -32,13 +28,7 @@ let update = (entities, entity, time, delta) => {
     entities.game.pointer.pointing = true;
     if (entities.game.pointer.justUp) {
         let target = (x / 12) | 0;
-        let puzzleId = puzzleIds[target];
-        let levels = entities.game.levels;
-        levels.current = sequence.indexOf(puzzleId);
-        dataSystem.save('current', levels.current);
-        entities[puzzleId].puzzle.init = true;
-        let state = entities.level.state;
-        state.updates = [puzzleId];
+        puzzleSystem.navigate(sequence.indexOf(puzzleIds[target]));
     }
 };
 
