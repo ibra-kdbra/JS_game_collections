@@ -1,0 +1,126 @@
+/* Menus drawn over the LittleJS canvas. The engine styles <body> and the canvas itself. */
+
+.screen {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 64px 16px 24px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, .55);
+    color: #fff;
+    font: 16px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif;
+    text-align: center;
+}
+
+.screen[hidden] {
+    display: none;
+}
+
+.screen h1,
+.screen h2 {
+    margin: 0;
+    font: clamp(44px, 11vw, 120px)/1 Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    letter-spacing: 1px;
+    text-shadow: 4px 4px 0 #000;
+}
+
+.screen h2 {
+    font-size: clamp(40px, 9vw, 80px);
+}
+
+.byline {
+    margin: -6px 0 0;
+    font: 22px/1.2 Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    letter-spacing: 1px;
+}
+
+.lead {
+    max-width: 32em;
+    margin: 0;
+}
+
+.screen button {
+    min-width: 160px;
+    min-height: 52px;
+    padding: 0 28px;
+    border: 3px solid #000;
+    border-radius: 6px;
+    background: #ffd23f;
+    color: #000;
+    font: 28px/1 Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 4px 4px 0 #000;
+}
+
+.screen button:hover,
+.screen button:focus-visible {
+    background: #fff;
+    outline: 3px solid #fff;
+    outline-offset: 3px;
+}
+
+.screen button:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 #000;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px;
+}
+
+.best {
+    min-height: 1.4em;
+    margin: 0;
+    color: #ffd23f;
+    font-weight: 700;
+}
+
+.keys {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 6px;
+    color: #ddd;
+    font-size: 14px;
+}
+
+kbd {
+    display: inline-block;
+    padding: 1px 6px;
+    border: 1px solid #888;
+    border-radius: 4px;
+    background: #222;
+    font: 13px/1.4 ui-monospace, monospace;
+}
+
+.touch-help {
+    display: none;
+    max-width: 30em;
+    margin: 0;
+    color: #ddd;
+    font-size: 14px;
+}
+
+.gk-has-touch .keys {
+    display: none;
+}
+
+.gk-has-touch .touch-help {
+    display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .screen button:active {
+        transform: none;
+    }
+}

@@ -2,8 +2,10 @@
 
 const clampCamera = !debug;
 const lowGraphicsSettings = glOverlay = !window['chrome']; // only chromium uses high settings
-const startCameraScale = 4 * 16;
 const defaultCameraScale = 4 * 16;
+// Zoom out on small screens so a phone still shows about 12 tiles across its short side.
+// Steps of 8 keep the 8px pixel art crisp.
+const fitCameraScale = () => clamp((min(mainCanvas.width, mainCanvas.height) / 12 / 8 | 0) * 8, defaultCameraScale, 32);
 const maxPlayers = 4;
 
 const team_none = 0;
@@ -12,32 +14,37 @@ const team_enemy = 2;
 
 let updateWindowSize, renderWindowSize, gameplayWindowSize;
 
+// Text is sized for a ~1000x700 screen and scales down on smaller ones.
+const uiScale = () => min(1, min(mainCanvas.width / 1000, mainCanvas.height / 700));
+const uiFont = (px, minPx = 0) => max(minPx, px * uiScale()) + "px Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif";
+// On touch screens the on-screen controls cover the bottom, so the HUD moves to the top.
+const hudOnTop = () => document.documentElement.classList.contains('gk-has-touch');
+
 engineInit(
 
     () => // appInit 
     {
         resetGame();
-        cameraScale = startCameraScale;
+        cameraScale = fitCameraScale();
+        cameraPos = players[0].pos.copy(); // start on the player, the title screen shows this view
     },
     () => // appUpdate
     {
+        if (!debug)
+            cameraScale = fitCameraScale();
         const cameraSize = vec2(mainCanvas.width, mainCanvas.height).scale(1 / cameraScale);
         renderWindowSize = cameraSize.add(vec2(5));
 
         gameplayWindowSize = vec2(mainCanvas.width, mainCanvas.height).scale(1 / defaultCameraScale);
         updateWindowSize = gameplayWindowSize.add(vec2(30));
-        //debugRect(cameraPos, maxGameplayCameraSize);
-        //debugRect(cameraPos, updateWindowSize);
 
         if (debug) {
             randSeeded(randSeeded(randSeeded(randSeed = Date.now()))); // set random seed for debug mode stuf
             if (keyWasPressed(81))
                 new Enemy(mousePosWorld);
 
-            if (keyWasPressed(84)) {
-                //for(let i=30;i--;)
+            if (keyWasPressed(84))
                 new Prop(mousePosWorld);
-            }
 
             if (keyWasPressed(69))
                 explosion(mousePosWorld);
@@ -47,7 +54,6 @@ engineInit(
 
                 // test
                 e.collideTiles = 1;
-                //e.tileIndex=7;
                 e.emitSize = 2;
                 e.colorStartA = new Color(1, 1, 1, 1);
                 e.colorStartB = new Color(0, 1, 1, 1);
@@ -58,28 +64,15 @@ engineInit(
                 e.speed = .3
                 e.elasticity = .1
                 e.gravityScale = 1;
-                //e.additive = 1;
                 e.angle = -PI;
             }
 
             if (mouseWheel) // mouse zoom
                 cameraScale = clamp(cameraScale * (1 - mouseWheel / 10), defaultTileSize.x * 16, defaultTileSize.x / 16);
 
-            //if (keyWasPressed(77))
-            //    playSong([[[,0,219,,,,,1.1,,-.1,-50,-.05,-.01,1],[2,0,84,,,.1,,.7,,,,.5,,6.7,1,.05]],[[[0,-1,1,0,5,0],[1,1,8,8,0,3]]],[0,0,0,0],90]) // music test
-
             if (keyWasPressed(77))
                 players[0].pos = mousePosWorld;
 
-            /*if (keyWasPressed(32))
-            {
-                skyParticles && skyParticles.destroy();
-                tileLayer.destroy();
-                tileBackgroundLayer.destroy();
-                tileParallaxLayers.forEach((tileParallaxLayer)=>tileParallaxLayer.destroy());
-                randomizeLevelParams();
-                applyArtToLevel();
-            }*/
             if (keyWasPressed(78))
                 nextLevel();
         }
@@ -92,8 +85,10 @@ engineInit(
         if (minDeadTime > 3 && (keyWasPressed(90) || keyWasPressed(32) || gamepadWasPressed(0)) || keyWasPressed(82))
             resetGame();
 
-        if (levelEndTimer.get() > 3)
+        if (levelEndTimer.get() > 3) {
             nextLevel();
+            dispatchEvent(new CustomEvent('huggers:level', { detail: level }));
+        }
     },
     () => // appUpdatePost
     {
@@ -145,41 +140,21 @@ engineInit(
         gradient.addColorStop(0, levelSkyColor.rgba());
         gradient.addColorStop(1, levelSkyHorizonColor.rgba());
         mainContext.fillStyle = gradient;
-        //mainContext.fillStyle = levelSkyColor.rgba();
         mainContext.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
 
         drawStars();
     },
     () => // appRenderPost
     {
-        //let minAliveTime = 9;
-        //for(const player of players)
-        //    minAliveTime = min(minAliveTime, player.getAliveTime());
-
-        //const livesPercent = percent(minAliveTime, 5, 4)
-        //const s = 8;
-        //const offset = 100*livesPercent;
-        //mainContext.drawImage(tileImage, 32, 8, s, s, 32, mainCanvas.height-90, s*9, s*9);
         mainContext.textAlign = 'center';
-        const p = percent(gameTimer.get(), 8, 10);
-
-        //mainContext.globalCompositeOperation = 'difference';
-        mainContext.fillStyle = new Color(0, 0, 0, p).rgba();
-        if (p > 0) {
-            //mainContext.fillStyle = (new Color).setHSLA(time/3,1,.5,p).rgba();
-            mainContext.font = '1.5in impact';
-            mainContext.fillText('Huggers Fight', mainCanvas.width / 2, 140);
-        }
-
-        mainContext.font = '.5in impact';
-        p > 0 && mainContext.fillText('A fighter game by ibra-kdbra', mainCanvas.width / 2, 210);
-
-        // check if any enemies left
+        // check if any enemies left, and draw them on the radar
+        const hudY = hudOnTop() ? 84 : mainCanvas.height - 40;
+        const radarY = hudOnTop() ? 104 : mainCanvas.height - 20;
         let enemiesCount = 0;
         for (const o of engineCollideObjects) {
             if (o.isCharacter && o.team == team_enemy) {
                 ++enemiesCount;
-                const pos = vec2(mainCanvas.width / 2 + (o.pos.x - cameraPos.x) * 30, mainCanvas.height - 20);
+                const pos = vec2(mainCanvas.width / 2 + (o.pos.x - cameraPos.x) * 30, radarY);
                 drawRectScreenSpace(pos, o.size.scale(20), o.color.scale(1, .6));
             }
         }
@@ -188,7 +163,17 @@ engineInit(
             levelEndTimer.set();
 
         mainContext.fillStyle = new Color(0, 0, 0).rgba();
-        mainContext.fillText('Level ' + level + '      Lives ' + playerLives + '      Enemies ' + enemiesCount, mainCanvas.width / 2, mainCanvas.height - 40);
+        mainContext.font = uiFont(48, 18);
+        const gap = uiScale() < .6 ? '   ' : '      ';
+        mainContext.fillText('Level ' + level + gap + 'Lives ' + playerLives + gap + 'Enemies ' + enemiesCount, mainCanvas.width / 2, hudY);
+
+        if (players.length && playerLives <= 0 && players.every(player => player.isDead())) {
+            mainContext.font = uiFont(120, 40);
+            mainContext.fillText('Game Over', mainCanvas.width / 2, mainCanvas.height / 2);
+            mainContext.font = uiFont(40, 18);
+            players.every(player => player.deadTimer.get() > 3) && mainContext.fillText(hudOnTop() ? 'Tap Shoot to play again' : 'Press Z or Space to play again',
+                mainCanvas.width / 2, mainCanvas.height / 2 + max(30, 60 * uiScale()));
+        }
 
         // fade in level transition
         const fade = levelEndTimer.isSet() ? percent(levelEndTimer.get(), 3, 1) : percent(levelTimer.get(), .5, 2);
