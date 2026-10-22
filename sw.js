@@ -1,74 +1,116 @@
 /**
- * Service Worker for JS Game Lab
- * Asset Caching & Offline Support
+ * Game Lab service worker.
+ *
+ * - The hub shell (pages, CSS, JS, fonts, icons) is precached per version, so the
+ *   collection opens instantly and offline. Bump VERSION whenever a shell file changes.
+ * - Everything else same-origin is served network-first and cached as it is used,
+ *   capped by entry count and file size so heavy games can't fill the disk.
+ * - Navigations always try the network first, so a deploy shows up on the next visit.
  */
 
-const CACHE_NAME = 'js-game-lab-v1';
-const ASSETS_TO_CACHE = [
-    './',
-    './index.html',
-    './assets/css/cyberpunk.css',
-    './assets/css/feedback.css',
-    './assets/js/script.js',
-    './assets/js/dropEffect.js',
-    './assets/js/lazyLoad.js',
-    './assets/icons/video_game.png',
-    './assets/icons/video_game.svg',
-    // Art Lab
-    './Art_Lab/index.html',
-    './assets/css/artlab.css',
-    './assets/js/artlab.js'
+const VERSION = 'v2';
+const SHELL_CACHE = `gamelab-shell-${VERSION}`;
+const RUNTIME_CACHE = `gamelab-runtime-${VERSION}`;
+const RUNTIME_MAX_ENTRIES = 300;
+const RUNTIME_MAX_BYTES = 5 * 1024 * 1024;
+
+const SHELL = [
+  './',
+  './index.html',
+  './Art_Lab/',
+  './Art_Lab/index.html',
+  './assets/css/tokens.css',
+  './assets/css/hub.css',
+  './assets/css/artlab.css',
+  './assets/css/feedback.css',
+  './assets/js/data.js',
+  './assets/js/site.js',
+  './assets/js/hub.js',
+  './assets/js/artlab.js',
+  './assets/js/radio.js',
+  './assets/js/feedback/FeedbackUI.js',
+  './assets/js/feedback/feedbackAPI.js',
+  './assets/icons/sprite.svg',
+  './assets/icons/video_game.svg',
+  './assets/icons/video_game.png',
+  './assets/fonts/big-shoulders-display-latin-600-normal.woff2',
+  './assets/fonts/big-shoulders-display-latin-800-normal.woff2',
+  './assets/fonts/atkinson-hyperlegible-latin-400-normal.woff2',
+  './assets/fonts/atkinson-hyperlegible-latin-700-normal.woff2',
 ];
 
-// Install Event
 self.addEventListener('install', (event) => {
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then((cache) => {
-                console.log('[Service Worker] Caching all: app shell and content');
-                return cache.addAll(ASSETS_TO_CACHE);
-            })
-            .then(() => self.skipWaiting())
-    );
+  event.waitUntil(
+    caches
+      .open(SHELL_CACHE)
+      .then((cache) => cache.addAll(SHELL))
+      .then(() => self.skipWaiting()),
+  );
 });
 
-// Activate Event - Clean up old caches
 self.addEventListener('activate', (event) => {
-    event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((cacheName) => {
-                    if (cacheName !== CACHE_NAME) {
-                        console.log('[Service Worker] Clearing old cache');
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        }).then(() => self.clients.claim())
-    );
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => key !== SHELL_CACHE && key !== RUNTIME_CACHE)
+            .map((key) => caches.delete(key)),
+        ),
+      )
+      .then(() => self.clients.claim()),
+  );
 });
 
-// Fetch Event - Stale-While-Revalidate Strategy
 self.addEventListener('fetch', (event) => {
-    // Skip cross-origin requests (like CDN)
-    if (!event.request.url.startsWith(self.location.origin)) {
-        return;
-    }
+  const { request } = event;
+  if (request.method !== 'GET') return;
 
-    event.respondWith(
-        caches.open(CACHE_NAME).then((cache) => {
-            return cache.match(event.request).then((response) => {
-                const fetchPromise = fetch(event.request).then((networkResponse) => {
-                    // Update cache if valid response
-                    if (networkResponse.ok && networkResponse.status === 200) {
-                        cache.put(event.request, networkResponse.clone());
-                    }
-                    return networkResponse;
-                });
+  const url = new URL(request.url);
+  // Leave cross-origin requests (CDNs, YouTube, the feedback API) to the browser.
+  if (url.origin !== self.location.origin) return;
+  // Media streams use range requests, which the Cache API can't answer correctly.
+  if (request.headers.has('range')) return;
 
-                // Return cached response if available, else fetch
-                return response || fetchPromise;
-            });
-        })
-    );
+  event.respondWith(networkFirst(event, request));
 });
+
+async function networkFirst(event, request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok && response.type === 'basic') {
+      event.waitUntil(store(request, response.clone()));
+    }
+    return response;
+  } catch (error) {
+    const cached = await caches.match(request, { ignoreSearch: request.mode === 'navigate' });
+    if (cached) return cached;
+    if (request.mode === 'navigate') {
+      const shell = await caches.match('./index.html');
+      if (shell) return shell;
+    }
+    throw error;
+  }
+}
+
+async function store(request, response) {
+  // Shell files are refreshed in place; everything else goes to the bounded runtime cache.
+  const shell = await caches.open(SHELL_CACHE);
+  if (await shell.match(request)) {
+    await shell.put(request, response);
+    return;
+  }
+
+  const length = Number(response.headers.get('content-length'));
+  if (length > RUNTIME_MAX_BYTES) return;
+  const body = await response.blob();
+  if (body.size > RUNTIME_MAX_BYTES) return;
+
+  const runtime = await caches.open(RUNTIME_CACHE);
+  await runtime.put(request, new Response(body, response));
+
+  const keys = await runtime.keys();
+  // Cache keys come back in insertion order; drop the oldest beyond the cap.
+  await Promise.all(keys.slice(0, Math.max(0, keys.length - RUNTIME_MAX_ENTRIES)).map((key) => runtime.delete(key)));
+}

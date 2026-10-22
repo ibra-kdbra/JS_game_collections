@@ -1,177 +1,228 @@
+/**
+ * Game Lab registry: the single source of truth for the hub and the Art Lab page.
+ *
+ * Paths are relative to the site root; each page prefixes its own base ('./' or '../').
+ * Thumbnails live in assets/thumbs/<slug>-480.webp and <slug>-960.webp (16:10).
+ *
+ * inputs  – controls the game actually supports today.
+ * mobile  – true only when the game has been checked at phone size and plays by touch.
+ */
+
+export const GENRES = {
+  arcade: 'Arcade',
+  puzzle: 'Puzzle',
+  action: 'Action',
+  strategy: 'Strategy',
+};
+
+export const INPUTS = {
+  keyboard: 'Keyboard',
+  mouse: 'Mouse',
+  touch: 'Touch',
+  gamepad: 'Gamepad',
+};
+
 export const games = [
   {
-    link: "./BlossomingFlowers/index.html",
-    imgSrc: "./BlossomingFlowers/assets/captured.png",
-    title: "Blossoming Flowers",
-    description: "Pure CSS blossoming flowers animation. Watch as petals unfold in a mesmerizing dance of color and motion.",
-    tags: ["#PC", "#Mobile"],
-    type: "experiment",
-    experimentTags: ["CSS Art", "Animation"]
+    slug: 'pacman',
+    title: 'Pac-Man',
+    href: 'PacMan/index.html',
+    blurb: 'The arcade original plus Ms. Pac-Man and procedurally generated Cookie-Man mazes, with practice mode and a rewind button.',
+    genre: 'arcade',
+    inputs: ['keyboard', 'touch'],
+    mobile: true,
+    featured: true,
   },
   {
-    link: "./Simple/index.html",
-    imgSrc: "./Simple/captured.png",
-    title: "Flow Fields",
-    description: "Experiment with flow fields. Press D to debug or double touch. Watch particles dance through invisible currents.",
-    tags: ["#PC", "#Mobile"],
-    type: "experiment",
-    experimentTags: ["Canvas", "Particles"]
+    slug: 'tetris',
+    title: 'Tetris',
+    href: 'Tetris/index.html',
+    blurb: 'Sprint 40 lines or dig through garbage. Hold, ghost piece, replays, custom handling and rebindable keys.',
+    genre: 'puzzle',
+    inputs: ['keyboard', 'touch'],
+    mobile: false,
+    featured: true,
   },
   {
-    link: "./Text_Fields/index.html",
-    imgSrc: "./Text_Fields/captured.png",
-    title: "Text Fields",
-    description: "Typography meets generative art. Text rendered as particle systems moving through flow fields.",
-    tags: ["#PC", "#Mobile"],
-    type: "experiment",
-    experimentTags: ["Typography", "Canvas"]
+    slug: '2048',
+    title: '2048',
+    href: '2048/index.html',
+    blurb: 'Slide and merge to 2048, or hand the board to one of ten AI strategies and watch it chase 16384.',
+    genre: 'puzzle',
+    inputs: ['keyboard', 'touch'],
+    mobile: true,
+    featured: true,
   },
   {
-    link: "./Experimental_math/index.html",
-    imgSrc: "./Experimental_math/captured.png",
-    title: "Experimental Math",
-    description: "Low-level mathematical explorations with flow fields. Visualize equations in motion.",
-    tags: ["#PC", "#Mobile"],
-    type: "experiment",
-    experimentTags: ["Math", "Generative"]
+    slug: 'huggers-fight',
+    title: 'Huggers Fight',
+    href: 'HuggersFight/index.html',
+    blurb: 'Wipe out enemy outposts on generated planets. Almost everything breaks, some things burn. Up to four gamepads.',
+    genre: 'action',
+    inputs: ['keyboard', 'mouse', 'gamepad'],
+    mobile: false,
+    featured: true,
   },
   {
-    link: "./Adaptive/index.html",
-    imgSrc: "./Adaptive/images/result3.png",
-    title: "Adaptive Fields",
-    description: "Try multiple variations with adaptive flow fields that respond to your interaction.",
-    tags: ["#PC", "#Mobile"],
-    type: "experiment",
-    experimentTags: ["Interactive", "Canvas"]
+    slug: 'gravity-wells',
+    title: 'Gravity Wells',
+    href: 'Gravity_Wells/index.html',
+    blurb: 'Clear every other square in the universe across eighteen compact puzzles. Tap one and see what happens.',
+    genre: 'puzzle',
+    inputs: ['touch', 'mouse'],
+    mobile: true,
+    featured: true,
   },
   {
-    link: "./LSD/index.html",
-    imgSrc: "./LSD/assets/captured.png",
-    title: "LSD",
-    description: "Create psychedelic animations in real-time. A trip through color and form.",
-    tags: ["#PC"],
-    type: "experiment",
-    experimentTags: ["Psychedelic", "Real-time"]
+    slug: 'souls-bumper',
+    title: 'Souls Bumper',
+    href: 'Souls-Bumper/index.html',
+    blurb: 'A JS13k platformer about death. Rewind your ghost to get through ten tough levels.',
+    genre: 'action',
+    inputs: ['keyboard'],
+    mobile: false,
+    featured: true,
   },
   {
-    link: "./ParticularDrift/index.html",
-    imgSrc: "./ParticularDrift/assets/captured.png",
-    title: "Particular Drift",
-    description: "Watch particles drift through space in this meditative visual experience.",
-    tags: ["#PC"],
-    type: "experiment",
-    experimentTags: ["Particles", "Ambient"]
+    slug: 'tower-defense',
+    title: 'Tower Defense',
+    href: 'TowerDefense/index.html',
+    blurb: 'Seven upgradeable towers, sixteen maps and endless waves. Build your own maps in the editor.',
+    genre: 'strategy',
+    inputs: ['mouse', 'keyboard'],
+    mobile: false,
   },
   {
-    link: "./2048/index.html",
-    imgSrc: "./2048/meta/apple-touch-icon.png",
-    title: "2048 with AI",
-    description: "Challenge yourself with the classic tile-merging puzzle. It has a built-in AI player, with some fantastic algorithms.",
-    tags: ["#PC", "#Mobile"]
+    slug: 'raven',
+    title: 'Raven',
+    href: 'Raven/index.html',
+    blurb: 'Bring a facility’s cameras back online while the Raven close in, but only when you aren’t looking.',
+    genre: 'action',
+    inputs: ['keyboard', 'mouse'],
+    mobile: false,
   },
   {
-    link: "./TowerDefense/index.html",
-    imgSrc: "./TowerDefense/imgs/captured.png",
-    title: "Tower Defense Game",
-    description: "A tower defense game with many options built with p5.js, with a few enhancements, many modes, playgrounds provided.",
-    tags: ["#PC"]
+    slug: 'pacman-slasher',
+    title: 'Pac-Man Slasher',
+    href: 'PacMan_Slasher/index.html',
+    blurb: 'Draw the symbol above each Pac-Man to slash it before it reaches you. Waves get faster.',
+    genre: 'arcade',
+    inputs: ['mouse', 'touch'],
+    mobile: true,
   },
   {
-    link: "./Hangman/index.html",
-    imgSrc: "./Hangman/images/captured.png",
-    title: "Hangman",
-    description: "Classic Hangman game with multiple options, wonderful game play.",
-    tags: ["#PC", "#Mobile"]
+    slug: 'tron',
+    title: 'Tron',
+    href: 'Tron/index.html',
+    blurb: 'Light-cycle duels against the computer or a friend on the same keyboard. Don’t touch the walls.',
+    genre: 'arcade',
+    inputs: ['keyboard', 'touch'],
+    mobile: false,
   },
   {
-    link: "./Art_Lab/index.html",
-    imgSrc: "./assets/icons/captured.png",
-    title: "Art Lab",
-    description: "Math with Art create wonders",
-    tags: ["#PC", "#Mobile"]
+    slug: 'moonldr',
+    title: 'MoonLDR',
+    href: 'MoonLDR/index.html',
+    blurb: 'A Lunar Lander homage. Touch down on marked pads for bonus points and fuel; the run lasts until the tank is dry.',
+    genre: 'arcade',
+    inputs: ['keyboard'],
+    mobile: false,
   },
   {
-    link: "./Raven/index.html",
-    imgSrc: "./Raven/assets/captured.jpg",
-    title: "Raven",
-    description: "In this 2D puzzle-action game, you must fix a security system while surviving enemies who only attack when you're not looking.",
-    tags: ["#PC"]
+    slug: 'hangman',
+    title: 'Hangman',
+    href: 'Hangman/index.html',
+    blurb: 'Guess the word across ten categories and three difficulties before you run out of guesses.',
+    genre: 'puzzle',
+    inputs: ['mouse', 'touch'],
+    mobile: true,
   },
   {
-    link: "./PacMan_Slasher/index.html",
-    imgSrc: "./PacMan_Slasher/img/screen.png",
-    title: "PacMan Slasher",
-    description: "Defeat a pacman by drawing its symbol anywhere.",
-    tags: ["#PC"]
+    slug: 'interlaced',
+    title: 'InterLaced',
+    href: 'InterLaced/index.html',
+    blurb: 'A terminal-driven network intrusion sim. Cut, slow and reroute packets to take each mesh offline.',
+    genre: 'strategy',
+    inputs: ['keyboard', 'mouse'],
+    mobile: false,
   },
   {
-    link: "./Tron/index.html",
-    imgSrc: "./Tron/imgs/intro.png",
-    title: "Tron",
-    description: "Remake of the classic arcade game that involves maneuvering a 'light cycle' in an arena against an opponent.",
-    tags: ["#PC"]
+    slug: 'rewire',
+    title: 'ReWire',
+    href: 'ReWire/index.html',
+    blurb: 'Drag a cable around power nodes and plug it in. Sixteen levels of tangled spatial logic.',
+    genre: 'puzzle',
+    inputs: ['mouse'],
+    mobile: false,
   },
   {
-    link: "./Tetris/index.html",
-    imgSrc: "./Tetris/imgs/captured.png",
-    title: "Tetris",
-    description: "The original Tetris game, with a few enhancements, many options included.",
-    tags: ["#PC"]
+    slug: 'wahdatio',
+    title: 'Wahdatio',
+    href: 'Wahdatio/index.html',
+    blurb: 'Capture nodes on a rotating sphere by sending processes between them, and outplay an adaptive AI.',
+    genre: 'strategy',
+    inputs: ['mouse'],
+    mobile: false,
   },
-  {
-    link: "./Souls-Bumper/index.html",
-    imgSrc: "./Souls-Bumper/assets/captured.png",
-    title: "Souls Bumper",
-    description: "Souls Bumper is a platformer where you navigate through challenging levels.",
-    tags: ["#PC"]
-  },
-  {
-    link: "./PacMan/index.html",
-    imgSrc: "./PacMan/imgs/color03.png",
-    title: "PacMan",
-    description: "The original PacMan game, with a few enhancements, many modes, playgrounds provided.",
-    tags: ["#PC"]
-  },
-  {
-    link: "./MoonLDR/index.html",
-    imgSrc: "./MoonLDR/images/normal.png",
-    title: "MoonLDR",
-    description: "Fun landing ship on ground game, it's a classic based on Lunar Lander",
-    tags: ["#PC"]
-  },
-  {
-    link: "./HuggersFight/index.html",
-    imgSrc: "./HuggersFight/captured.png",
-    title: "HuggersFight",
-    description: "The empire is spreading like a plague across the galaxy and building outposts on remote planets.",
-    tags: ["#PC"]
-  },
-  {
-    link: "./InterLaced/index.html",
-    imgSrc: "./InterLaced/assets/captured.png",
-    title: "InterLaced",
-    description: "Interlaced is a tactical network intrusion and sabotage simulator",
-    tags: ["#PC"]
-  },
-  {
-    link: "./Gravity_Wells/index.html",
-    imgSrc: "./Gravity_Wells/assets/imgs/captured.png",
-    title: "Gravity Wells",
-    description: "Gravity Wells is a puzzle game set in space.",
-    tags: ["#PC", "#Mobile"]
-  },
-  {
-    link: "./ReWire/index.html",
-    imgSrc: "./ReWire/assets/captured.png",
-    title: "ReWire",
-    description: "ReWire is a puzzle game set in space.",
-    tags: ["#PC"]
-  },
-  {
-    link: "./Wahdatio/index.html",
-    imgSrc: "./Wahdatio/img/sample_logo.png",
-    title: "Wahdatio",
-    description: "A profound 3D strategy game that embodies the concept of unity and interconnectedness",
-    tags: ["#PC",]
-  }
 ];
+
+export const experiments = [
+  {
+    slug: 'blossoming-flowers',
+    title: 'Blossoming Flowers',
+    href: 'Art_Lab/BlossomingFlowers/index.html',
+    blurb: 'Petals unfold in a loop of pure CSS animation.',
+    tags: ['CSS', 'Animation'],
+  },
+  {
+    slug: 'flow-fields',
+    title: 'Flow Fields',
+    href: 'Art_Lab/Simple/index.html',
+    blurb: 'Particles drift through an invisible vector field. Press D, or double-tap, to see it.',
+    tags: ['Canvas', 'Particles'],
+  },
+  {
+    slug: 'text-fields',
+    title: 'Text Fields',
+    href: 'Art_Lab/Text_Fields/index.html',
+    blurb: 'Type becomes a particle system that flows through the field.',
+    tags: ['Typography', 'Canvas'],
+  },
+  {
+    slug: 'experimental-math',
+    title: 'Experimental Math',
+    href: 'Art_Lab/Experimental_math/index.html',
+    blurb: 'Equations plotted as motion, one vector at a time.',
+    tags: ['Math', 'Generative'],
+  },
+  {
+    slug: 'adaptive-fields',
+    title: 'Adaptive Fields',
+    href: 'Art_Lab/Adaptive/index.html',
+    blurb: 'Tune color, noise and density and export the result.',
+    tags: ['Interactive', 'p5.js'],
+  },
+  {
+    slug: 'lsd',
+    title: 'Liquid Shapes',
+    href: 'Art_Lab/LSD/index.html',
+    blurb: 'A fragment shader you can steer in real time, with video export.',
+    tags: ['WebGL', 'Shader'],
+  },
+  {
+    slug: 'particular-drift',
+    title: 'Particular Drift',
+    href: 'Art_Lab/ParticularDrift/index.html',
+    blurb: 'Any image dissolves into tens of thousands of drifting particles.',
+    tags: ['WebGL', 'Particles'],
+  },
+];
+
+/** Thumbnail srcset for a slug, relative to the page's base path. */
+export function thumbSet(slug, base = './') {
+  const path = `${base}assets/thumbs/${slug}`;
+  return {
+    src: `${path}-480.webp`,
+    srcset: `${path}-480.webp 480w, ${path}-960.webp 960w`,
+  };
+}

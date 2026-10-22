@@ -21,7 +21,7 @@ The audit behind this plan ran every page in headless Chromium at 390×844 (touc
 - **Design taste filter.** The hub redesign follows the impeccable craft floor and the
   UI UX Pro Max accessibility checklist (see Phase 1).
 
-## Phase 0: Stop the bleeding (this PR)
+## Phase 0: Stop the bleeding (done)
 
 Bugs that were confirmed in a browser and have small, safe fixes.
 
@@ -72,6 +72,32 @@ The landing page is the front door; it gets rebuilt rather than restyled.
   no horizontal scroll at 320px, zoom allowed.
 - Service worker rewritten: versioned precache of the hub shell only, runtime cache with size
   limits, and never caching large media or the 2048 model.
+
+**What shipped** (branch `upgrade/phase-1-landing-redesign`)
+- Rebuilt hub and Art Lab pages. Signal-orange marquee band with today's pick (one per day,
+  "Another pick" cycles), a genre-grouped index whose rhythm alternates pairs of featured games
+  with rows of three, an Art Lab strip, and a "Jump back in" row of recently played games.
+- Search uses word-prefix matching; genre chips and a "Plays on phone" switch; the filter
+  state is kept in the URL so a filtered view can be shared; `/` focuses search.
+- Pages are pre-rendered from `assets/js/data.js` by `tools/render-pages.mjs`, so everything is
+  visible without JavaScript. Run it after editing the registry (`--check` for CI).
+- Big Shoulders Display + Atkinson Hyperlegible, self-hosted (~64 KB). An SVG icon sprite
+  replaces Font Awesome. OKLCH tokens with designed light and dark themes; every text pair is
+  at least 5.2:1 and control borders are at least 3.6:1.
+- 16:10 WebP thumbnails at two widths (1.2 MB total). Weak ones replaced with real gameplay captures.
+- First load on a phone: 181 KB, 18 requests, CLS 0. No three.js, GSAP or Font Awesome, and
+  no YouTube on load.
+- Music is opt-in: nothing loads until the music button is pressed, and closing the panel
+  stops playback. Custom video or playlist links work without the YouTube Data API key.
+- Feedback moved to a native `<dialog>`. **Fixed a stored XSS**: names and comments from the
+  public API were inserted as HTML; they are now rendered as text.
+- Service worker v2: versioned shell precache, network-first with a bounded runtime cache
+  (300 entries, 5 MB per file), and no range or cross-origin requests. Old caches are purged.
+- Removed the legacy hub CSS/JS (cyberpunk theme modules, three.js background, lazy loader,
+  old music player, GSAP vendor bundle).
+
+**Moved to the start of Phase 2:** the shared game kit below, since each part is only
+proven once a game adopts it.
 
 **Shared game kit** (`assets/kit/`, opt-in per game, no build step)
 - `storage.js`: namespaced and guarded get/set, best-score helpers the hub can read.
@@ -153,7 +179,8 @@ Each one is built on the shared kit from day one, as the reference implementatio
 ## Tracking
 
 - [x] Phase 0: confirmed bug fixes
-- [ ] Phase 1: hub redesign, service worker, shared kit
+- [x] Phase 1: hub redesign, Art Lab page, service worker, feedback XSS fix
+- [ ] Shared game kit (start of Phase 2)
 - [ ] Phase 2A · 2B · 2C · 2D
 - [ ] Phase 3: new games
 - [ ] Phase 4: hygiene, licensing, CI smoke tests

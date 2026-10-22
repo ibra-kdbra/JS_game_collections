@@ -1,231 +1,288 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>JS Game Lab | Indie Game Collection</title>
-
-    <!-- SEO Meta Tags -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Game Lab · Free browser games in plain JavaScript</title>
     <meta
       name="description"
-      content="Explore a curated collection of JavaScript and HTML5 games. From puzzles to arcade classics, all built with vanilla JavaScript and HTML5 Canvas."
-    />
-    <meta
-      name="keywords"
-      content="JavaScript games, HTML5 games, indie games, browser games, Canvas games, web games"
+      content="Arcade classics, puzzles, action and strategy games plus generative art, all hand-built in vanilla JavaScript and HTML5 canvas. Free to play in your browser, nothing to install."
     />
     <meta name="author" content="ibra-kdbra" />
+    <meta name="theme-color" content="#fd703b" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f8612e" media="(prefers-color-scheme: light)" />
+    <link rel="canonical" href="https://jsgamelab.ibrakdbra.me/" />
 
-    <!-- Open Graph -->
-    <meta property="og:title" content="JS Game Lab | Indie Game Collection" />
-    <meta
-      property="og:description"
-      content="A stunning collection of browser-based games built with vanilla JavaScript"
-    />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="./assets/icons/video_game.png" />
+    <meta property="og:title" content="Game Lab" />
+    <meta property="og:description" content="Free browser games and art experiments, hand-built in plain JavaScript." />
+    <meta property="og:image" content="https://jsgamelab.ibrakdbra.me/assets/thumbs/pacman-960.webp" />
+    <meta name="twitter:card" content="summary_large_image" />
 
-    <!-- Icons -->
-    <link href="./assets/icons/video_game.ico" rel="icon" type="image/x-icon" />
-    <link
-      href="./assets/icons/video_game.svg"
-      rel="icon"
-      type="image/svg+xml"
-    />
-    <link href="./assets/icons/video_game.png" rel="icon" type="image/png" />
+    <link rel="icon" href="./assets/icons/video_game.svg" type="image/svg+xml" />
+    <link rel="icon" href="./assets/icons/video_game.png" type="image/png" />
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700&family=Chakra+Petch:wght@400;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="preload" href="./assets/fonts/big-shoulders-display-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="./assets/fonts/atkinson-hyperlegible-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
 
-    <!-- Styles -->
-    <link rel="stylesheet" href="./assets/css/cyberpunk.css" />
-    <style>
-      body, p, li, a, span, button, input, select, textarea { font-family: 'Albert Sans', sans-serif; }
-      h1, h2, h3, h4, h5, h6 { font-family: 'Chakra Petch', sans-serif; }
-    </style>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    />
+    <script>
+      // Apply a saved theme before first paint to avoid a flash.
+      try {
+        const theme = localStorage.getItem('gamelab.theme');
+        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+      } catch (e) {}
+    </script>
 
-    <!-- GSAP for animations -->
-    <script src="./assets/vendor/gsap/gsap.min.js" defer></script>
-    <script src="./assets/vendor/gsap/ScrollTrigger.min.js" defer></script>
+    <link rel="stylesheet" href="./assets/css/tokens.css" />
+    <link rel="stylesheet" href="./assets/css/hub.css" />
+    <script type="module" src="./assets/js/hub.js"></script>
   </head>
-  <body id="main">
-    <!-- Animated Background -->
-    <div class="cyber-bg"></div>
-    <!-- Three.js particle effect container -->
 
-    <!-- Corner Navigation (right-aligned icons) -->
-    <nav class="corner-nav">
-      <div class="nav-icons-group">
-        <a
-          href="https://github.com/ibra-kdbra/JS_game_collections"
-          class="corner-link"
-          target="_blank"
-          aria-label="GitHub"
-        >
-          <i class="fab fa-github"></i>
+  <body>
+    <a class="skip-link" href="#games">Skip to games</a>
+
+    <div class="marquee">
+      <header class="topbar">
+        <nav class="topnav" aria-label="Primary">
+          <a href="#games">Games</a>
+          <a href="#art-lab">Art Lab</a>
+          <a class="topnav-source" href="https://github.com/ibra-kdbra/JS_game_collections">Source</a>
+        </nav>
+        <div class="toolbar-actions">
+          <button class="icon-btn" type="button" data-radio-toggle aria-expanded="false" aria-controls="radio" aria-label="Music">
+            <svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-music"></use></svg>
+          </button>
+          <button class="icon-btn" type="button" data-feedback-open aria-label="Feedback">
+            <svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-message"></use></svg>
+          </button>
+          <button class="icon-btn" type="button" data-theme-toggle aria-label="Switch to light theme">
+            <svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-sun"></use></svg>
+          </button>
+        </div>
+      </header>
+
+      <div id="radio" class="radio" hidden></div>
+
+      <section class="hero" aria-labelledby="site-title">
+        <div class="hero-copy">
+          <h1 id="site-title">Game Lab</h1>
+          <p class="lede"><!-- render:lede -->Fifteen browser games and seven art experiments, hand-built in plain JavaScript. Free to play, nothing to install.<!-- /render:lede --></p>
+        </div>
+
+        <figure class="pick" data-pick><!-- render:pick -->
+        <a class="pick-shot" href="./PacMan/index.html" tabindex="-1" aria-hidden="true">
+          <img src="./assets/thumbs/pacman-480.webp" srcset="./assets/thumbs/pacman-480.webp 480w, ./assets/thumbs/pacman-960.webp 960w" sizes="(min-width: 960px) 55vw, 100vw" width="960" height="600" alt="" fetchpriority="high" decoding="async">
         </a>
-      </div>
-    </nav>
-
-    <!-- Hero Section -->
-    <section class="hero">
-      <div class="hero-content">
-        <div class="hero-badge">
-          <i class="fas fa-gamepad"></i>
-          <span>Open Source Game Collection</span>
-        </div>
-
-        <h1 class="hero-title">Game Lab</h1>
-
-        <p class="hero-subtitle">
-          Explore a curated collection of
-          <span class="text-glow">JavaScript</span> and
-          <span class="text-glow-cyan">HTML5</span> games. From classic
-          puzzles to creative experiments, all built with vanilla code.
-        </p>
-
-        <div class="hero-stats">
-          <div class="stat-item">
-            <span class="stat-value" id="game-count">15+</span>
-            <span class="stat-label">Games</span>
+        <figcaption class="pick-caption">
+          <p class="pick-label">Today’s pick <span aria-hidden="true">·</span> <span data-pick-genre>Arcade</span></p>
+          <h2 class="pick-title" data-pick-title>Pac-Man</h2>
+          <p class="pick-blurb" data-pick-blurb>The arcade original plus Ms. Pac-Man and procedurally generated Cookie-Man mazes, with practice mode and a rewind button.</p>
+          <div class="pick-actions">
+            <a class="btn btn-ink" href="./PacMan/index.html" data-pick-play><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-play"></use></svg><span>Play <span data-pick-name>Pac-Man</span></span></a>
+            <button class="pick-next" type="button" data-pick-next hidden>Another pick <svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-arrow-right"></use></svg></button>
           </div>
-          <div class="stat-item">
-            <span class="stat-value">7</span>
-            <span class="stat-label">Art Experiments</span>
+        </figcaption>
+      <!-- /render:pick --></figure>
+      </section>
+    </div>
+
+    <main>
+      <section class="recent" data-recent aria-labelledby="recent-title" hidden>
+        <h2 id="recent-title" class="recent-title">Jump back in</h2>
+        <ul class="recent-list" data-recent-list></ul>
+      </section>
+
+      <section id="games" class="section" aria-labelledby="games-title">
+        <div class="section-head">
+          <h2 id="games-title" class="section-title">Games</h2>
+          <p class="section-count"><span data-result-count><!-- render:game-count -->15<!-- /render:game-count --></span> <span data-result-noun>games</span></p>
+        </div>
+
+        <form class="filters" role="search" data-filters onsubmit="return false">
+          <div class="search">
+            <label class="visually-hidden" for="game-search">Search games</label>
+            <svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-search"></use></svg>
+            <input id="game-search" type="search" name="q" placeholder="Search by name, genre or control" autocomplete="off" enterkeyhint="search" />
           </div>
-          <div class="stat-item">
-            <span class="stat-value">100%</span>
-            <span class="stat-label">Vanilla JS</span>
-          </div>
+
+          <fieldset class="chips">
+            <legend class="visually-hidden">Genre</legend>
+            <label class="chip"><input type="radio" name="genre" value="all" checked /><span>All</span></label>
+            <label class="chip"><input type="radio" name="genre" value="arcade" /><span>Arcade</span></label>
+            <label class="chip"><input type="radio" name="genre" value="puzzle" /><span>Puzzle</span></label>
+            <label class="chip"><input type="radio" name="genre" value="action" /><span>Action</span></label>
+            <label class="chip"><input type="radio" name="genre" value="strategy" /><span>Strategy</span></label>
+          </fieldset>
+
+          <label class="switch">
+            <input type="checkbox" name="mobile" role="switch" />
+            <span class="switch-track" aria-hidden="true"></span>
+            <span>Plays on phone</span>
+          </label>
+        </form>
+
+        <ul class="games" data-games aria-live="polite"><!-- render:games -->
+          <li class="game game--wide" data-slug="pacman" data-genre="arcade" data-mobile="true" data-search="pac-man the arcade original plus ms. pac-man and procedurally generated cookie-man mazes, with practice mode and a rewind button. arcade keyboard touch">
+            <img class="game-thumb" src="./assets/thumbs/pacman-480.webp" srcset="./assets/thumbs/pacman-480.webp 480w, ./assets/thumbs/pacman-960.webp 960w" sizes="(min-width: 1100px) 48vw, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="game-title"><a class="game-link" href="./PacMan/index.html">Pac-Man</a></h3>
+            <p class="game-blurb">The arcade original plus Ms. Pac-Man and procedurally generated Cookie-Man mazes, with practice mode and a rewind button.</p>
+            <p class="game-meta"><span class="genre">Arcade</span><span class="phone-ok">Plays on phone</span><span class="inputs" role="img" aria-label="Controls: Keyboard, Touch"><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-keyboard"></use></svg><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-touch"></use></svg></span></p>
+          </li>
+          <li class="game game--wide" data-slug="tetris" data-genre="puzzle" data-mobile="false" data-search="tetris sprint 40 lines or dig through garbage. hold, ghost piece, replays, custom handling and rebindable keys. puzzle keyboard touch">
+            <img class="game-thumb" src="./assets/thumbs/tetris-480.webp" srcset="./assets/thumbs/tetris-480.webp 480w, ./assets/thumbs/tetris-960.webp 960w" sizes="(min-width: 1100px) 48vw, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="game-title"><a class="game-link" href="./Tetris/index.html">Tetris</a></h3>
+            <p class="game-blurb">Sprint 40 lines or dig through garbage. Hold, ghost piece, replays, custom handling and rebindable keys.</p>
+            <p class="game-meta"><span class="genre">Puzzle</span><span class="inputs" role="img" aria-label="Controls: Keyboard, Touch"><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-keyboard"></use></svg><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-touch"></use></svg></span></p>
+          </li>
+          <li class="game" data-slug="tower-defense" data-genre="strategy" data-mobile="false" data-search="tower defense seven upgradeable towers, sixteen maps and endless waves. build your own maps in the editor. strategy mouse keyboard">
+            <img class="game-thumb" src="./assets/thumbs/tower-defense-480.webp" srcset="./assets/thumbs/tower-defense-480.webp 480w, ./assets/thumbs/tower-defense-960.webp 960w" sizes="(min-width: 1100px) 32vw, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="game-title"><a class="game-link" href="./TowerDefense/index.html">Tower Defense</a></h3>
+            <p class="game-blurb">Seven upgradeable towers, sixteen maps and endless waves. Build your own maps in the editor.</p>
+            <p class="game-meta"><span class="genre">Strategy</span><span class="inputs" role="img" aria-label="Controls: Mouse, Keyboard"><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-mouse"></use></svg><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-keyboard"></use></svg></span></p>
+          </li>
+          <li class="game" data-slug="raven" data-genre="action" data-mobile="false" data-search="raven bring a facility’s cameras back online while the raven close in, but only when you aren’t looking. action keyboard mouse">
+            <img class="game-thumb" src="./assets/thumbs/raven-480.webp" srcset="./assets/thumbs/raven-480.webp 480w, ./assets/thumbs/raven-960.webp 960w" sizes="(min-width: 1100px) 32vw, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="game-title"><a class="game-link" href="./Raven/index.html">Raven</a></h3>
+            <p class="game-blurb">Bring a facility’s cameras back online while the Raven close in, but only when you aren’t looking.</p>
+            <p class="game-meta"><span class="genre">Action</span><span class="inputs" role="img" aria-label="Controls: Keyboard, Mouse"><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-keyboard"></use></svg><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-mouse"></use></svg></span></p>
+          </li>
+          <li class="game" data-slug="pacman-slasher" data-genre="arcade" data-mobile="true" data-search="pac-man slasher draw the symbol above each pac-man to slash it before it reaches you. waves get faster. arcade mouse touch">
+            <img class="game-thumb" src="./assets/thumbs/pacman-slasher-480.webp" srcset="./assets/thumbs/pacman-slasher-480.webp 480w, ./assets/thumbs/pacman-slasher-960.webp 960w" sizes="(min-width: 1100px) 32vw, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="game-title"><a class="game-link" href="./PacMan_Slasher/index.html">Pac-Man Slasher</a></h3>
+            <p class="game-blurb">Draw the symbol above each Pac-Man to slash it before it reaches you. Waves get faster.</p>
+            <p class="game-meta"><span class="genre">Arcade</span><span class="phone-ok">Plays on phone</span><span class="inputs" role="img" aria-label="Controls: Mouse, Touch"><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-mouse"></use></svg><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-touch"></use></svg></span></p>
+          </li>
+          <li class="game game--wide" data-slug="2048" data-genre="puzzle" data-mobile="true" data-search="2048 slide and merge to 2048, or hand the board to one of ten ai strategies and watch it chase 16384. puzzle keyboard touch">
+            <img class="game-thumb" src="./assets/thumbs/2048-480.webp" srcset="./assets/thumbs/2048-480.webp 480w, ./assets/thumbs/2048-960.webp 960w" sizes="(min-width: 1100px) 48vw, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="game-title"><a class="game-link" href="./2048/index.html">2048</a></h3>
+            <p class="game-blurb">Slide and merge to 2048, or hand the board to one of ten AI strategies and watch it chase 16384.</p>
+            <p class="game-meta"><span class="genre">Puzzle</span><span class="phone-ok">Plays on phone</span><span class="inputs" role="img" aria-label="Controls: Keyboard, Touch"><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-keyboard"></use></svg><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-touch"></use></svg></span></p>
+          </li>
+          <li class="game game--wide" data-slug="huggers-fight" data-genre="action" data-mobile="false" data-search="huggers fight wipe out enemy outposts on generated planets. almost everything breaks, some things burn. up to four gamepads. action keyboard mouse gamepad">
+            <img class="game-thumb" src="./assets/thumbs/huggers-fight-480.webp" srcset="./assets/thumbs/huggers-fight-480.webp 480w, ./assets/thumbs/huggers-fight-960.webp 960w" sizes="(min-width: 1100px) 48vw, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="game-title"><a class="game-link" href="./HuggersFight/index.html">Huggers Fight</a></h3>
+            <p class="game-blurb">Wipe out enemy outposts on generated planets. Almost everything breaks, some things burn. Up to four gamepads.</p>
+            <p class="game-meta"><span class="genre">Action</span><span class="inputs" role="img" aria-label="Controls: Keyboard, Mouse, Gamepad"><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-keyboard"></use></svg><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-mouse"></use></svg><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-gamepad"></use></svg></span></p>
+          </li>
+          <li class="game" data-slug="tron" data-genre="arcade" data-mobile="false" data-search="tron light-cycle duels against the computer or a friend on the same keyboard. don’t touch the walls. arcade keyboard touch">
+            <img class="game-thumb" src="./assets/thumbs/tron-480.webp" srcset="./assets/thumbs/tron-480.webp 480w, ./assets/thumbs/tron-960.webp 960w" sizes="(min-width: 1100px) 32vw, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="game-title"><a class="game-link" href="./Tron/index.html">Tron</a></h3>
+            <p class="game-blurb">Light-cycle duels against the computer or a friend on the same keyboard. Don’t touch the walls.</p>
+            <p class="game-meta"><span class="genre">Arcade</span><span class="inputs" role="img" aria-label="Controls: Keyboard, Touch"><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-keyboard"></use></svg><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-touch"></use></svg></span></p>
+          </li>
+          <li class="game" data-slug="moonldr" data-genre="arcade" data-mobile="false" data-search="moonldr a lunar lander homage. touch down on marked pads for bonus points and fuel; the run lasts until the tank is dry. arcade keyboard">
+            <img class="game-thumb" src="./assets/thumbs/moonldr-480.webp" srcset="./assets/thumbs/moonldr-480.webp 480w, ./assets/thumbs/moonldr-960.webp 960w" sizes="(min-width: 1100px) 32vw, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="game-title"><a class="game-link" href="./MoonLDR/index.html">MoonLDR</a></h3>
+            <p class="game-blurb">A Lunar Lander homage. Touch down on marked pads for bonus points and fuel; the run lasts until the tank is dry.</p>
+            <p class="game-meta"><span class="genre">Arcade</span><span class="inputs" role="img" aria-label="Controls: Keyboard"><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-keyboard"></use></svg></span></p>
+          </li>
+          <li class="game" data-slug="hangman" data-genre="puzzle" data-mobile="true" data-search="hangman guess the word across ten categories and three difficulties before you run out of guesses. puzzle mouse touch">
+            <img class="game-thumb" src="./assets/thumbs/hangman-480.webp" srcset="./assets/thumbs/hangman-480.webp 480w, ./assets/thumbs/hangman-960.webp 960w" sizes="(min-width: 1100px) 32vw, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="game-title"><a class="game-link" href="./Hangman/index.html">Hangman</a></h3>
+            <p class="game-blurb">Guess the word across ten categories and three difficulties before you run out of guesses.</p>
+            <p class="game-meta"><span class="genre">Puzzle</span><span class="phone-ok">Plays on phone</span><span class="inputs" role="img" aria-label="Controls: Mouse, Touch"><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-mouse"></use></svg><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-touch"></use></svg></span></p>
+          </li>
+          <li class="game game--wide" data-slug="gravity-wells" data-genre="puzzle" data-mobile="true" data-search="gravity wells clear every other square in the universe across eighteen compact puzzles. tap one and see what happens. puzzle touch mouse">
+            <img class="game-thumb" src="./assets/thumbs/gravity-wells-480.webp" srcset="./assets/thumbs/gravity-wells-480.webp 480w, ./assets/thumbs/gravity-wells-960.webp 960w" sizes="(min-width: 1100px) 48vw, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="game-title"><a class="game-link" href="./Gravity_Wells/index.html">Gravity Wells</a></h3>
+            <p class="game-blurb">Clear every other square in the universe across eighteen compact puzzles. Tap one and see what happens.</p>
+            <p class="game-meta"><span class="genre">Puzzle</span><span class="phone-ok">Plays on phone</span><span class="inputs" role="img" aria-label="Controls: Touch, Mouse"><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-touch"></use></svg><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-mouse"></use></svg></span></p>
+          </li>
+          <li class="game game--wide" data-slug="souls-bumper" data-genre="action" data-mobile="false" data-search="souls bumper a js13k platformer about death. rewind your ghost to get through ten tough levels. action keyboard">
+            <img class="game-thumb" src="./assets/thumbs/souls-bumper-480.webp" srcset="./assets/thumbs/souls-bumper-480.webp 480w, ./assets/thumbs/souls-bumper-960.webp 960w" sizes="(min-width: 1100px) 48vw, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="game-title"><a class="game-link" href="./Souls-Bumper/index.html">Souls Bumper</a></h3>
+            <p class="game-blurb">A JS13k platformer about death. Rewind your ghost to get through ten tough levels.</p>
+            <p class="game-meta"><span class="genre">Action</span><span class="inputs" role="img" aria-label="Controls: Keyboard"><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-keyboard"></use></svg></span></p>
+          </li>
+          <li class="game" data-slug="interlaced" data-genre="strategy" data-mobile="false" data-search="interlaced a terminal-driven network intrusion sim. cut, slow and reroute packets to take each mesh offline. strategy keyboard mouse">
+            <img class="game-thumb" src="./assets/thumbs/interlaced-480.webp" srcset="./assets/thumbs/interlaced-480.webp 480w, ./assets/thumbs/interlaced-960.webp 960w" sizes="(min-width: 1100px) 32vw, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="game-title"><a class="game-link" href="./InterLaced/index.html">InterLaced</a></h3>
+            <p class="game-blurb">A terminal-driven network intrusion sim. Cut, slow and reroute packets to take each mesh offline.</p>
+            <p class="game-meta"><span class="genre">Strategy</span><span class="inputs" role="img" aria-label="Controls: Keyboard, Mouse"><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-keyboard"></use></svg><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-mouse"></use></svg></span></p>
+          </li>
+          <li class="game" data-slug="rewire" data-genre="puzzle" data-mobile="false" data-search="rewire drag a cable around power nodes and plug it in. sixteen levels of tangled spatial logic. puzzle mouse">
+            <img class="game-thumb" src="./assets/thumbs/rewire-480.webp" srcset="./assets/thumbs/rewire-480.webp 480w, ./assets/thumbs/rewire-960.webp 960w" sizes="(min-width: 1100px) 32vw, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="game-title"><a class="game-link" href="./ReWire/index.html">ReWire</a></h3>
+            <p class="game-blurb">Drag a cable around power nodes and plug it in. Sixteen levels of tangled spatial logic.</p>
+            <p class="game-meta"><span class="genre">Puzzle</span><span class="inputs" role="img" aria-label="Controls: Mouse"><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-mouse"></use></svg></span></p>
+          </li>
+          <li class="game" data-slug="wahdatio" data-genre="strategy" data-mobile="false" data-search="wahdatio capture nodes on a rotating sphere by sending processes between them, and outplay an adaptive ai. strategy mouse">
+            <img class="game-thumb" src="./assets/thumbs/wahdatio-480.webp" srcset="./assets/thumbs/wahdatio-480.webp 480w, ./assets/thumbs/wahdatio-960.webp 960w" sizes="(min-width: 1100px) 32vw, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="game-title"><a class="game-link" href="./Wahdatio/index.html">Wahdatio</a></h3>
+            <p class="game-blurb">Capture nodes on a rotating sphere by sending processes between them, and outplay an adaptive AI.</p>
+            <p class="game-meta"><span class="genre">Strategy</span><span class="inputs" role="img" aria-label="Controls: Mouse"><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-mouse"></use></svg></span></p>
+          </li>
+        <!-- /render:games --></ul>
+
+        <div class="empty" data-empty hidden>
+          <p>No games match those filters.</p>
+          <button class="btn btn-accent" type="button" data-clear-filters>Clear filters</button>
         </div>
+      </section>
 
-        <div class="hero-cta">
-          <a href="#games" class="btn btn-primary">
-            <i class="fas fa-play"></i>
-            Start Playing
-          </a>
-          <a href="#artlab" class="btn btn-secondary">
-            <i class="fas fa-flask"></i>
-            Explore Art Lab
-          </a>
+      <section id="art-lab" class="section art-lab" aria-labelledby="art-lab-title">
+        <div class="section-head">
+          <h2 id="art-lab-title" class="section-title">Art Lab</h2>
+          <p class="section-count"><!-- render:exp-count -->7<!-- /render:exp-count --> experiments</p>
         </div>
-      </div>
+        <p class="section-lede">Flow fields, shaders and particle systems: the generative side of the lab. Most of them take your input and export what you make.</p>
+        <ul class="exps"><!-- render:experiments -->
+          <li class="exp">
+            <img class="exp-thumb" src="./assets/thumbs/blossoming-flowers-480.webp" srcset="./assets/thumbs/blossoming-flowers-480.webp 480w, ./assets/thumbs/blossoming-flowers-960.webp 960w" sizes="(min-width: 700px) 320px, 75vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="exp-title"><a class="exp-link" href="./Art_Lab/BlossomingFlowers/index.html">Blossoming Flowers</a></h3>
+            <p class="exp-blurb">Petals unfold in a loop of pure CSS animation.</p>
+            <p class="exp-tags"><span>CSS</span><span>Animation</span></p>
+          </li>
+          <li class="exp">
+            <img class="exp-thumb" src="./assets/thumbs/flow-fields-480.webp" srcset="./assets/thumbs/flow-fields-480.webp 480w, ./assets/thumbs/flow-fields-960.webp 960w" sizes="(min-width: 700px) 320px, 75vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="exp-title"><a class="exp-link" href="./Art_Lab/Simple/index.html">Flow Fields</a></h3>
+            <p class="exp-blurb">Particles drift through an invisible vector field. Press D, or double-tap, to see it.</p>
+            <p class="exp-tags"><span>Canvas</span><span>Particles</span></p>
+          </li>
+          <li class="exp">
+            <img class="exp-thumb" src="./assets/thumbs/text-fields-480.webp" srcset="./assets/thumbs/text-fields-480.webp 480w, ./assets/thumbs/text-fields-960.webp 960w" sizes="(min-width: 700px) 320px, 75vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="exp-title"><a class="exp-link" href="./Art_Lab/Text_Fields/index.html">Text Fields</a></h3>
+            <p class="exp-blurb">Type becomes a particle system that flows through the field.</p>
+            <p class="exp-tags"><span>Typography</span><span>Canvas</span></p>
+          </li>
+          <li class="exp">
+            <img class="exp-thumb" src="./assets/thumbs/experimental-math-480.webp" srcset="./assets/thumbs/experimental-math-480.webp 480w, ./assets/thumbs/experimental-math-960.webp 960w" sizes="(min-width: 700px) 320px, 75vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="exp-title"><a class="exp-link" href="./Art_Lab/Experimental_math/index.html">Experimental Math</a></h3>
+            <p class="exp-blurb">Equations plotted as motion, one vector at a time.</p>
+            <p class="exp-tags"><span>Math</span><span>Generative</span></p>
+          </li>
+          <li class="exp">
+            <img class="exp-thumb" src="./assets/thumbs/adaptive-fields-480.webp" srcset="./assets/thumbs/adaptive-fields-480.webp 480w, ./assets/thumbs/adaptive-fields-960.webp 960w" sizes="(min-width: 700px) 320px, 75vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="exp-title"><a class="exp-link" href="./Art_Lab/Adaptive/index.html">Adaptive Fields</a></h3>
+            <p class="exp-blurb">Tune color, noise and density and export the result.</p>
+            <p class="exp-tags"><span>Interactive</span><span>p5.js</span></p>
+          </li>
+          <li class="exp">
+            <img class="exp-thumb" src="./assets/thumbs/lsd-480.webp" srcset="./assets/thumbs/lsd-480.webp 480w, ./assets/thumbs/lsd-960.webp 960w" sizes="(min-width: 700px) 320px, 75vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="exp-title"><a class="exp-link" href="./Art_Lab/LSD/index.html">Liquid Shapes</a></h3>
+            <p class="exp-blurb">A fragment shader you can steer in real time, with video export.</p>
+            <p class="exp-tags"><span>WebGL</span><span>Shader</span></p>
+          </li>
+          <li class="exp">
+            <img class="exp-thumb" src="./assets/thumbs/particular-drift-480.webp" srcset="./assets/thumbs/particular-drift-480.webp 480w, ./assets/thumbs/particular-drift-960.webp 960w" sizes="(min-width: 700px) 320px, 75vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <h3 class="exp-title"><a class="exp-link" href="./Art_Lab/ParticularDrift/index.html">Particular Drift</a></h3>
+            <p class="exp-blurb">Any image dissolves into tens of thousands of drifting particles.</p>
+            <p class="exp-tags"><span>WebGL</span><span>Particles</span></p>
+          </li>
+        <!-- /render:experiments --></ul>
+        <p class="section-more"><a href="./Art_Lab/index.html">Open the Art Lab <svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-arrow-right"></use></svg></a></p>
+      </section>
+    </main>
 
-      <div class="scroll-indicator">
-        <span>Scroll to explore</span>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="2"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-          />
-        </svg>
-      </div>
-    </section>
-
-    <!-- Art Lab Feature Section -->
-    <section class="section" id="artlab">
-      <div class="section-header">
-        <h2 class="section-title">
-          Featured: <span class="text-glow-cyan">Art Lab</span>
-        </h2>
-        <p class="section-subtitle">Where mathematics meets creativity</p>
-      </div>
-
-      <!-- Art Lab showcase - populated by main.js using data.js -->
-      <div class="artlab-showcase-container" id="artlab-showcase">
-        <!-- Will be dynamically rendered -->
-      </div>
-    </section>
-
-    <!-- Games Section -->
-    <section class="section" id="games">
-      <div class="section-header">
-        <h2 class="section-title">Game Collection</h2>
-        <p class="section-subtitle">
-          Click any game to start playing instantly
-        </p>
-      </div>
-
-      <!-- Search & Filter Section -->
-      <div class="search-filter-container">
-        <div class="search-wrapper">
-          <i class="fas fa-search search-icon"></i>
-          <input
-            type="text"
-            id="search-input"
-            placeholder="Search games..."
-            autocomplete="off"
-          />
-        </div>
-
-        <div class="filter-section">
-          <button class="filter-btn active" data-filter="all">
-            <i class="fas fa-border-all"></i> All
-          </button>
-          <button class="filter-btn" data-filter="pc">
-            <i class="fas fa-desktop"></i> PC
-          </button>
-          <button class="filter-btn" data-filter="mobile">
-            <i class="fas fa-mobile-alt"></i> Mobile
-          </button>
-        </div>
-      </div>
-
-      <!-- Game Cards Grid -->
-      <div class="games-grid" id="game-cards-container">
-        <!-- Cards will be inserted dynamically here -->
-      </div>
-    </section>
-
-    <!-- Footer -->
     <footer class="footer">
-      <p class="footer-text">
-        Made by
-        <a
-          class="footer-link"
-          href="https://github.com/ibra-kdbra"
-          target="_blank"
-          >ibra-kdbra</a
-        >
-      </p>
+      <div class="footer-inner">
+        <p class="footer-brand">Game Lab</p>
+        <p>Made by <a href="https://github.com/ibra-kdbra">ibra-kdbra</a>. Every game runs on plain JavaScript, HTML and CSS, and the code is open under the MIT license.</p>
+        <ul class="footer-links">
+          <li><a href="https://github.com/ibra-kdbra/JS_game_collections"><svg class="icon" aria-hidden="true"><use href="./assets/icons/sprite.svg#i-github"></use></svg> Source on GitHub</a></li>
+          <li><a href="https://github.com/ibra-kdbra/JS_game_collections/issues/new">Report a bug</a></li>
+        </ul>
+      </div>
     </footer>
-
-    <!-- Scripts -->
-    <link rel="stylesheet" href="./assets/css/feedback.css" />
-
-    <!-- Initialize Music Player -->
-    <script type="module">
-      import { VideoPlayerComponent } from "./assets/js/videoPlayer.js";
-      // Inject player into the icons group
-      new VideoPlayerComponent().render(".nav-icons-group");
-    </script>
-    <script type="module" src="./assets/js/musicPlayer.js"></script>
-
-    <script type="module" src="./assets/js/dropEffect.js"></script>
-    <script type="module" src="./assets/js/lazyLoad.js"></script>
-    <script type="module" src="./assets/js/script.js"></script>
-
-    <!-- Initialize Feedback (Modal Mode) -->
-    <script type="module">
-      import { FeedbackUI } from "./assets/js/feedback/FeedbackUI.js";
-      // Initialize for main hub
-      new FeedbackUI("main_hub");
-    </script>
   </body>
 </html>

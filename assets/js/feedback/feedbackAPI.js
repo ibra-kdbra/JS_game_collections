@@ -5,10 +5,6 @@
 const API_URL = 'https://js-game-feedback-api.sonarfarouq.workers.dev';
 
 class FeedbackService {
-    constructor() {
-        this.initialized = true; // No init needed with proxy
-    }
-
     /**
      * Submit new feedback
      * @param {string} pageId - Page/game identifier
@@ -78,27 +74,6 @@ class FeedbackService {
             console.error('Failed to fetch feedback:', error);
             return { items: [] };
         }
-    }
-
-    /**
-     * Get aggregate stats for a page
-     */
-    async getStats(pageId) {
-        const feedback = await this.getFeedback(pageId);
-        const items = feedback.items || [];
-        const count = items.length;
-        const average = count > 0
-            ? items.reduce((sum, r) => sum + (r.rating || 0), 0) / count
-            : 0;
-        return { items: [{ count, average }] };
-    }
-
-    /**
-     * Init method (no-op, kept for compatibility)
-     */
-    async init() {
-        // No initialization needed when using proxy
-        return true;
     }
 }
 
