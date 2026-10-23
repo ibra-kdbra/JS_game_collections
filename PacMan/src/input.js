@@ -215,7 +215,6 @@ var initSwipe = function() {
         if (onKitControls) {
             return;
         }
-        event.preventDefault();
         var fingerCount = event.touches.length;
         if (fingerCount == 1) {
 
@@ -233,7 +232,6 @@ var initSwipe = function() {
         if (onKitControls) {
             return;
         }
-        event.preventDefault();
         var fingerCount = event.touches.length;
         if (fingerCount == 1) {
 
@@ -270,7 +268,8 @@ var initSwipe = function() {
     };
 
     var touchCancel = function(event) {
-        event.preventDefault();
+        // Also called from the passive touchstart/touchmove handlers on multi-touch.
+        if (event.type === "touchcancel") event.preventDefault();
         x=y=dx=dy=0;
     };
 
@@ -281,8 +280,9 @@ var initSwipe = function() {
     
     // register touch events
     document.onclick = touchTap;
-    document.ontouchstart = touchStart;
+    // Passive (as browsers treat them anyway): `touch-action: none` stops scrolling.
+    document.addEventListener('touchstart', touchStart, { passive: true });
     document.ontouchend = touchEnd;
-    document.ontouchmove = touchMove;
+    document.addEventListener('touchmove', touchMove, { passive: true });
     document.ontouchcancel = touchCancel;
 };
