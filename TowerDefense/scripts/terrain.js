@@ -118,6 +118,8 @@ const Terrain = (() => {
         return 'g';
     }
 
+    // Cached pictures get CPU-backed contexts ({ willReadFrequently: true }): painting thousands
+    // of small shapes is faster there than on a GPU canvas, and each is uploaded once when drawn.
     function makeCanvas(w, h) {
         const c = document.createElement('canvas');
         c.width = Math.max(1, Math.ceil(w));
@@ -424,7 +426,7 @@ const Terrain = (() => {
     function groundTiles(th, px) {
         return th.ground.map((base, v) => {
             const c = makeCanvas(px, px);
-            const g = c.getContext('2d');
+            const g = c.getContext('2d', { willReadFrequently: true });
             // Variants stay close to the first colour so the grid does not show
             g.fillStyle = th.ground[0];
             g.fillRect(0, 0, px, px);
@@ -461,7 +463,7 @@ const Terrain = (() => {
             canvas.width = Math.ceil(cols * px);
             canvas.height = Math.ceil(rows * px);
         }
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.lineJoin = 'round';
 
@@ -635,7 +637,7 @@ const Terrain = (() => {
     // Darkens the strip of a shape that a copy shifted down by d does not cover
     function innerShadow(ctx, path, w, h, d, color) {
         const c = makeCanvas(w, h);
-        const g = c.getContext('2d');
+        const g = c.getContext('2d', { willReadFrequently: true });
         g.fillStyle = color;
         g.fill(path);
         g.globalCompositeOperation = 'destination-out';

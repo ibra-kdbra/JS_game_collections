@@ -1083,7 +1083,8 @@ body.is-selected #store {
     display: block;
 }
 
-.map-card .thumb img {
+.map-card .thumb img,
+.map-card .thumb canvas {
     display: block;
     width: 100%;
     height: auto;

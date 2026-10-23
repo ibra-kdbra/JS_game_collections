@@ -708,7 +708,7 @@ const Art = (() => {
             this.canvas = document.createElement('canvas');
             this.canvas.width = width;
             this.canvas.height = 64;
-            this.ctx = this.canvas.getContext('2d');
+            this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
             this.items = [];
             this.x = 0;
             this.y = 0;
@@ -755,7 +755,7 @@ const Art = (() => {
         const c = document.createElement('canvas');
         c.width = Math.ceil(w);
         c.height = Math.ceil(h);
-        const g = c.getContext('2d');
+        const g = c.getContext('2d', { willReadFrequently: true });
         g.translate(c.width / 2, c.height / 2);
         draw(g);
         g.setTransform(1, 0, 0, 1, 0, 0);
@@ -998,7 +998,7 @@ const Art = (() => {
         if (!a) return '';
         const c = document.createElement('canvas');
         c.width = c.height = size;
-        const g = c.getContext('2d');
+        const g = c.getContext('2d', { willReadFrequently: true });
         g.translate(size / 2, size / 2);
         g.scale(size * 0.92, size * 0.92);
         g.lineJoin = 'round';
@@ -1020,7 +1020,7 @@ const Art = (() => {
         if (!a) return '';
         const c = document.createElement('canvas');
         c.width = c.height = size;
-        const g = c.getContext('2d');
+        const g = c.getContext('2d', { willReadFrequently: true });
         g.translate(size / 2, size / 2);
         g.scale(size * 0.44, size * 0.44);
         g.lineJoin = 'round';

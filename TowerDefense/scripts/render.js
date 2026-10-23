@@ -162,7 +162,7 @@ const Renderer = (() => {
     function buildGrid() {
         const px = terrainPx;
         const c = Terrain.makeCanvas(cols * px, rows * px);
-        const g = c.getContext('2d');
+        const g = c.getContext('2d', { willReadFrequently: true });
         g.strokeStyle = 'rgba(255,255,255,0.5)';
         g.lineWidth = Math.max(1, px * 0.03);
         g.beginPath();
@@ -1019,7 +1019,7 @@ const Renderer = (() => {
 
     function radial(inner, outer) {
         const c = Terrain.makeCanvas(256, 256);
-        const g = c.getContext('2d');
+        const g = c.getContext('2d', { willReadFrequently: true });
         const grad = g.createRadialGradient(128, 128, 70, 128, 128, 182);
         grad.addColorStop(0, inner);
         grad.addColorStop(1, outer);

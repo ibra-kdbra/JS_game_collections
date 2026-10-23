@@ -916,10 +916,11 @@ function renderLevels() {
             const starHTML = pickMode === 'campaign' && !disabled
                 ? `<span class="mini-stars" aria-label="${st} of 3 stars">${[1, 2, 3].map(i => `<span class="${i <= st ? 'on' : ''}">${icon('star')}</span>`).join('')}</span>`
                 : '';
-            b.innerHTML = `<span class="thumb"><img alt="" src="${thumbURL(m, data)}" width="320" height="200">${themeName ? `<span class="theme">${esc(themeName)}</span>` : ''}</span>
+            b.innerHTML = `<span class="thumb"><canvas width="320" height="200" aria-hidden="true"></canvas>${themeName ? `<span class="theme">${esc(themeName)}</span>` : ''}</span>
                 <span class="title"><span>${esc(m.spawns ? `${m.title} ×${m.spawns}` : m.title)}</span>${starHTML}</span>
                 <span class="sub">${esc(sub)}</span>`;
             holder.append(b);
+            queueThumb(b.querySelector('canvas'), m, data);
         });
     });
 }
@@ -930,10 +931,34 @@ function thumbData(m) {
     return fakeRandomMap(m);
 }
 
-// Picture of a map for the level select, drawn with the game's terrain
+// Picture of a map for the level select, drawn with the game's terrain.
+// Painted once per map into an offscreen canvas and copied into the card, a few
+// per frame, so opening the map screen never blocks the page (no PNG encoding).
 const thumbCache = {};
-function thumbURL(m, data) {
-    if (!data) return blankThumb();
+const thumbQueue = [];
+let thumbTimer = 0;
+
+function queueThumb(target, m, data) {
+    thumbQueue.push({ target, m, data });
+    if (!thumbTimer) thumbTimer = setTimeout(drainThumbs, 0);
+}
+
+function drainThumbs() {
+    const until = performance.now() + 12;
+    while (thumbQueue.length && performance.now() < until) {
+        const { target, m, data } = thumbQueue.shift();
+        if (!target.isConnected) continue;
+        const g = target.getContext('2d');
+        if (data) g.drawImage(thumbCanvas(m, data), 0, 0);
+        else {
+            g.fillStyle = '#09090b';
+            g.fillRect(0, 0, target.width, target.height);
+        }
+    }
+    thumbTimer = thumbQueue.length ? setTimeout(drainThumbs, 16) : 0;
+}
+
+function thumbCanvas(m, data) {
     const key = m.group === 'custom' ? `custom-${store.get('customMap', '').length}` : m.id;
     if (thumbCache[key]) return thumbCache[key];
     const W = 320;
@@ -941,7 +966,7 @@ function thumbURL(m, data) {
     const cv = document.createElement('canvas');
     cv.width = W;
     cv.height = H;
-    const g = cv.getContext('2d');
+    const g = cv.getContext('2d', { willReadFrequently: true });
     const theme = Terrain.themeFor(data, m.group === 'custom' ? null : m.id);
     g.fillStyle = Terrain.THEMES[theme].frame;
     g.fillRect(0, 0, W, H);
@@ -966,19 +991,7 @@ function thumbURL(m, data) {
     g.scale(r * 2.4, r * 2.4);
     Art.drawGate(g);
     g.restore();
-    return (thumbCache[key] = cv.toDataURL('image/png'));
-}
-
-let blank = null;
-function blankThumb() {
-    if (blank) return blank;
-    const cv = document.createElement('canvas');
-    cv.width = 320;
-    cv.height = 200;
-    const g = cv.getContext('2d');
-    g.fillStyle = '#09090b';
-    g.fillRect(0, 0, 320, 200);
-    return (blank = cv.toDataURL());
+    return (thumbCache[key] = cv);
 }
 
 // A stand-in picture for random maps (the real layout is rolled at the start)

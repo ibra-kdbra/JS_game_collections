@@ -740,6 +740,7 @@ function fitCanvas() {
         Renderer.mapChanged();
     }
     Renderer.resize();
+    coveredFrameDrawn = false;
 }
 
 // Sell a tower
@@ -980,7 +981,14 @@ function setup() {
     new ResizeObserver(() => fitCanvas()).observe(holder);
 }
 
+// While a menu covers the map and nothing is running, draw one frame and idle
+// (saves the phone's battery and GPU; the map behind the menu doesn't move).
+let coveredFrameDrawn = false;
+
 function draw() {
+    const covered = (paused || gameOver) && openOverlayId() !== null;
+    if (covered && coveredFrameDrawn) return;
+    coveredFrameDrawn = covered;
     let steps = 0;
     const t0 = performance.now();
     if (!paused && !gameOver) {
