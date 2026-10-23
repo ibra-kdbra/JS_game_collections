@@ -226,6 +226,18 @@ let engine = (function (){
     if (!map.orient){ ctxM.setTransform(1,0,0,1,0,0); }
   }
 
+  // Symbols are drawn this far (map units) above a Pac-Man.
+  const TOKEN_ROOM = 10;
+
+  // Bottom edge of the HUD in CSS pixels, measured even while it is hidden.
+  function hudReserve(){
+    const hidden = hud.classList.contains('hidden');
+    if (hidden){ hud.classList.remove('hidden'); }
+    const bottom = hud.getBoundingClientRect().bottom;
+    if (hidden){ hud.classList.add('hidden'); }
+    return Math.ceil(bottom);
+  }
+
   function updateCanvasSize(force = false){
     if (isActive || force === true ){
       realWidth  = canvasM.scrollWidth;
@@ -241,19 +253,30 @@ let engine = (function (){
       map.scale = pixelRatio + Math.floor(realWidth/1000);
       if (map.scale < 2){ map.scale = 2;}
 
+      // Keep the maze, and the symbols above Pac-Men on its top row, below the HUD
+      // (wave, score, combo) when it fits there.
+      const hudBottom = hudReserve();
+      const freeHeight = (scale) => realHeight - hudBottom - TOKEN_ROOM*scale - 4;
+      const fitsBelowHud = (scale) => map.height*tileYsize*scale <= freeHeight(scale);
+
       if ((realWidth - map.width*tileXsize*map.scale) < 0 || (realHeight - map.height*tileYsize*map.scale) < 0){
         while (map.scale > 1 && ((realWidth  - map.width*tileXsize*map.scale) < 0 || (realHeight - map.height*tileYsize*map.scale) < 0)){
           map.scale--;
         }
       }
       else{
-        while ((realWidth - map.width*tileXsize*(map.scale+1)) > realWidth*0.15 && (realHeight - map.height*tileYsize*(map.scale+1)) > realHeight*0.15){
+        while ((realWidth - map.width*tileXsize*(map.scale+1)) > realWidth*0.15 && (realHeight - map.height*tileYsize*(map.scale+1)) > realHeight*0.15 && fitsBelowHud(map.scale+1)){
           map.scale++;
         }
       }
 
+      const mapHeight = map.height*tileYsize*map.scale;
       map.offsetX = Math.ceil((realWidth  - map.width*tileXsize*map.scale)/2);
-      map.offsetY = Math.ceil((realHeight - map.height*tileYsize*map.scale)/2);
+      map.offsetY = Math.ceil((realHeight - mapHeight)/2);
+      const top = hudBottom + TOKEN_ROOM*map.scale;
+      if (map.offsetY < top && fitsBelowHud(map.scale)){
+        map.offsetY = Math.ceil(top + (freeHeight(map.scale) - mapHeight)/2);
+      }
 
       needForceDraw = true;
     }
@@ -657,11 +680,15 @@ let engine = (function (){
     if (pixelRatio == 3 && realWidth > realHeight){ map.scale--; }
     if (map.scale < 2){ map.scale = 2;}
 
+    // Rows: what fits below the HUD, so Pac-Men coming from the top are not hidden by it.
+    const freeHeight = realHeight - hudReserve() - TOKEN_ROOM*map.scale - 4;
     map.width  = Math.floor(realWidth*0.75/(tileXsize*map.scale));
-    map.height = Math.floor(realHeight*0.75/(tileYsize*map.scale));
+    map.height = Math.floor(Math.min(realHeight*0.75, freeHeight)/(tileYsize*map.scale));
     maxEnemy = Math.max(Math.min(Math.floor((map.width + map.height)/6), 6), 4);
     if (map.width < 12){map.width += 2;}
     if (map.height < 12){map.height += 2;}
+    const maxRows = Math.floor(freeHeight/(tileYsize*map.scale));
+    if (map.height > maxRows){map.height = Math.max(6, maxRows);}
 
     updateCanvasSize(true);
     generateMap();
@@ -792,8 +819,21 @@ let engine = (function (){
 
 let map = engine.map;
 
-window.addEventListener("orientationchange", engine.onrotate);
-window.addEventListener("resize", engine.onresize);
+// At most one relayout per frame while the window is being resized.
+let resizeFrame = 0;
+function scheduleResize(){
+  if (resizeFrame){ return; }
+  resizeFrame = requestAnimationFrame(() => {
+    resizeFrame = 0;
+    engine.onresize();
+  });
+}
+// Some browsers report the new size before the orientation change: lay out again after it.
+window.addEventListener("orientationchange", () => {
+  engine.onrotate();
+  scheduleResize();
+});
+window.addEventListener("resize", scheduleResize);
 
 document.addEventListener("visibilitychange", () => {
   if (document.hidden){
