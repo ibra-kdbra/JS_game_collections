@@ -22,7 +22,8 @@ class Intro {
     }
 
     render() {
-        game.ctx.font = Asset.getFontString(18);
+        const k = game.textScale;
+        game.ctx.font = Asset.getFontString(18 * k);
         game.ctx.fillStyle = 'rgba(204,255,204,0.9)';
 
         let text = this._text.substring(0, this._chars);
@@ -36,7 +37,7 @@ class Intro {
             }
 
             // Trim off leading and trailing space while rendering (don't include in math)
-            game.ctx.fillText(line.trim(), 15, 30 + i * 28);
+            game.ctx.fillText(line.trim(), 15, (30 + i * 28) * k);
 
             let leftover = lines[i].slice(line.length);
             if (leftover.length > 0) {
