@@ -6,7 +6,7 @@ Small, dependency-free helpers every game can opt into. Plain ES modules, no bui
 | --- | --- |
 | `storage.js` | `createStore(slug)` namespaced, never-throwing `get/set/remove`; `recordBest(slug, value, { lowerIsBetter, mode, label })` saves personal bests the hub can display; `migrateKey` moves old un-namespaced keys. |
 | `loop.js` | `createLoop({ update(dt), render(alpha) })` fixed-timestep loop (60 steps/s by default) that pauses when the tab is hidden. `createStepper()` does the same for engines that own their loop (p5, LittleJS). |
-| `input.js` | `createTouchControls({ dpad, buttons })` on-screen controls that dispatch real `KeyboardEvent`s with `key`, `code`, `keyCode` and `which`, so existing keyboard handlers work unchanged. `onSwipe(el, cb)` and `tapKey(key)`. |
+| `input.js` | `createTouchControls({ dpad, buttons })` on-screen controls that dispatch real `KeyboardEvent`s with `key`, `code`, `keyCode` and `which`, so existing keyboard handlers work unchanged. Optional `repeatMs` repeats a held button; `repeatDelayMs` sets the wait before the first repeat so a tap never counts twice. `onSwipe(el, cb)` and `tapKey(key)`. |
 | `shell.js` | `initShell({ slug })` loads the kit styles and records the game as recently played for the hub. It adds nothing to the page: games open in their own tab and fill the whole window. |
 | `index.js` | Loads everything and exposes `window.GameKit` for classic-script games. |
 
