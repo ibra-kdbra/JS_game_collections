@@ -163,15 +163,6 @@ export const games = [
     mobile: true,
   },
   {
-    slug: 'shadow-dog',
-    title: 'Shadow Dog Runner',
-    href: 'Sprites_Games/ninth_project/index.html',
-    blurb: 'Roll through the creatures of the night in this side-scrolling runner. Score 40 points in 30 seconds, or see how long you last in Endless.',
-    genre: 'arcade',
-    inputs: ['keyboard', 'touch'],
-    mobile: true,
-  },
-  {
     slug: 'minesweeper',
     title: 'Minesweeper',
     href: 'Minesweeper/index.html',
