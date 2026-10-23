@@ -38,21 +38,28 @@ Personal bests are shown in the main menu and on the game over screen.
 
 ### Touch
 
-- On-screen pad: move left and right, soft drop (down) and hard drop (up, marked DROP)
-- Buttons: rotate counter-clockwise, rotate clockwise, hold and pause
-- Gestures on the playfield: drag sideways to move, drag down to soft drop, flick up to hard drop, tap to rotate, double tap to hold
+Gestures work anywhere on the game:
 
-The on-screen buttons press whatever keys you have bound, so they keep working after you change the controls.
+| Gesture | Action |
+| --- | --- |
+| Tap | Rotate clockwise |
+| Two-finger tap | Rotate counter-clockwise |
+| Drag sideways | Move one cell for every cell dragged |
+| Drag down | Soft drop, one row for every cell dragged |
+| Flick down | Hard drop (also after a sideways drag, in one motion) |
+| Flick up, or tap the Hold box | Hold |
+
+On-screen buttons sit below the board in portrait and on both sides in landscape: hold, soft drop, left and right under the left thumb; drop and both rotations under the right thumb. Held buttons repeat with your DAS and ARR settings. Pause is next to the stats. The buttons can be switched off under Settings (Buttons), which gives the board more room.
 
 ## Settings
 
-DAS, ARR, gravity, soft drop speed, lock delay, playfield size, sound and volume, block style, ghost piece, grid, outlines and background theme. Settings and key bindings are saved in the browser.
+DAS, ARR, gravity, soft drop speed, lock delay, playfield size, on-screen buttons, sound and volume, block style, ghost piece, grid, outlines and background theme. Settings and key bindings are saved in the browser.
 
 ## How it works
 
 - Game logic runs in fixed 60 Hz steps (DAS, ARR, gravity and lock delay are counted in those steps), so it plays the same on 60 Hz and 120 Hz screens. The clock counts steps too, so it stops while paused and replays show the same time.
-- The playfield, hold and preview canvases are drawn at the screen's pixel density. On narrow screens the side panels shrink, and on touch screens the layout leaves room for the controls.
-- Replays store the keys pressed on each step together with the random seed.
+- The playfield, hold and preview canvases are drawn at the screen's pixel density, capped at 2x. On narrow screens the side panels shrink. On touch screens the board is sized to fit around the buttons and the safe areas; tall phones get the hold box and stats in a strip above the board. Layout runs once per frame at most while the window is resized or rotated.
+- Replays store the keys pressed on each step together with the random seed, and the touch gestures applied on each step.
 
 ## Files
 
@@ -67,7 +74,7 @@ Tetris/
 │   ├── hold.js          hold slot
 │   ├── preview.js       seven-piece bag and next queue
 │   ├── menu.js          menus, settings, key bindings, saving, touch controls
-│   ├── responsive.js    touch gestures on the playfield
+│   ├── responsive.js    touch gestures and on-screen buttons
 │   ├── liveBackground.js animated background themes
 │   ├── audio.js         sound effects and music (Web Audio)
 │   ├── particles.js     line clear sparks

@@ -31,6 +31,9 @@
       <div id="a">
         <canvas id="hold"></canvas>
       </div>
+      <button type="button" id="touchPause" class="touch-only" aria-label="Pause">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+      </button>
       <ul id="replay" style="display: none;">
         <li><a href="#" onclick="replay(-1)">Prev</a></li>
         <li><a href="#" onclick="replay()">Play/Pause</a></li>
@@ -91,7 +94,12 @@
       <!-- Controls Menu -->
       <div class="menu">
         <h2>Controls</h2>
-        <p>Click on the control you want to change, then press any key.</p>
+        <div class="touch-help touch-only">
+          <p><b>Tap</b> the board to rotate, tap with <b>two fingers</b> to rotate the other way.</p>
+          <p><b>Drag</b> sideways to move a cell at a time, <b>drag down</b> to soft drop, <b>flick down</b> to hard drop, <b>flick up</b> or tap the Hold box to hold.</p>
+          <p>The on-screen buttons can be turned off under Settings.</p>
+        </div>
+        <p class="key-help">Click on the control you want to change, then press any key.</p>
         <table id="controls">
           <tr><th>Move Left:</th><td id="moveLeft">←</td></tr>
           <tr><th>Move Right:</th><td id="moveRight">→</td></tr>
@@ -134,6 +142,21 @@
       <h3>Next</h3>
       <canvas id="preview"></canvas>
     </section>
+  </div>
+
+  <!-- On-screen buttons for touch screens (left thumb moves, right thumb rotates and drops) -->
+  <div id="pad" class="touch-only" aria-hidden="true">
+    <div class="pad-group pad-left">
+      <button type="button" data-act="holdPiece" class="pad-hold">Hold</button>
+      <button type="button" data-act="moveDown"><svg viewBox="0 0 24 24"><path d="M12 18l7-10H5z"/></svg></button>
+      <button type="button" data-act="moveLeft"><svg viewBox="0 0 24 24"><path d="M6 12l10-7v14z"/></svg></button>
+      <button type="button" data-act="moveRight"><svg viewBox="0 0 24 24"><path d="M18 12L8 5v14z"/></svg></button>
+    </div>
+    <div class="pad-group pad-right">
+      <button type="button" data-act="hardDrop" class="pad-drop">Drop</button>
+      <button type="button" data-act="rotLeft" class="pad-rot">&#8634;</button>
+      <button type="button" data-act="rotRight" class="pad-rot">&#8635;</button>
+    </div>
   </div>
 
   <canvas id="sprite"></canvas>

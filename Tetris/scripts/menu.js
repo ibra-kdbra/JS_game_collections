@@ -1,6 +1,5 @@
 const version = '0.1.0';
 let store;
-let touchControls;
 let setLoop;
 let arrowReleased = true;
 let arrowDelay = 0;
@@ -156,7 +155,6 @@ addEventListener(
       currCell.innerHTML = key[e.keyCode];
       store.set('binds', binds);
       currCell = 0;
-      buildTouchControls();
     }
   },
   false,
@@ -182,24 +180,29 @@ let s;
 let settingsArrow;
 // TODO DRY this.
 function arrowRelease() {
+  if (this && this.onpointerup) this.onpointerup = this.onpointerleave = this.onpointercancel = null;
   resize();
   arrowReleased = true;
   arrowDelay = 0;
   clearTimeout(setLoop);
 }
-function left() {
-  settingsArrow = 1;
-  s = this.parentNode.id;
-  this.onmouseup = arrowRelease;
-  this.onmouseout = arrowRelease;
+// Pointer events, so holding an arrow repeats with a mouse, a pen or a finger.
+function arrowPress(el, dir, e) {
+  if (e.button > 0) return;
+  e.preventDefault();
+  clearTimeout(setLoop);
+  arrowReleased = true;
+  arrowDelay = 0;
+  settingsArrow = dir;
+  s = el.parentNode.id;
+  el.onpointerup = el.onpointerleave = el.onpointercancel = arrowRelease;
   settingsLoop();
 }
-function right() {
-  settingsArrow = 0;
-  s = this.parentNode.id;
-  this.onmouseup = arrowRelease;
-  this.onmouseout = arrowRelease;
-  settingsLoop();
+function left(e) {
+  arrowPress(this, 1, e);
+}
+function right(e) {
+  arrowPress(this, 0, e);
 }
 
 /**
@@ -243,40 +246,6 @@ function loadLocalData() {
 }
 
 /**
- * KeyboardEvent.key values for the bound key codes, so the on-screen
- *  controls press whatever keys the player has bound.
- */
-const keyNames = { 8: 'Backspace', 9: 'Tab', 13: 'Enter', 16: 'Shift', 17: 'Control', 27: 'Escape', 32: ' ', 37: 'ArrowLeft', 38: 'ArrowUp', 39: 'ArrowRight', 40: 'ArrowDown' };
-function keyForCode(code) {
-  if (keyNames[code]) return keyNames[code];
-  if ((code >= 48 && code <= 57) || (code >= 65 && code <= 90)) return String.fromCharCode(code).toLowerCase();
-  return null;
-}
-
-/**
- * On-screen controls for touch screens: move, soft drop and hard drop on the
- *  pad, rotate both ways, hold and pause on the buttons.
- */
-function buildTouchControls() {
-  if (touchControls) touchControls.destroy();
-  const k = function(name) {
-    return keyForCode(binds[name]);
-  };
-  const buttons = [
-    { label: '↺', key: k('rotLeft') },
-    { label: '↻', key: k('rotRight') },
-    { label: 'Hold', key: k('holdPiece'), small: true },
-    { label: 'Pause', key: k('pause'), small: true },
-  ].filter(function(b) {
-    return b.key;
-  });
-  touchControls = GameKit.createTouchControls({
-    dpad: { left: k('moveLeft'), right: k('moveRight'), down: k('moveDown'), up: k('hardDrop') },
-    buttons: buttons,
-  });
-}
-
-/**
  * Runs once the page and the Game Lab kit have loaded.
  */
 function bootTetris() {
@@ -294,8 +263,8 @@ function bootTetris() {
     span.innerHTML = setting[s][settings[s]];
     iLeft.className = 'left';
     iRight.className = 'right';
-    iLeft.onmousedown = left;
-    iRight.onmousedown = right;
+    iLeft.onpointerdown = left;
+    iRight.onpointerdown = right;
 
     set.appendChild(div);
     div.appendChild(b);
@@ -304,7 +273,7 @@ function bootTetris() {
     div.appendChild(iRight);
   }
   GameKit.initShell({ slug: 'tetris' });
-  buildTouchControls();
+  Touch.init();
   resize();
   renderBests();
 }
