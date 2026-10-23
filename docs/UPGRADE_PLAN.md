@@ -161,11 +161,39 @@ Each one is built on the shared kit from day one, as the reference implementatio
 - CI: a Playwright smoke test that opens every registered game at phone and desktop size and
   fails on page errors or 404s. Run a link check on `data.js`.
 
+**What shipped** (branch `upgrade/phase-4-hygiene`)
+- README screenshots and GIFs moved from the game folders to `docs/media/` as WebP (GIFs as
+  animated WebP): 44 MB out of the game folders, under 8 MB in `docs/media/`.
+- Removed files nothing loads: Gravity Wells' `.afdesign` and SVG sources, PacMan's README and
+  research images, social preview images, 2048's startup images, unused sprites and sounds in
+  the sprite tutorials, PacMan Slasher's OGG copies, EOT/SVG/TTF font copies in 2048 and PacMan
+  Slasher, and the vendored mp4-muxer repository (only its build is kept, in
+  `assets/vendor/mp4-muxer/`). The PSD, PXM, SCSS, `engine/build/` and `coffee.zip` files were
+  already gone in Phase 2.
+- `_config.yml` keeps `docs/`, `tools/`, the per-game level checkers and the PacMan and Wahdatio
+  source folders out of the published site.
+- `CREDITS.md` names the upstream project, author and licence of every forked game and Art Lab
+  experiment, and lists third-party sounds, music, libraries and fonts. Open licence questions
+  (GPL-3.0 upstreams for PacMan and HuggersFight, the commercial LSD track, Namco sounds,
+  non-commercial Hangman sounds) are listed there for the owner.
+- Adaptive Fields loads p5.js from the repo instead of a CDN.
+- `tools/smoke.mjs` opens the hub, the Art Lab and every registered page at 390x844 (touch) and
+  1280x800, and fails on uncaught errors, console errors and same-origin 404s; it also checks
+  every local path in `data.js`. `.github/workflows/smoke.yml` runs it with the page and level
+  checkers on every push and pull request.
+
+**Still open:** LSD, Particular Drift, Flow Fields and Text Fields load dat.GUI, Pickr, Font
+Awesome 6 and Google Fonts from CDNs, and Adaptive loads Montserrat from Google Fonts. Without
+network the first four stop with an error (the smoke test shows this with `SMOKE_OFFLINE=1`).
+
 ## Tracking
 
 - [x] Phase 0: confirmed bug fixes
 - [x] Phase 1: hub and Art Lab upgrades on the original design, service worker, feedback XSS fix
-- [ ] Shared game kit (start of Phase 2)
-- [ ] Phase 2A · 2B · 2C · 2D
-- [ ] Phase 3: new games
-- [ ] Phase 4: hygiene, licensing, CI smoke tests
+- [x] Shared game kit (start of Phase 2)
+- [x] Phase 2A · 2B · 2C: every original game upgraded on the kit
+- [ ] Phase 2D: Brainy Warrior is listed and being rebuilt; Shadow Dog Runner is being removed;
+      the Sprite lab entry and the Art Lab fixes (Text Fields aspect, DPR, pinned Pickr) are open
+- [x] Phase 3: Breakout, Snake, Minesweeper and Crate Lab (the one-button runner was not built)
+- [x] Phase 4: README media moved, dead files removed, CREDITS.md, CI smoke test
+- [ ] Phase 4 follow-ups: self-host the Art Lab CDN libraries, owner decisions on licences
