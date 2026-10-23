@@ -1,7 +1,6 @@
 let scene, camera, renderer;
 
-let sceneHud, cameraHud;
-let hudCanvas, hudContext, hudTexture, hudMaterial;
+let hudCanvas, hudContext;
 
 let hudWidth, hudHeight;
 

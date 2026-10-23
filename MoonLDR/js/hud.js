@@ -1,17 +1,12 @@
-// The HUD is a 2D canvas drawn as a texture on a full-screen quad, rendered
-// over the world with its own scene and camera. It is created once; resizing
-// only resizes the canvas and swaps the texture.
+// The HUD is a 2D canvas laid over the WebGL canvas and composited by the
+// browser, so a frame costs only the text drawing: no texture upload to the GPU.
+// It is created once; resizing only resizes the canvas.
 function initHud() {
-    cameraHud = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 10);
-    sceneHud = new THREE.Scene();
     hudCanvas = document.createElement('canvas');
+    hudCanvas.className = 'hud';
+    hudCanvas.setAttribute('aria-hidden', 'true');
     hudContext = hudCanvas.getContext('2d');
-
-    hudMaterial = new THREE.MeshBasicMaterial();
-    hudMaterial.transparent = true;
-
-    const hudPlane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), hudMaterial);
-    sceneHud.add(hudPlane);
+    stage.appendChild(hudCanvas);
     resizeHud();
 }
 
@@ -22,12 +17,6 @@ function resizeHud() {
     hudCanvas.width = Math.round(hudWidth * pixelRatio);
     hudCanvas.height = Math.round(hudHeight * pixelRatio);
     hudContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-
-    if(hudTexture) hudTexture.dispose();
-    hudTexture = new THREE.Texture(hudCanvas);
-    hudTexture.minFilter = THREE.LinearFilter;
-    hudMaterial.map = hudTexture;
-    hudMaterial.needsUpdate = true;
 }
 
 function renderHud() {
@@ -39,9 +28,6 @@ function renderHud() {
         fillMainPanel();
         drawMultipliers();
     }
-
-    hudTexture.needsUpdate = true;
-    renderer.render(sceneHud, cameraHud);
 }
 
 function isCompactHud() {

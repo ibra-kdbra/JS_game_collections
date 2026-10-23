@@ -60,6 +60,13 @@ canvas {
     height: 100%;
 }
 
+/* The HUD canvas sits on top of the WebGL view. */
+canvas.hud {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
 .menu {
     position: fixed;
     inset: 0;
