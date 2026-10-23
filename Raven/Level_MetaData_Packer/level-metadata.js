@@ -73,7 +73,7 @@ const LevelMetadata = {
     },
     level13: {
         name: '13 Uplink Array',
-        hint: '! Two terminals, two cameras, three Raven.'
+        hint: '! Four terminals, four cameras, eleven Raven.'
     },
     outro:
         '[SEC REF 672.C]\n\n' +
