@@ -2,7 +2,7 @@
 
 HTML5 game inspired by Pac-Man, with a twist: you draw to fight.
 
-![PacMan Slasher screenshot](img/screen.png)
+![PacMan Slasher screenshot](../docs/media/pacman-slasher/screen.webp)
 
 
 ## Gameplay

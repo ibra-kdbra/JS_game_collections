@@ -2,9 +2,9 @@
 
 Remake of the classic arcade game: steer a light cycle around the arena and make your opponent crash into a wall or a trail of light first. Play against the computer or a friend on the same keyboard.
 
-![Intro](./imgs/intro.png)
+![Intro](../docs/media/tron/intro.webp)
 
-![End](./imgs/game_end.png)
+![End](../docs/media/tron/game-end.webp)
 
 ## How to play
 

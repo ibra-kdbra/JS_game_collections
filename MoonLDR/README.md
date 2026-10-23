@@ -23,7 +23,7 @@ Your best score for each difficulty is saved in the browser.
 * **P** or **Esc** - pause (the game also pauses when the tab is hidden)
 * On touch screens: on-screen rotate buttons, a Thrust button and Pause
 
-![game](./images/start.png "game")  
+![game](../docs/media/moonldr/start.webp "game")  
 
 ## Technologies used
 
@@ -66,9 +66,9 @@ The simulation runs in fixed 60 Hz steps, independent of the display's refresh r
 The shape of the lander is approximated with 3 circles which makes collision detection easier due to rotation.  
 Each circle is checked against every line segment defined by the terrain (basic circle-line intersection).
 
-![lander](./images/normal.png "lander")  
+![lander](../docs/media/moonldr/normal.webp "lander")  
 
-![colliders](./images/colliders.png "colliders")
+![colliders](../docs/media/moonldr/colliders.webp "colliders")
 
 Upon collision, the landing is safe if 4 conditions are met:
 
@@ -84,16 +84,16 @@ It is drawn at the screen's pixel density and switches to short labels on narrow
 It contains score and fuel information on the left, lander parameters on the right and some basic information in the middle.
 Bonus markings are rendered in world space.
 
-![landing](./images/landing.png "landing")
+![landing](../docs/media/moonldr/landing.webp "landing")
 
 ## Particle systems
 
 One particle system is attached to the thruster and it emits particles in a cone.  
 The other one creates a circular explosion when the player crashes.
 
-![thruster](./images/thruster.png "thruster")
+![thruster](../docs/media/moonldr/thruster.webp "thruster")
 
-![explosion](./images/explosion.png "explosion")
+![explosion](../docs/media/moonldr/explosion.webp "explosion")
 
 ## Audio
 
