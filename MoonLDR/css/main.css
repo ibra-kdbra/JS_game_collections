@@ -6,6 +6,16 @@ body {
     font-family: 'Courier New', Courier, monospace;
 }
 
+/* Touches on the game never scroll, zoom, select or pull to refresh. */
+html,
+body {
+    touch-action: none;
+    overscroll-behavior: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
 /* The play area. On touch screens it leaves room for the controls:
    below it in portrait, beside it in landscape. */
 .stage {
@@ -13,15 +23,34 @@ body {
     inset: 0;
 }
 
+/* Touch pad: rotate left and right, one row; Thrust and Pause beside it in
+   portrait, stacked at the right edge (Thrust at the bottom) in landscape. */
+.gk-touch .gk-dpad {
+    grid-template-columns: repeat(2, 60px);
+    grid-template-rows: 60px;
+    gap: 8px;
+}
+
+.gk-touch .gk-dpad button {
+    grid-area: auto;
+}
+
 .gk-has-touch .stage {
-    bottom: 200px;
+    bottom: calc(72px + 12px + max(16px, env(safe-area-inset-bottom)));
 }
 
 @media (orientation: landscape) {
+    .gk-touch .gk-buttons {
+        flex-direction: column-reverse;
+        flex-wrap: nowrap;
+        align-items: stretch;
+        gap: 10px;
+    }
+
     .gk-has-touch .stage {
         bottom: 0;
-        left: 200px;
-        right: 200px;
+        left: calc(128px + 12px + max(16px, env(safe-area-inset-left)));
+        right: calc(72px + 12px + max(16px, env(safe-area-inset-right)));
     }
 }
 
@@ -38,12 +67,22 @@ canvas {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 14px;
-    padding: 64px 16px 24px;
+    padding: max(48px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
     overflow-y: auto;
+    touch-action: pan-y;
     text-align: center;
     background: rgba(0, 0, 0, 0.72);
+}
+
+/* Centred when it fits, scrollable from the top when it doesn't. */
+.menu > :first-child {
+    margin-top: auto;
+}
+
+.menu > :last-child {
+    margin-bottom: auto;
 }
 
 .menu[hidden] {
@@ -147,4 +186,72 @@ canvas {
 
 .gk-has-touch .touch-keys {
     display: block;
+}
+
+/* Short landscape screens: tighter menu, the two settings side by side. */
+@media (orientation: landscape) and (max-height: 500px) {
+    .menu:not([hidden]) {
+        display: grid;
+        grid-template-columns: auto auto;
+        justify-content: center;
+        align-content: safe center;
+        gap: 8px 24px;
+        padding-top: max(12px, env(safe-area-inset-top));
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+
+    .menu > * {
+        grid-column: 1 / -1;
+        justify-self: center;
+    }
+
+    .menu > .opt {
+        grid-column: auto;
+    }
+
+    /* Difficulty and terrain share a row; the note about difficulty goes below. */
+    .menu > .opt-note,
+    .menu > .opt-note ~ :not(.opt) {
+        order: 1;
+    }
+
+    .menu > :first-child,
+    .menu > :last-child {
+        margin: 0;
+    }
+
+    .menu h1 {
+        font-size: 30px;
+    }
+
+    .tagline,
+    .opt-note {
+        max-width: 44em;
+        font-size: 12px;
+    }
+
+    /* Each setting: its label over one row of buttons. */
+    .opt {
+        display: grid;
+        grid-auto-flow: column;
+        justify-content: center;
+        gap: 4px 6px;
+    }
+
+    .opt-label {
+        grid-row: 1;
+        grid-column: 1 / -1;
+    }
+
+    .menu .opt button {
+        grid-row: 2;
+        padding: 6px 10px;
+        font-size: 14px;
+        white-space: nowrap;
+    }
+
+    .menu .start {
+        min-height: 44px;
+        padding-block: 0;
+    }
 }
