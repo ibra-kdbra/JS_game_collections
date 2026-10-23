@@ -290,63 +290,119 @@ const LevelCache = [
     ]
   },
   {
-    width: 16,
-    height: 16,
-    data: 'uL-$v,-$v,-$v,v5,=L=,=$;$=,=$;$=,=$;$=,=L=,v5,v5L-e;$-$t#$-$t#<[',
+    width: 30,
+    height: 20,
+    data: '<tt;$-$tt;$-$tt;$-uuLvvM,vvM,-<-<-<-<=,-$+$-$+$-$+$-$+$=,-<-<-<-<=,vvM,vvM,-<-<-<-<=,-$+$-$+$-$+$-$+$=,-<-<-<-<=,vvM,vvMu4-u<t#$-$tt;$-$tt;<t3',
     name: '11 Server Vault',
     hint: '! A camera can hold one Raven while you watch another.',
-    enter: { p1: { x: 160, y: 416 }, p2: { x: 224, y: 480 } },
+    enter: { p1: { x: 416, y: 544 }, p2: { x: 480, y: 608 } },
     exit: { p1: { x: 32, y: 32 }, p2: { x: 96, y: 96 } },
     d: [
       { u: 1, v: 3, exitDoor: true },
-      { u: 5, v: 12, entranceDoor: true }
+      { u: 13, v: 16, entranceDoor: true }
     ],
-    e: [ { x: 368, y: 368 }, { x: 272, y: 80, wake: 'los' } ],
-    t: [ { u: 1, v: 7, control: 'A' } ],
-    c: [ { u: 14, v: 8, control: 'A', facing: 150, enabled: false } ]
+    e: [
+      { x: 240, y: 304, wakeRadius: 192 },
+      { x: 560, y: 176, wake: 'los' },
+      { x: 720, y: 336, wake: 'los' },
+      { x: 48, y: 336, patrolDX: 0, patrolDY: -160 },
+      { x: 720, y: 496, wake: 'los' },
+      { x: 880, y: 464, wakeRadius: 224 },
+      { x: 432, y: 400, wake: 'los' },
+      { x: 240, y: 144, patrolDX: 224, patrolDY: 0 },
+      { x: 880, y: 144, wakeRadius: 224 },
+      { x: 560, y: 336, wakeRadius: 160 },
+      { x: 272, y: 432, wake: 'los' },
+      { x: 624, y: 240, wake: 'los' },
+      { x: 816, y: 304, patrolDX: 0, patrolDY: 160, patrolStart: 600 },
+      { x: 912, y: 240, wake: 'los' },
+      { x: 912, y: 368, wake: 'los' },
+      { x: 48, y: 432, wake: 'los' },
+      { x: 144, y: 496, wake: 'los' }
+    ],
+    t: [
+      { u: 28, v: 9, control: 'A' },
+      { u: 1, v: 15, control: 'B' },
+      { u: 14, v: 9, control: 'C' }
+    ],
+    c: [
+      { u: 28, v: 15, control: 'A', facing: 200, enabled: false },
+      { u: 1, v: 4, control: 'B', facing: 30, enabled: false },
+      { u: 12, v: 10, control: 'C', facing: 0, enabled: false }
+    ]
   },
   {
-    width: 22,
-    height: 14,
-    data: 'uu$-$vM,-$vM,-$-<5<=,E$+$5$+$=,E$+$5$+$=,E<5<=,vf,vf,vfuL-<t;$-$tS$-$tS<3',
+    width: 30,
+    height: 19,
+    data: '<tt;$-$tt;$-$tt;$-uuLvvM,vvMuu,E4vvM,vvM4Euu,vvM,vvMuu,E4vvM,vvMuuD-,tt3$-$tt;$-$tt;<#',
     name: '12 Cooling Tunnels',
     hint: '! Patrols keep moving until someone sees them.',
     chx: 0,
     chy: 32,
     enter: { p1: { x: 32, y: 32 }, p2: { x: 96, y: 96 } },
-    exit: { p1: { x: 512, y: 352 }, p2: { x: 576, y: 416 } },
+    exit: { p1: { x: 832, y: 512 }, p2: { x: 896, y: 576 } },
     d: [
       { u: 1, v: 3, entranceDoor: true },
-      { u: 16, v: 10, exitDoor: true }
+      { u: 26, v: 15, exitDoor: true }
     ],
     e: [
-      { x: 112, y: 272, wake: 'los', patrolDX: 384, patrolDY: 0 },
-      { x: 624, y: 80, wakeRadius: 256 }
+      { x: 400, y: 160, patrolDX: 288, patrolDY: 0 },
+      { x: 656, y: 176, wake: 'los' },
+      { x: 848, y: 144, wakeRadius: 256 },
+      { x: 304, y: 256, patrolDX: 320, patrolDY: 0, patrolStart: 800 },
+      { x: 720, y: 272, wake: 'los' },
+      { x: 144, y: 304, wake: 'los' },
+      { x: 496, y: 352, patrolDX: -256, patrolDY: 0 },
+      { x: 272, y: 464, wake: 'los' },
+      { x: 592, y: 448, patrolDX: 192, patrolDY: 0, patrolStart: 1500 }
     ],
-    t: [ { u: 10, v: 4, control: 'A' } ],
-    c: [ { u: 20, v: 8, control: 'A', facing: 180, enabled: false } ]
+    t: [
+      { u: 6, v: 4, control: 'A' },
+      { u: 28, v: 7, control: 'B' },
+      { u: 1, v: 11, control: 'C' }
+    ],
+    c: [
+      { u: 28, v: 5, control: 'A', facing: 180, enabled: false },
+      { u: 1, v: 8, control: 'B', facing: 0, enabled: false },
+      { u: 28, v: 10, control: 'C', facing: 180, enabled: false }
+    ]
   },
   {
-    width: 24,
-    height: 17,
-    data: 'l<td$-$td$-$lu-u$vv,vv,5<^<5,5$+$^$+$5,5<5,5<5,n,n,vvLv-L;$v-$dT-Lt;$-$td$-$td<l',
+    width: 28,
+    height: 21,
+    data: 't#<tt+$-$tt+$-$t#u,-u4vv=,vv=,54v-4=,5$#$v-$#$=,54E<=4=,v$+$v,v$+$v,v<v,54v-4=,5$#$v-$#$=,54v-4=,vv=,vv=u4-u,t#$-$tt+$-$tt+<t#',
     name: '13 Uplink Array',
-    hint: '! Two terminals, two cameras, three Raven.',
-    enter: { p1: { x: 352, y: 448 }, p2: { x: 416, y: 512 } },
-    exit: { p1: { x: 352, y: 32 }, p2: { x: 416, y: 96 } },
+    hint: '! Four terminals, four cameras, eleven Raven.',
+    enter: { p1: { x: 416, y: 576 }, p2: { x: 480, y: 640 } },
+    exit: { p1: { x: 416, y: 32 }, p2: { x: 480, y: 96 } },
     d: [
-      { u: 11, v: 3, exitDoor: true },
-      { u: 11, v: 13, entranceDoor: true }
+      { u: 13, v: 3, exitDoor: true },
+      { u: 13, v: 17, entranceDoor: true }
     ],
     e: [
-      { x: 80, y: 176, wakeRadius: 160 },
-      { x: 688, y: 176, wakeRadius: 160 },
-      { x: 208, y: 400, wake: 'los' }
+      { x: 80, y: 176, wake: 'los' },
+      { x: 816, y: 176, wake: 'los' },
+      { x: 304, y: 144, patrolDX: 0, patrolDY: 192 },
+      { x: 592, y: 144, patrolDX: 0, patrolDY: 192 },
+      { x: 432, y: 240 },
+      { x: 208, y: 336, wake: 'los' },
+      { x: 688, y: 336, wake: 'los' },
+      { x: 336, y: 432, patrolDX: 224, patrolDY: 0 },
+      { x: 80, y: 496 },
+      { x: 816, y: 496 },
+      { x: 432, y: 400, wake: 'los' }
     ],
-    t: [ { u: 1, v: 9, control: 'A' }, { u: 22, v: 9, control: 'B' } ],
+    t: [
+      { u: 1, v: 4, control: 'A' },
+      { u: 26, v: 4, control: 'B' },
+      { u: 1, v: 16, control: 'C' },
+      { u: 26, v: 16, control: 'D' }
+    ],
     c: [
-      { u: 9, v: 4, control: 'A', facing: 160, enabled: false },
-      { u: 14, v: 4, control: 'B', facing: 20, enabled: false }
+      { u: 26, v: 15, control: 'A', facing: 225, enabled: false },
+      { u: 1, v: 15, control: 'B', facing: 315, enabled: false },
+      { u: 26, v: 5, control: 'C', facing: 135, enabled: false },
+      { u: 1, v: 5, control: 'D', facing: 45, enabled: false }
     ]
   }
 ];
