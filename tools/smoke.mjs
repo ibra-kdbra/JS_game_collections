@@ -276,6 +276,24 @@ if (externalUrls.size) {
   console.log('  External URLs (not fetched):');
   for (const u of externalUrls) console.log(`       ${u}`);
 }
+// Firefox ignores an import map that comes after a module script or modulepreload,
+// so every bare import ("three") then fails there; Chromium is lenient and won't show it.
+console.log('\nHTML');
+let htmlProblems = 0;
+for (const entry of pages) {
+  const file = path.join(root, decodeURIComponent(entry.href.split(/[?#]/)[0]));
+  if (!existsSync(file)) continue;
+  const html = readFileSync(file, 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+  const map = html.search(/<script[^>]*type=["']importmap["']/i);
+  const module = html.search(/<script[^>]*type=["']module["']|<link[^>]*rel=["']modulepreload["']/i);
+  if (map >= 0 && module >= 0 && module < map) {
+    console.log(`  FAIL ${entry.href}: the import map comes after a module script or modulepreload`);
+    htmlProblems++;
+  }
+}
+if (htmlProblems) failed = true;
+else console.log('  ok   import maps come before any module script or modulepreload');
+
 console.log('\nPages');
 for (const entry of pages) {
   for (const vp of Object.keys(VIEWPORTS)) {
