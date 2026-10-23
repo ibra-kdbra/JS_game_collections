@@ -19,6 +19,25 @@ let cart = new Cart();
 // Letterbox: the 800x600 world is scaled uniformly and centred in the free space.
 const view = { scale: 1, x: 0, y: 0, dpr: 1 };
 
+// Safe-area insets (notch, rounded corners, home indicator), read from CSS.
+let safeProbe = null;
+function safeArea() {
+  if (typeof getComputedStyle != "function") return { top: 0, right: 0, bottom: 0, left: 0 }; // headless tools
+  if (!safeProbe) {
+    safeProbe = document.createElement("div");
+    safeProbe.style.cssText = "position:fixed;left:0;top:0;visibility:hidden;pointer-events:none;" +
+      "padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)";
+    document.body.append(safeProbe);
+  }
+  const cs = getComputedStyle(safeProbe);
+  return {
+    top: parseFloat(cs.paddingTop) || 0,
+    right: parseFloat(cs.paddingRight) || 0,
+    bottom: parseFloat(cs.paddingBottom) || 0,
+    left: parseFloat(cs.paddingLeft) || 0,
+  };
+}
+
 // Progress and per-level stats.
 let store = null;
 let controls = null;
@@ -65,7 +84,15 @@ let mg = {
     this.canvas.classList.add("screen");
     document.body.prepend(this.canvas);
     this.resize();
-    window.addEventListener("resize", () => this.resize());
+    // At most one relayout per frame while the window is resized or rotated.
+    let resizeFrame = 0;
+    window.addEventListener("resize", () => {
+      if (resizeFrame) return;
+      resizeFrame = requestAnimationFrame(() => {
+        resizeFrame = 0;
+        this.resize();
+      });
+    });
 
     showIntro();
     buildLevelSelect();
@@ -105,22 +132,40 @@ let mg = {
   resize: function() {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const dpr = window.devicePixelRatio || 1;
-    this.canvas.width = Math.round(w * dpr);
-    this.canvas.height = Math.round(h * dpr);
+    // Backing store capped at 2x: the whole window is redrawn every step.
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const cw = Math.round(w * dpr);
+    const ch = Math.round(h * dpr);
+    if (this.canvas.width !== cw || this.canvas.height !== ch) {
+      this.canvas.width = cw;
+      this.canvas.height = ch;
+    }
 
-    // Use the whole window, except, while playing on a touch screen, the room
-    // for the on-screen controls (below in portrait, beside in landscape).
+    // Use the whole window inside the safe areas, except, while playing on a touch
+    // screen, the room the on-screen controls take (below in portrait, beside in
+    // landscape), measured from the controls themselves.
+    const safe = safeArea();
     const touch = gameStarted && !controls.el.hidden;
     const portrait = h >= w;
-    const top = 8;
-    const bottom = touch && portrait ? 210 : 8;
-    const side = touch && !portrait ? 200 : 8;
-    const availW = w - side * 2;
+    let left = safe.left + 8;
+    let right = safe.right + 8;
+    const top = safe.top + 8;
+    let bottom = safe.bottom + 8;
+    if (touch) {
+      const pad = controls.el.querySelector(".gk-dpad").getBoundingClientRect();
+      const buttons = controls.el.querySelector(".gk-buttons").getBoundingClientRect();
+      if (portrait) {
+        bottom = Math.max(bottom, h - Math.min(pad.top, buttons.top) + 8);
+      } else {
+        left = Math.max(left, pad.right + 8);
+        right = Math.max(right, w - buttons.left + 8);
+      }
+    }
+    const availW = w - left - right;
     const availH = h - top - bottom;
     view.scale = Math.min(availW / WORLD_W, availH / WORLD_H);
     view.dpr = dpr;
-    view.x = side + (availW - WORLD_W * view.scale) / 2;
+    view.x = left + (availW - WORLD_W * view.scale) / 2;
     // On a portrait phone's menu the world sits at the top, leaving the bottom for the level list.
     view.y = portrait && w < 700 && !gameStarted ? top : top + (availH - WORLD_H * view.scale) / 2;
     ctx.imageSmoothingEnabled = false;
@@ -345,7 +390,11 @@ function updateGameArea() {
 }
 
 function drawHud(lvl) {
-  let font = "32px 'VT323'";
+  // World text is 32px on the 800x600 screen; when the world is shrunk onto a phone,
+  // grow it so it stays at least 13 CSS pixels.
+  const size = Math.max(32, Math.ceil(13 / view.scale));
+  const k = size / 32;
+  let font = size + "px 'VT323'";
   const touch = !controls.el.hidden;
   if (!touch && lvl < lastLevel()) {
     writeTxt(ctx, 1, font, "WHITE", "[M] Music: " + (musicOff ? "off" : "on"), 790, 20, "right");
@@ -353,9 +402,9 @@ function drawHud(lvl) {
     writeTxt(ctx, 1, font, "WHITE", "[R] Reset Level", 790, 70, "right");
   }
   if (lvl < lastLevel()) {
-    writeTxt(ctx, 1, font, "WHITE", "Level " + (lvl + 1) + ": " + LEVELS[lvl].name, 10, 20);
-    writeTxt(ctx, 1, font, "WHITE", "Lives: " + cart.hero.hp + "   Time: " + levelTime.toFixed(1), 10, 45);
-    writeTxt(ctx, 1, font, "RED", "Deaths: " + (cart.hero.deaths - deathsAtStart), 10, 70);
+    writeTxt(ctx, 1, font, "WHITE", "Level " + (lvl + 1) + ": " + LEVELS[lvl].name, 10, 20 * k);
+    writeTxt(ctx, 1, font, "WHITE", "Lives: " + cart.hero.hp + "   Time: " + levelTime.toFixed(1), 10, 45 * k);
+    writeTxt(ctx, 1, font, "RED", "Deaths: " + (cart.hero.deaths - deathsAtStart), 10, 70 * k);
   }
 
   const tips = LEVELS[lvl].tips;
@@ -363,7 +412,7 @@ function drawHud(lvl) {
     const finale = lvl == lastLevel();
     tips.forEach((tip, i) => {
       const big = finale && i == 0;
-      writeTxt(ctx, 1, big ? "80px 'VT323'" : font, "WHITE", tip, 400, finale ? 100 + i * 50 : 110 + i * 22, "center");
+      writeTxt(ctx, 1, big ? "80px 'VT323'" : font, "WHITE", tip, 400, finale ? 100 + i * 50 * k : 80 + 30 * k + i * 22 * k, "center", 780);
     });
   }
 
@@ -372,7 +421,7 @@ function drawHud(lvl) {
     const a = Math.min(1, banner.t);
     drawBox(ctx, .55 * a, "#000", 0, 470, WORLD_W, 90);
     writeTxt(ctx, a, "56px 'VT323'", "#05f2db", banner.text, 400, 512, "center");
-    writeTxt(ctx, a, font, "WHITE", banner.sub, 400, 545, "center");
+    writeTxt(ctx, a, font, "WHITE", banner.sub, 400, 545, "center", 780);
     ctx.globalAlpha = 1;
     if (banner.t <= 0) banner = null;
   }
@@ -384,12 +433,14 @@ function drawBox(ctx, a, colour, x, y, w, h) {
   ctx.fillRect(x, y, w, h);
 }
 
-function writeTxt(ctx, a, font, colour, txt, x, y, align) {
+function writeTxt(ctx, a, font, colour, txt, x, y, align, maxWidth) {
   ctx.globalAlpha = a;
   ctx.font = font;
   ctx.fillStyle = colour;
   ctx.textAlign = align || "left";
-  ctx.fillText(txt, x, y);
+  // fillText squeezes the text to maxWidth when it would be wider.
+  if (maxWidth) ctx.fillText(txt, x, y, maxWidth);
+  else ctx.fillText(txt, x, y);
 }
 
 // Initialize DOM listeners
