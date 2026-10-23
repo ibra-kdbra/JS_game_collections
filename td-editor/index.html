@@ -2,7 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#09090b">
     <title>Map Editor</title>
     <link href="css/style.css" rel="stylesheet">
     <link href="../assets/icons/map.svg" rel="icon" type="image/svg+xml" />
@@ -21,6 +22,10 @@
 
     <main>
       <aside id="tiles">
+        <div class="layer-seg" role="group" aria-label="Layer (Space)">
+          <button type="button" data-layer="game" aria-pressed="true" onclick="if (dispMode) toggleDispMode()">Gameplay</button>
+          <button type="button" data-layer="deco" aria-pressed="false" onclick="if (!dispMode) toggleDispMode()">Decoration</button>
+        </div>
         <div id="tile-picker">
           <h2>Tiles</h2>
           <div class="group">

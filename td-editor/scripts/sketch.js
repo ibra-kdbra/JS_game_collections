@@ -306,6 +306,9 @@ function updateDivs() {
         t.display = 'block';
         d.display = 'none';
     }
+    document.querySelectorAll('[data-layer]').forEach(b => {
+        b.setAttribute('aria-pressed', String((b.dataset.layer === 'deco') === dispMode));
+    });
 }
 
 // Update map status display
@@ -487,7 +490,19 @@ function draw() {
             }
         }
     }
+
+    // Outline the tile under the mouse
+    if (hoverOutline && mouseInMap()) {
+        const p = gridPos(mouseX, mouseY);
+        noFill();
+        stroke(250, 204, 21);
+        strokeWeight(2);
+        rect(p.x * ts + 1, p.y * ts + 1, ts - 2, ts - 2);
+        strokeWeight(1);
+    }
 }
+
+const hoverOutline = matchMedia('(hover: hover)').matches;
 
 // User input
 

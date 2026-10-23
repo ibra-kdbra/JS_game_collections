@@ -55,6 +55,16 @@ let difficulty;         // entry of difficulties (waves.js)
 let gameMode;           // 'campaign' or 'endless'
 let gameOver = false;
 let speed = 1;          // logic steps per tick: 1x, 2x or 3x
+let mapId = 'sparse2';  // chosen map (MAP_LIST in hud.js)
+let modeId = 'campaign';
+let diffId = 'normal';
+let upcoming = null;    // pattern of the wave after the current one, for the preview
+let started = false;    // whether the first wave has been released
+let earlyBonus = 0;     // bonus paid for the wave that was just called early
+let floaters = [];      // floating numbers: { x, y, text, color, life, size }
+let hurt = 0;           // ticks left of the red edge flash after losing lives
+let damageNumbers = true;
+let stats;              // per-game totals for the end screen
 
 let godMode = false;    // make player immortal for test purposes
 let healthBar = true;   // display enemy health bar
@@ -113,17 +123,60 @@ const addWave = (pattern) => {
 // Buy and place a tower if player has enough money
 const buy = (t) => {
     if (godMode || cash >= t.cost) {
-        if (!godMode) {
-            cash -= t.cost;
-            toPlace = false;
-        }
-        selected = t;
+        if (!godMode) cash -= t.cost;
         if (grid[t.gridPos.x][t.gridPos.y] === 0) toPathfind = true;
-        updateInfo(t);
         newTowers.push(t);
+        stats.built++;
+        sfx('build');
+        addFloater(t.pos.x, t.pos.y - ts * 0.3, `-$${t.cost}`, [250, 204, 21]);
+        ghost = null;
+        // Keep building the same tower while another one is affordable
+        if (!godMode && cash < t.cost) {
+            toPlace = false;
+            selected = t;
+        }
+        updateInfo();
     } else {
-        toast(`Not enough cash: ${t.title} costs $${t.cost}`, 'error');
+        sfx('error');
+        toast(`Not enough gold: ${t.title} costs $${t.cost}`, 'error');
     }
+}
+
+// Floating text on the map (damage, gold, lives)
+function addFloater(x, y, text, color, size = 1) {
+    if (floaters.length > 120) floaters.shift();
+    floaters.push({ x, y, text, color, size, life: 45 });
+}
+
+// Hooks called by enemies (enemy.js)
+const typeColors = {
+    physical: [244, 244, 245],
+    energy: [0, 240, 255],
+    explosion: [255, 153, 0],
+    piercing: [216, 180, 254],
+    poison: [132, 204, 22]
+};
+
+function onEnemyHit(e, dealt, type) {
+    if (!damageNumbers || dealt < 25) return;
+    addFloater(e.pos.x + (Math.random() - 0.5) * ts * 0.4, e.pos.y - ts * 0.35,
+        String(Math.round(dealt)), typeColors[type] || typeColors.physical, 0.9);
+}
+
+function onEnemyKilled(e) {
+    stats.kills++;
+    stats.earned += e.cash;
+    if (e.cash > 0) addFloater(e.pos.x, e.pos.y, `+$${e.cash}`, [250, 204, 21], 0.8);
+}
+
+function onEnemyLeaked(e) {
+    if (godMode) return;
+    stats.leaked += e.damage;
+    hurt = 24;
+    sfx('leak');
+    const c = center(exit.x, exit.y);
+    addFloater(c.x, c.y - ts * 0.4, `-${e.damage}`, [248, 113, 113], 1.2);
+    flashLives();
 }
 
 // Calculate and display current and average FPS
@@ -142,29 +195,28 @@ const calcFPS = () => {
     text(fpsText, 5, height - 25);
 }
 
-// Check if all conditions for placing a tower are true
-const canPlace = (col, row) => {
-    if (!toPlace) return false;
+// Why a tower cannot go on a tile, or null if it can
+const placeReason = (col, row) => {
     const g = grid[col][row];
-    if (g === 3) return !getTower(col, row);
-    if (g === 1 || g === 2 || g === 4) return false;
-    if (!empty(col, row) || !placeable(col, row)) return false;
-    return true;
+    if (getTower(col, row)) return 'A tower is already here';
+    if (g === 3) return null;
+    if (g === 1) return 'Cannot build on walls';
+    if (g === 2 || g === 4) return 'Enemy road: no building';
+    if (!empty(col, row)) return 'Spawn and exit tiles stay clear';
+    if (!placeable(col, row)) return 'That would block the only path';
+    return null;
 }
+
+// Check if all conditions for placing a tower are true
+const canPlace = (col, row) => toPlace && placeReason(col, row) === null;
 
 // Check if spawn cooldown is done and enemies are available to spawn
 const canSpawn = () => {
     return newEnemies.length > 0 && scd === 0;
 }
 
-// Clear tower information
-const clearInfo = () => {
-    $('info-div').style.display = 'none';
-    updateHint();
-}
-
-// Next authored wave, or nothing once the campaign is over
-const customWave = () => campaignWaves[wave];
+// Pattern for the wave after the current one
+const rollWave = () => gameMode === 'campaign' ? (campaignWaves[wave] || null) : randomWave();
 
 // Check if tile is empty
 const empty = (col, row) => {
@@ -279,8 +331,7 @@ const importMap = (str) => {
     }
     custom = m;
     store.set('customMap', str.trim());
-    $('custom').disabled = false;
-    $('map').value = 'custom';
+    mapId = 'custom';
     savePrefs();
     resetGame();
     toast('Map imported', 'ok');
@@ -331,8 +382,8 @@ function applyMap(m) {
 // Load map from template
 // Always have an exit and spawnpoints if you do not have a premade grid
 function loadMap() {
-    let name = $('map').value;
-    if (name === 'custom' && !custom) name = $('map').value = 'sparse2';
+    let name = mapId;
+    if (name === 'custom' && !custom) name = mapId = 'sparse2';
 
     if (name === 'custom') {
         applyMap(custom);
@@ -375,8 +426,9 @@ function loadMap() {
 // Increment wave counter and prepare wave
 function nextWave() {
     if (gameMode === 'campaign' && wave >= campaignWaves.length) return;
-    addWave(gameMode === 'campaign' ? customWave() : randomWave());
+    addWave(upcoming || rollWave());
     wave++;
+    upcoming = rollWave();
 }
 
 // Check if no more enemies
@@ -392,6 +444,10 @@ function outsideMap(e) {
 function pause() {
     if (gameOver) return;
     paused = !paused;
+    if (!paused && !started) {
+        started = true;
+        announceWave();
+    }
     stepper.reset();
     updateControls();
 }
@@ -596,9 +652,9 @@ function recalculate() {
 }
 
 function resetGame() {
-    if ($('end-dialog').open) $('end-dialog').close();
-    difficulty = difficulties[$('difficulty').value] || difficulties.normal;
-    gameMode = $('mode').value;
+    closeOverlay('end');
+    difficulty = difficulties[diffId] || difficulties.normal;
+    gameMode = modeId;
     // Clear all entities
     enemies = [];
     projectiles = [];
@@ -610,6 +666,12 @@ function resetGame() {
     newTowers = [];
     selected = null;
     ghost = null;
+    floaters = [];
+    hurt = 0;
+    upcoming = null;
+    started = false;
+    earlyBonus = 0;
+    stats = { kills: 0, leaked: 0, built: 0, earned: 0, upgrades: 0 };
     loadMap();
     // Reset all stats
     health = difficulty.health;
@@ -626,9 +688,9 @@ function resetGame() {
     toPlace = false;
     toWait = false;
     stepper.reset();
-    clearInfo();
     // Start game
     nextWave();
+    updateInfo();
     updateControls();
     updateBest();
 }
@@ -651,6 +713,10 @@ function rescale(newTs) {
         p.width *= k;
         p.topSpeed /= k;
     });
+    floaters.forEach(f => {
+        f.x *= k;
+        f.y *= k;
+    });
     systems = [];
     flashes = [];
 }
@@ -670,18 +736,27 @@ function fitCanvas() {
 function sell(t) {
     selected = null;
     if (grid[t.gridPos.x][t.gridPos.y] === 0) toPathfind = true;
-    clearInfo();
-    cash += t.sellPrice();
+    const price = t.sellPrice();
+    cash += price;
     t.kill();
+    sfx('sell');
+    addFloater(t.pos.x, t.pos.y, `+$${price}`, [250, 204, 21]);
+    updateInfo();
 }
 
 // Set a tower to place
 function setPlace(t) {
+    // Picking the same tower again puts it away
+    if (toPlace && towerType === t) {
+        cancelPlace();
+        return;
+    }
     towerType = t;
     toPlace = true;
     selected = null;
     ghost = null;
-    updateInfo(createTower(0, 0, tower[towerType]));
+    sfx('click');
+    updateInfo();
 }
 
 // Leave placement mode and deselect
@@ -689,98 +764,23 @@ function cancelPlace() {
     toPlace = false;
     selected = null;
     ghost = null;
-    clearInfo();
+    updateInfo();
 }
 
-// Visualize range of tower
-function showRange(t, cx, cy) {
-    stroke(255);
-    fill(t.color[0], t.color[1], t.color[2], 63);
-    const r = (t.range + 0.5) * ts * 2;
-    ellipse(cx, cy, r, r);
-}
-
-// Display tower information
-function updateInfo(t) {
-    const name = $('name');
-    name.textContent = t.title;
-    name.style.color = `rgb(${t.color})`;
-
-    $('damage').textContent = t.getDamage();
-    $('type').textContent = t.type.toUpperCase();
-    $('range').textContent = t.range;
-    $('cooldown').textContent = `${t.getCooldown().toFixed(2)}s`;
-    $('sellPrice').textContent = toPlace ? `costs $${t.totalCost}` : `sells for $${t.sellPrice()}`;
-
-    $('info-buttons').style.display = toPlace ? 'none' : 'flex';
-    $('place-buttons').style.display = toPlace ? 'flex' : 'none';
-    $('info-div').style.display = 'block';
-    updateHint();
-    updateControls();
-}
-
-// Contextual help under the tower info
-function updateHint() {
-    const touch = lastPointer !== 'mouse';
-    let hint = '';
-    if (toPlace) {
-        hint = touch ? 'Tap a tile to aim, tap it again to build.' : 'Click a free tile to build. Esc cancels.';
-    } else if (!selected) {
-        hint = touch ? 'Pick a tower, then tap the map. Tap a built tower to upgrade or sell it.'
-            : 'Pick a tower from the store (keys 1-7), then click the map. Click a tower to upgrade or sell it.';
-        if (touch && ts < 12 && innerHeight > innerWidth) hint += ' Turn your phone sideways for bigger tiles.';
-    }
-    $('hint').textContent = hint;
-}
-
-// Update buttons and status text; only touches the DOM when something changed
-const shown = {};
-function setText(id, value) {
-    if (shown[id] === value) return;
-    shown[id] = value;
-    $(id).textContent = value;
-}
-
-function updateControls() {
-    setText('pause', gameOver ? 'Game over' : paused ? (wave <= 1 && enemies.length === 0 ? 'Start' : 'Resume') : 'Pause');
-    setText('speed', `${speed}x`);
-    setText('mute', muteSounds ? 'Sound off' : 'Sound on');
-    $('next-wave').disabled = !toWait || gameOver;
-}
-
-// Update game status display with wave, health, and cash
-function updateStatus() {
-    const total = gameMode === 'campaign' ? `/${campaignWaves.length}` : '';
-    setText('wave', `Wave ${wave}${total}`);
-    setText('health', `♥ ${health}/${maxHealth}`);
-    setText('cash', `$${cash}`);
-    let note = '';
-    if (gameOver) note = '';
-    else if (toWait) note = `Next wave in ${Math.ceil(wcd / 60)}s`;
-    else if (paused && wave === 1 && enemies.length === 0) note = 'Build towers, then press Start.';
-    else if (paused) note = 'Paused';
-    setText('wave-note', note);
-    $('next-wave').disabled = !toWait || gameOver;
-
-    // Grey out what the player cannot afford
-    const cashKey = `${cash}|${selected ? selected.upgrades.length : -1}`;
-    if (shown.cashKey !== cashKey) {
-        shown.cashKey = cashKey;
-        document.querySelectorAll('[data-tower]').forEach(b => {
-            b.classList.toggle('poor', cash < tower[b.dataset.tower].cost && !godMode);
-        });
-        const up = $('upgrade');
-        if (selected && selected.upgrades.length > 0) {
-            const u = selected.upgrades[0];
-            up.textContent = `Upgrade $${u.cost}`;
-            up.disabled = false;
-            up.classList.toggle('poor', cash < u.cost && !godMode);
-        } else {
-            up.textContent = 'Max level';
-            up.disabled = true;
-        }
-        if (selected) $('sell').textContent = `Sell $${selected.sellPrice()}`;
-    }
+// Visualize range of tower: the circle enemies' centres must enter (see getInRange)
+function showRange(t, cx, cy, ok = true) {
+    const d = (t.range + 1) * ts * 2;
+    noStroke();
+    if (ok) fill(t.color[0], t.color[1], t.color[2], 46);
+    else fill(248, 113, 113, 40);
+    ellipse(cx, cy, d, d);
+    noFill();
+    stroke(255, 255, 255, 170);
+    strokeWeight(Math.max(1, ts / 20));
+    drawingContext.setLineDash([Math.max(3, ts / 4), Math.max(3, ts / 5)]);
+    ellipse(cx, cy, d, d);
+    drawingContext.setLineDash([]);
+    strokeWeight(1);
 }
 
 // Upgrade tower
@@ -789,9 +789,13 @@ function upgrade(t) {
         if (!godMode) cash -= t.cost;
         selected.upgrade(t);
         selected.upgrades = t.upgrades ? t.upgrades : [];
-        updateInfo(selected);
+        stats.upgrades++;
+        sfx('upgrade');
+        addFloater(selected.pos.x, selected.pos.y - ts * 0.3, 'UP!', [250, 204, 21], 0.9);
+        updateInfo();
     } else {
-        toast(`Not enough cash: upgrade costs $${t.cost}`, 'error');
+        sfx('error');
+        toast(`Not enough gold: the upgrade costs $${t.cost}`, 'error');
     }
 }
 
@@ -819,64 +823,22 @@ function scaleEnemy(e) {
 function callNextWave() {
     if (!toWait || gameOver) return;
     const bonus = Math.ceil(wcd / earlyCallTicks);
-    if (bonus > 0) {
-        cash += bonus;
-        toast(`Early call bonus: $${bonus}`, 'ok');
-    }
+    cash += bonus;
+    earlyBonus = bonus;
     wcd = 0;
     if (paused) pause();
 }
 
+// Gold for calling the next wave right now
+const earlyCallBonus = () => toWait && !gameOver ? Math.ceil(wcd / earlyCallTicks) : 0;
+
+function setSpeed(n) {
+    speed = n;
+    updateControls();
+}
+
 function cycleSpeed() {
-    speed = speed % 3 + 1;
-    updateControls();
-}
-
-function toggleMute() {
-    muteSounds = !muteSounds;
-    savePrefs();
-    updateControls();
-}
-
-
-// Results and personal bests
-
-const bestMode = () => `${$('map').value}-${gameMode}-${$('difficulty').value}`;
-
-function mapTitle() {
-    const opt = $('map').selectedOptions[0];
-    return opt ? opt.textContent.replace(/ \(.*\)$/, '') : '';
-}
-
-function recordWave(cleared) {
-    if (cleared < 1) return false;
-    return GameKit.recordBest(SLUG, cleared, {
-        mode: bestMode(),
-        label: `Wave ${cleared} on ${mapTitle()} (${difficulty.title})`
-    }).isNew;
-}
-
-function updateBest() {
-    const best = GameKit.readBests(SLUG)[bestMode()];
-    $('best').textContent = best
-        ? `Best here: ${best.value} wave${best.value === 1 ? '' : 's'} cleared`
-        : 'No waves cleared on this setup yet.';
-}
-
-function endGame(won) {
-    gameOver = true;
-    paused = true;
-    const cleared = won ? wave : wave - 1;
-    const isNew = recordWave(cleared);
-    const best = GameKit.readBests(SLUG)[bestMode()];
-    $('end-title').textContent = won ? 'Victory!' : 'The base has fallen';
-    $('end-text').textContent = won
-        ? `All ${campaignWaves.length} waves cleared on ${mapTitle()} (${difficulty.title}) with ${health} lives left.`
-        : `You cleared ${cleared} wave${cleared === 1 ? '' : 's'}. ${isNew ? 'New personal best!' : best ? `Best: ${best.value}.` : ''}`;
-    $('end-dialog').returnValue = '';
-    $('end-dialog').showModal();
-    updateControls();
-    updateBest();
+    setSpeed(speed % 3 + 1);
 }
 
 
@@ -885,6 +847,7 @@ function endGame(won) {
 function tick() {
     if (scd > 0) scd--;
     if (wcd > 0 && toWait) wcd--;
+    if (hurt > 0) hurt--;
 
     // Spawn enemies
     if (canSpawn()) {
@@ -971,6 +934,7 @@ function tick() {
         toWait = false;
         wcd = 0;
         nextWave();
+        announceWave();
     }
 
     // Wave cleared: wait for the next one
@@ -982,6 +946,7 @@ function tick() {
         }
         wcd = difficulty.waveCool;
         toWait = true;
+        waveCleared();
         updateControls();
     }
 
@@ -1015,11 +980,12 @@ function setup() {
     canvas.parent('sketch-holder');
     canvas.elt.addEventListener('pointerdown', onCanvasPointer);
     canvas.elt.addEventListener('contextmenu', e => e.preventDefault());
-    textFont('monospace');
+    textFont('Chakra Petch');
+    textStyle(BOLD);
 
-    loadPrefs();
-    if (matchMedia('(max-width: 899px) and (orientation: portrait)').matches) $('options').open = false;
+    const fromLink = loadPrefs();
     resetGame();
+    if (!fromLink) openLevels();
 
     new ResizeObserver(() => fitCanvas()).observe(holder);
 }
@@ -1035,6 +1001,12 @@ function draw() {
     }
     render();
     updateStatus();
+    // Floating text drifts in real time, so it also clears while paused
+    for (let i = floaters.length - 1; i >= 0; i--) {
+        const f = floaters[i];
+        f.y -= ts / 48;
+        if (--f.life <= 0) floaters.splice(i, 1);
+    }
 }
 
 function render() {
@@ -1054,34 +1026,29 @@ function render() {
         }
     }
 
-    // Draw spawnpoints
-    for (let i = 0; i < spawnpoints.length; i++) {
-        stroke(255);
-        fill(0, 230, 64);
-        const s = spawnpoints[i];
-        rect(s.x * ts, s.y * ts, ts, ts);
-    }
-
-    // Draw exit
-    stroke(255);
-    fill(207, 0, 15);
-    rect(exit.x * ts, exit.y * ts, ts, ts);
-
-    // Draw temporary spawnpoints
-    for (let i = 0; i < tempSpawns.length; i++) {
-        stroke(255);
-        fill(155, 32, 141);
-        const s = tempSpawns[i][0];
-        rect(s.x * ts, s.y * ts, ts, ts);
-    }
+    // Spawnpoints (green), temporary spawnpoints (purple) and the exit (red)
+    spawnpoints.forEach(s => drawMarker(s.x, s.y, [0, 230, 64]));
+    tempSpawns.forEach(([s]) => drawMarker(s.x, s.y, [155, 32, 141]));
+    drawMarker(exit.x, exit.y, [207, 0, 15], true);
 
     enemies.forEach(e => e.draw());
+    enemies.forEach(e => e.drawHit());
     if (healthBar) enemies.forEach(e => e.drawHealth());
 
     // Range of the selected tower
     if (selected && !toPlace && selected.alive) showRange(selected, selected.pos.x, selected.pos.y);
 
     towers.forEach(t => t.draw());
+
+    // Outline the selected tower
+    if (selected && !toPlace && selected.alive) {
+        noFill();
+        stroke(250, 204, 21);
+        strokeWeight(Math.max(2, ts / 10));
+        rect(selected.gridPos.x * ts + 1, selected.gridPos.y * ts + 1, ts - 2, ts - 2);
+        strokeWeight(1);
+    }
+
     if (showEffects) systems.forEach(s => s.draw());
     projectiles.forEach(p => p.draw());
 
@@ -1100,32 +1067,16 @@ function render() {
     });
     if (!paused) flashes = [];
 
-    // Draw range of tower being placed
-    const p = placementTile();
-    if (p) {
-        const c = center(p.x, p.y);
-        showRange(createTower(0, 0, tower[towerType]), c.x, c.y);
+    drawPlacement();
+    drawFloaters();
 
-        // Draw a red X if tower cannot be placed
-        if (!canPlace(p.x, p.y)) {
-            push();
-            translate(c.x, c.y);
-            rotate(PI / 4);
-            noStroke();
-            fill(207, 0, 15);
-            const edge = 0.1 * ts;
-            const len = 0.9 * ts / 2;
-            rect(-edge, len, edge * 2, -len * 2);
-            rotate(PI / 2);
-            rect(-edge, len, edge * 2, -len * 2);
-            pop();
-        } else if (ghost) {
-            noFill();
-            stroke(255);
-            strokeWeight(2);
-            rect(p.x * ts, p.y * ts, ts, ts);
-            strokeWeight(1);
-        }
+    // Red edge when lives are lost
+    if (hurt > 0) {
+        noFill();
+        stroke(248, 113, 113, hurt * 9);
+        strokeWeight(Math.max(6, ts / 3));
+        rect(0, 0, width, height);
+        strokeWeight(1);
     }
 
     // Update FPS meter
@@ -1135,8 +1086,10 @@ function render() {
     if (godMode) {
         noStroke();
         fill(0);
-        rect(0, 0, 102, 22);
+        rect(0, 0, 112, 22);
         fill(255);
+        textSize(12);
+        textAlign(LEFT, BASELINE);
         text('God Mode Active', 5, 15);
     }
 
@@ -1144,10 +1097,115 @@ function render() {
     if (stopFiring) {
         noStroke();
         fill(0);
-        rect(width - 60, 0, 60, 22);
+        rect(width - 70, 0, 70, 22);
         fill(255);
-        text('Firing off', width - 55, 15);
+        textSize(12);
+        textAlign(LEFT, BASELINE);
+        text('Firing off', width - 65, 15);
     }
+}
+
+// Spawn and exit tiles with an inner ring so they read at any size
+function drawMarker(x, y, color, isExit = false) {
+    stroke(255);
+    strokeWeight(1);
+    fill(color);
+    rect(x * ts, y * ts, ts, ts);
+    if (ts < 10) return;
+    noFill();
+    stroke(9, 9, 11, 200);
+    strokeWeight(Math.max(1.5, ts / 12));
+    const c = center(x, y);
+    if (isExit) {
+        rect(c.x - ts * 0.22, c.y - ts * 0.22, ts * 0.44, ts * 0.44);
+    } else {
+        ellipse(c.x, c.y, ts * 0.45, ts * 0.45);
+    }
+    strokeWeight(1);
+}
+
+// Preview of the tower being placed: range, ghost, buildable tint and price
+let lastPlaceKey = '';
+function drawPlacement() {
+    const p = placementTile();
+    const key = p ? `${p.x},${p.y},${towerType}` : '';
+    if (key !== lastPlaceKey) {
+        lastPlaceKey = key;
+        updatePlaceStatus();
+    }
+    if (!p) return;
+
+    const t = createTower(p.x, p.y, tower[towerType]);
+    const c = t.pos;
+    const reason = placeReason(p.x, p.y);
+    const afford = godMode || cash >= t.cost;
+    const ok = !reason;
+    showRange(t, c.x, c.y, ok && afford);
+
+    noStroke();
+    if (ok && afford) fill(74, 222, 128, 80);
+    else fill(248, 113, 113, 110);
+    rect(p.x * ts, p.y * ts, ts, ts);
+
+    if (ok) {
+        drawingContext.save();
+        drawingContext.globalAlpha = afford ? 0.8 : 0.45;
+        t.draw();
+        drawingContext.restore();
+    } else {
+        // Red X
+        push();
+        translate(c.x, c.y);
+        rotate(PI / 4);
+        noStroke();
+        fill(207, 0, 15);
+        const edge = 0.1 * ts;
+        const len = 0.9 * ts / 2;
+        rect(-edge, len, edge * 2, -len * 2);
+        rotate(PI / 2);
+        rect(-edge, len, edge * 2, -len * 2);
+        pop();
+    }
+
+    // Tile chosen by a first tap waits for confirmation
+    if (ghost) {
+        noFill();
+        stroke(255);
+        strokeWeight(2);
+        rect(p.x * ts, p.y * ts, ts, ts);
+        strokeWeight(1);
+    }
+
+    // Price tag above the tile
+    const label = `$${t.cost}`;
+    const size = Math.max(11, Math.min(16, ts * 0.5));
+    textSize(size);
+    textAlign(CENTER, CENTER);
+    const w = textWidth(label) + 10;
+    const h = size + 6;
+    let ty = p.y * ts - h / 2 - 3;
+    if (ty - h / 2 < 0) ty = (p.y + 1) * ts + h / 2 + 3;
+    const tx = constrain(c.x, w / 2, width - w / 2);
+    noStroke();
+    fill(9, 9, 11, 230);
+    rect(tx - w / 2, ty - h / 2, w, h, 4);
+    fill(afford ? color(250, 204, 21) : color(248, 113, 113));
+    text(label, tx, ty + 1);
+}
+
+function drawFloaters() {
+    if (!floaters.length) return;
+    textAlign(CENTER, CENTER);
+    stroke(9, 9, 11);
+    floaters.forEach(f => {
+        const a = Math.min(255, f.life * 12);
+        textSize(Math.max(10, Math.min(18, ts * 0.5)) * f.size);
+        strokeWeight(3);
+        fill(f.color[0], f.color[1], f.color[2], a);
+        stroke(9, 9, 11, a);
+        text(f.text, f.x, f.y);
+    });
+    strokeWeight(1);
 }
 
 // Tile where the tower being placed would go: mouse hover or the first tap
@@ -1158,12 +1216,36 @@ function placementTile() {
     return null;
 }
 
+// Build on the tile chosen by a first tap (the inspector's Build button)
+function confirmGhost() {
+    if (!ghost) return;
+    const p = ghost;
+    ghost = null;
+    tryBuild(p);
+}
+
+function tryBuild(p) {
+    const reason = placeReason(p.x, p.y);
+    if (reason) {
+        sfx('error');
+        toast(reason, 'error');
+        updateInfo();
+        return;
+    }
+    buy(createTower(p.x, p.y, tower[towerType]));
+}
+
 
 // User input
 
 function onCanvasPointer(e) {
-    if (e.button !== 0) return;
     lastPointer = e.pointerType;
+    // Right click cancels building and deselects
+    if (e.button === 2) {
+        cancelPlace();
+        return;
+    }
+    if (e.button !== 0) return;
     const r = e.target.getBoundingClientRect();
     const x = (e.clientX - r.left) * width / r.width;
     const y = (e.clientY - r.top) * height / r.height;
@@ -1176,7 +1258,8 @@ function onCanvasPointer(e) {
         selected = t;
         toPlace = false;
         ghost = null;
-        updateInfo(selected);
+        sfx('click');
+        updateInfo();
         return;
     }
 
@@ -1188,14 +1271,11 @@ function onCanvasPointer(e) {
     // Mouse builds on click; touch shows the range first and builds on a second tap
     if (e.pointerType !== 'mouse' && !(ghost && ghost.equals(p.x, p.y))) {
         ghost = p;
+        updateInfo();
         return;
     }
     ghost = null;
-    if (canPlace(p.x, p.y)) {
-        buy(createTower(p.x, p.y, tower[towerType]));
-    } else {
-        toast('You cannot build there', 'error');
-    }
+    tryBuild(p);
 }
 
 const towerKeys = { 1: 'gun', 2: 'laser', 3: 'slow', 4: 'sniper', 5: 'rocket', 6: 'bomb', 7: 'tesla' };
@@ -1203,8 +1283,19 @@ const towerKeys = { 1: 'gun', 2: 'laser', 3: 'slow', 4: 'sniper', 5: 'rocket', 6
 function onKey(e) {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (document.querySelector('dialog[open]')) return;
-    if (e.target.closest && e.target.closest('input, textarea, select')) return;
+    if (e.target.closest && e.target.closest('input, textarea, select')) {
+        if (e.key !== 'Escape') return;
+    }
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+
+    // Menus take Escape (and Space to resume from the pause menu)
+    if (openOverlayId()) {
+        if (key === 'Escape') {
+            e.preventDefault();
+            closeTopOverlay();
+        }
+        return;
+    }
 
     if (towerKeys[key]) {
         setPlace(towerKeys[key]);
@@ -1212,13 +1303,17 @@ function onKey(e) {
     }
     switch (key) {
         case 'Escape':
-            cancelPlace();
+            if (toPlace || selected) cancelPlace();
+            else openMenu();
             break;
         case ' ':
             // Drop focus from any clicked button so it isn't also activated
             e.preventDefault();
             if (document.activeElement instanceof HTMLButtonElement) document.activeElement.blur();
             pause();
+            break;
+        case 'c':
+            cycleTarget();
             break;
         case 'f':
             showFPS = !showFPS;
@@ -1228,6 +1323,7 @@ function onKey(e) {
             break;
         case 'h':
             healthBar = !healthBar;
+            savePrefs();
             break;
         case 'm':
             showImportMapPrompt();
@@ -1238,6 +1334,7 @@ function onKey(e) {
         case 'p':
             showEffects = !showEffects;
             if (!showEffects) systems = [];
+            savePrefs();
             break;
         case 'q':
             stopFiring = !stopFiring;
@@ -1259,6 +1356,7 @@ function onKey(e) {
             break;
         case 'w':
             skipToNext = !skipToNext;
+            savePrefs();
             toast(skipToNext ? 'Waves start back to back' : 'Pause between waves', 'info');
             break;
         case 'x':
@@ -1283,30 +1381,58 @@ function onKey(e) {
     }
 }
 
+// Selected tower's targeting: First, Last, Strongest, Closest
+function cycleTarget() {
+    if (!selected || !hasTargeting(selected)) return;
+    const modes = Object.keys(targetModes);
+    setTarget(modes[(modes.indexOf(selected.targetMode) + 1) % modes.length]);
+}
+
+function setTarget(mode) {
+    if (!selected || !hasTargeting(selected)) return;
+    selected.targetMode = mode;
+    sfx('click');
+    updateInfo();
+}
+
+// The slow and poison towers hit everything in range, so they have no target choice
+const hasTargeting = (t) => t.name !== 'slow' && t.name !== 'poison';
+
 
 // Preferences
 
+// Returns true when the page was opened with a map to play (from the editor)
 function loadPrefs() {
     const prefs = store.get('prefs', {});
     const saved = store.get('customMap');
     if (saved) custom = parseMap(saved);
-    $('custom').disabled = !custom;
 
     const params = new URLSearchParams(location.search);
-    const map = params.get('map') || prefs.map;
-    if (map && $('map').querySelector(`option[value="${map}"]:not([disabled])`)) $('map').value = map;
-    if (prefs.mode) $('mode').value = prefs.mode;
-    if (prefs.difficulty) $('difficulty').value = prefs.difficulty;
+    const linked = params.get('map');
+    const map = linked || prefs.map;
+    if (map && MAP_LIST.some(m => m.id === map) && (map !== 'custom' || custom)) mapId = map;
+    if (prefs.mode in { campaign: 1, endless: 1 }) modeId = prefs.mode;
+    if (prefs.difficulty in difficulties) diffId = prefs.difficulty;
     muteSounds = !!prefs.muted;
+    if (typeof prefs.numbers === 'boolean') damageNumbers = prefs.numbers;
+    if (typeof prefs.bars === 'boolean') healthBar = prefs.bars;
+    if (typeof prefs.effects === 'boolean') showEffects = prefs.effects;
+    skipToNext = !!prefs.autosend;
+    return !!linked && mapId === linked;
 }
 
 function savePrefs() {
     store.set('prefs', {
-        map: $('map').value,
-        mode: $('mode').value,
-        difficulty: $('difficulty').value,
-        muted: muteSounds
+        map: mapId,
+        mode: modeId,
+        difficulty: diffId,
+        muted: muteSounds,
+        numbers: damageNumbers,
+        bars: healthBar,
+        effects: showEffects,
+        autosend: skipToNext
     });
+    syncSettings();
 }
 
 
@@ -1316,35 +1442,9 @@ document.addEventListener('keydown', onKey);
 document.addEventListener('pointerdown', e => {
     if (e.pointerType !== lastPointer) {
         lastPointer = e.pointerType;
-        updateHint();
+        updateInfo();
     }
 }, { capture: true });
 document.addEventListener('visibilitychange', () => {
     if (document.hidden && !paused) pause();
-});
-
-document.querySelectorAll('[data-tower]').forEach(b => {
-    b.addEventListener('click', () => setPlace(b.dataset.tower));
-});
-['map', 'mode', 'difficulty'].forEach(id => {
-    $(id).addEventListener('change', () => {
-        savePrefs();
-        resetGame();
-        $(id).blur();
-    });
-});
-$('pause').addEventListener('click', pause);
-$('speed').addEventListener('click', cycleSpeed);
-$('next-wave').addEventListener('click', callNextWave);
-$('restart').addEventListener('click', resetGame);
-$('mute').addEventListener('click', toggleMute);
-$('import').addEventListener('click', showImportMapPrompt);
-$('export').addEventListener('click', showExportMap);
-$('sell').addEventListener('click', () => { if (selected) sell(selected); });
-$('upgrade').addEventListener('click', () => {
-    if (selected && selected.upgrades.length > 0) upgrade(selected.upgrades[0]);
-});
-$('cancel').addEventListener('click', cancelPlace);
-$('end-dialog').addEventListener('close', () => {
-    if ($('end-dialog').returnValue === 'retry') resetGame();
 });

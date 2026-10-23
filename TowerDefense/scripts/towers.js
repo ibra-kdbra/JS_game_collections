@@ -184,6 +184,7 @@ const tower = {
         damageMax: 100,
         damageMin: 100,
         range: 9,
+        targetMode: 'strong',
         // Methods
         drawBarrel() {
             stroke(0);
@@ -200,7 +201,7 @@ const tower = {
             if (entities.length === 0) return;
             const t = getTaunting(entities);
             if (t.length > 0) entities = t;
-            const e = getStrongest(entities);
+            const e = pickTarget(entities, this.targetMode, this.pos);
             if (typeof e === 'undefined') return;
             this.onAim(e);
         },
@@ -490,7 +491,7 @@ tower.bomb = {
 tower.tesla = {
     // Display
     color: [255, 255, 0],
-    hasBase: false,
+    hasBarrel: false,       // drawn as a coil (drawBase); it was hidden behind a stray barrel
     radius: 1,
     secondary: [30, 139, 195],
     weight: 10,

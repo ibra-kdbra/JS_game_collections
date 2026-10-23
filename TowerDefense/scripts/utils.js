@@ -46,6 +46,36 @@ const getFirst = (entities) => {
     return chosen;
 };
 
+// Get last enemy (i.e., furthest from exit)
+const getLast = (entities) => {
+    let mostDist = -1;
+    let chosen = entities[0];
+    entities.forEach(e => {
+        const t = gridPos(e.pos.x, e.pos.y);
+        const dist = dists[t.x]?.[t.y] ?? 0;
+        if (dist > mostDist) {
+            mostDist = dist;
+            chosen = e;
+        }
+    });
+    return chosen;
+};
+
+// Targeting modes a tower can use
+const targetModes = {
+    first: 'First',
+    last: 'Last',
+    strong: 'Strongest',
+    close: 'Closest'
+};
+
+const pickTarget = (entities, mode, pos) => {
+    if (mode === 'last') return getLast(entities);
+    if (mode === 'strong') return getStrongest(entities);
+    if (mode === 'close') return getNearest(entities, pos);
+    return getFirst(entities);
+};
+
 // Get entities within a range (radius in tiles)
 const getInRange = (cx, cy, radius, entities) => 
     entities.filter(e => insideCircle(e.pos.x, e.pos.y, cx, cy, (radius + 1) * ts));
