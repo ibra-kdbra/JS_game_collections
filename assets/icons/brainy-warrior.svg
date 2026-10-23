@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Brainy Warrior">
+  <title>Brainy Warrior</title>
+  <defs>
+    <linearGradient id="bw-steel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fde047"/>
+      <stop offset="1" stop-color="#eab308"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="62" height="62" rx="14" fill="#09090b"/>
+  <rect x="1.5" y="1.5" width="61" height="61" rx="13.5" fill="none" stroke="#facc15" stroke-opacity=".35"/>
+  <!-- the tile the warrior stands on -->
+  <path d="M32 44 52 52.5 32 61 12 52.5Z" fill="#22d3ee" fill-opacity=".18" stroke="#22d3ee" stroke-opacity=".7" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- plume -->
+  <path d="M33 13c3-6 10-8 15-6-5 1-8 4-9 9" fill="#facc15" fill-opacity=".85"/>
+  <!-- helmet -->
+  <path d="M17 33c0-11 6.5-19 15-19s15 8 15 19v9c0 3-2 5-5 5H22c-3 0-5-2-5-5z" fill="url(#bw-steel)"/>
+  <!-- circuits on the dome: the "brainy" part -->
+  <g fill="none" stroke="#09090b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity=".85">
+    <path d="M32 15v8M32 23l-6 4M32 23l6 4"/>
+    <path d="M23 21l3 3M41 21l-3 3"/>
+  </g>
+  <g fill="#09090b">
+    <circle cx="26" cy="27" r="1.9"/>
+    <circle cx="38" cy="27" r="1.9"/>
+    <circle cx="32" cy="23" r="1.6"/>
+  </g>
+  <!-- visor -->
+  <path d="M20 33h24v4H35v8h-6v-8h-9z" fill="#09090b"/>
+  <path d="M22.5 34.5h6M35.5 34.5h6" stroke="#22d3ee" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

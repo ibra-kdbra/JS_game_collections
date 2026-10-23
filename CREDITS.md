@@ -88,7 +88,6 @@ its licence file.
 | Font | Where |
 | --- | --- |
 | Albert Sans, Chakra Petch | `assets/fonts/` |
-| Outfit | `Brainy_Warrior/fonts/` |
 | Chakra Petch, JetBrains Mono | `Breakout/fonts/` |
 | Martian Mono | `Minesweeper/fonts/`, `Snake/fonts/` |
 | Big Shoulders Stencil Display, IBM Plex Mono | `Sokoban/fonts/` |
