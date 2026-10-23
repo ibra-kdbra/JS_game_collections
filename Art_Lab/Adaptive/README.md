@@ -4,12 +4,12 @@
 
 <table>
   <tr>
-    <td><img src="images/result1.png"></td>
-    <td><img src="images/result2.png"></td>
+    <td><img src="../../docs/media/adaptive/result1.webp"></td>
+    <td><img src="../../docs/media/adaptive/result2.webp"></td>
   </tr>
   <tr>
-    <td><img src="images/result3.png"></td>
-    <td><img src="images/result4.png"></td>
+    <td><img src="../../docs/media/adaptive/result3.webp"></td>
+    <td><img src="../../docs/media/adaptive/result4.webp"></td>
   </tr>
 </table>  
 

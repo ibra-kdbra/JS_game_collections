@@ -80,7 +80,8 @@ The hub and the Art Lab page are generated from one registry, `assets/js/data.js
    ```
    `node tools/render-pages.mjs --check` exits non-zero if the pages are stale.
 
-See [docs/UPGRADE_PLAN.md](docs/UPGRADE_PLAN.md) for the roadmap.
+See [docs/UPGRADE_PLAN.md](docs/UPGRADE_PLAN.md) for the roadmap and [CREDITS.md](CREDITS.md) for
+the original authors and licences of the games, sounds and libraries.
 
 [Back to top](#javascript-game-collection)
 

@@ -38,10 +38,10 @@ Wahdatio is a strategic battle game played on the surface of a 3D sphere where p
 
 <div align="center">
 
-| ![Level Selection](./img/samples/shot1.png) | ![Tutorial Gameplay](./img/samples/shot2.png) |
+| ![Level Selection](../docs/media/wahdatio/shot1.webp) | ![Tutorial Gameplay](../docs/media/wahdatio/shot2.webp) |
 |:---:|:---:|
-| ![Strategic Combat](./img/samples/shot3.png) | ![Advanced Levels](./img/samples/shot4.png) |
-| ![Network Building](./img/samples/shot5.png) | ![Victory Screen](./img/samples/shot6.png) |
+| ![Strategic Combat](../docs/media/wahdatio/shot3.webp) | ![Advanced Levels](../docs/media/wahdatio/shot4.webp) |
+| ![Network Building](../docs/media/wahdatio/shot5.webp) | ![Victory Screen](../docs/media/wahdatio/shot6.webp) |
 
 </div>
 

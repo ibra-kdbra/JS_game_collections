@@ -838,7 +838,7 @@ document.addEventListener('keydown', e => {
 
 GameKit.initShell({ slug: 'pacman-slasher' });
 
-let soundSpec = (name) => ({src: ['./audio/' + name + '.mp3', './audio/' + name + '.ogg'], volume: 0.25});
+let soundSpec = (name) => ({src: ['./audio/' + name + '.mp3'], volume: 0.25});
 
 preloader.onupdate = x => {textBlock.textContent = x+' %';};
 preloader.start(['./img/sprites.png', './img/finger.png'], {
