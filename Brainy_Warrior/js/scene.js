@@ -452,7 +452,7 @@ export class World {
         this.sun.shadow.camera.updateProjectionMatrix();
 
         this.view.targetAz = this.view.azimuth = 0;
-        this.view.targetPolar = this.view.polar = 0.92;
+        this.view.targetPolar = this.view.polar = this.defaultPolar();
         this.view.targetZoom = this.view.zoom = 1;
         this.fitCamera();
         this.sync(state);
@@ -800,8 +800,14 @@ export class World {
 
     resetView() {
         this.view.targetAz = 0;
-        this.view.targetPolar = 0.92;
+        this.view.targetPolar = this.defaultPolar();
         this.view.targetZoom = 1;
+    }
+
+    /** Portrait phones get a steeper view so the board uses more of the tall screen. */
+    defaultPolar() {
+        const aspect = (this.container.clientWidth || 1) / (this.container.clientHeight || 1);
+        return aspect < 0.8 ? 0.66 : 0.92;
     }
 
     resize() {
@@ -837,7 +843,7 @@ export class World {
             cam.updateMatrixWorld();
             const ok = corners.every((c) => {
                 v.copy(c).project(cam);
-                return Math.abs(v.x) < 0.92 && Math.abs(v.y) < 0.9 * free;
+                return Math.abs(v.x) < (W < 600 ? 0.97 : 0.92) && Math.abs(v.y) < 0.9 * free;
             });
             if (ok) far = mid;
             else near = mid;
