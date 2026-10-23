@@ -10,7 +10,10 @@ State of the Game Lab upgrade, for continuing in a new session.
 4. `upgrade/phase-3-new-games` – adds Breakout, Snake, Minesweeper, Crate Lab (Sokoban).
 5. `upgrade/phase-4-hygiene` – README media moved to `docs/media/`, dead files removed,
    `CREDITS.md`, `_config.yml` deploy excludes, browser smoke test and CI workflow.
-6. `upgrade/phase-5-polish` – polish on top of phase 4. **Merge the newest of these to deploy everything.**
+6. `upgrade/phase-5-polish` – on top of phase 4: games fill the window (kit shell renders no
+   buttons), Shadow Dog Runner removed, flat hub without gradients, Brainy Warrior rebuilt
+   (rules engine, WebAssembly solver, Quaternius CC0 models, 34-level measured ramp), Tower
+   Defense UI and art rework, level difficulty audit across games. **Merge this to deploy everything.**
 7. `wip/souls-level-check` – merged into phase-2 and phase-3; kept for history.
 
 ## Open work
@@ -19,11 +22,14 @@ State of the Game Lab upgrade, for continuing in a new session.
   (1c9ae88) is required: without it the straight-through run sticks on level 5. Long hall,
   The tower and Reclaim runs jump above the top row of the map (there is no ceiling, same as
   the original); the owner accepted that.
-- Not tested by people: difficulty (bots only), sound, real phones/Safari.
-- Phase 4: done (see `docs/UPGRADE_PLAN.md`). Still open: the Art Lab experiments LSD, Particular
-  Drift, Flow Fields and Text Fields load dat.GUI, Pickr, Font Awesome 6 and Google Fonts from
-  CDNs, and `CREDITS.md` lists licence questions only the owner can decide (GPL-3.0 upstreams of
-  PacMan and HuggersFight, the commercial LSD track, Namco sounds, non-commercial Hangman sounds).
+- Not tested by people: difficulty (bots only), sound, real phones/Safari, frame rate on real
+  GPUs (Brainy Warrior and Tower Defense have `?perf=1` overlays; Brainy Warrior adapts quality).
+- Phase 4: done (see `docs/UPGRADE_PLAN.md`); nothing loads from a CDN any more. `CREDITS.md`
+  lists licence questions only the owner can decide (GPL-3.0 upstreams of PacMan and
+  HuggersFight, the commercial LSD track, Namco sounds, non-commercial Hangman sounds).
+- Saved progress in Breakout, Snake and Minesweeper is keyed by level number, and their level
+  order changed in phase 5; harmless while phase 3+ is not live.
+- Brainy Warrior's last six levels are very hard (bot success near 0%); needs playtesting.
 
 ## Rules the owner set
 - Author/committer `ibra-kdbra <git-repo-develop@outlook.com>`; no AI/Claude attribution
@@ -35,7 +41,11 @@ State of the Game Lab upgrade, for continuing in a new session.
 - `node tools/render-pages.mjs` after editing `assets/js/data.js` (`--check` to verify).
 - Level checkers: `node Brainy_Warrior/tools/verify-levels.mjs`, `node Sokoban/tools/verify-levels.mjs`,
   `node Breakout/tools/verify-levels.mjs`, `node Snake/tools/verify.mjs`, `node Minesweeper/test/solver.test.mjs`,
-  `node Souls-Bumper/tools/verify-levels.mjs` (`node Souls-Bumper/tools/map.mjs <n>` prints a level).
+  `node Souls-Bumper/tools/verify-levels.mjs` (`node Souls-Bumper/tools/map.mjs <n>` prints a level),
+  `node Gravity_Wells/tools/verify-puzzles.mjs`, `node ReWire/tools/verify-levels.mjs`,
+  `node Raven/tools/verify-levels.mjs` (re-record a changed Raven level with
+  `node Raven/tools/search-runs.mjs <n> --seeds 1`). Each prints its difficulty table.
+- Brainy Warrior budgets: `CHROME=<chromium> node Brainy_Warrior/tools/perf-check.mjs`.
 - Smoke test (every registered page at phone and desktop size): `node tools/smoke.mjs`
   (`--only <slug,...>`, `--viewport phone|desktop`; `SMOKE_OFFLINE=1` blocks the network,
   `SMOKE_STRICT=1` also fails on CDN loads). Needs Playwright: `npm i --no-save playwright` and

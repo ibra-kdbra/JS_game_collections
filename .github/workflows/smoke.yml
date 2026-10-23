@@ -32,6 +32,10 @@ jobs:
         run: node Souls-Bumper/tools/verify-levels.mjs
       - name: Gravity Wells puzzles
         run: node Gravity_Wells/tools/verify-puzzles.mjs
+      - name: ReWire levels
+        run: node ReWire/tools/verify-levels.mjs
+      - name: Raven levels
+        run: node Raven/tools/verify-levels.mjs
 
   smoke:
     name: Browser smoke test

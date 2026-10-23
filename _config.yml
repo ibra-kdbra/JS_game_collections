@@ -9,6 +9,8 @@ exclude:
   - Gravity_Wells/tools
   - Breakout/tools
   - Minesweeper/test
+  - Raven/tools
+  - ReWire/tools
   - Snake/tools
   - Sokoban/tools
   - Souls-Bumper/tools
