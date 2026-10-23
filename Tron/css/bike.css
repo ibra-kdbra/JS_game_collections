@@ -35,6 +35,9 @@ html,
 body {
   margin: 0;
   height: 100%;
+  /* No double-tap zoom or pull to refresh; the menu panel still scrolls. */
+  touch-action: manipulation;
+  overscroll-behavior: none;
 }
 
 body {
