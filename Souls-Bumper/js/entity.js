@@ -78,7 +78,11 @@ function entity(w, h, x, y, angle, type, colour, scale, isButton = false, maxHP 
     this.idle+=delta;
     this.updateHitbox();
 
-    if(this.active) {
+    if(this.active && this.type == types.AIR) {
+      // Air tiles point at an empty spot outside the atlas: nothing to draw.
+      // Keep their share of the screen-shake countdown, which runs per drawn tile.
+      if(cart.shakeTime>0) cart.shakeTime-=delta/1000;
+    } else if(this.active) {
       ctx.save();
       ctx.translate(this.x, this.y);
       ctx.globalAlpha = this.alpha;

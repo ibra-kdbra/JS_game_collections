@@ -165,6 +165,7 @@ let mg = {
     const availH = h - top - bottom;
     view.scale = Math.min(availW / WORLD_W, availH / WORLD_H);
     view.dpr = dpr;
+    view.fullClear = true;
     view.x = left + (availW - WORLD_W * view.scale) / 2;
     // On a portrait phone's menu the world sits at the top, leaving the bottom for the level list.
     view.y = portrait && w < 700 && !gameStarted ? top : top + (availH - WORLD_H * view.scale) / 2;
@@ -174,7 +175,16 @@ let mg = {
   begin: function() {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = 1;
-    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    // Only the world box (and its border) is ever drawn: clear just that, and the
+    // whole canvas once after a resize.
+    if (view.fullClear) {
+      ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      view.fullClear = false;
+    } else {
+      const d = view.dpr;
+      ctx.clearRect(Math.floor(view.x * d) - 4, Math.floor(view.y * d) - 4,
+        Math.ceil(WORLD_W * view.scale * d) + 8, Math.ceil(WORLD_H * view.scale * d) + 8);
+    }
     const s = view.scale * view.dpr;
     ctx.setTransform(s, 0, 0, s, view.x * view.dpr, view.y * view.dpr);
     ctx.save();
