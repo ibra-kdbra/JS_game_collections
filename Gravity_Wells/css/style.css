@@ -51,7 +51,7 @@ canvas {
   }
 }
 
-/* HUD: puzzle list and mute, top-right so the kit's back button keeps top-left. */
+/* HUD: puzzle list and mute, top-right. */
 .gw-hud {
   position: fixed;
   top: max(8px, env(safe-area-inset-top));

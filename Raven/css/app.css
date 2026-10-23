@@ -8,7 +8,7 @@ html, body {
 
 #stage {
     position: absolute;
-    top: 52px;
+    top: 32px;
     bottom: 32px;
     left: 32px;
     right: 32px;
@@ -34,10 +34,10 @@ html, body {
     display: none;
 }
 
-/* Phones: use the whole screen below the Game Lab buttons */
+/* Phones: use the whole screen */
 @media (max-width: 700px), (max-height: 500px) {
     #stage {
-        top: max(56px, env(safe-area-inset-top));
+        top: env(safe-area-inset-top);
         bottom: env(safe-area-inset-bottom);
         left: env(safe-area-inset-left);
         right: env(safe-area-inset-right);

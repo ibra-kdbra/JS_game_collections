@@ -9,7 +9,7 @@
   --artlab-secondary: #ff9900;
   --artlab-accent: #00f0ff;
 
-  /* Art Lab background gradient */
+  /* Art Lab surfaces */
   --artlab-bg-start: #09090b;
   --artlab-bg-mid: #12131a;
   --artlab-bg-end: #1a1c24;
@@ -28,17 +28,13 @@ body#artlab-body {
   background: var(--artlab-bg-start);
 }
 
-/* ---------- Dedicated Procedural Art Lab Lighting Surface ---------- */
+/* ---------- Background: flat obsidian with a faint pixel grid ---------- */
 .artlab-bg {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background-color: #09090b;
-  background-image: 
-    radial-gradient(ellipse 85% 60% at 50% -10%, rgba(250, 204, 21, 0.25) 0%, transparent 70%),
-    radial-gradient(ellipse 65% 55% at 85% 75%, rgba(0, 240, 255, 0.15) 0%, transparent 60%),
-    radial-gradient(ellipse 55% 45% at 10% 80%, rgba(255, 153, 0, 0.1) 0%, transparent 55%);
-  background-attachment: fixed;
+  background-color: var(--bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='2' height='2' fill='%23facc15' fill-opacity='.07'/%3E%3C/svg%3E");
 }
 
 /* ---------- Minimal Corner Navigation ---------- */
@@ -61,7 +57,7 @@ body#artlab-body {
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: rgba(18, 19, 26, 0.6);
+  background: var(--surface);
   border: 1px solid rgba(250, 204, 21, 0.2);
   border-radius: 50%;
   color: var(--text-secondary);
@@ -76,7 +72,7 @@ body#artlab-body {
   border-color: var(--artlab-primary);
   color: var(--artlab-primary);
   transform: translateY(-1px);
-  box-shadow: 0 0 15px rgba(250, 204, 21, 0.3);
+  box-shadow: 3px 3px 0 var(--artlab-primary);
 }
 
 .corner-logo {
@@ -94,7 +90,6 @@ body#artlab-body {
 
 .logo-icon {
   font-size: 1.5rem;
-  filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.6));
 }
 
 .logo-text {
@@ -103,7 +98,6 @@ body#artlab-body {
   font-weight: 800;
   letter-spacing: 0.02em;
   color: var(--artlab-primary);
-  text-shadow: 0 0 12px rgba(250, 204, 21, 0.35);
 }
 
 .corner-link {
@@ -112,7 +106,7 @@ body#artlab-body {
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: rgba(18, 19, 26, 0.6);
+  background: var(--surface);
   border: 1px solid rgba(250, 204, 21, 0.2);
   border-radius: 50%;
   color: var(--text-secondary);
@@ -127,17 +121,17 @@ body#artlab-body {
   border-color: var(--artlab-primary);
   color: var(--text-primary);
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(250, 204, 21, 0.2);
+  box-shadow: 3px 3px 0 var(--artlab-primary);
 }
 
 /* ---------- Art Lab Hero Section ---------- */
 .artlab-hero {
-  min-height: 75vh;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 6rem 2rem 3rem;
+  padding: 6.5rem 2rem 2.5rem;
   text-align: center;
   position: relative;
 }
@@ -147,11 +141,13 @@ body#artlab-body {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1.25rem;
-  background: rgba(250, 204, 21, 0.1);
-  border: 1px solid rgba(250, 204, 21, 0.3);
-  border-radius: var(--radius-full);
+  background: var(--surface);
+  border: 1px solid var(--line-accent);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-weight: 700;
   font-size: 0.8rem;
-  color: var(--artlab-primary-light);
+  color: var(--artlab-primary);
   text-transform: uppercase;
   letter-spacing: 0.12em;
   margin-bottom: 1.5rem;
@@ -194,13 +190,13 @@ body#artlab-body {
   padding: 0.875rem 1.75rem;
   text-decoration: none;
   transition: all var(--transition-fast);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-hard);
 }
 
 .btn-artlab:hover {
   background: var(--artlab-primary-light);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #000;
 }
 
 /* ---------- Modern Centered Carousel Section ---------- */
@@ -261,32 +257,28 @@ body#artlab-body {
 }
 
 .experiment-card:hover {
-  transform: translateY(-12px) scale(1.02);
+  transform: translate(-3px, -3px);
 }
 
 .experiment-card-inner {
-  background: rgba(18, 19, 26, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 24px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  border: 1px solid rgba(250, 204, 21, 0.15);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--line);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .experiment-card:hover .experiment-card-inner {
   border-color: var(--artlab-primary);
-  box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.4),
-    0 0 40px rgba(250, 204, 21, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-hard-accent);
 }
 
 .experiment-card-preview {
-  height: 220px;
+  aspect-ratio: 16 / 10;
   overflow: hidden;
   position: relative;
+  background: #000;
+  border-bottom: 1px solid var(--line);
 }
 
 .experiment-card-preview img {
@@ -294,16 +286,6 @@ body#artlab-body {
   height: 100%;
   object-fit: cover;
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Image hover scale removed in compliance with Impeccable guidelines */
-
-.experiment-card-preview::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to top, rgba(18, 19, 26, 1) 0%, rgba(18, 19, 26, 0.5) 30%, transparent 60%);
-  pointer-events: none;
 }
 
 .experiment-number {
@@ -315,13 +297,12 @@ body#artlab-body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: var(--blur-sm);
-  border: 1px solid var(--glass-border);
-  border-radius: 50%;
+  background: var(--artlab-primary);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
   font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--artlab-primary-light);
+  font-weight: 700;
+  color: var(--ink);
   z-index: 2;
 }
 
@@ -364,10 +345,10 @@ body#artlab-body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border-radius: var(--radius-full);
-  background: rgba(250, 204, 21, 0.1);
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--artlab-primary-light);
-  border: 1px solid rgba(250, 204, 21, 0.25);
+  border: 1px solid var(--line-accent);
 }
 
 .experiment-card-action {
@@ -414,11 +395,8 @@ body#artlab-body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(250, 204, 21, 0.1);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  border: none;
-  /* No border as requested */
+  background: var(--surface);
+  border: 1px solid var(--line-accent);
   border-radius: 50%;
   color: var(--text-secondary);
   cursor: pointer;
@@ -430,11 +408,9 @@ body#artlab-body {
 }
 
 .carousel-btn:hover {
-  background: rgba(250, 204, 21, 0.3);
-  /* Subtle hover bg */
-  color: var(--artlab-primary-light);
-  transform: scale(1.1);
-  box-shadow: 0 0 20px rgba(250, 204, 21, 0.2);
+  background: var(--artlab-primary);
+  border-color: var(--artlab-primary);
+  color: var(--ink);
 }
 
 
@@ -443,7 +419,8 @@ body#artlab-body {
   position: relative;
   padding: 2rem 2rem;
   text-align: center;
-  background: rgba(12, 12, 29, 0.6);
+  background: var(--bg);
+  border-top: 1px solid rgba(250, 204, 21, 0.15);
 }
 
 .artlab-footer-text {
@@ -621,7 +598,7 @@ body#artlab-body {
   display: block;
   color: inherit;
   text-decoration: none;
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
 }
 
 .experiment-card-link:focus-visible {

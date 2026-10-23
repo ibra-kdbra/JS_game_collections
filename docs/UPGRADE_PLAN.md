@@ -131,7 +131,7 @@ Each wave adds the shared kit, fixes responsiveness, adds touch, saves bests, th
 **Wave D: rescue and surface**
 - **Brainy Warrior**: finish the half-done refactor (Level, Player and slide APIs), procedural
   materials instead of the missing textures, swipe controls, more levels, thumbnail. Then re-list it.
-- **Shadow Dog Runner** (Sprites #9): restart, pause, touch actually driving the player, high score. Then list it.
+- ~~**Shadow Dog Runner** (Sprites #9)~~: removed from the collection at the owner's request.
   Group tutorials #1–#8 under a "Sprite lab" entry in Art Lab, crediting Franks Laboratory.
 - **Art Lab**: fix Text Fields' aspect and resize, add DPR to Experimental Math, pin the Pickr version,
   credit the collidingScopes forks.

@@ -2598,8 +2598,8 @@ function resizeDisplay() {
 
   const rotate = phone && height > width;
   const fitWidth = rotate ? height : width;
-  // Leave room above and below for the Game Lab buttons on larger screens
-  const fitHeight = (rotate ? width : height) - (phone ? 0 : 112);
+  // A small margin above and below on larger screens
+  const fitHeight = (rotate ? width : height) - (phone ? 0 : 24);
   const scale = Math.min(fitWidth / 980, fitHeight / 620);
   container.style.transform = (rotate ? 'rotate(90deg) ' : '') + 'scale(' + scale + ')';
 }

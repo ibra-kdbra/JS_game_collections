@@ -119,7 +119,7 @@ kbd {
   align-items: center;
   gap: 16px;
   min-height: 60px;
-  padding: calc(8px + var(--safe-t)) calc(12px + var(--safe-r)) 8px calc(186px + var(--safe-l));
+  padding: calc(8px + var(--safe-t)) calc(12px + var(--safe-r)) 8px calc(12px + var(--safe-l));
   z-index: 5;
 }
 
@@ -293,7 +293,7 @@ kbd {
 @media (max-width: 560px) {
   .hud {
     gap: 6px;
-    padding-left: calc(108px + var(--safe-l));
+    padding-left: calc(8px + var(--safe-l));
     padding-right: calc(8px + var(--safe-r));
   }
 
@@ -421,7 +421,7 @@ kbd {
   z-index: 10;
   display: grid;
   place-items: center;
-  padding: calc(60px + var(--safe-t)) calc(12px + var(--safe-r)) calc(12px + var(--safe-b)) calc(12px + var(--safe-l));
+  padding: calc(12px + var(--safe-t)) calc(12px + var(--safe-r)) calc(12px + var(--safe-b)) calc(12px + var(--safe-l));
   background: rgba(9, 9, 11, 0.72);
   overflow-y: auto;
   touch-action: pan-y;
@@ -866,10 +866,6 @@ kbd {
 /* ---------------- Responsive ---------------- */
 
 @media (max-width: 560px) {
-  .screen {
-    padding-top: calc(56px + var(--safe-t));
-  }
-
   .card {
     padding: 18px 16px 16px;
   }
@@ -893,8 +889,6 @@ kbd {
   .screen {
     padding-top: calc(10px + var(--safe-t));
     padding-bottom: calc(10px + var(--safe-b));
-    /* Clear the kit's Game Lab and fullscreen pills on the left. */
-    padding-left: calc(186px + var(--safe-l));
   }
 
   .card {

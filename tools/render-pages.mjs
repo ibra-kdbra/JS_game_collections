@@ -27,6 +27,16 @@ const TAG = {
   mobile: '<span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span>',
 };
 
+const INPUT_LABEL = {
+  keyboard: 'Keyboard',
+  mouse: 'Mouse',
+  touch: 'Touch',
+  gamepad: 'Gamepad',
+};
+
+const inputChip = (input) =>
+  `<li class="meta-chip meta-chip--input" title="${INPUT_LABEL[input]}"><svg class="ico" aria-hidden="true"><use href="#i-${input}"></use></svg><span class="sr-only">${INPUT_LABEL[input]}</span></li>`;
+
 function gameCard(game, index) {
   const t = thumbSet(game.slug, '{base}');
   const tags = platformTags(game);
@@ -37,13 +47,17 @@ function gameCard(game, index) {
             <div class="game-card-preview">
               <div class="game-card-tags">${tags.map((tag) => TAG[tag]).join('')}</div>
               <img src="${t.src}" srcset="${t.srcset}" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="${index < 3 ? 'eager' : 'lazy'}" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">${esc(game.title)}</h3>
               <p class="game-card-description">${esc(game.blurb)}</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">${esc(GENRES[game.genre])}</li>${game.inputs.map(inputChip).join('')}
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">${esc(GENRES[game.genre])}</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -52,31 +66,37 @@ function gameCard(game, index) {
 
 function artlabShowcase() {
   return `
-        <a href="{base}Art_Lab/index.html" class="artlab-main-card">
-          <div class="artlab-card-glow"></div>
-          <div class="artlab-card-content">
+        <div class="artlab-gallery">
+          <a href="{base}Art_Lab/index.html" class="artlab-main-card">
             <div class="artlab-icon"><i class="fas fa-flask" aria-hidden="true"></i></div>
             <h3 class="artlab-card-title">Art Lab</h3>
             <p class="artlab-card-desc">Math with Art create wonders</p>
             <div class="artlab-stats">
               <span><i class="fas fa-layer-group" aria-hidden="true"></i> ${experiments.length} Experiments</span>
             </div>
-            <div class="artlab-enter-btn">
+            <span class="artlab-enter-btn">
               <span>Explore Collection</span>
               <i class="fas fa-arrow-right" aria-hidden="true"></i>
-            </div>
-          </div>
-          <div class="artlab-preview-strip">${experiments
-            .map((exp) => {
+            </span>
+          </a>
+          <ul class="artlab-strip" aria-label="Art Lab pieces">${experiments
+            .map((exp, i) => {
               const t = thumbSet(exp.slug, '{base}');
               return `
-            <div class="strip-item" data-link="{base}${esc(exp.href)}" title="${esc(exp.title)}">
-              <img src="${t.src}" width="85" height="85" alt="${esc(exp.title)}" loading="lazy" decoding="async">
-            </div>`;
+            <li>
+              <a class="art-tile" href="{base}${esc(exp.href)}" target="_blank" rel="noopener">
+                <img src="${t.src}" srcset="${t.srcset}" sizes="(min-width: 1100px) 300px, (min-width: 700px) 45vw, 72vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+                <span class="art-tile-caption">
+                  <span class="art-tile-number">${String(i + 1).padStart(2, '0')}</span>
+                  <span class="art-tile-title">${esc(exp.title)}</span>
+                  <span class="art-tile-tags">${exp.tags.map(esc).join(' / ')}</span>
+                </span>
+              </a>
+            </li>`;
             })
             .join('')}
-          </div>
-        </a>
+          </ul>
+        </div>
       `;
 }
 

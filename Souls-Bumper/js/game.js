@@ -109,11 +109,11 @@ let mg = {
     this.canvas.width = Math.round(w * dpr);
     this.canvas.height = Math.round(h * dpr);
 
-    // Keep the play area clear of the shell bar and, while playing on a touch
-    // screen, of the on-screen controls (below in portrait, beside in landscape).
+    // Use the whole window, except, while playing on a touch screen, the room
+    // for the on-screen controls (below in portrait, beside in landscape).
     const touch = gameStarted && !controls.el.hidden;
     const portrait = h >= w;
-    const top = 52;
+    const top = 8;
     const bottom = touch && portrait ? 210 : 8;
     const side = touch && !portrait ? 200 : 8;
     const availW = w - side * 2;

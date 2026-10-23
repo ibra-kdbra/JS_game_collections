@@ -1,13 +1,6 @@
 /* ---------- Continue Playing (recently opened games) ---------- */
 .recent-games {
-  max-width: 1200px;
-  margin: 0 auto 2.5rem;
-  padding: 0 1rem;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
+  margin: 0 0 2.5rem;
 }
 
 .recent-games[hidden] {
@@ -15,54 +8,95 @@
 }
 
 .recent-label {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 0.5rem;
+  margin-bottom: 0.85rem;
   font-family: var(--font-display);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--primary);
 }
 
 .recent-list {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  gap: 0.85rem;
   list-style: none;
 }
 
 .recent-chip {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.6rem;
-  min-height: 44px;
-  padding: 0.3rem 1rem 0.3rem 0.3rem;
-  background: rgba(18, 19, 26, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(250, 204, 21, 0.2);
-  border-radius: var(--radius-full);
+  gap: 0.85rem;
+  min-height: 72px;
+  padding: 0.5rem 0.85rem 0.5rem 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-md);
   color: var(--text-primary);
-  font-family: var(--font-display);
-  font-size: 0.9rem;
-  font-weight: 600;
   text-decoration: none;
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .recent-chip img {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  flex: none;
+  width: 88px;
+  height: 55px;
   object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: #000;
 }
 
-.recent-chip:hover {
-  border-color: var(--primary);
+.recent-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.recent-title {
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.recent-best {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-best strong {
   color: var(--primary);
-  box-shadow: 0 0 18px rgba(250, 204, 21, 0.25);
-  transform: translateY(-1px);
+  font-weight: 700;
+}
+
+.recent-chip:hover,
+.recent-chip:focus-visible {
+  border-color: var(--primary);
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 var(--primary);
+}
+
+/* Phones: one compact row that scrolls sideways */
+@media (max-width: 640px) {
+  .recent-list {
+    display: flex;
+    overflow-x: auto;
+    margin: 0 -0.75rem;
+    padding: 0 0.75rem 0.5rem;
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0 0.75rem;
+  }
+
+  .recent-list > li {
+    flex: 0 0 78%;
+    scroll-snap-align: start;
+  }
 }

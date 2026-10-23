@@ -80,10 +80,7 @@ var initRenderer = function(){
         resets++;
     };
 
-    // Space taken by the Game Lab kit: its back button (top-left) and, on
-    // touch screens, the on-screen D-pad (bottom-left).
-    var SHELL_HEIGHT = 56;
-    var SHELL_WIDTH = 110;
+    // Space taken on touch screens by the on-screen D-pad (bottom-left).
     var getTouchPad = function() {
         var pad = document.querySelector('.gk-touch:not([hidden]) .gk-dpad');
         if (!pad) {
@@ -94,18 +91,12 @@ var initRenderer = function(){
     };
 
     // get the target scale that will cause the canvas to fit the window
-    // (and the top margin that keeps it clear of the back button)
     var getLayout = function() {
         var w = window.innerWidth - 10;
         var h = window.innerHeight - 10;
         var fit = function(w, h) { return Math.min(w / screenWidth, h / screenHeight); };
         var top = 0;
         var s = fit(w, h);
-        if ((window.innerWidth - screenWidth*s)/2 < SHELL_WIDTH) {
-            top = SHELL_HEIGHT;
-            h -= top;
-            s = fit(w, h);
-        }
         var pad = getTouchPad();
         if (pad) {
             // the maze goes beside the D-pad or above it, whichever is bigger

@@ -1,4 +1,4 @@
-/* Game Lab kit: shell bar and touch controls. Self-contained so any game can load it. */
+/* Game Lab kit: touch controls. Self-contained so any game can load it. */
 
 :root {
   /* Game Lab's Cyber Yellow & Obsidian palette */
@@ -7,100 +7,6 @@
   --gk-glass: rgba(18, 19, 26, 0.72);
   --gk-line: rgba(250, 204, 21, 0.3);
   --gk-font: 'Chakra Petch', 'Albert Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-}
-
-/* ---------- Shell ---------- */
-
-.gk-shell {
-  position: fixed;
-  z-index: 2147483000;
-  display: flex;
-  gap: 6px;
-  font: 700 14px/1 var(--gk-font);
-}
-
-.gk-shell--top-left {
-  top: max(8px, env(safe-area-inset-top));
-  left: max(8px, env(safe-area-inset-left));
-}
-
-.gk-shell--top-right {
-  top: max(8px, env(safe-area-inset-top));
-  right: max(8px, env(safe-area-inset-right));
-}
-
-.gk-shell--bottom-left {
-  bottom: max(8px, env(safe-area-inset-bottom));
-  left: max(8px, env(safe-area-inset-left));
-}
-
-.gk-shell-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 0 12px 0 8px;
-  border: 1px solid var(--gk-line);
-  border-radius: 999px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  background: var(--gk-glass);
-  color: #fff;
-  font: inherit;
-  text-decoration: none;
-  cursor: pointer;
-  opacity: 0.72;
-  transition: opacity 120ms ease, background-color 120ms ease;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.gk-shell-btn--icon {
-  width: 36px;
-  padding: 0;
-  justify-content: center;
-}
-
-.gk-shell-btn:hover,
-.gk-shell-btn:focus-visible {
-  opacity: 1;
-  background: var(--gk-accent);
-  border-color: var(--gk-accent);
-  color: var(--gk-ink);
-  box-shadow: 0 0 20px rgba(250, 204, 21, 0.35);
-}
-
-.gk-shell-btn:focus-visible {
-  outline: 2px solid var(--gk-accent);
-  outline-offset: 2px;
-}
-
-.gk-shell-btn svg {
-  width: 18px;
-  height: 18px;
-  flex: none;
-}
-
-/* Pointer-coarse screens get a 44px target without growing the visual pill much. */
-@media (pointer: coarse) {
-  .gk-shell-btn {
-    min-height: 44px;
-  }
-
-  .gk-shell-btn--icon {
-    width: 44px;
-  }
-}
-
-@media (max-width: 420px) {
-  .gk-shell-btn span {
-    display: none;
-  }
-
-  .gk-shell-btn {
-    padding: 0;
-    width: 44px;
-    justify-content: center;
-  }
 }
 
 /* ---------- Touch controls ---------- */
@@ -211,8 +117,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gk-touch button,
-  .gk-shell-btn {
+  .gk-touch button {
     transition: none;
   }
 }

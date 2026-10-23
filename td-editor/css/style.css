@@ -36,7 +36,7 @@ header, aside {
 /* Page content */
 header {
     margin: 4px 4px 0;
-    padding: 10px 14px 10px 150px;
+    padding: 10px 14px;
 }
 
 h1, h2, h3 {
@@ -201,7 +201,7 @@ button:focus-visible {
 /* Phones and narrow tablets in portrait: map on top, tools below */
 @media (max-width: 899px) and (orientation: portrait) {
     header {
-        padding: 8px 8px 8px 112px;
+        padding: 8px;
     }
 
     h1 {
@@ -243,7 +243,7 @@ button:focus-visible {
     }
 
     #tiles {
-        padding-top: 56px;
+        padding-top: 8px;
     }
 
     .aside-holder {

@@ -49,6 +49,14 @@
   <body id="main">
     <a class="skip-link" href="#games">Skip to games</a>
 
+    <!-- Control icons used on the game cards -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display: none">
+      <symbol id="i-keyboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="1"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" stroke-linecap="round"/></symbol>
+      <symbol id="i-mouse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 7v4" stroke-linecap="round"/></symbol>
+      <symbol id="i-touch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5a2 2 0 0 1 4 0v6"/><path d="M13 10a2 2 0 0 1 4 0v1a2 2 0 0 1 3 1.7V15a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-2.7L4 15.5a1.8 1.8 0 0 1 2.9-2.1L9 15.5"/></symbol>
+      <symbol id="i-gamepad" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12a4 4 0 0 1 4 4v3a3 3 0 0 1-5.4 1.8L15 15H9l-1.6 1.8A3 3 0 0 1 2 15v-3a4 4 0 0 1 4-4z"/><path d="M7 11v3M5.5 12.5h3M15.5 12h.01M18 13.5h.01"/></symbol>
+    </svg>
+
     <!-- Animated Background (the WebGL particle layer is added by dropEffect.js) -->
     <div class="cyber-bg" aria-hidden="true"></div>
 
@@ -87,7 +95,7 @@
 
           <div class="hero-stats">
             <div class="stat-item">
-              <span class="stat-value"><!-- render:game-count -->21<!-- /render:game-count --></span>
+              <span class="stat-value"><!-- render:game-count -->20<!-- /render:game-count --></span>
               <span class="stat-label">Games</span>
             </div>
             <div class="stat-item">
@@ -112,22 +120,6 @@
           </div>
         </div>
 
-        <div class="scroll-indicator" aria-hidden="true">
-          <span>Scroll to explore</span>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="2"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-            />
-          </svg>
-        </div>
       </section>
 
       <!-- Art Lab Feature Section -->
@@ -140,44 +132,92 @@
         </div>
 
         <div class="artlab-showcase-container" id="artlab-showcase"><!-- render:artlab-showcase -->
-        <a href="./Art_Lab/index.html" class="artlab-main-card">
-          <div class="artlab-card-glow"></div>
-          <div class="artlab-card-content">
+        <div class="artlab-gallery">
+          <a href="./Art_Lab/index.html" class="artlab-main-card">
             <div class="artlab-icon"><i class="fas fa-flask" aria-hidden="true"></i></div>
             <h3 class="artlab-card-title">Art Lab</h3>
             <p class="artlab-card-desc">Math with Art create wonders</p>
             <div class="artlab-stats">
               <span><i class="fas fa-layer-group" aria-hidden="true"></i> 7 Experiments</span>
             </div>
-            <div class="artlab-enter-btn">
+            <span class="artlab-enter-btn">
               <span>Explore Collection</span>
               <i class="fas fa-arrow-right" aria-hidden="true"></i>
-            </div>
-          </div>
-          <div class="artlab-preview-strip">
-            <div class="strip-item" data-link="./Art_Lab/BlossomingFlowers/index.html" title="Blossoming Flowers">
-              <img src="./assets/thumbs/blossoming-flowers-480.webp" width="85" height="85" alt="Blossoming Flowers" loading="lazy" decoding="async">
-            </div>
-            <div class="strip-item" data-link="./Art_Lab/Simple/index.html" title="Flow Fields">
-              <img src="./assets/thumbs/flow-fields-480.webp" width="85" height="85" alt="Flow Fields" loading="lazy" decoding="async">
-            </div>
-            <div class="strip-item" data-link="./Art_Lab/Text_Fields/index.html" title="Text Fields">
-              <img src="./assets/thumbs/text-fields-480.webp" width="85" height="85" alt="Text Fields" loading="lazy" decoding="async">
-            </div>
-            <div class="strip-item" data-link="./Art_Lab/Experimental_math/index.html" title="Experimental Math">
-              <img src="./assets/thumbs/experimental-math-480.webp" width="85" height="85" alt="Experimental Math" loading="lazy" decoding="async">
-            </div>
-            <div class="strip-item" data-link="./Art_Lab/Adaptive/index.html" title="Adaptive Fields">
-              <img src="./assets/thumbs/adaptive-fields-480.webp" width="85" height="85" alt="Adaptive Fields" loading="lazy" decoding="async">
-            </div>
-            <div class="strip-item" data-link="./Art_Lab/LSD/index.html" title="LSD">
-              <img src="./assets/thumbs/lsd-480.webp" width="85" height="85" alt="LSD" loading="lazy" decoding="async">
-            </div>
-            <div class="strip-item" data-link="./Art_Lab/ParticularDrift/index.html" title="Particular Drift">
-              <img src="./assets/thumbs/particular-drift-480.webp" width="85" height="85" alt="Particular Drift" loading="lazy" decoding="async">
-            </div>
-          </div>
-        </a>
+            </span>
+          </a>
+          <ul class="artlab-strip" aria-label="Art Lab pieces">
+            <li>
+              <a class="art-tile" href="./Art_Lab/BlossomingFlowers/index.html" target="_blank" rel="noopener">
+                <img src="./assets/thumbs/blossoming-flowers-480.webp" srcset="./assets/thumbs/blossoming-flowers-480.webp 480w, ./assets/thumbs/blossoming-flowers-960.webp 960w" sizes="(min-width: 1100px) 300px, (min-width: 700px) 45vw, 72vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+                <span class="art-tile-caption">
+                  <span class="art-tile-number">01</span>
+                  <span class="art-tile-title">Blossoming Flowers</span>
+                  <span class="art-tile-tags">CSS Art / Animation</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a class="art-tile" href="./Art_Lab/Simple/index.html" target="_blank" rel="noopener">
+                <img src="./assets/thumbs/flow-fields-480.webp" srcset="./assets/thumbs/flow-fields-480.webp 480w, ./assets/thumbs/flow-fields-960.webp 960w" sizes="(min-width: 1100px) 300px, (min-width: 700px) 45vw, 72vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+                <span class="art-tile-caption">
+                  <span class="art-tile-number">02</span>
+                  <span class="art-tile-title">Flow Fields</span>
+                  <span class="art-tile-tags">Canvas / Particles</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a class="art-tile" href="./Art_Lab/Text_Fields/index.html" target="_blank" rel="noopener">
+                <img src="./assets/thumbs/text-fields-480.webp" srcset="./assets/thumbs/text-fields-480.webp 480w, ./assets/thumbs/text-fields-960.webp 960w" sizes="(min-width: 1100px) 300px, (min-width: 700px) 45vw, 72vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+                <span class="art-tile-caption">
+                  <span class="art-tile-number">03</span>
+                  <span class="art-tile-title">Text Fields</span>
+                  <span class="art-tile-tags">Typography / Canvas</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a class="art-tile" href="./Art_Lab/Experimental_math/index.html" target="_blank" rel="noopener">
+                <img src="./assets/thumbs/experimental-math-480.webp" srcset="./assets/thumbs/experimental-math-480.webp 480w, ./assets/thumbs/experimental-math-960.webp 960w" sizes="(min-width: 1100px) 300px, (min-width: 700px) 45vw, 72vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+                <span class="art-tile-caption">
+                  <span class="art-tile-number">04</span>
+                  <span class="art-tile-title">Experimental Math</span>
+                  <span class="art-tile-tags">Math / Generative</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a class="art-tile" href="./Art_Lab/Adaptive/index.html" target="_blank" rel="noopener">
+                <img src="./assets/thumbs/adaptive-fields-480.webp" srcset="./assets/thumbs/adaptive-fields-480.webp 480w, ./assets/thumbs/adaptive-fields-960.webp 960w" sizes="(min-width: 1100px) 300px, (min-width: 700px) 45vw, 72vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+                <span class="art-tile-caption">
+                  <span class="art-tile-number">05</span>
+                  <span class="art-tile-title">Adaptive Fields</span>
+                  <span class="art-tile-tags">Interactive / Canvas</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a class="art-tile" href="./Art_Lab/LSD/index.html" target="_blank" rel="noopener">
+                <img src="./assets/thumbs/lsd-480.webp" srcset="./assets/thumbs/lsd-480.webp 480w, ./assets/thumbs/lsd-960.webp 960w" sizes="(min-width: 1100px) 300px, (min-width: 700px) 45vw, 72vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+                <span class="art-tile-caption">
+                  <span class="art-tile-number">06</span>
+                  <span class="art-tile-title">LSD</span>
+                  <span class="art-tile-tags">Psychedelic / Real-time</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a class="art-tile" href="./Art_Lab/ParticularDrift/index.html" target="_blank" rel="noopener">
+                <img src="./assets/thumbs/particular-drift-480.webp" srcset="./assets/thumbs/particular-drift-480.webp 480w, ./assets/thumbs/particular-drift-960.webp 960w" sizes="(min-width: 1100px) 300px, (min-width: 700px) 45vw, 72vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+                <span class="art-tile-caption">
+                  <span class="art-tile-number">07</span>
+                  <span class="art-tile-title">Particular Drift</span>
+                  <span class="art-tile-tags">Particles / Ambient</span>
+                </span>
+              </a>
+            </li>
+          </ul>
+        </div>
       <!-- /render:artlab-showcase --></div>
       </section>
 
@@ -235,7 +275,7 @@
 
         <!-- Continue playing: filled from this browser's recently opened games -->
         <div class="recent-games" id="recent-games" hidden>
-          <span class="recent-label"><i class="fas fa-clock-rotate-left" aria-hidden="true"></i> Continue playing</span>
+          <h3 class="recent-label"><i class="fas fa-clock-rotate-left" aria-hidden="true"></i> Continue playing</h3>
           <ul class="recent-list" id="recent-list"></ul>
         </div>
 
@@ -246,13 +286,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/2048-480.webp" srcset="./assets/thumbs/2048-480.webp 480w, ./assets/thumbs/2048-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="eager" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">2048 with AI</h3>
               <p class="game-card-description">Challenge yourself with the classic tile-merging puzzle. It has a built-in AI player, with some fantastic algorithms.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Puzzle</li><li class="meta-chip meta-chip--input" title="Keyboard"><svg class="ico" aria-hidden="true"><use href="#i-keyboard"></use></svg><span class="sr-only">Keyboard</span></li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Puzzle</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -262,13 +306,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/tower-defense-480.webp" srcset="./assets/thumbs/tower-defense-480.webp 480w, ./assets/thumbs/tower-defense-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="eager" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">Tower Defense Game</h3>
               <p class="game-card-description">A tower defense game with many options built with p5.js, with a few enhancements, many modes, playgrounds provided.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Strategy</li><li class="meta-chip meta-chip--input" title="Mouse"><svg class="ico" aria-hidden="true"><use href="#i-mouse"></use></svg><span class="sr-only">Mouse</span></li><li class="meta-chip meta-chip--input" title="Keyboard"><svg class="ico" aria-hidden="true"><use href="#i-keyboard"></use></svg><span class="sr-only">Keyboard</span></li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Strategy</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -278,13 +326,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/hangman-480.webp" srcset="./assets/thumbs/hangman-480.webp 480w, ./assets/thumbs/hangman-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="eager" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">Hangman</h3>
               <p class="game-card-description">Classic Hangman game with multiple options, wonderful game play.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Puzzle</li><li class="meta-chip meta-chip--input" title="Keyboard"><svg class="ico" aria-hidden="true"><use href="#i-keyboard"></use></svg><span class="sr-only">Keyboard</span></li><li class="meta-chip meta-chip--input" title="Mouse"><svg class="ico" aria-hidden="true"><use href="#i-mouse"></use></svg><span class="sr-only">Mouse</span></li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Puzzle</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -294,13 +346,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/raven-480.webp" srcset="./assets/thumbs/raven-480.webp 480w, ./assets/thumbs/raven-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">Raven</h3>
               <p class="game-card-description">In this 2D puzzle-action game, you must fix a security system while surviving enemies who only attack when you’re not looking.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Action</li><li class="meta-chip meta-chip--input" title="Keyboard"><svg class="ico" aria-hidden="true"><use href="#i-keyboard"></use></svg><span class="sr-only">Keyboard</span></li><li class="meta-chip meta-chip--input" title="Mouse"><svg class="ico" aria-hidden="true"><use href="#i-mouse"></use></svg><span class="sr-only">Mouse</span></li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Action</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -310,13 +366,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/pacman-slasher-480.webp" srcset="./assets/thumbs/pacman-slasher-480.webp 480w, ./assets/thumbs/pacman-slasher-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">PacMan Slasher</h3>
               <p class="game-card-description">Defeat a pacman by drawing its symbol anywhere.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Arcade</li><li class="meta-chip meta-chip--input" title="Mouse"><svg class="ico" aria-hidden="true"><use href="#i-mouse"></use></svg><span class="sr-only">Mouse</span></li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Arcade</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -326,13 +386,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/tron-480.webp" srcset="./assets/thumbs/tron-480.webp 480w, ./assets/thumbs/tron-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">Tron</h3>
               <p class="game-card-description">Remake of the classic arcade game that involves maneuvering a ‘light cycle’ in an arena against an opponent.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Arcade</li><li class="meta-chip meta-chip--input" title="Keyboard"><svg class="ico" aria-hidden="true"><use href="#i-keyboard"></use></svg><span class="sr-only">Keyboard</span></li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Arcade</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -342,13 +406,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/tetris-480.webp" srcset="./assets/thumbs/tetris-480.webp 480w, ./assets/thumbs/tetris-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">Tetris</h3>
               <p class="game-card-description">The original Tetris game, with a few enhancements, many options included.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Puzzle</li><li class="meta-chip meta-chip--input" title="Keyboard"><svg class="ico" aria-hidden="true"><use href="#i-keyboard"></use></svg><span class="sr-only">Keyboard</span></li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Puzzle</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -358,13 +426,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/souls-bumper-480.webp" srcset="./assets/thumbs/souls-bumper-480.webp 480w, ./assets/thumbs/souls-bumper-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">Souls Bumper</h3>
               <p class="game-card-description">Souls Bumper is a platformer where you navigate through challenging levels.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Action</li><li class="meta-chip meta-chip--input" title="Keyboard"><svg class="ico" aria-hidden="true"><use href="#i-keyboard"></use></svg><span class="sr-only">Keyboard</span></li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Action</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -374,13 +446,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/pacman-480.webp" srcset="./assets/thumbs/pacman-480.webp 480w, ./assets/thumbs/pacman-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">PacMan</h3>
               <p class="game-card-description">The original PacMan game, with a few enhancements, many modes, playgrounds provided.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Arcade</li><li class="meta-chip meta-chip--input" title="Keyboard"><svg class="ico" aria-hidden="true"><use href="#i-keyboard"></use></svg><span class="sr-only">Keyboard</span></li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Arcade</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -390,13 +466,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/moonldr-480.webp" srcset="./assets/thumbs/moonldr-480.webp 480w, ./assets/thumbs/moonldr-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">MoonLDR</h3>
               <p class="game-card-description">Fun landing ship on ground game, it’s a classic based on Lunar Lander.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Arcade</li><li class="meta-chip meta-chip--input" title="Keyboard"><svg class="ico" aria-hidden="true"><use href="#i-keyboard"></use></svg><span class="sr-only">Keyboard</span></li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Arcade</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -406,13 +486,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/huggers-fight-480.webp" srcset="./assets/thumbs/huggers-fight-480.webp 480w, ./assets/thumbs/huggers-fight-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">HuggersFight</h3>
               <p class="game-card-description">The empire is spreading like a plague across the galaxy and building outposts on remote planets.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Action</li><li class="meta-chip meta-chip--input" title="Keyboard"><svg class="ico" aria-hidden="true"><use href="#i-keyboard"></use></svg><span class="sr-only">Keyboard</span></li><li class="meta-chip meta-chip--input" title="Mouse"><svg class="ico" aria-hidden="true"><use href="#i-mouse"></use></svg><span class="sr-only">Mouse</span></li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li><li class="meta-chip meta-chip--input" title="Gamepad"><svg class="ico" aria-hidden="true"><use href="#i-gamepad"></use></svg><span class="sr-only">Gamepad</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Action</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -422,13 +506,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/interlaced-480.webp" srcset="./assets/thumbs/interlaced-480.webp 480w, ./assets/thumbs/interlaced-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">InterLaced</h3>
               <p class="game-card-description">Interlaced is a tactical network intrusion and sabotage simulator.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Strategy</li><li class="meta-chip meta-chip--input" title="Keyboard"><svg class="ico" aria-hidden="true"><use href="#i-keyboard"></use></svg><span class="sr-only">Keyboard</span></li><li class="meta-chip meta-chip--input" title="Mouse"><svg class="ico" aria-hidden="true"><use href="#i-mouse"></use></svg><span class="sr-only">Mouse</span></li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Strategy</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -438,13 +526,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/gravity-wells-480.webp" srcset="./assets/thumbs/gravity-wells-480.webp 480w, ./assets/thumbs/gravity-wells-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">Gravity Wells</h3>
               <p class="game-card-description">Gravity Wells is a puzzle game set in space.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Puzzle</li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li><li class="meta-chip meta-chip--input" title="Mouse"><svg class="ico" aria-hidden="true"><use href="#i-mouse"></use></svg><span class="sr-only">Mouse</span></li><li class="meta-chip meta-chip--input" title="Keyboard"><svg class="ico" aria-hidden="true"><use href="#i-keyboard"></use></svg><span class="sr-only">Keyboard</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Puzzle</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -454,13 +546,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/rewire-480.webp" srcset="./assets/thumbs/rewire-480.webp 480w, ./assets/thumbs/rewire-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">ReWire</h3>
               <p class="game-card-description">Drag the cable around the power nodes and plug it in to bring the system back online.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Puzzle</li><li class="meta-chip meta-chip--input" title="Mouse"><svg class="ico" aria-hidden="true"><use href="#i-mouse"></use></svg><span class="sr-only">Mouse</span></li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Puzzle</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -470,13 +566,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/wahdatio-480.webp" srcset="./assets/thumbs/wahdatio-480.webp 480w, ./assets/thumbs/wahdatio-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">Wahdatio</h3>
               <p class="game-card-description">A profound 3D strategy game that embodies the concept of unity and interconnectedness.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Strategy</li><li class="meta-chip meta-chip--input" title="Mouse"><svg class="ico" aria-hidden="true"><use href="#i-mouse"></use></svg><span class="sr-only">Mouse</span></li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li><li class="meta-chip meta-chip--input" title="Keyboard"><svg class="ico" aria-hidden="true"><use href="#i-keyboard"></use></svg><span class="sr-only">Keyboard</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Strategy</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -486,29 +586,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/brainy-warrior-480.webp" srcset="./assets/thumbs/brainy-warrior-480.webp 480w, ./assets/thumbs/brainy-warrior-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">Brainy Warrior 3D</h3>
               <p class="game-card-description">A 3D sliding logic puzzle game based on Brainy Warrior. Slide the hero to defeat all enemies. Built with Three.js and features a BFS auto-solver.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Puzzle</li><li class="meta-chip meta-chip--input" title="Keyboard"><svg class="ico" aria-hidden="true"><use href="#i-keyboard"></use></svg><span class="sr-only">Keyboard</span></li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Puzzle</span>
-              </div>
-            </div>
-          </div>
-        </a>
-        <a class="game-card" href="./Sprites_Games/ninth_project/index.html" target="_blank" rel="noopener" data-slug="shadow-dog" data-genre="arcade" data-platforms="pc mobile" data-search="shadow dog runner roll through the creatures of the night in this side-scrolling runner. score 40 points in 30 seconds, or see how long you last in endless. arcade keyboard touch">
-          <div class="game-card-inner">
-            <div class="game-card-preview">
-              <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
-              <img src="./assets/thumbs/shadow-dog-480.webp" srcset="./assets/thumbs/shadow-dog-480.webp 480w, ./assets/thumbs/shadow-dog-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
-            </div>
-            <div class="game-card-content">
-              <h3 class="game-card-title">Shadow Dog Runner</h3>
-              <p class="game-card-description">Roll through the creatures of the night in this side-scrolling runner. Score 40 points in 30 seconds, or see how long you last in Endless.</p>
-              <div class="game-card-action">
-                <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Arcade</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -518,13 +606,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/minesweeper-480.webp" srcset="./assets/thumbs/minesweeper-480.webp 480w, ./assets/thumbs/minesweeper-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">Minesweeper</h3>
               <p class="game-card-description">Classic Minesweeper where every board can be solved by logic, with a daily board, a puzzle ladder, hints and stats.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Puzzle</li><li class="meta-chip meta-chip--input" title="Mouse"><svg class="ico" aria-hidden="true"><use href="#i-mouse"></use></svg><span class="sr-only">Mouse</span></li><li class="meta-chip meta-chip--input" title="Keyboard"><svg class="ico" aria-hidden="true"><use href="#i-keyboard"></use></svg><span class="sr-only">Keyboard</span></li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Puzzle</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -534,13 +626,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/sokoban-480.webp" srcset="./assets/thumbs/sokoban-480.webp 480w, ./assets/thumbs/sokoban-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">Crate Lab</h3>
               <p class="game-card-description">A Sokoban-style puzzle: push every crate onto a pad across 40 original levels, and try to match the solver-proven par.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Puzzle</li><li class="meta-chip meta-chip--input" title="Keyboard"><svg class="ico" aria-hidden="true"><use href="#i-keyboard"></use></svg><span class="sr-only">Keyboard</span></li><li class="meta-chip meta-chip--input" title="Mouse"><svg class="ico" aria-hidden="true"><use href="#i-mouse"></use></svg><span class="sr-only">Mouse</span></li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Puzzle</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -550,13 +646,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/snake-480.webp" srcset="./assets/thumbs/snake-480.webp 480w, ./assets/thumbs/snake-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">Snake</h3>
               <p class="game-card-description">The classic Snake with Classic, Wrap, Zen and daily modes, plus 20 hand-built arenas with portals.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Arcade</li><li class="meta-chip meta-chip--input" title="Keyboard"><svg class="ico" aria-hidden="true"><use href="#i-keyboard"></use></svg><span class="sr-only">Keyboard</span></li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Arcade</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>
@@ -566,13 +666,17 @@
             <div class="game-card-preview">
               <div class="game-card-tags"><span class="tag tag-pc"><i class="fas fa-desktop" aria-hidden="true"></i> PC</span><span class="tag tag-mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile</span></div>
               <img src="./assets/thumbs/breakout-480.webp" srcset="./assets/thumbs/breakout-480.webp 480w, ./assets/thumbs/breakout-960.webp 960w" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+              <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">
               <h3 class="game-card-title">Breakout</h3>
               <p class="game-card-description">Classic brick breaker with 27 levels, steel, armour and explosive bricks, six power-ups and an endless mode.</p>
+              <ul class="game-card-meta" aria-label="Genre and controls">
+                <li class="meta-chip meta-chip--genre">Arcade</li><li class="meta-chip meta-chip--input" title="Keyboard"><svg class="ico" aria-hidden="true"><use href="#i-keyboard"></use></svg><span class="sr-only">Keyboard</span></li><li class="meta-chip meta-chip--input" title="Mouse"><svg class="ico" aria-hidden="true"><use href="#i-mouse"></use></svg><span class="sr-only">Mouse</span></li><li class="meta-chip meta-chip--input" title="Touch"><svg class="ico" aria-hidden="true"><use href="#i-touch"></use></svg><span class="sr-only">Touch</span></li>
+              </ul>
               <div class="game-card-action">
                 <span class="play-btn">Play Now <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                <span class="game-card-genre">Arcade</span>
+                <span class="game-card-genre">New tab</span>
               </div>
             </div>
           </div>

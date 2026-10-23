@@ -19,23 +19,19 @@
 #search-input {
   width: 100%;
   padding: 1rem 1.5rem 1rem 3rem;
-  background: rgba(18, 19, 26, 0.7); 
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(250, 204, 21, 0.25);
-  border-radius: var(--radius-full);
+  background: var(--surface);
+  border: 1px solid var(--line-accent);
+  border-radius: var(--radius-md);
   color: white;
   font-size: 1rem;
   transition: all var(--transition-fast);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 #search-input:focus {
   outline: none;
   border-color: var(--primary);
-  background: rgba(18, 19, 26, 0.9);
-  box-shadow: 0 0 25px rgba(250, 204, 21, 0.3);
-  transform: translateY(-1px);
+  background: var(--surface-2);
+  box-shadow: 4px 4px 0 var(--primary);
 }
 
 #search-input::placeholder {
@@ -63,8 +59,7 @@
 
 .filter-btn {
   padding: 0.625rem 1.25rem;
-  background: rgba(250, 204, 21, 0.08);
-  backdrop-filter: blur(12px);
+  background: var(--surface);
   border: 1px solid rgba(250, 204, 21, 0.2);
   border-radius: var(--radius-full);
   color: var(--text-secondary);
@@ -85,14 +80,12 @@
   border-color: var(--primary);
   color: var(--primary);
   transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(250, 204, 21, 0.2);
 }
 
 .filter-btn.active {
   background: var(--primary);
   border-color: var(--primary);
   color: #09090b;
-  box-shadow: 0 0 20px rgba(250, 204, 21, 0.4);
 }
 
 .filter-btn:focus-visible {

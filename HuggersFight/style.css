@@ -9,7 +9,7 @@
     align-items: center;
     justify-content: center;
     gap: 14px;
-    padding: 64px 16px 24px;
+    padding: 24px 16px;
     overflow-y: auto;
     background: rgba(0, 0, 0, .55);
     color: #fff;

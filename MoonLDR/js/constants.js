@@ -68,7 +68,7 @@ const scoreMultiplierChances = [0.4, 0.2, 0.15, 0.15, 0.1];
 const infoPanelFontSize = 20;
 const infoPanelCompactFontSize = 13;
 const compactHudWidth = 640;
-const hudShellClearance = 70;
+const hudTopClearance = 26;
 const statsPanelFontSize = 30;
 
 const infoPanelTextColor = "rgba(255,255,255,1)";

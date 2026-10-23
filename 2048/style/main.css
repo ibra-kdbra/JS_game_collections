@@ -13,10 +13,10 @@ body {
   padding: 4rem 16px;
 }
 
-/* Leave room for the Game Lab back button on narrow screens. */
+/* Narrow screens: less empty space above the board. */
 @media (max-width: 860px) {
   body {
-    padding-top: max(64px, calc(env(safe-area-inset-top) + 56px));
+    padding-top: max(16px, env(safe-area-inset-top));
   }
 }
 

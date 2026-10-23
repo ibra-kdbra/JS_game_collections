@@ -379,8 +379,6 @@ body.live .stage {
 @media (max-width: 520px) {
   .top {
     min-height: 56px;
-    justify-content: flex-start;
-    padding-left: 112px;
   }
 
   .hud {

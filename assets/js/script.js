@@ -1,4 +1,4 @@
-import { games, thumbSet } from './data.js';
+import { games, thumbSet, GENRES } from './data.js';
 
 const RECENT_KEY = 'gamelab.recent';
 const RECENT_MAX = 4;
@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     restoreFiltersFromUrl();
     initSearch();
     initFilters();
-    initArtLabStrip();
+    initBests();
     initRecent();
     applyFilters({ animate: false });
     initScrollAnimations();
@@ -179,16 +179,32 @@ function applyFilters({ animate = true } = {}) {
 }
 
 /**
- * The Art Lab showcase is one big link; its preview tiles open individual experiments.
+ * Personal bests saved by the games (assets/kit/storage.js, `gamelab.best.<slug>`):
+ * `{ <mode>: { value, label, at } }`. The hub shows the overall best when the game
+ * has one, otherwise the most recently set.
  */
-function initArtLabStrip() {
-    document.querySelectorAll('#artlab-showcase .strip-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            window.open(item.dataset.link, '_blank', 'noopener');
-        });
-    });
+function readBest(slug) {
+    try {
+        const all = JSON.parse(localStorage.getItem(`gamelab.best.${slug}`) ?? 'null');
+        if (!all || typeof all !== 'object') return null;
+        if (all.default?.label) return String(all.default.label);
+        const latest = Object.values(all)
+            .filter(entry => entry && entry.label)
+            .sort((a, b) => (b.at ?? 0) - (a.at ?? 0))[0];
+        return latest ? String(latest.label) : null;
+    } catch {
+        return null;
+    }
+}
+
+function initBests() {
+    for (const card of elements.cards) {
+        const best = readBest(card.dataset.slug);
+        const badge = card.querySelector('.game-card-best');
+        if (!best || !badge) continue;
+        badge.textContent = `Best: ${best}`;
+        badge.hidden = false;
+    }
 }
 
 /**
@@ -223,6 +239,8 @@ function renderRecent() {
         const li = document.createElement('li');
         const link = document.createElement('a');
         const img = document.createElement('img');
+        const text = document.createElement('span');
+        const title = document.createElement('span');
         link.className = 'recent-chip';
         link.href = `./${game.href}`;
         link.target = '_blank';
@@ -230,9 +248,25 @@ function renderRecent() {
         link.dataset.slug = slug;
         img.src = thumbSet(slug, './').src;
         img.alt = '';
-        img.width = 36;
-        img.height = 36;
-        link.append(img, game.title);
+        img.width = 88;
+        img.height = 55;
+        img.decoding = 'async';
+        text.className = 'recent-text';
+        title.className = 'recent-title';
+        title.textContent = game.title;
+        text.append(title);
+        const best = readBest(slug);
+        const sub = document.createElement('span');
+        sub.className = 'recent-best';
+        if (best) {
+            const strong = document.createElement('strong');
+            strong.textContent = best;
+            sub.append('Best: ', strong);
+        } else {
+            sub.textContent = GENRES[game.genre] ?? '';
+        }
+        text.append(sub);
+        link.append(img, text);
         li.append(link);
         return li;
     }));
@@ -249,6 +283,13 @@ function initRecent() {
     document.addEventListener('click', onOpen);
     document.addEventListener('auxclick', onOpen);
     renderRecent();
+
+    // Games run in their own tabs; pick up new bests and plays when they save.
+    window.addEventListener('storage', (e) => {
+        if (e.key !== null && !e.key.startsWith('gamelab.')) return;
+        initBests();
+        renderRecent();
+    });
 }
 
 /**
