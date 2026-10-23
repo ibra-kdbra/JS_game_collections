@@ -124,7 +124,6 @@ button {
   justify-content: flex-end;
   gap: 8px;
   min-height: 38px;
-  padding-left: 180px; /* room for the Game Lab shell buttons */
 }
 
 .brand {
@@ -1061,12 +1060,6 @@ table.stats {
   }
 }
 
-@media (max-width: 420px) {
-  .top {
-    padding-left: 104px; /* the shell shows icons only here */
-  }
-}
-
 /* Phones held sideways: controls on the left, the field takes the full height. */
 @media (max-height: 520px) and (orientation: landscape) and (min-width: 600px) {
   .app {
@@ -1077,7 +1070,6 @@ table.stats {
   }
   .top {
     grid-column: 1;
-    padding-left: 104px;
   }
   .brand {
     display: none;
@@ -1117,9 +1109,6 @@ table.stats {
     flex-wrap: wrap;
   }
   .status {
-    display: none;
-  }
-  .gk-shell-btn span {
     display: none;
   }
 }

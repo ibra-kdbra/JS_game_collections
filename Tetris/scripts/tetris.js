@@ -323,8 +323,8 @@ function resize() {
   var portrait = window.innerHeight > window.innerWidth;
   var narrow = window.innerWidth < 700;
 
-  // Space taken by the shell bar and the touch controls.
-  var top = touch && !portrait ? 8 : narrow || touch ? 56 : 12;
+  // Space taken by the touch controls.
+  var top = touch && !portrait ? 8 : 12;
   var bottom = touch && portrait ? 204 : 12;
   var sides = touch && !portrait ? 196 : 8;
   var availW = window.innerWidth - sides * 2;

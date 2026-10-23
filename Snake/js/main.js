@@ -105,8 +105,6 @@ function layout() {
   let bottom = vh - pad;
   if (sideHud) {
     right = hudRect.left - pad;
-    const shell = $('.gk-shell')?.getBoundingClientRect();
-    if (shell) left = Math.max(left, shell.right + pad);
   } else {
     top = hudRect.bottom + 4;
     const hint = $('#keys-hint');

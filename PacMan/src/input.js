@@ -207,7 +207,7 @@ var initSwipe = function() {
     // touches on the Game Lab kit's own buttons (back link, D-pad) are not swipes
     var onKitControls = false;
     var isKitControl = function(event) {
-        return !!(event.target.closest && event.target.closest('.gk-touch, .gk-shell'));
+        return !!(event.target.closest && event.target.closest('.gk-touch'));
     };
 
     var touchStart = function(event) {

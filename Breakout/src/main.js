@@ -56,17 +56,6 @@ let drag = null;
 
 /* ---------- Layout ---------- */
 
-/** Union of the Game Lab buttons. Measured per call: kit.css may load after boot. */
-function shellRect() {
-  const rect = { right: 0, bottom: 0 };
-  for (const el of document.querySelectorAll('.gk-shell .gk-shell-btn')) {
-    const r = el.getBoundingClientRect();
-    rect.right = Math.max(rect.right, Math.min(r.right, 200));
-    rect.bottom = Math.max(rect.bottom, Math.min(r.bottom, 80));
-  }
-  return rect;
-}
-
 function computeLayout() {
   const vw = document.documentElement.clientWidth || innerWidth;
   const vh = window.visualViewport?.height ?? innerHeight;
@@ -97,24 +86,19 @@ function computeLayout() {
 
 function placeHud() {
   const hud = $('hud');
-  const shell = shellRect();
   const top = hud.querySelector('.hud-row--top');
   hud.classList.toggle('is-side', layout.side);
   if (layout.side) {
     const width = 168;
     hud.style.left = `${Math.max(8, layout.x - width - 22)}px`;
-    hud.style.top = `${Math.max(layout.y, shell.bottom + 14)}px`;
+    hud.style.top = `${layout.y}px`;
     hud.style.width = `${width}px`;
     top.style.paddingLeft = '0px';
   } else {
-    const left = layout.x;
-    const hudTop = layout.y - 96;
-    hud.style.left = `${left}px`;
-    hud.style.top = `${hudTop}px`;
+    hud.style.left = `${layout.x}px`;
+    hud.style.top = `${layout.y - 96}px`;
     hud.style.width = `${layout.w}px`;
-    // Keep the first row clear of the Game Lab buttons.
-    const overlap = hudTop < shell.bottom ? Math.max(0, shell.right + 10 - left) : 0;
-    top.style.paddingLeft = `${overlap}px`;
+    top.style.paddingLeft = '0px';
   }
   const msg = $('fieldMsg');
   msg.style.left = `${layout.x}px`;

@@ -1505,9 +1505,6 @@ li.letter {
 [hidden] {
 	display: none !important;
 }
-.score-container {
-	padding-top: 44px;
-}
 .home-container .hint-button {
 	cursor: pointer;
 	margin-right: 5%;
@@ -1596,9 +1593,6 @@ li.letter {
 	}
 }
 @media screen and (max-width: 480px) {
-	.score-container {
-		padding-top: 48px;
-	}
 	.home-container .hint-button {
 		min-height: 36px;
 		margin-right: 10%;

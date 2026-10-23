@@ -412,7 +412,7 @@ button {
   z-index: 20;
   display: grid;
   place-items: center;
-  padding: max(64px, calc(env(safe-area-inset-top) + 56px)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   overflow-y: auto;
   overflow-x: hidden;
   background: rgba(9, 9, 11, 0.78);
@@ -770,8 +770,7 @@ button {
   height: 20px;
 }
 
-/* Short landscape phones: the Game Lab buttons sit left of a centred panel, so
-   the panel can use the full height. */
+/* Short landscape phones: the panel uses the full height. */
 @media (max-height: 520px) and (min-width: 760px) {
   .screen {
     padding-top: max(10px, env(safe-area-inset-top));

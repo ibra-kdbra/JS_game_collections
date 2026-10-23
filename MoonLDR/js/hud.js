@@ -52,10 +52,10 @@ function infoFont() {
     return "Normal " + (isCompactHud() ? infoPanelCompactFontSize : infoPanelFontSize) + "px 'Courier New', monospace";
 }
 
-// Info lines start below the Game Lab buttons in the top-left corner.
+// Info lines start near the top-left corner, never above the first line's height.
 function infoLineY(line) {
     const step = Math.max(hudHeight * infoPanelRelativeOffsetYStep, (isCompactHud() ? infoPanelCompactFontSize : infoPanelFontSize) * 1.3);
-    return Math.max(hudHeight * infoPanelRelativeOffsetY, hudShellClearance) + line * step;
+    return Math.max(hudHeight * infoPanelRelativeOffsetY, hudTopClearance) + line * step;
 }
 
 function formatClock(seconds) {

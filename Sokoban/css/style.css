@@ -31,7 +31,6 @@
   --danger: #f87171;
   --stencil: 'Crate Stencil', 'Arial Narrow', Impact, sans-serif;
   --mono: 'Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
-  --shell-gap: 176px;
   color-scheme: dark;
 }
 
@@ -81,7 +80,6 @@ button {
     'brief brief brief';
   align-items: center;
   gap: 4px 20px;
-  padding-left: var(--shell-gap);
   min-height: 52px;
 }
 
@@ -733,16 +731,13 @@ dialog[open] .star.on:nth-child(2) {
 }
 
 @media (max-width: 720px) {
-  /* The shell's back and fullscreen buttons own the top-left corner; the title goes below them. */
   .hud {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
-      '. actions'
-      'id id'
+      'id actions'
       'counters counters'
       'brief brief';
     gap: 6px 10px;
-    padding-left: 0;
   }
 
   .hud-actions .icon-btn {
@@ -787,15 +782,10 @@ dialog[open] .star.on:nth-child(2) {
 
 /* Landscape phones: d-pad left, buttons right, board between them. */
 @media (orientation: landscape) and (max-height: 560px) {
-  :root {
-    --shell-gap: 216px;
-  }
-
   .hud {
     grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-areas: 'id counters actions';
     min-height: 44px;
-    padding-left: var(--shell-gap);
   }
 
   .brief {

@@ -36,7 +36,7 @@ header, aside, #options {
 
 header {
     margin: 4px 4px 0;
-    padding: 10px 14px 10px 150px;
+    padding: 10px 14px;
 }
 
 h1, h2, h3 {
@@ -405,7 +405,7 @@ select {
 /* Tablets and phones in portrait: map on top, controls underneath */
 @media (max-width: 899px) and (orientation: portrait) {
     header {
-        padding: 8px 8px 8px 112px;
+        padding: 8px;
     }
 
     h1 {
@@ -517,7 +517,7 @@ select {
     }
 
     #store {
-        padding: 56px 8px 8px;
+        padding: 8px;
         overflow: visible;
     }
 
