@@ -268,6 +268,25 @@ main button:focus-visible {
     display: none;
 }
 
+.theme-row {
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    align-items: center;
+    gap: 6px;
+    margin: 6px 0 8px;
+    font-size: 13px;
+}
+
+.theme-row select {
+    min-height: 44px;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    font: 600 13px var(--body);
+    padding: 0 8px;
+}
+
 #status .play {
     min-height: 46px;
     justify-content: center;
@@ -444,18 +463,25 @@ main button:focus-visible {
 }
 
 
+/* Touch screens: full-size targets */
+@media (pointer: coarse) {
+    main button, .size-row button, button.zoom {
+        min-height: 44px;
+    }
+}
+
 /* ---------- Swatch colours ---------- */
 
-/* Grid tile types */
-.empty { --sw: rgb(255, 255, 255); }
-.wall { --sw: rgb(108, 122, 137); }
-.path { --sw: rgb(191, 85, 236); }
-.tower { --sw: rgb(25, 181, 254); }
-.enemy { --sw: rgb(233, 212, 96); }
+/* Grid tile types, in the colours the terrain draws them */
+.empty { --sw: #5c9443; }
+.wall { --sw: #8b8d84; }
+.path { --sw: #c9a46b; }
+.tower { --sw: #a5acb4; }
+.enemy { --sw: #d9b77a; }
 
 /* Special types */
-.spawn { --sw: rgb(0, 230, 64); }
-.exit { --sw: rgb(207, 0, 15); }
+.spawn { --sw: #7c4dff; }
+.exit { --sw: #facc15; }
 
 /* Path types and utilities */
 .dir { --sw: rgb(248, 148, 6); }

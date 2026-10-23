@@ -13,6 +13,8 @@
     <script src="../TowerDefense/scripts/ui.js" defer></script>
     <script src="scripts/utils.js" defer></script>
     <script src="scripts/tiles.js" defer></script>
+    <script src="../TowerDefense/scripts/terrain.js" defer></script>
+    <script src="../TowerDefense/scripts/art.js" defer></script>
     <script src="scripts/sketch.js" defer></script>
   </head>
   <body>
@@ -29,17 +31,17 @@
         <div id="tile-picker">
           <h2>Tiles</h2>
           <div class="group">
-            <p><button class="empty" data-tile="empty">Empty Tile (1)</button></p>
-            <p><button class="wall" data-tile="wall">Wall Tile (2)</button></p>
-            <p><button class="path" data-tile="path">Path Tile (3)</button></p>
-            <p><button class="tower" data-tile="tower">Tower Tile (4)</button></p>
-            <p><button class="enemy" data-tile="enemy">Enemy-Only Tile (5)</button></p>
+            <p><button class="empty" data-tile="empty">Open ground (1)</button></p>
+            <p><button class="wall" data-tile="wall">Wall (2)</button></p>
+            <p><button class="path" data-tile="path">Path (3)</button></p>
+            <p><button class="tower" data-tile="tower">Tower pad (4)</button></p>
+            <p><button class="enemy" data-tile="enemy">Enemy-only road (5)</button></p>
           </div>
   
           <h2>Special</h2>
           <div class="group">
-            <p><button class="spawn" data-tile="spawn">Spawnpoint (6)</button></p>
-            <p><button class="exit" data-tile="exit">Exit Point (7)</button></p>
+            <p><button class="spawn" data-tile="spawn">Spawn portal (6)</button></p>
+            <p><button class="exit" data-tile="exit">Exit gate (7)</button></p>
           </div>
   
           <h2>Paths</h2>
@@ -128,6 +130,17 @@
             <button class="zoom" onclick="changeSize(0, -1)" aria-label="Fewer rows">&minus;</button>
             <button class="zoom" onclick="changeSize(0, 1)" aria-label="More rows">+</button>
           </div>
+          <label class="theme-row" for="theme"><span>Look</span>
+            <select id="theme">
+              <option value="auto">Automatic</option>
+              <option value="meadow">Meadow</option>
+              <option value="city">City</option>
+              <option value="desert">Desert</option>
+              <option value="frost">Frost</option>
+              <option value="void">Void</option>
+              <option value="ash">Ashlands</option>
+            </select>
+          </label>
           <p><button class="play" onclick="playMap()">Play this map</button></p>
         </aside>
 

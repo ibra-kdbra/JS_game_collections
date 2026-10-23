@@ -13,21 +13,43 @@ Pick a map, mode and difficulty on the map screen. Winning the campaign earns up
 three stars depending on how many lives you keep; stars and your best wave are shown
 per map, mode and difficulty.
 
-The wave panel shows what the next wave brings (new enemy types are marked), a
-countdown between waves and a button to send the next wave early for bonus gold.
-Select a tower to see its stats, what the upgrade changes, its sell price and
-which enemy it targets (First, Last, Strongest or Closest). The menu (Esc) has
-sound, damage numbers, health bars, particles and back-to-back waves.
+The wave panel shows what the next wave brings, with a picture of each enemy (new
+types are marked; tap one to read about it), a countdown between waves and a button
+to send the next wave early for bonus gold. The build menu compares towers with
+power, range and rate bars. Select a tower to see its stats, what the upgrade
+changes (the bars and the upgraded range on the map show it too), its sell price
+and which enemy it targets (First, Last, Strongest or Closest). The menu (Esc) has
+sound, damage numbers, health bars, particles, screen shake, vibration (phones)
+and back-to-back waves. The first game shows a few short tips; they can be skipped
+or replayed from the menu.
+
+Arrows on the ground show the way enemies will walk. While you place a tower on
+open ground, yellow arrows show the new way they would take.
+
+### Look
+
+Everything is drawn in code, no image files: `scripts/terrain.js` paints each map
+once (ground, roads with rounded edges, raised walls, build pads, trees, rocks,
+crystals) in one of six looks (Meadow, City, Desert, Frost, Void, Ashlands),
+`scripts/art.js` draws the towers (a new silhouette per upgrade), enemies and
+effect sprites into one atlas at the current tile size, `scripts/fx.js` runs pooled
+particles, beams and shock rings, and `scripts/render.js` draws each frame on a 2D
+canvas from those cached pictures. Quality steps down by itself when frames get
+slow. Add `?perf=1` to the address (or press F) for frame times, entity counts and
+draw calls.
 
 ### Touch
 
 Pick a tower, tap a tile to see its range and whether it fits, then tap the same
-tile again or press **Build**. Tap a built tower to upgrade, sell or retarget it.
+tile again or press **Build**. While placing, the row of towers in the panel
+switches type. Tap a built tower to upgrade, sell or retarget it. Pinch or use the
++ and - buttons to zoom, drag to look around.
 
 ### Keyboard and mouse
 
 * Mouse: click a tile to build the selected tower (you keep building until you
-  run out of gold), click a tower to select it, right click to stop
+  run out of gold), click a tower to select it, right click to stop; wheel to
+  zoom, drag to pan when zoomed in
 * 1-7: choose a tower to build (Gun, Laser, Slow, Sniper, Rocket, Bomb, Tesla); the same key again puts it away
 * Esc: cancel building / deselect, otherwise open the menu
 * Space: start, pause and resume
@@ -42,7 +64,7 @@ tile again or press **Build**. Tap a built tower to upgrade, sell or retarget it
 * [ and ]: smaller or bigger tiles on random maps (restarts the game)
 * Z: default tile size on random maps (restarts the game)
 
-Debug keys: F shows FPS, G toggles god mode, H toggles enemy health bars,
+Debug keys: F shows performance numbers, G toggles god mode, H toggles enemy health bars,
 P toggles particle effects, Q stops towers firing, W starts waves back to back.
 
 Libraries (in `vendor/`): p5.js 1.11.2 (LGPL-2.1) and lz-string 1.5.0 (MIT).
