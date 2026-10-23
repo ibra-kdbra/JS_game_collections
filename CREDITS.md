@@ -73,11 +73,12 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | lz-string 1.5.0 | `TowerDefense/vendor/` | MIT (licence file included) |
 | howler.js 2.2.4 | `PacMan_Slasher/js/vendor/` | MIT (licence file included) |
 | mp4-muxer 4.3.3 | `assets/vendor/mp4-muxer/` | MIT (licence file included) |
+| dat.GUI 0.7.9 | `assets/vendor/dat-gui/` | Apache-2.0 (licence file included) |
+| Pickr 1.8.2 | `assets/vendor/pickr/` | MIT (licence file included) |
 | LittleJS 0.74 | `HuggersFight/engine/` | MIT |
 | Sonant-X | `Souls-Bumper/js/audio.js` | zlib |
 
-Art Lab experiments still load dat.GUI, Pickr, p5.js 1.4.0, Font Awesome 6.0.0 and Google
-Fonts from CDNs (all MIT, LGPL or OFL); see `docs/UPGRADE_PLAN.md`.
+Nothing is loaded from a CDN.
 
 ## Fonts
 
@@ -92,6 +93,8 @@ its licence file.
 | Martian Mono | `Minesweeper/fonts/`, `Snake/fonts/` |
 | Big Shoulders Stencil Display, IBM Plex Mono | `Sokoban/fonts/` |
 | Pixelify Sans, VT323 | `Souls-Bumper/vendor/fonts/` |
+| Modak | `Art_Lab/LSD/fonts/` |
+| Montserrat | `Art_Lab/Adaptive/fonts/` |
 | Lato, Source Sans Pro | `Tetris/vendor/fonts/` |
 | Audiowide, Orbitron | `Tron/vendor/fonts/` |
 | Press Start 2P (Cody "CodeMan38" Boisclair) | `PacMan/font/`, `PacMan_Slasher/css/fonts/` |

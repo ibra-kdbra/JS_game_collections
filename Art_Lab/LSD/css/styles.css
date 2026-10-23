@@ -1,3 +1,10 @@
+/* Modak by Ek Type, SIL Open Font License 1.1 (fonts/OFL.txt) */
+@font-face {
+  font-family: "Modak";
+  src: url("../fonts/Modak-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+
 html, body{
   font-size: 16px;
   font-family: Helvetica;
