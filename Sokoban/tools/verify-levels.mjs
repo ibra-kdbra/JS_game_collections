@@ -14,7 +14,14 @@
  *   - dead squares: cells from which a lone box can never be pushed to a goal;
  *   - freeze deadlocks: a box off-goal that can move along neither axis.
  *
- * Exits with code 1 when any level is unsolvable, has a wrong par or is malformed.
+ * Difficulty columns: optimal pushes (the par), moves of that solution, box
+ * changes (how often the solution switches to another crate), dead squares
+ * (floor cells a crate must never be pushed onto) and search states. The ramp
+ * check fails when a world's median par or median search states is not above
+ * the previous world's.
+ *
+ * Exits with code 1 when any level is unsolvable, has a wrong par, is malformed
+ * or the worlds do not ramp up.
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -351,6 +358,7 @@ function main() {
   const failures = [];
   const json = [];
   const seenMaps = new Set();
+  const stats = [];
   let world = 0;
   const t0 = Date.now();
   if (!args.has('--json')) console.log(`Verifying ${levels.length} levels in ${LEVEL_FILE.split('/').slice(-3).join('/')}\n`);
@@ -399,15 +407,38 @@ function main() {
       return fail(`solution replay failed: ${e.message}`);
     }
     json.push({ index: i, title: name, par, lurd });
+    let changes = 0;
+    let at = -1;
+    for (const p of res.path) {
+      if (p.box !== at) changes++;
+      at = p.box + board.step[p.dir];
+    }
+    const live = liveSquares(board);
+    let dead = 0;
+    for (let k = 0; k < board.n; k++) if (board.floor[k] && !live[k]) dead++;
+    stats.push({ world: Number(lvl.meta.world), par, states: res.states });
     if (!args.has('--json')) {
-      console.log(`  ok   ${label} par ${String(par).padStart(3)}  ${board.boxes.length} boxes  ${String(res.states).padStart(8)} states  ${ms} ms`);
+      console.log(`  ok   ${label} par ${String(par).padStart(3)}  moves ${String(lurd.length).padStart(3)}  changes ${String(changes).padStart(2)}  dead ${String(dead).padStart(2)}  ${board.boxes.length} boxes  ${String(res.states).padStart(8)} states  ${ms} ms`);
       if (args.has('--solutions')) console.log(`       ${lurd}`);
     }
   });
+  // Ramp: every world harder than the one before, by median par and median search states.
+  const median = (xs) => xs.slice().sort((a, b) => a - b)[Math.floor(xs.length / 2)];
+  const worlds = [...new Set(stats.map((x) => x.world))];
+  const ramp = worlds.map((w) => {
+    const ls = stats.filter((x) => x.world === w);
+    return { w, par: median(ls.map((x) => x.par)), states: median(ls.map((x) => x.states)) };
+  });
+  for (let k = 1; k < ramp.length; k++) {
+    if (ramp[k].par <= ramp[k - 1].par || ramp[k].states <= ramp[k - 1].states) {
+      failures.push(`world ${ramp[k].w} is not harder than world ${ramp[k - 1].w}`);
+    }
+  }
   if (args.has('--json')) {
     console.log(JSON.stringify(json));
   } else {
-    console.log(`\n${levels.length - failures.length}/${levels.length} levels verified in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+    console.log(`\nmedian par / search states per world: ${ramp.map((r) => `${r.w}: ${r.par} / ${r.states}`).join(', ')}`);
+    console.log(`${levels.length - failures.length}/${levels.length} levels verified in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
   }
   if (levels.length < 40 && !draft) failures.push(`only ${levels.length} levels (need 40)`);
   if (failures.length) {

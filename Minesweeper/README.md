@@ -14,7 +14,7 @@ Minesweeper where luck never decides the game. Every board can be cleared by log
 
 - **Boards:** Beginner 9×9/10, Intermediate 16×16/40, Expert 30×16/99, and Custom (width 5–50, height 5–40, up to width × height − 9 mines). Custom input is checked as you type, and you get a warning when no-guess may fail at that density.
 - **Daily:** a 16×16/40 board seeded by the UTC date, so everyone gets the same one. The start is already open.
-- **Puzzles:** a ladder of 12 fixed boards. Each level is bigger, denser or needs more pair logic than the one before, and the starting area is capped so early levels are not half solved before you move. Clear a level to unlock the next.
+- **Puzzles:** a ladder of 12 fixed boards. Each level is bigger, denser or needs more pair logic than the one before (from one round of pair logic on 8×8 up to ten on a 20×16 board at Expert density), and the starting area is capped so early levels are not half solved before you move. Clear a level to unlock the next.
 - **Hint** (+10 s) lights up one cell that logic proves safe, and outlines the numbers that prove it.
 - **Undo** (+15 s, once per game) takes back the click that set off a mine.
 - **Stats** for each board: games, wins, best time, and current and longest streak. Best times for Beginner, Intermediate, Expert and Daily also go to the hub through `recordBest`.

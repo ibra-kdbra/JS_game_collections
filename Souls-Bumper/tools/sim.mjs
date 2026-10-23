@@ -36,6 +36,8 @@ globalThis.__sim = {
   step: updateGameArea,
   get completed() { return completed; }, set completed(v) { completed = v; },
   get reload() { return RELOAD; }, set reload(v) { RELOAD = v; },
+  // Searches only: particles are decoration, skipping them makes a step about twice as fast.
+  noParticles() { particle = function() { this.remove = true; this.update = function() {}; }; },
 };
 var completed = -1;
 const __onLevelComplete = onLevelComplete;
@@ -52,8 +54,8 @@ function seeded(seed) {
   };
 }
 
-// A fresh game, started on level `num` (0-based).
-export function createGame(num, seed = 1) {
+// A fresh game, started on level `num` (0-based). `fast` drops the particles (for searches).
+export function createGame(num, seed = 1, { fast = false } = {}) {
   const math = Object.create(Math);
   math.random = seeded(seed);
   const doc = { createElement: element, getElementById: element, querySelectorAll: () => [], addEventListener: noop, hidden: false, body: element() };
@@ -71,6 +73,7 @@ export function createGame(num, seed = 1) {
   vm.createContext(sandbox);
   script.runInContext(sandbox);
   const sim = sandbox.__sim;
+  if (fast) sim.noParticles();
   sim.start();
   sim.startLevel(num);
   return sim;

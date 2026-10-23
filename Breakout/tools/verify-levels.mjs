@@ -8,6 +8,10 @@
  * 3. A 'perfect' bot plays each level with several seeds and must clear it.
  * 4. A 'casual' bot (keyboard speed, late, loose aim) rates the difficulty
  *    by how many lives it loses and how often it clears within 3 lives.
+ * 5. The ramp: each act must cost the casual bot more lives on average than
+ *    the act before. A level clearly easier than the one before it in the
+ *    same act, or a last level that is not the hardest, is reported; with
+ *    few runs that is noisy, so use 48 runs before reordering on it.
  */
 import { CONFIG, levelSpeed } from '../src/config.js';
 import { LEVELS, parseMap, unreachableCount, mulberry32, generateLevel } from '../src/levels.js';
@@ -15,6 +19,7 @@ import { createWorld } from '../src/sim.js';
 import { createBot } from '../src/bot.js';
 
 const RUNS = Number(process.argv[2] ?? 6);
+const lostByLevel = [];
 const DT = 1 / 60;
 const LIMIT = 900; // seconds of game time per attempt
 let failures = 0;
@@ -86,12 +91,35 @@ LEVELS.forEach((level, i) => {
   const avg = perfect.reduce((a, r) => a + r.time, 0) / RUNS;
   const c3 = casual.filter((r) => r.cleared && r.lost < CONFIG.lives.start).length;
   const cLost = casual.reduce((a, r) => a + r.lost, 0) / RUNS;
+  lostByLevel.push({ act: level.act, lost: cLost, name: level.name });
   const bad = unreachable > 0 || pClear < RUNS;
   if (bad) failures++;
   console.log(
     `${String(i + 1).padStart(2)}  ${level.name.padEnd(18)} ${String(level.act + 1).padStart(3)}  ${String(bricks).padStart(6)}  ${unreachable ? 'FAIL' : '  ok'}  ${String(pClear).padStart(7)}/${RUNS}       ${avg.toFixed(0).padStart(5)}s  ${String(c3).padStart(13)}/${RUNS}  ${cLost.toFixed(2).padStart(17)}`,
   );
 });
+
+// ---------- 5. Ramp ----------
+{
+  const acts = [...new Set(lostByLevel.map((l) => l.act))];
+  const avg = acts.map((a) => {
+    const ls = lostByLevel.filter((l) => l.act === a);
+    return ls.reduce((s, l) => s + l.lost, 0) / ls.length;
+  });
+  console.log(`\ncasual lives lost per act: ${avg.map((v, i) => `act ${acts[i] + 1} ${v.toFixed(2)}`).join(', ')}`);
+  for (let i = 1; i < avg.length; i++) {
+    if (avg[i] <= avg[i - 1]) {
+      console.log(`FAIL act ${acts[i] + 1} is not harder than act ${acts[i - 1] + 1}`);
+      failures++;
+    }
+  }
+  const last = lostByLevel[lostByLevel.length - 1];
+  if (lostByLevel.some((l) => l.lost > last.lost)) console.log(`note: the last level (${last.name}) is not the hardest`);
+  for (let i = 1; i < lostByLevel.length; i++) {
+    const [a, b] = [lostByLevel[i - 1], lostByLevel[i]];
+    if (a.act === b.act && b.lost < a.lost - 0.75) console.log(`note: ${b.name} (${b.lost.toFixed(2)}) is easier than ${a.name} (${a.lost.toFixed(2)}) before it`);
+  }
+}
 
 // ---------- Endless sample ----------
 let endlessOk = 0;

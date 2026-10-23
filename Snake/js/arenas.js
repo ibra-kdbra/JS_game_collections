@@ -6,7 +6,7 @@
  *
  * An edge with no wall wraps to the opposite edge.
  * `target` is the length that clears the arena; `speed` is logic steps per move
- * (lower is faster). The curve: targets climb from 10 to 30, speed from 9 to 6,
+ * (lower is faster). The curve: targets climb from 10 to 28 and 40 for the finale, speed from 9 to 6,
  * walls go from none to mazes, wrap edges arrive at 4 and portals at 7.
  */
 export const ARENAS = [
@@ -200,9 +200,36 @@ export const ARENAS = [
 ####################`,
   },
   {
-    name: 'Comb',
+    name: 'Fortress',
     target: 17,
     speed: 8,
+    hint: 'Walls inside walls.',
+    map: `
+####################
+#..S...............#
+#..................#
+#..######..######..#
+#..#............#..#
+#..#............#..#
+#..#..###..###..#..#
+#..#..#......#..#..#
+#.....#......#.....#
+#..#............#..#
+#..#............#..#
+#.....#......#.....#
+#..#..#......#..#..#
+#..#..###..###..#..#
+#..#............#..#
+#..#............#..#
+#..######..######..#
+#..................#
+#..................#
+####################`,
+  },
+  {
+    name: 'Comb',
+    target: 18,
+    speed: 7.5,
     hint: 'Teeth from above and below.',
     map: `
 ####################
@@ -228,7 +255,7 @@ export const ARENAS = [
   },
   {
     name: 'Coil',
-    target: 18,
+    target: 19,
     speed: 7.5,
     hint: 'A spiral that hides food in its heart.',
     map: `
@@ -255,7 +282,7 @@ export const ARENAS = [
   },
   {
     name: 'Islands',
-    target: 19,
+    target: 20,
     speed: 7.5,
     hint: 'Scattered rocks, open edges.',
     map: `
@@ -309,8 +336,8 @@ export const ARENAS = [
   },
   {
     name: 'Labyrinth',
-    target: 20,
-    speed: 7.5,
+    target: 22,
+    speed: 7,
     hint: 'Plan the way out before you go in.',
     map: `
 ####################
@@ -357,33 +384,6 @@ export const ARENAS = [
 #......#....#......#
 #.......#..#.......#
 #..................#
-#..................#
-#..................#
-####################`,
-  },
-  {
-    name: 'Fortress',
-    target: 22,
-    speed: 7,
-    hint: 'Walls inside walls.',
-    map: `
-####################
-#..S...............#
-#..................#
-#..######..######..#
-#..#............#..#
-#..#............#..#
-#..#..###..###..#..#
-#..#..#......#..#..#
-#.....#......#.....#
-#..#............#..#
-#..#............#..#
-#.....#......#.....#
-#..#..#......#..#..#
-#..#..###..###..#..#
-#..#............#..#
-#..#............#..#
-#..######..######..#
 #..................#
 #..................#
 ####################`,
@@ -525,7 +525,7 @@ export const ARENAS = [
   },
   {
     name: 'Ouroboros',
-    target: 30,
+    target: 40,
     speed: 6,
     hint: 'A ring around a stone heart. Eat your way to thirty.',
     map: `
