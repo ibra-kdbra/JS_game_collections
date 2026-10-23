@@ -1,4 +1,5 @@
 import soundSystem from './sound.js';
+import resizeSystem from './resize.js';
 
 let add = (game, canvas) => {
     let pointer = game.pointer;
@@ -40,7 +41,7 @@ let add = (game, canvas) => {
         viewportOffset = canvas.getBoundingClientRect();
         left = viewportOffset.left;
         top = viewportOffset.top;
-        adjust = game.canvas.zoom / window.devicePixelRatio;
+        adjust = game.canvas.zoom / resizeSystem.ratio();
         pointerX = (e.clientX - left) / adjust;
         pointerY = (e.clientY - top) / adjust;
         handlePointerDown(pointerX, pointerY);
@@ -51,7 +52,7 @@ let add = (game, canvas) => {
         viewportOffset = canvas.getBoundingClientRect();
         left = viewportOffset.left;
         top = viewportOffset.top;
-        adjust = game.canvas.zoom / window.devicePixelRatio;
+        adjust = game.canvas.zoom / resizeSystem.ratio();
         pointerX = (e.changedTouches[0].clientX - left) / adjust;
         pointerY = (e.changedTouches[0].clientY - top) / adjust;
         handlePointerDown(pointerX, pointerY);
@@ -63,7 +64,7 @@ let add = (game, canvas) => {
         viewportOffset = canvas.getBoundingClientRect();
         left = viewportOffset.left;
         top = viewportOffset.top;
-        adjust = game.canvas.zoom / window.devicePixelRatio;
+        adjust = game.canvas.zoom / resizeSystem.ratio();
         pointerX = (e.clientX - left) / adjust;
         pointerY = (e.clientY - top) / adjust;
         handlePointerMove(pointerX, pointerY);
@@ -74,7 +75,7 @@ let add = (game, canvas) => {
         viewportOffset = canvas.getBoundingClientRect();
         left = viewportOffset.left;
         top = viewportOffset.top;
-        adjust = game.canvas.zoom / window.devicePixelRatio;
+        adjust = game.canvas.zoom / resizeSystem.ratio();
         pointerX = (e.changedTouches[0].clientX - left) / adjust;
         pointerY = (e.changedTouches[0].clientY - top) / adjust;
         handlePointerMove(pointerX, pointerY);
@@ -84,7 +85,7 @@ let add = (game, canvas) => {
         viewportOffset = canvas.getBoundingClientRect();
         left = viewportOffset.left;
         top = viewportOffset.top;
-        adjust = game.canvas.zoom / window.devicePixelRatio;
+        adjust = game.canvas.zoom / resizeSystem.ratio();
         pointerX = (e.clientX - left) / adjust;
         pointerY = (e.clientY - top) / adjust;
         handlePointerUp(pointerX, pointerY);
@@ -95,7 +96,7 @@ let add = (game, canvas) => {
         viewportOffset = canvas.getBoundingClientRect();
         left = viewportOffset.left;
         top = viewportOffset.top;
-        adjust = game.canvas.zoom / window.devicePixelRatio;
+        adjust = game.canvas.zoom / resizeSystem.ratio();
         pointerX = e.changedTouches[0].clientX / adjust;
         pointerY = e.changedTouches[0].clientY / adjust;
         handlePointerUp(pointerX, pointerY);

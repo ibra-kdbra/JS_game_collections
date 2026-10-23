@@ -4,11 +4,18 @@ let offsetX = 0;
 let offsetY = 0;
 let w = 0;
 let h = 0;
+let dpr = 0;
+
+// Backing-store scale. Phones report 3 or more; 2 is already sharp for this
+// flat art and keeps the per-frame clear and redraw cheap.
+const MAX_DPR = 2;
+let pixelRatio = () => Math.min(MAX_DPR, window.devicePixelRatio || 1);
 
 let resize = (game, canvas) => {
-    if (w === window.innerWidth && h === window.innerHeight) {
+    if (w === window.innerWidth && h === window.innerHeight && dpr === pixelRatio()) {
         return;
     }
+    dpr = pixelRatio();
 //    if (/(iPhone|iPad)/i.test(navigator.userAgent)) {
 //        w = document.body.clientWidth;
 //        h = document.body.clientHeight;
@@ -18,8 +25,8 @@ let resize = (game, canvas) => {
 //    }
     canvas.style.width = w + 'px';
     canvas.style.height = h + 'px';
-    canvas.width = w * window.devicePixelRatio;
-    canvas.height = h * window.devicePixelRatio;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
     game.canvas.w = canvas.width;
     game.canvas.h = canvas.height;
     targetRatio = game.canvas.tW / game.canvas.tH;
@@ -40,5 +47,7 @@ let resize = (game, canvas) => {
 };
 
 export default Object.freeze({
-    resize
+    resize,
+    // The scale between CSS pixels and canvas pixels, for pointer mapping.
+    ratio: () => dpr || pixelRatio()
 });
