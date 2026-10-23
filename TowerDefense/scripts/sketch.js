@@ -1,8 +1,6 @@
 let enemies = [];
 let projectiles = [];
-let systems = [];
 let towers = [];
-let flashes = [];
 let newEnemies = [];
 let newProjectiles = [];
 let newTowers = [];
@@ -13,8 +11,6 @@ let ts = 24;            // tile size in pixels, fitted to the screen
 let tileZoom = 2;
 let zoomDefault = 24;
 let randomTs = zoomDefault; // preferred tile size when generating random maps
-
-let particleAmt = 32;   // number of particles to draw per explosion
 
 let tempSpawnCount = 40;
 
@@ -42,9 +38,12 @@ let wave;
 
 let spawnCool;          // number of ticks between spawning enemies
 
-let bg;                 // background color
-let border;             // color to draw on tile borders
-let borderAlpha;        // alpha of tile borders
+let bg;                 // background color (kept in map strings)
+let border;             // color to draw on tile borders (kept in map strings)
+let borderAlpha;        // alpha of tile borders (kept in map strings)
+let mapTheme = 'meadow';// terrain look (terrain.js)
+let mapStamp = 0;       // bumped when the map's tiles change, to redraw the terrain
+let pathVersion = 0;    // bumped when enemy paths change, to redraw the route hints
 
 let selected;
 let towerType;
@@ -64,6 +63,8 @@ let earlyBonus = 0;     // bonus paid for the wave that was just called early
 let floaters = [];      // floating numbers: { x, y, text, color, life, size }
 let hurt = 0;           // ticks left of the red edge flash after losing lives
 let damageNumbers = true;
+let screenShake = true; // shake the map on big hits
+let haptics = true;     // vibrate on phones for key events
 let stats;              // per-game totals for the end screen
 
 let godMode = false;    // make player immortal for test purposes
@@ -72,7 +73,6 @@ let muteSounds = false; // whether to mute sounds
 let paused;             // whether to update or not
 let scd;                // number of ticks until next spawn cycle
 let showEffects = true; // whether or not to display particle effects
-let showFPS = false;    // whether or not to display FPS
 let skipToNext = false; // whether or not to immediately start next wave
 let stopFiring = false; // whether or not to pause towers firing
 let toCooldown;         // flag to reset spawning cooldown
@@ -80,9 +80,6 @@ let toPathfind;         // flag to update enemy pathfinding
 let toPlace;            // flag to place a tower
 let toWait;             // flag to wait before next wave
 let wcd;                // number of ticks until next wave
-
-let avgFPS = 0;         // current average of all FPS values
-let numFPS = 0;         // number of FPS values calculated so far
 
 let minDist = 15;       // minimum distance between spawnpoint and exit
 let resistance = 0.5;   // percentage of damage blocked by resistance
@@ -128,6 +125,7 @@ const buy = (t) => {
         newTowers.push(t);
         stats.built++;
         sfx('build');
+        FX.buzz(12);
         addFloater(t.pos.x, t.pos.y - ts * 0.3, `-$${t.cost}`, [250, 204, 21]);
         ghost = null;
         // Keep building the same tower while another one is affordable
@@ -164,6 +162,7 @@ function onEnemyHit(e, dealt, type) {
 }
 
 function onEnemyKilled(e) {
+    FX.death(e);
     stats.kills++;
     stats.earned += e.cash;
     if (e.cash > 0) addFloater(e.pos.x, e.pos.y, `+$${e.cash}`, [250, 204, 21], 0.8);
@@ -174,25 +173,10 @@ function onEnemyLeaked(e) {
     stats.leaked += e.damage;
     hurt = 24;
     sfx('leak');
+    FX.leak();
     const c = center(exit.x, exit.y);
     addFloater(c.x, c.y - ts * 0.4, `-${e.damage}`, [248, 113, 113], 1.2);
     flashLives();
-}
-
-// Calculate and display current and average FPS
-const calcFPS = () => {
-    const fps = frameRate();
-    avgFPS += (fps - avgFPS) / ++numFPS;
-
-    // Draw black rect under text
-    noStroke();
-    fill(0);
-    rect(0, height - 40, 70, 40);
-
-    // Update FPS meter
-    fill(255);
-    const fpsText = `FPS: ${fps.toFixed(2)}\nAvg: ${avgFPS.toFixed(2)}`;
-    text(fpsText, 5, height - 25);
 }
 
 // Why a tower cannot go on a tile, or null if it can
@@ -209,6 +193,20 @@ const placeReason = (col, row) => {
 
 // Check if all conditions for placing a tower are true
 const canPlace = (col, row) => toPlace && placeReason(col, row) === null;
+
+// placeReason for the preview, recomputed at most every few frames per tile
+// (it runs a path search, too slow to repeat every frame)
+const placeCache = { key: '', at: -99, value: null };
+function placeReasonCached(col, row) {
+    const key = `${col},${row},${towers.length},${newTowers.length},${pathVersion}`;
+    const now = frameCount;
+    if (placeCache.key !== key || now - placeCache.at > 12) {
+        placeCache.key = key;
+        placeCache.at = now;
+        placeCache.value = placeReason(col, row);
+    }
+    return placeCache.value;
+}
 
 // Check if spawn cooldown is done and enemies are available to spawn
 const canSpawn = () => {
@@ -255,7 +253,8 @@ const exportMap = () => {
         borderAlpha,
         // Misc
         cols,
-        rows
+        rows,
+        theme: mapTheme
     };
     return LZString.compressToBase64(JSON.stringify(mapData));
 };
@@ -270,7 +269,15 @@ const getEmpty = () => {
 
 // Find tower at specific tile, otherwise return null
 const getTower = (col, row) => {
-    return towers.concat(newTowers).find(t => t.alive && t.gridPos.x === col && t.gridPos.y === row) || null;
+    for (let i = 0; i < towers.length; i++) {
+        const t = towers[i];
+        if (t.alive && t.gridPos.x === col && t.gridPos.y === row) return t;
+    }
+    for (let i = 0; i < newTowers.length; i++) {
+        const t = newTowers[i];
+        if (t.alive && t.gridPos.x === col && t.gridPos.y === row) return t;
+    }
+    return null;
 }
 
 // Return map of visitability
@@ -415,8 +422,11 @@ function loadMap() {
     }
 
     tempSpawns = [];
+    mapTheme = Terrain.themeFor(name === 'custom' ? custom : maps[name] || null, name === 'custom' ? null : name);
+    mapStamp++;
     fitCanvas();
     recalculate();
+    Renderer.mapChanged(mapTheme);
 
     if (spawnpoints.some(s => dists[s.x][s.y] === null)) {
         toast('Warning: a spawnpoint cannot reach the exit on this map', 'error');
@@ -437,7 +447,7 @@ function noMoreEnemies() {
 }
 
 function outsideMap(e) {
-    return outsideRect(e.pos.x, e.pos.y, 0, 0, width, height);
+    return outsideRect(e.pos.x, e.pos.y, 0, 0, cols * ts, rows * ts);
 }
 
 // Toggle pause state
@@ -649,6 +659,7 @@ function recalculate() {
     }
 
     paths = newPaths;
+    pathVersion++;
 }
 
 function resetGame() {
@@ -658,10 +669,9 @@ function resetGame() {
     // Clear all entities
     enemies = [];
     projectiles = [];
-    systems = [];
     towers = [];
-    flashes = [];
     newEnemies = [];
+    FX.clear();
     newProjectiles = [];
     newTowers = [];
     selected = null;
@@ -709,16 +719,13 @@ function rescale(newTs) {
     projectiles.concat(newProjectiles).forEach(p => {
         p.pos.mult(k);
         p.vel.mult(k);
-        p.length *= k;
-        p.width *= k;
-        p.topSpeed /= k;
+        p.topSpeed *= k;
     });
     floaters.forEach(f => {
         f.x *= k;
         f.y *= k;
     });
-    systems = [];
-    flashes = [];
+    FX.clear();
 }
 
 // Size the tiles so the whole map fits the space available
@@ -728,8 +735,11 @@ function fitCanvas() {
     const h = holder.clientHeight;
     if (!w || !h) return;
     const newTs = Math.max(4, Math.floor(Math.min(w / cols, h / rows)));
-    if (newTs !== ts) rescale(newTs);
-    if (width !== cols * ts || height !== rows * ts) resizeCanvas(cols * ts, rows * ts, true);
+    if (newTs !== ts) {
+        rescale(newTs);
+        Renderer.mapChanged();
+    }
+    Renderer.resize();
 }
 
 // Sell a tower
@@ -757,6 +767,7 @@ function setPlace(t) {
     ghost = null;
     sfx('click');
     updateInfo();
+    tipEvent('placing');
 }
 
 // Leave placement mode and deselect
@@ -765,22 +776,6 @@ function cancelPlace() {
     selected = null;
     ghost = null;
     updateInfo();
-}
-
-// Visualize range of tower: the circle enemies' centres must enter (see getInRange)
-function showRange(t, cx, cy, ok = true) {
-    const d = (t.range + 1) * ts * 2;
-    noStroke();
-    if (ok) fill(t.color[0], t.color[1], t.color[2], 46);
-    else fill(248, 113, 113, 40);
-    ellipse(cx, cy, d, d);
-    noFill();
-    stroke(255, 255, 255, 170);
-    strokeWeight(Math.max(1, ts / 20));
-    drawingContext.setLineDash([Math.max(3, ts / 4), Math.max(3, ts / 5)]);
-    ellipse(cx, cy, d, d);
-    drawingContext.setLineDash([]);
-    strokeWeight(1);
 }
 
 // Upgrade tower
@@ -899,11 +894,8 @@ function tick() {
         t.update();
     }
 
-    // Particle systems
-    for (let i = systems.length - 1; i >= 0; i--) {
-        systems[i].update();
-        if (systems[i].isDead()) systems.splice(i, 1);
-    }
+    // Visual effects advance with the game
+    FX.tick();
 
     // Projectiles
     for (let i = projectiles.length - 1; i >= 0; i--) {
@@ -973,33 +965,34 @@ function applyPending() {
 }
 
 
-// Main p5 functions
+// Main p5 functions (p5 runs the loop; drawing is done by render.js)
 
 function setup() {
-    const canvas = createCanvas(holder.clientWidth || 300, holder.clientHeight || 300);
-    canvas.parent('sketch-holder');
-    canvas.elt.addEventListener('pointerdown', onCanvasPointer);
-    canvas.elt.addEventListener('contextmenu', e => e.preventDefault());
-    textFont('Chakra Petch');
-    textStyle(BOLD);
+    noCanvas();
+    Renderer.init(holder);
+    buildStore();
 
     const fromLink = loadPrefs();
     resetGame();
     if (!fromLink) openLevels();
+    else maybeStartTips();
 
     new ResizeObserver(() => fitCanvas()).observe(holder);
 }
 
 function draw() {
+    let steps = 0;
+    const t0 = performance.now();
     if (!paused && !gameOver) {
-        stepper.advance(performance.now(), () => {
+        steps = stepper.advance(t0, () => {
             for (let i = 0; i < speed && !gameOver; i++) tick();
-        });
+        }) * speed;
     } else {
         stepper.reset();
         applyPending();
     }
-    render();
+    Renderer.logicTime(performance.now() - t0);
+    Renderer.frame(steps);
     updateStatus();
     // Floating text drifts in real time, so it also clears while paused
     for (let i = floaters.length - 1; i >= 0; i--) {
@@ -1009,210 +1002,16 @@ function draw() {
     }
 }
 
-function render() {
-    background(bg);
-
-    // Draw basic tiles
-    for (let x = 0; x < cols; x++) {
-        for (let y = 0; y < rows; y++) {
-            const t = tiles[display[x][y]];
-            if (typeof t === 'function') {
-                t(x, y, displayDir[x][y]);
-            } else {
-                stroke(border, borderAlpha);
-                t ? fill(t) : noFill();
-                rect(x * ts, y * ts, ts, ts);
-            }
-        }
-    }
-
-    // Spawnpoints (green), temporary spawnpoints (purple) and the exit (red)
-    spawnpoints.forEach(s => drawMarker(s.x, s.y, [0, 230, 64]));
-    tempSpawns.forEach(([s]) => drawMarker(s.x, s.y, [155, 32, 141]));
-    drawMarker(exit.x, exit.y, [207, 0, 15], true);
-
-    enemies.forEach(e => e.draw());
-    enemies.forEach(e => e.drawHit());
-    if (healthBar) enemies.forEach(e => e.drawHealth());
-
-    // Range of the selected tower
-    if (selected && !toPlace && selected.alive) showRange(selected, selected.pos.x, selected.pos.y);
-
-    towers.forEach(t => t.draw());
-
-    // Outline the selected tower
-    if (selected && !toPlace && selected.alive) {
-        noFill();
-        stroke(250, 204, 21);
-        strokeWeight(Math.max(2, ts / 10));
-        rect(selected.gridPos.x * ts + 1, selected.gridPos.y * ts + 1, ts - 2, ts - 2);
-        strokeWeight(1);
-    }
-
-    if (showEffects) systems.forEach(s => s.draw());
-    projectiles.forEach(p => p.draw());
-
-    // Shots and blasts queued by the last logic steps
-    flashes.forEach(f => {
-        if (f.line) {
-            stroke(f.color);
-            strokeWeight(f.weight);
-            line(...f.line);
-            strokeWeight(1);
-        } else {
-            noStroke();
-            fill(f.color);
-            ellipse(f.circle[0], f.circle[1], f.circle[2], f.circle[2]);
-        }
-    });
-    if (!paused) flashes = [];
-
-    drawPlacement();
-    drawFloaters();
-
-    // Red edge when lives are lost
-    if (hurt > 0) {
-        noFill();
-        stroke(248, 113, 113, hurt * 9);
-        strokeWeight(Math.max(6, ts / 3));
-        rect(0, 0, width, height);
-        strokeWeight(1);
-    }
-
-    // Update FPS meter
-    if (showFPS) calcFPS();
-
-    // Show if god mode active
-    if (godMode) {
-        noStroke();
-        fill(0);
-        rect(0, 0, 112, 22);
-        fill(255);
-        textSize(12);
-        textAlign(LEFT, BASELINE);
-        text('God Mode Active', 5, 15);
-    }
-
-    // Show if towers are disabled
-    if (stopFiring) {
-        noStroke();
-        fill(0);
-        rect(width - 70, 0, 70, 22);
-        fill(255);
-        textSize(12);
-        textAlign(LEFT, BASELINE);
-        text('Firing off', width - 65, 15);
-    }
-}
-
-// Spawn and exit tiles with an inner ring so they read at any size
-function drawMarker(x, y, color, isExit = false) {
-    stroke(255);
-    strokeWeight(1);
-    fill(color);
-    rect(x * ts, y * ts, ts, ts);
-    if (ts < 10) return;
-    noFill();
-    stroke(9, 9, 11, 200);
-    strokeWeight(Math.max(1.5, ts / 12));
-    const c = center(x, y);
-    if (isExit) {
-        rect(c.x - ts * 0.22, c.y - ts * 0.22, ts * 0.44, ts * 0.44);
-    } else {
-        ellipse(c.x, c.y, ts * 0.45, ts * 0.45);
-    }
-    strokeWeight(1);
-}
-
-// Preview of the tower being placed: range, ghost, buildable tint and price
-let lastPlaceKey = '';
-function drawPlacement() {
-    const p = placementTile();
-    const key = p ? `${p.x},${p.y},${towerType}` : '';
-    if (key !== lastPlaceKey) {
-        lastPlaceKey = key;
-        updatePlaceStatus();
-    }
-    if (!p) return;
-
-    const t = createTower(p.x, p.y, tower[towerType]);
-    const c = t.pos;
-    const reason = placeReason(p.x, p.y);
-    const afford = godMode || cash >= t.cost;
-    const ok = !reason;
-    showRange(t, c.x, c.y, ok && afford);
-
-    noStroke();
-    if (ok && afford) fill(74, 222, 128, 80);
-    else fill(248, 113, 113, 110);
-    rect(p.x * ts, p.y * ts, ts, ts);
-
-    if (ok) {
-        drawingContext.save();
-        drawingContext.globalAlpha = afford ? 0.8 : 0.45;
-        t.draw();
-        drawingContext.restore();
-    } else {
-        // Red X
-        push();
-        translate(c.x, c.y);
-        rotate(PI / 4);
-        noStroke();
-        fill(207, 0, 15);
-        const edge = 0.1 * ts;
-        const len = 0.9 * ts / 2;
-        rect(-edge, len, edge * 2, -len * 2);
-        rotate(PI / 2);
-        rect(-edge, len, edge * 2, -len * 2);
-        pop();
-    }
-
-    // Tile chosen by a first tap waits for confirmation
-    if (ghost) {
-        noFill();
-        stroke(255);
-        strokeWeight(2);
-        rect(p.x * ts, p.y * ts, ts, ts);
-        strokeWeight(1);
-    }
-
-    // Price tag above the tile
-    const label = `$${t.cost}`;
-    const size = Math.max(11, Math.min(16, ts * 0.5));
-    textSize(size);
-    textAlign(CENTER, CENTER);
-    const w = textWidth(label) + 10;
-    const h = size + 6;
-    let ty = p.y * ts - h / 2 - 3;
-    if (ty - h / 2 < 0) ty = (p.y + 1) * ts + h / 2 + 3;
-    const tx = constrain(c.x, w / 2, width - w / 2);
-    noStroke();
-    fill(9, 9, 11, 230);
-    rect(tx - w / 2, ty - h / 2, w, h, 4);
-    fill(afford ? color(250, 204, 21) : color(248, 113, 113));
-    text(label, tx, ty + 1);
-}
-
-function drawFloaters() {
-    if (!floaters.length) return;
-    textAlign(CENTER, CENTER);
-    stroke(9, 9, 11);
-    floaters.forEach(f => {
-        const a = Math.min(255, f.life * 12);
-        textSize(Math.max(10, Math.min(18, ts * 0.5)) * f.size);
-        strokeWeight(3);
-        fill(f.color[0], f.color[1], f.color[2], a);
-        stroke(9, 9, 11, a);
-        text(f.text, f.x, f.y);
-    });
-    strokeWeight(1);
-}
-
 // Tile where the tower being placed would go: mouse hover or the first tap
 function placementTile() {
     if (!toPlace || typeof towerType === 'undefined') return null;
     if (ghost) return ghost;
-    if (lastPointer === 'mouse' && mouseInMap()) return gridPos(mouseX, mouseY);
+    const h = Renderer.hover;
+    if (lastPointer === 'mouse' && h) {
+        const x = Math.floor(h.x / ts);
+        const y = Math.floor(h.y / ts);
+        if (x >= 0 && y >= 0 && x < cols && y < rows) return createVector(x, y);
+    }
     return null;
 }
 
@@ -1229,27 +1028,26 @@ function tryBuild(p) {
     if (reason) {
         sfx('error');
         toast(reason, 'error');
+        FX.buzz([20, 40, 20]);
         updateInfo();
         return;
     }
     buy(createTower(p.x, p.y, tower[towerType]));
+    tipEvent('built');
 }
 
 
 // User input
 
-function onCanvasPointer(e) {
+// A tap or click on the map (w in world pixels; null for a right click)
+function onMapTap(w, e) {
     lastPointer = e.pointerType;
     // Right click cancels building and deselects
-    if (e.button === 2) {
+    if (!w || e.button === 2) {
         cancelPlace();
         return;
     }
-    if (e.button !== 0) return;
-    const r = e.target.getBoundingClientRect();
-    const x = (e.clientX - r.left) * width / r.width;
-    const y = (e.clientY - r.top) * height / r.height;
-    const p = gridPos(x, y);
+    const p = createVector(Math.floor(w.x / ts), Math.floor(w.y / ts));
     if (p.x < 0 || p.y < 0 || p.x >= cols || p.y >= rows) return;
 
     const t = getTower(p.x, p.y);
@@ -1260,6 +1058,7 @@ function onCanvasPointer(e) {
         ghost = null;
         sfx('click');
         updateInfo();
+        tipEvent('selected');
         return;
     }
 
@@ -1316,7 +1115,7 @@ function onKey(e) {
             cycleTarget();
             break;
         case 'f':
-            showFPS = !showFPS;
+            Renderer.togglePerf();
             break;
         case 'g':
             godMode = !godMode;
@@ -1333,7 +1132,7 @@ function onKey(e) {
             break;
         case 'p':
             showEffects = !showEffects;
-            if (!showEffects) systems = [];
+            FX.enabled = showEffects;
             savePrefs();
             break;
         case 'q':
@@ -1418,6 +1217,10 @@ function loadPrefs() {
     if (typeof prefs.bars === 'boolean') healthBar = prefs.bars;
     if (typeof prefs.effects === 'boolean') showEffects = prefs.effects;
     skipToNext = !!prefs.autosend;
+    if (typeof prefs.shake === 'boolean') screenShake = prefs.shake;
+    if (typeof prefs.haptics === 'boolean') haptics = prefs.haptics;
+    FX.enabled = showEffects;
+    FX.shakeOn = screenShake;
     return !!linked && mapId === linked;
 }
 
@@ -1430,7 +1233,9 @@ function savePrefs() {
         numbers: damageNumbers,
         bars: healthBar,
         effects: showEffects,
-        autosend: skipToNext
+        autosend: skipToNext,
+        shake: screenShake,
+        haptics
     });
     syncSettings();
 }

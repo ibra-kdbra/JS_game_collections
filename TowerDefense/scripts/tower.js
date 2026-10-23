@@ -56,35 +56,6 @@ class Tower {
         return this.cd === 0;
     }
 
-    draw() {
-        // Draw turret base
-        if (this.hasBase && !this.baseOnTop) this.drawBase();
-        // Draw barrel
-        if (this.hasBarrel) {
-            push();
-            translate(this.pos.x, this.pos.y);
-            rotate(this.angle);
-            this.drawBarrel();
-            pop();
-        }
-        // Draw turret base
-        if (this.hasBase && this.baseOnTop) this.drawBase();
-    }
-
-    // Draw barrel of tower (moveable part)
-    drawBarrel() {
-        stroke(this.border);
-        fill(this.secondary);
-        rect(0, -this.width * ts / 2, this.length * ts, this.width * ts);
-    }
-
-    // Draw base of tower (stationary part)
-    drawBase() {
-        stroke(this.border);
-        fill(this.color);
-        ellipse(this.pos.x, this.pos.y, this.radius * ts, this.radius * ts);
-    }
-
     // Returns damage range
     getDamage() {
         return rangeText(this.damageMin, this.damageMax);
@@ -110,9 +81,8 @@ class Tower {
         if (!this.canFire()) return;
         this.resetCooldown();
         this.attack(e);
-        // Draw line to target
-        if (!this.drawLine) return;
-        flashLine(this.pos.x, this.pos.y, e.pos.x, e.pos.y, this.color, this.weight);
+        // Shot, beam or bolt (fx.js); the look depends on the tower
+        FX.fire(this, e);
     }
 
     onCreate() {
@@ -132,13 +102,67 @@ class Tower {
 
     // Target correct enemy
     target(entities) {
-        entities = this.visible(entities);
-        if (entities.length === 0) return;
-        let t = getTaunting(entities);
-        if (t.length > 0) entities = t;
-        let e = pickTarget(entities, this.targetMode, this.pos);
+        const e = this.pickInRange(entities);
         if (typeof e === 'undefined') return;
         this.onAim(e);
+    }
+
+    // The enemy this tower would shoot: the same choice as visible(), then
+    // getTaunting() and pickTarget() (utils.js), done in one pass without
+    // building arrays, since every tower runs it every tick.
+    pickInRange(entities) {
+        const r = (this.range + 1) * ts;
+        const r2 = r * r;
+        const px = this.pos.x;
+        const py = this.pos.y;
+        let any = false;
+        let taunt = false;
+        for (let i = 0; i < entities.length; i++) {
+            const e = entities[i];
+            if ((e.pos.x - px) ** 2 + (e.pos.y - py) ** 2 < r2) {
+                any = true;
+                if (e.taunt) {
+                    taunt = true;
+                    break;
+                }
+            }
+        }
+        if (!any) return undefined;
+        const mode = this.targetMode;
+        let chosen;
+        let best = mode === 'last' ? -1 : 10000;
+        for (let i = 0; i < entities.length; i++) {
+            const e = entities[i];
+            if ((e.pos.x - px) ** 2 + (e.pos.y - py) ** 2 >= r2) continue;
+            if (taunt && !e.taunt) continue;
+            if (chosen === undefined) chosen = e;
+            if (mode === 'strong') {
+                if (e.health > chosen.health) chosen = e;
+            } else if (mode === 'close') {
+                const d = Math.hypot(e.pos.x - px, e.pos.y - py);
+                if (d < best) {
+                    best = d;
+                    chosen = e;
+                }
+            } else {
+                const gx = Math.floor(e.pos.x / ts);
+                const gy = Math.floor(e.pos.y / ts);
+                if (mode === 'last') {
+                    const d = dists[gx]?.[gy] ?? 0;
+                    if (d > best) {
+                        best = d;
+                        chosen = e;
+                    }
+                } else {
+                    const d = dists[gx][gy];
+                    if (d < best) {
+                        best = d;
+                        chosen = e;
+                    }
+                }
+            }
+        }
+        return chosen;
     }
 
     update() {

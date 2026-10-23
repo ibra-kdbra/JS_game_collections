@@ -1,8 +1,9 @@
 // Check if approximately at tile center
 const atTileCenter = (x, y, col, row) => {
-    const c = center(col, row);
+    const cx = col * ts + ts / 2;
+    const cy = row * ts + ts / 2;
     const t = ts / 24;
-    return between(x, c.x - t, c.x + t) && between(y, c.y - t, c.y + t);
+    return between(x, cx - t, cx + t) && between(y, cy - t, cy + t);
 };
 
 // Check if number falls within range (exclusive)
@@ -20,10 +21,6 @@ const copyArray = (arr) => arr.map(row => [...row]);
 
 // Convert grid coordinates to string
 const cts = (col, row) => `${col},${row}`;
-
-// Short-lived shapes (shots, blasts) queued by game logic and drawn on the next frame
-const flashLine = (x1, y1, x2, y2, color, weight) => flashes.push({ line: [x1, y1, x2, y2], color, weight });
-const flashCircle = (x, y, d, color) => flashes.push({ circle: [x, y, d], color });
 
 // Returns an array of entities with a certain name
 const getByName = (entities, names) => {
@@ -110,8 +107,6 @@ const getTaunting = (entities) => entities.filter(e => e.taunt);
 const gridPos = (x, y) => createVector(Math.floor(x / ts), Math.floor(y / ts));
 
 const insideCircle = (x, y, cx, cy, r) => (x - cx) ** 2 + (y - cy) ** 2 < r ** 2;
-
-const mouseInMap = () => between(mouseX, 0, width) && between(mouseY, 0, height);
 
 // Return orthogonal neighbors of a certain value
 const neighbors = (grid, col, row, val) => {

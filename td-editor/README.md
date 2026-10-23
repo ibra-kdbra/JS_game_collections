@@ -4,7 +4,10 @@ Map editor for the [Tower Defense](../TowerDefense/index.html) game. Paint tiles
 mouse or a finger, then press **Play this map** to open it in the game as the Custom map.
 **Export map** gives a map string you can share; **Import map** loads one.
 
-It uses p5.js and lz-string from `../TowerDefense/vendor/`.
+The map is drawn with the game's own terrain (`../TowerDefense/scripts/terrain.js`), so
+it looks the same as in the game. **Look** picks the theme saved with the map
+(Automatic chooses one from the decoration tiles). It uses p5.js and lz-string from
+`../TowerDefense/vendor/`.
 
 ### Controls
 

@@ -16,15 +16,16 @@
     <script src="scripts/audio.js" defer></script>
     <script src="scripts/enemy.js" defer></script>
     <script src="scripts/enemies.js" defer></script>
-    <script src="scripts/particle.js" defer></script>
-    <script src="scripts/particle_system.js" defer></script>
     <script src="scripts/effect.js" defer></script>
     <script src="scripts/effects.js" defer></script>
     <script src="scripts/tower.js" defer></script>
     <script src="scripts/towers.js" defer></script>
     <script src="scripts/missile.js" defer></script>
     <script src="scripts/maps.js" defer></script>
-    <script src="scripts/tiles.js" defer></script>
+    <script src="scripts/terrain.js" defer></script>
+    <script src="scripts/art.js" defer></script>
+    <script src="scripts/fx.js" defer></script>
+    <script src="scripts/render.js" defer></script>
     <script src="scripts/waves.js" defer></script>
     <script src="scripts/sketch.js" defer></script>
     <script src="scripts/hud.js" defer></script>
@@ -70,40 +71,49 @@
       </div>
     </header>
 
-    <aside id="store" aria-label="Build towers">
-      <h2>Build <small>keys 1-7</small></h2>
-      <div class="store-grid" id="store-grid"></div>
-    </aside>
-
     <div id="sketch-holder">
       <div id="banner" class="banner" aria-live="polite"></div>
       <div id="map-tip" class="map-tip"></div>
-    </div>
-
-    <section id="controls" aria-label="Wave controls">
-      <div class="wave-head">
-        <span id="wave-label">Wave 1</span>
-        <span id="wave-timer"></span>
-      </div>
-      <div id="preview" class="chips"></div>
-      <div class="ctrl-row">
-        <button type="button" id="pause" class="primary">
-          <svg aria-hidden="true"><use href="#i-play"/></svg><span>Start</span>
-        </button>
-        <div class="seg" role="group" aria-label="Game speed (T)">
-          <button type="button" data-speed="1" aria-pressed="true">1x</button>
-          <button type="button" data-speed="2" aria-pressed="false">2x</button>
-          <button type="button" data-speed="3" aria-pressed="false">3x</button>
+      <div id="coach" class="coach" role="status" hidden>
+        <p id="coach-text"></p>
+        <div class="coach-actions">
+          <button type="button" class="link" id="coach-skip">Skip tips</button>
+          <button type="button" id="coach-next" class="primary small">Got it</button>
         </div>
       </div>
-      <button type="button" id="next-wave" title="Call the next wave now for bonus gold (N)">
-        <span class="fill" id="next-fill"></span>
-        <svg aria-hidden="true"><use href="#i-next"/></svg>
-        <span id="next-label">Send next wave</span>
-      </button>
-    </section>
+    </div>
 
-    <aside id="inspector" aria-live="polite"></aside>
+    <aside id="side">
+      <section id="controls" aria-label="Wave controls">
+        <div class="wave-head">
+          <span id="wave-label">Wave 1</span>
+          <span id="wave-timer"></span>
+        </div>
+        <div id="preview" class="chips"></div>
+        <div class="ctrl-row">
+          <button type="button" id="pause" class="primary">
+            <svg aria-hidden="true"><use href="#i-play"/></svg><span>Start</span>
+          </button>
+          <div class="seg" role="group" aria-label="Game speed (T)">
+            <button type="button" data-speed="1" aria-pressed="true">1x</button>
+            <button type="button" data-speed="2" aria-pressed="false">2x</button>
+            <button type="button" data-speed="3" aria-pressed="false">3x</button>
+          </div>
+          <button type="button" id="next-wave" title="Call the next wave now for bonus gold (N)">
+            <span class="fill" id="next-fill"></span>
+            <svg aria-hidden="true"><use href="#i-next"/></svg>
+            <span id="next-label">Send next wave</span>
+          </button>
+        </div>
+      </section>
+
+      <section id="store" aria-label="Build towers">
+        <h2>Build <small class="desk-only">keys 1-7</small></h2>
+        <div class="store-grid" id="store-grid"></div>
+      </section>
+
+      <section id="inspector" aria-live="polite"></section>
+    </aside>
 
     <!-- Level select -->
     <div id="levels" class="overlay" role="dialog" aria-modal="true" aria-labelledby="levels-title" hidden>
@@ -157,11 +167,14 @@
           <label class="toggle"><span>Damage numbers</span><input type="checkbox" role="switch" id="set-numbers"><i></i></label>
           <label class="toggle"><span>Enemy health bars</span><input type="checkbox" role="switch" id="set-bars"><i></i></label>
           <label class="toggle"><span>Explosion particles</span><input type="checkbox" role="switch" id="set-effects"><i></i></label>
+          <label class="toggle"><span>Screen shake on big hits</span><input type="checkbox" role="switch" id="set-shake"><i></i></label>
+          <label class="toggle" id="haptics-row"><span>Vibration</span><input type="checkbox" role="switch" id="set-haptics"><i></i></label>
           <label class="toggle"><span>Send waves back to back</span><input type="checkbox" role="switch" id="set-autosend"><i></i></label>
         </div>
         <details class="help">
           <summary>How to play and shortcuts</summary>
-          <p>Enemies walk from the green spawn tiles to the red exit. Every one that gets through costs lives. Towers block the way, so you can build a maze; you can never wall the exit off completely.</p>
+          <p>Enemies come out of the purple portals and walk to your golden gate. Every one that gets through costs lives. The arrows on the ground show their way. On open ground towers block the way, so you can build a maze; you can never wall the gate off completely.</p>
+          <p>Pinch or use the mouse wheel to zoom, drag to look around.</p>
           <dl class="keys">
             <dt>1 - 7</dt><dd>Pick a tower to build</dd>
             <dt>Click / tap</dt><dd>Build (touch: tap to aim, then tap again or press Build)</dd>
@@ -174,7 +187,9 @@
             <dt>R</dt><dd>Restart</dd>
             <dt>V</dt><dd>Sound on or off</dd>
             <dt>M / X</dt><dd>Import / export a map string</dd>
+            <dt>F</dt><dd>Performance numbers</dd>
           </dl>
+          <button type="button" id="replay-tips" class="small">Show the first-game tips again</button>
         </details>
         <div class="menu-buttons small">
           <button type="button" id="export">Export map</button>
@@ -186,6 +201,7 @@
     <!-- Victory / defeat -->
     <div id="end" class="overlay" role="dialog" aria-modal="true" aria-labelledby="end-title" hidden>
       <div class="panel end-panel">
+        <div class="end-art"><canvas id="end-canvas" width="460" height="150" aria-hidden="true"></canvas><span class="end-badge" id="end-badge"></span></div>
         <p class="end-kicker" id="end-kicker"></p>
         <h2 id="end-title"></h2>
         <div class="stars" id="end-stars"></div>

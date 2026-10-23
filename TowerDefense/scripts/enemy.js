@@ -21,7 +21,7 @@ class Enemy {
 
     applyEffect(name, duration) {
         if (this.immune.includes(name)) return;
-        if (getByName(this.effects, name).length > 0) return;
+        for (let i = 0; i < this.effects.length; i++) if (this.effects[i].name === name) return;
         var e = createEffect(duration, effects[name]);
         e.onStart(this);
         this.effects.push(e);
@@ -120,16 +120,17 @@ class Enemy {
     }
 
     steer() {
-        var t = gridPos(this.pos.x, this.pos.y);
-        if (outsideRect(t.x, t.y, 0, 0, cols, rows)) return;
-        var dir = paths[t.x][t.y];
-        if (atTileCenter(this.pos.x, this.pos.y, t.x, t.y)) {
+        const tx = Math.floor(this.pos.x / ts);
+        const ty = Math.floor(this.pos.y / ts);
+        if (outsideRect(tx, ty, 0, 0, cols, rows)) return;
+        const dir = paths[tx][ty];
+        if (atTileCenter(this.pos.x, this.pos.y, tx, ty)) {
             if (dir === null) return;
-            var speed = this.pxSpeed();
-            if (dir === 1) this.vel = createVector(-speed, 0);
-            if (dir === 2) this.vel = createVector(0, -speed);
-            if (dir === 3) this.vel = createVector(speed, 0);
-            if (dir === 4) this.vel = createVector(0, speed);
+            const speed = this.pxSpeed();
+            if (dir === 1) this.vel.set(-speed, 0);
+            if (dir === 2) this.vel.set(0, -speed);
+            if (dir === 3) this.vel.set(speed, 0);
+            if (dir === 4) this.vel.set(0, speed);
         }
     }
 
@@ -145,13 +146,13 @@ class Enemy {
 
         // Stop exactly on the tile center instead of stepping past it, so
         // steering never misses a turn whatever the tile size or speed.
-        const t = gridPos(this.pos.x, this.pos.y);
-        const c = center(t.x, t.y);
-        const dx = c.x - this.pos.x;
-        const dy = c.y - this.pos.y;
+        const cx = Math.floor(this.pos.x / ts) * ts + ts / 2;
+        const cy = Math.floor(this.pos.y / ts) * ts + ts / 2;
+        const dx = cx - this.pos.x;
+        const dy = cy - this.pos.y;
         const ahead = dx * this.vel.x + dy * this.vel.y > 0;
         if (ahead && dx * dx + dy * dy <= this.vel.magSq()) {
-            this.pos.set(c.x, c.y);
+            this.pos.set(cx, cy);
         } else {
             this.pos.add(this.vel);
         }

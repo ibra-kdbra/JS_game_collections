@@ -22,19 +22,28 @@ let autogen = true;     // automatically generate display layer
 let deco = 'empty';     // decoration to draw
 let dispMode = false;   // whether or not to show display tiles
 let tile = 'empty';     // tile to draw
+let theme = 'auto';     // terrain look saved with the map ('auto' picks one from the tiles)
+
+let terrainCanvas = null;   // map picture from ../TowerDefense/scripts/terrain.js
+let terrainKey = '';
+let terrainAt = 0;
 
 
 // Misc functions
 
-// Draw an arrow
+// Draw an arrow (white with a dark edge so it reads on any terrain)
 const arrow = () => {
-    stroke(0);
-    const length = 0.7 * ts;
+    const length = 0.6 * ts;
     const back = 0.1 * ts;
-    const width = 0.5 * ts;
-    line(-length / 2, 0, length / 2, 0);
-    line(-length / 2, 0, -back, -width / 2);
-    line(-length / 2, 0, -back, width / 2);
+    const width = 0.42 * ts;
+    [[9, Math.max(3, ts / 7)], [255, Math.max(1.5, ts / 14)]].forEach(([c, w]) => {
+        stroke(c);
+        strokeWeight(w);
+        line(-length / 2, 0, length / 2, 0);
+        line(-length / 2, 0, -back, -width / 2);
+        line(-length / 2, 0, -back, width / 2);
+    });
+    strokeWeight(1);
 };
 
 // Return map string, or null (with a message) if the map is not playable yet
@@ -66,6 +75,7 @@ const exportMap = () => {
         cols,
         rows
     };
+    if (theme !== 'auto') mapData.theme = theme;
 
     return LZString.compressToBase64(JSON.stringify(mapData));
 };
@@ -117,6 +127,8 @@ const importMap = (str) => {
         // Misc
         cols = m.cols;
         rows = m.rows;
+        theme = m.theme && Terrain.THEMES[m.theme] ? m.theme : 'auto';
+        document.getElementById('theme').value = theme;
 
         resizeFit();
         toast('Map imported', 'ok');
@@ -429,49 +441,80 @@ function setup() {
     new ResizeObserver(() => resizeFit()).observe(div);
 }
 
-function draw() {
-    background(dispMode ? bg : 255);
+// The map in the shape the terrain renderer expects
+function mapView() {
+    return {
+        cols, rows, grid, display,
+        spawnpoints: spawnpoints.map(s => [s.x, s.y]),
+        exit: exit ? [exit.x, exit.y] : null,
+        theme: theme === 'auto' ? undefined : theme
+    };
+}
 
-    // Draw basic tiles
-    for (let x = 0; x < cols; x++) {
-        for (let y = 0; y < rows; y++) {
-            if (dispMode) {
+function draw() {
+    // Redraw the terrain when the tiles change (at most about ten times a second while painting)
+    const now = performance.now();
+    const key = `${cols}x${rows}|${ts}|${theme}|${grid.map(c => c.join('')).join('/')}|${display.map(c => c.join(',')).join('/')}|` +
+        `${spawnpoints.map(s => s.x + ',' + s.y).join(';')}|${exit ? exit.x + ',' + exit.y : ''}`;
+    if (!terrainCanvas || key !== terrainKey && now - terrainAt > 90) {
+        terrainKey = key;
+        terrainAt = now;
+        const view = mapView();
+        terrainCanvas = Terrain.render({
+            m: view, px: ts * pixelDensity(), theme: Terrain.themeFor(view, null), canvas: terrainCanvas || undefined
+        });
+    }
+    background(9);
+    const g = drawingContext;
+    g.drawImage(terrainCanvas, 0, 0, width, height);
+
+    if (dispMode) {
+        // Colour decoration tiles show through so they stay editable
+        noStroke();
+        for (let x = 0; x < cols; x++) {
+            for (let y = 0; y < rows; y++) {
                 const t = tiles[display[x][y]];
-                if (typeof t === 'function') {
-                    t(x, y, displayDir[x][y]);
-                } else {
-                    stroke(border, borderAlpha);
-                    t ? fill(t) : noFill();
-                    rect(x * ts, y * ts, ts, ts);
-                }
-            } else {
-                stroke(0, 63);
-                const t = grid[x][y];
-                if (t === 0) {
-                    noFill();
-                } else {
-                    fill([[108, 122, 137], [191, 85, 236], [25, 181, 254], [233, 212, 96]][t - 1]);
-                }
+                if (!Array.isArray(t)) continue;
+                fill(t[0], t[1], t[2], 90);
                 rect(x * ts, y * ts, ts, ts);
+            }
+        }
+    } else {
+        // Enemy-only tiles get a light tint so they differ from path tiles
+        noStroke();
+        fill(250, 204, 21, 40);
+        for (let x = 0; x < cols; x++) {
+            for (let y = 0; y < rows; y++) {
+                if (grid[x][y] === 4) rect(x * ts, y * ts, ts, ts);
             }
         }
     }
 
-    // Draw spawnpoints
+    // Portals and the gate
     spawnpoints.forEach(s => {
-        stroke(dispMode ? 255 : 0);
-        fill(0, 230, 64);
-        rect(s.x * ts, s.y * ts, ts, ts);
+        const c = center(s.x, s.y);
+        g.fillStyle = '#3b1d7a';
+        g.beginPath();
+        g.arc(c.x, c.y, ts * 0.4, 0, Math.PI * 2);
+        g.fill();
+        g.strokeStyle = '#c38bff';
+        g.lineWidth = Math.max(1.5, ts * 0.08);
+        for (let i = 0; i < 3; i++) {
+            g.beginPath();
+            g.arc(c.x, c.y, ts * 0.3, i * 2.1 + frameCount * 0.03, i * 2.1 + 1.4 + frameCount * 0.03);
+            g.stroke();
+        }
     });
-
-    // Draw exit
     if (exit) {
-        stroke(dispMode ? 255 : 0);
-        fill(207, 0, 15);
-        rect(exit.x * ts, exit.y * ts, ts, ts);
+        const c = center(exit.x, exit.y);
+        g.save();
+        g.translate(c.x, c.y);
+        g.scale(ts, ts);
+        Art.drawGate(g);
+        g.restore();
     }
 
-    // Draw paths
+    // Path arrows
     if (!dispMode) {
         for (let x = 0; x < cols; x++) {
             for (let y = 0; y < rows; y++) {
@@ -512,6 +555,10 @@ document.addEventListener('keydown', e => {
     if (e.target.closest && e.target.closest('input, textarea, select')) return;
     if (e.key === ' ') e.preventDefault();
     onKey(e.keyCode, e.shiftKey);
+});
+
+document.getElementById('theme').addEventListener('change', e => {
+    theme = e.target.value;
 });
 
 document.querySelectorAll('[data-tile]').forEach(b => {
