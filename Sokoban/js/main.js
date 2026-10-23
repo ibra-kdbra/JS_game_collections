@@ -21,6 +21,7 @@ const touch = createTouchControls({
     { label: 'Restart', key: 'r', small: true, repeatMs: 0 },
   ],
   repeatMs: 150,
+  repeatDelayMs: 300, // a quick tap is one step; holding walks after 0.3 s
 });
 
 const store = createStore(SLUG);
