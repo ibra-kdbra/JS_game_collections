@@ -683,3 +683,136 @@ span.record-display:hover:not(.highlighted) {
     order: -1;
   }
 }
+
+/* ---------- Phones (game page only) ----------
+   The board is capped at the height left below the controls (--board-max,
+   measured in js/index.js), so the whole board shows without scrolling. */
+.play-page {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.play-page .game-container {
+  width: min(100%, 500px, var(--board-max, 500px));
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 600px) {
+  .play-page {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .play-page .heading {
+    flex-wrap: nowrap;
+  }
+
+  .play-page h1.title {
+    font-size: clamp(1.75rem, 9vw, 3.5rem);
+  }
+
+  .play-page .score-container,
+  .play-page .best-container {
+    min-width: 3.75rem;
+    height: 50px;
+    padding: 0 8px 5px;
+  }
+
+  .play-page .segmented label {
+    min-height: 44px;
+    padding: 0 10px;
+  }
+
+  .play-page .actions {
+    margin-top: 8px;
+  }
+
+  .play-page .status {
+    margin-top: 4px;
+  }
+
+  .play-page .game-container {
+    margin-top: 6px;
+  }
+}
+
+/* Short portrait screens: the intro line makes way for the board. */
+@media (max-width: 600px) and (max-height: 760px) {
+  .play-page .game-intro {
+    display: none;
+  }
+
+  .play-page .heading {
+    margin-bottom: 10px;
+  }
+}
+
+@media (max-width: 360px) {
+  .play-page .segmented label {
+    padding: 0 8px;
+    font-size: 14px;
+  }
+
+  .play-page .restart-button,
+  .play-page .action-button {
+    padding: 0 10px;
+  }
+}
+
+/* Landscape phones: controls on the left, the board on the right at full height. */
+@media (orientation: landscape) and (max-height: 560px) {
+  .play-page {
+    padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  }
+
+  .play-page .container {
+    width: min(100%, 62rem);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 20px;
+    align-items: start;
+  }
+
+  .play-page .container > * {
+    grid-column: 1;
+  }
+
+  .play-page .game-container {
+    grid-column: 2;
+    grid-row: 1 / span 7;
+    width: min(500px, var(--board-max, 300px), 58vw);
+    margin: 0;
+  }
+
+  .play-page h1.title {
+    font-size: clamp(1.5rem, 4.5vw, 3rem);
+    white-space: nowrap;
+  }
+
+  .play-page .game-intro {
+    margin: 8px 0;
+  }
+
+  .play-page .actions {
+    flex-wrap: wrap;
+  }
+
+  .play-page .heading {
+    flex-wrap: wrap;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 420px) {
+  .play-page .game-intro {
+    display: none;
+  }
+
+  .play-page .heading {
+    margin-bottom: 8px;
+  }
+
+  .play-page .segmented label {
+    min-height: 44px;
+  }
+}
