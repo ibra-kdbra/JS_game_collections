@@ -243,11 +243,26 @@ function hero(w, h, x, y, angle, type, scale) {
     this.particles=[];
     this.hp=2;
     this.active=true;
+    // Movement state starts fresh, so a level plays the same however you got there.
     respawnTime=0;
+    jumping=false;
     jumpTime=0;
+    jumpH=0;
     speed=0;
+    airTime=0;
+    idle=0;
+    runtime=0;
+    coyote=maxCoyote;
+    wallDelay=0;
+    rewindDelay=maxDelay;
+    showDeaths=0;
+    blockRewind=false;
+    offScreen=false;
+    lastDir=RIGHT;
     checkPos=null;
     this.e.sy=0;
+    this.e.angle=0;
+    this.e.flip=false;
     this.e.x=lvl.startPos[0];
     this.e.y=lvl.startPos[1];
     this.e.updateHitbox(); // Collisions use the hitbox, which otherwise lags a step behind.
@@ -277,15 +292,22 @@ function hero(w, h, x, y, angle, type, scale) {
     // Set Hero Current Tile
     const heroRow = Math.floor((this.e.y - this.e.mhHScaled) / scaled);
     const heroCol = Math.floor((this.e.x - this.e.mhWScaled) / scaled);
-    const heroTileIndex = heroCol + (cart.level.cols*heroRow);
+    const cols = cart.level.cols;
+    const heroTileIndex = heroCol + (cols*heroRow);
+    // Tiles are stored row by row, so a column past either edge would wrap
+    // into the neighbouring row (e.g. a portal on the far side); treat it as empty.
+    const tileAt = (index, col) => (col >= 0 && col < cols ? cart.level.tiles[index] : null);
     if(curTile != null) this.prevTile = curTile;
-    curTile = cart.level.tiles[heroTileIndex];
+    curTile = tileAt(heroTileIndex, heroCol);
 
     if(this.e.x != prevPos.x || this.e.y != prevPos.y){
       this.e.colArr = [];
 
-      // Add surrounding tiles
-      cart.surTiles.forEach(e => this.e.colArr.push(cart.level.tiles[heroTileIndex+e]));
+      // Add surrounding tiles (surTiles offsets are left/right/diagonal neighbours)
+      cart.surTiles.forEach(e => {
+        const dx = ((e % cols) + cols + 1) % cols - 1;
+        this.e.colArr.push(tileAt(heroTileIndex + e, heroCol + dx));
+      });
 
       // add an entity for each dead body
       this.hereos.forEach(e => addBody(e, this.e.colArr));
