@@ -1,161 +1,43 @@
-// The 3D presentation: island, sea, characters, effects and camera.
+// The 3D presentation: island, sea, sky, characters, effects and camera.
 // It only draws; js/game.js owns the rules state and tells it what to animate.
+//
+// Performance notes (see README, "Performance"):
+//  * the island is one merged mesh plus three instanced meshes per level, and
+//    each character is one skinned mesh, so a level costs a few dozen draw calls;
+//  * nothing in frame() allocates: tweens, particles, camera and idle life all
+//    reuse objects;
+//  * quality adapts to the frame rate (pixel ratio, shadow map, grass), and
+//    everything a level creates is disposed when the next one is built.
+import './color.js';
 import * as THREE from 'three';
-import { SEA, WALL, DELTA, tileAt, wizardAt } from './rules.js';
-import { createWarrior, createEnemy, createWizard, createRockGeometries, mat } from './models.js';
+import { DELTA, wizardAt } from './rules.js';
+import { Actor, ENEMY_KINDS, loadActors } from './actors.js';
+import { buildIsland, WATER_Y } from './island.js';
+import { createGroundAtlas, dotTexture, runeTexture } from './textures.js';
+import { createSky, createWater, shoreMask, PALETTE, SUN_DIR } from './environment.js';
+import { PerfOverlay, Quality } from './perf.js';
 
 const TAU = Math.PI * 2;
 const ease = {
-    linear: (t) => t,
     inQuad: (t) => t * t,
     outQuad: (t) => 1 - (1 - t) * (1 - t),
     outCubic: (t) => 1 - (1 - t) ** 3,
     inOutCubic: (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2),
     outBack: (t) => 1 + 2.70158 * (t - 1) ** 3 + 1.70158 * (t - 1) ** 2,
 };
-const lerp = (a, b, t) => a + (b - a) * t;
 const ANGLE = { up: Math.PI, down: 0, left: -Math.PI / 2, right: Math.PI / 2 };
+const angleTo = (from, to) => Math.atan2(Math.sin(to - from), Math.cos(to - from));
+// Is a character over the island (not falling into the sea)?
+const p0 = (a) => a.root.position.y > -0.3;
 
-// ---------------------------------------------------------------- water --
-const WATER_VERT = /* glsl */ `
-uniform float uTime;
-varying vec3 vWorld;
-#include <fog_pars_vertex>
-float wave(vec2 p, float t) {
-    return sin(p.x * 1.1 + t * 1.1) * 0.045 + sin(p.y * 1.5 - t * 1.4) * 0.035 + sin((p.x + p.y) * 0.6 + t * 0.7) * 0.05;
-}
-void main() {
-    vec4 world = modelMatrix * vec4(position, 1.0);
-    world.y += wave(world.xz, uTime);
-    vWorld = world.xyz;
-    vec4 mvPosition = viewMatrix * world;
-    gl_Position = projectionMatrix * mvPosition;
-    #include <fog_vertex>
-}`;
-
-const WATER_FRAG = /* glsl */ `
-uniform float uTime;
-uniform sampler2D uMask;
-uniform vec4 uRect;
-uniform vec3 uDeep;
-uniform vec3 uShallow;
-uniform vec3 uFoam;
-uniform vec3 uSun;
-varying vec3 vWorld;
-#include <fog_pars_fragment>
-void main() {
-    float t = uTime;
-    vec2 p = vWorld.xz;
-    // Analytic slope of the vertex waves plus finer ripples, for lighting.
-    float dx = cos(p.x * 1.1 + t * 1.1) * 0.05 + cos((p.x + p.y) * 0.6 + t * 0.7) * 0.03
-             + cos(p.x * 5.3 + p.y * 2.1 + t * 2.3) * 0.05;
-    float dz = -sin(p.y * 1.5 - t * 1.4) * 0.0 + cos(p.y * 1.5 - t * 1.4) * 0.052 + cos((p.x + p.y) * 0.6 + t * 0.7) * 0.03
-             + cos(p.y * 4.7 - p.x * 1.7 - t * 1.9) * 0.05;
-    vec3 n = normalize(vec3(-dx, 1.0, -dz));
-    vec2 uv = (p - uRect.xy) / uRect.zw;
-    float land = texture2D(uMask, uv).r;
-    vec3 col = mix(uDeep, uShallow, smoothstep(0.02, 0.75, land));
-    // Foam hugging the shore, breathing with the waves.
-    float edge = land + sin(t * 1.8 + (p.x * 2.0 + p.y * 1.3)) * 0.05;
-    float foam = smoothstep(0.5, 0.62, edge) * 0.55;
-    foam += smoothstep(0.28, 0.31, edge) * (1.0 - smoothstep(0.31, 0.36, edge)) * 0.45;
-    col = mix(col, uFoam, clamp(foam, 0.0, 1.0));
-    vec3 v = normalize(cameraPosition - vWorld);
-    vec3 h = normalize(v + uSun);
-    float spec = pow(max(dot(n, h), 0.0), 90.0) * 0.9;
-    float fres = pow(1.0 - max(dot(n, v), 0.0), 4.0);
-    col += spec * vec3(1.0, 0.92, 0.75) + fres * vec3(0.25, 0.35, 0.45);
-    gl_FragColor = vec4(col, 1.0);
-    #include <fog_fragment>
-}`;
-
-function createWater() {
-    const uniforms = THREE.UniformsUtils.merge([
-        THREE.UniformsLib.fog,
-        {
-            uTime: { value: 0 },
-            uMask: { value: null },
-            uRect: { value: new THREE.Vector4(0, 0, 1, 1) },
-            uDeep: { value: new THREE.Color(0x0b3b5c) },
-            uShallow: { value: new THREE.Color(0x1fa6b8) },
-            uFoam: { value: new THREE.Color(0xf1fbff) },
-            uSun: { value: new THREE.Vector3(0.4, 0.8, 0.45).normalize() },
-        },
-    ]);
-    const material = new THREE.ShaderMaterial({ uniforms, vertexShader: WATER_VERT, fragmentShader: WATER_FRAG, fog: true });
-    const geo = new THREE.PlaneGeometry(70, 70, 70, 70);
-    geo.rotateX(-Math.PI / 2);
-    const water = new THREE.Mesh(geo, material);
-    water.position.y = -0.32;
-    water.receiveShadow = false;
-    return water;
-}
-
-/** Blurred land mask so the water knows where the shore is. */
-function shoreMask(level, pad) {
-    const res = 8;
-    const w = (level.width + pad * 2) * res;
-    const h = (level.height + pad * 2) * res;
-    let a = new Float32Array(w * h);
-    for (let z = 0; z < level.height; z++) {
-        for (let x = 0; x < level.width; x++) {
-            if (tileAt(level, x, z) === SEA) continue;
-            for (let j = 0; j < res; j++) {
-                for (let i = 0; i < res; i++) a[((z + pad) * res + j) * w + (x + pad) * res + i] = 1;
-            }
-        }
-    }
-    // Three box-blur passes approximate a gaussian falloff around the island.
-    const r = 5;
-    let b = new Float32Array(w * h);
-    for (let pass = 0; pass < 3; pass++) {
-        for (let y = 0; y < h; y++) {
-            let acc = 0;
-            for (let x = -r; x <= r; x++) acc += a[y * w + Math.min(w - 1, Math.max(0, x))];
-            for (let x = 0; x < w; x++) {
-                b[y * w + x] = acc / (2 * r + 1);
-                acc += a[y * w + Math.min(w - 1, x + r + 1)] - a[y * w + Math.max(0, x - r)];
-            }
-        }
-        for (let x = 0; x < w; x++) {
-            let acc = 0;
-            for (let y = -r; y <= r; y++) acc += b[Math.min(h - 1, Math.max(0, y)) * w + x];
-            for (let y = 0; y < h; y++) {
-                a[y * w + x] = acc / (2 * r + 1);
-                acc += b[Math.min(h - 1, y + r + 1) * w + x] - b[Math.max(0, y - r) * w + x];
-            }
-        }
-    }
-    const data = new Uint8Array(w * h * 4);
-    for (let i = 0; i < w * h; i++) {
-        const v = Math.min(255, Math.round(Math.min(1, a[i] * 1.6) * 255));
-        data[i * 4] = data[i * 4 + 1] = data[i * 4 + 2] = v;
-        data[i * 4 + 3] = 255;
-    }
-    const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat);
-    tex.magFilter = THREE.LinearFilter;
-    tex.minFilter = THREE.LinearFilter;
-    tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
-    tex.needsUpdate = true;
-    return tex;
-}
+// Scratch objects, so animation code never allocates per frame.
+const _v = new THREE.Vector3();
+const _v2 = new THREE.Vector3();
+const _c = new THREE.Color();
 
 // ------------------------------------------------------------ particles --
-function dotTexture() {
-    const c = document.createElement('canvas');
-    c.width = c.height = 64;
-    const g = c.getContext('2d');
-    const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-    grd.addColorStop(0, 'rgba(255,255,255,1)');
-    grd.addColorStop(0.4, 'rgba(255,255,255,0.85)');
-    grd.addColorStop(1, 'rgba(255,255,255,0)');
-    g.fillStyle = grd;
-    g.fillRect(0, 0, 64, 64);
-    return new THREE.CanvasTexture(c);
-}
-
 class Particles {
-    constructor(scene, max = 360) {
+    constructor(scene, max = 400) {
         this.max = max;
         this.pos = new Float32Array(max * 3);
         this.col = new Float32Array(max * 3);
@@ -165,9 +47,10 @@ class Particles {
         this.grav = new Float32Array(max);
         this.base = new Float32Array(max * 3);
         this.next = 0;
+        this.live = 0;
         const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
-        geo.setAttribute('color', new THREE.BufferAttribute(this.col, 3));
+        geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
+        geo.setAttribute('color', new THREE.BufferAttribute(this.col, 3).setUsage(THREE.DynamicDrawUsage));
         this.points = new THREE.Points(
             geo,
             new THREE.PointsMaterial({
@@ -185,7 +68,6 @@ class Particles {
     }
 
     burst(at, { count = 20, colors = [0xffffff], speed = 2, up = 1.5, gravity = 6, life = 0.8, spread = 0.15 } = {}) {
-        const c = new THREE.Color();
         for (let n = 0; n < count; n++) {
             const i = this.next;
             this.next = (this.next + 1) % this.max;
@@ -199,14 +81,17 @@ class Particles {
             this.vel[i * 3 + 2] = Math.sin(a) * s;
             this.life[i] = this.maxLife[i] = life * (0.6 + Math.random() * 0.6);
             this.grav[i] = gravity;
-            c.set(colors[n % colors.length]);
-            this.base[i * 3] = c.r;
-            this.base[i * 3 + 1] = c.g;
-            this.base[i * 3 + 2] = c.b;
+            _c.set(colors[n % colors.length]);
+            this.base[i * 3] = _c.r;
+            this.base[i * 3 + 1] = _c.g;
+            this.base[i * 3 + 2] = _c.b;
         }
+        this.live = this.max;
     }
 
     update(dt) {
+        if (!this.live) return;
+        let alive = 0;
         for (let i = 0; i < this.max; i++) {
             if (this.life[i] <= 0) continue;
             this.life[i] -= dt;
@@ -215,6 +100,7 @@ class Particles {
                 this.col[i * 3] = this.col[i * 3 + 1] = this.col[i * 3 + 2] = 0;
                 continue;
             }
+            alive++;
             this.vel[i * 3 + 1] -= this.grav[i] * dt;
             this.pos[i * 3] += this.vel[i * 3] * dt;
             this.pos[i * 3 + 1] += this.vel[i * 3 + 1] * dt;
@@ -224,6 +110,7 @@ class Particles {
             this.col[i * 3 + 1] = this.base[i * 3 + 1] * k;
             this.col[i * 3 + 2] = this.base[i * 3 + 2] * k;
         }
+        this.live = alive;
         this.points.geometry.attributes.position.needsUpdate = true;
         this.points.geometry.attributes.color.needsUpdate = true;
     }
@@ -231,44 +118,47 @@ class Particles {
 
 // ----------------------------------------------------------------- world --
 export class World {
-    constructor(container, { onFrame } = {}) {
+    constructor(container) {
         this.container = container;
-        this.onFrame = onFrame;
         const coarse = matchMedia('(pointer: coarse)').matches;
+        this.quality = new Quality({ coarse, onChange: (s) => this.applyQuality(s) });
         this.renderer = new THREE.WebGLRenderer({ antialias: !coarse || devicePixelRatio < 2, powerPreference: 'high-performance' });
-        this.renderer.setPixelRatio(Math.min(devicePixelRatio, coarse ? 1.5 : 2));
+        this.renderer.outputEncoding = THREE.sRGBEncoding;
         this.renderer.shadowMap.enabled = true;
+        // Count the shadow pass too: reset the stats once per frame ourselves.
+        this.renderer.info.autoReset = false;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         container.appendChild(this.renderer.domElement);
 
         this.scene = new THREE.Scene();
-        const fog = 0x0a1620;
-        this.scene.background = new THREE.Color(fog);
-        this.scene.fog = new THREE.Fog(fog, 14, 34);
-        this.camera = new THREE.PerspectiveCamera(38, 1, 0.1, 120);
+        this.scene.background = PALETTE.horizon.clone();
+        this.scene.fog = new THREE.Fog(PALETTE.horizon.clone(), 14, 34);
+        this.camera = new THREE.PerspectiveCamera(38, 1, 0.1, 150);
 
-        this.scene.add(new THREE.HemisphereLight(0xcfe8ff, 0x3b2f1e, 0.6));
-        this.sun = new THREE.DirectionalLight(0xfff1d6, 0.9);
+        this.hemi = new THREE.HemisphereLight(0xdcefff, 0x5b4a32, 0.7);
+        this.scene.add(this.hemi);
+        this.sun = new THREE.DirectionalLight(0xfff0d8, 1.35);
         this.sun.castShadow = true;
-        this.sun.shadow.mapSize.set(coarse ? 1024 : 2048, coarse ? 1024 : 2048);
-        this.sun.shadow.bias = -0.0008;
-        this.sun.shadow.normalBias = 0.02;
+        this.sun.shadow.bias = -0.0006;
+        this.sun.shadow.normalBias = 0.025;
+        this.sun.shadow.radius = 3;
         this.scene.add(this.sun, this.sun.target);
-        const rim = new THREE.DirectionalLight(0x7dd3fc, 0.35);
-        rim.position.set(-6, 5, -8);
+        const rim = new THREE.DirectionalLight(0x9fd8ff, 0.45);
+        rim.position.set(-6, 4, -8);
         this.scene.add(rim);
 
+        this.sky = createSky();
+        this.scene.add(this.sky);
         this.water = createWater();
+        this.water.position.y = WATER_Y;
         this.scene.add(this.water);
         this.particles = new Particles(this.scene);
-        this.rockGeos = createRockGeometries();
 
-        this.board = new THREE.Group();
-        this.scene.add(this.board);
-        this.hero = createWarrior();
-        this.scene.add(this.hero);
-        this.wizard = createWizard();
-        this.scene.add(this.wizard);
+        this.groundMaterial = new THREE.MeshLambertMaterial({ map: createGroundAtlas(), vertexColors: true });
+        this.blobs = this.createBlobs();
+        this.windUniforms = { uTime: { value: 0 } };
+        this.runeTex = runeTexture();
+        this.hintGeo = new THREE.PlaneGeometry(0.9, 0.9).rotateX(-Math.PI / 2);
         this.fx = new THREE.Group();
         this.scene.add(this.fx);
 
@@ -277,20 +167,115 @@ export class World {
         this.timeScale = Math.max(0.25, Math.min(8, Number(new URLSearchParams(location.search).get('speed')) || 1));
         this.time = 0;
         this.view = { azimuth: 0, polar: 0.92, zoom: 1, targetAz: 0, targetPolar: 0.92, targetZoom: 1 };
+        this.fitted = { az: NaN, polar: NaN };
         this.insets = { top: 0, bottom: 0 };
         this.enemies = [];
+        this.pool = new Map(); // enemy actors kept for reuse between levels
         this.highlights = [];
         this.heat = null;
+        this.island = null;
+
+        this.perf = PerfOverlay.enabled() ? new PerfOverlay(this.renderer, this.quality) : null;
+        this.applyQuality(this.quality.settings);
+
+        // Characters load lazily; the game waits on `ready` with a loading screen.
+        this.ready = loadActors((p) => this.onProgress?.(p)).then((gltf) => {
+            this.gltf = gltf;
+            this.hero = new Actor('warrior');
+            this.wizard = new Actor('wizard');
+            this.scene.add(this.hero.root, this.wizard.root);
+            this.hero.play('idle', { fade: 0 });
+            this.wizard.play('idle', { fade: 0 });
+            this.setCharacterShadows();
+            return gltf;
+        });
 
         this.clock = new THREE.Clock();
+        this.lastFrame = performance.now();
         this.renderer.setAnimationLoop(() => this.frame());
         new ResizeObserver(() => this.resize()).observe(container);
         this.resize();
     }
 
+    applyQuality(s) {
+        this.renderer.setPixelRatio(Math.min(devicePixelRatio, s.dpr));
+        const type = s.soft ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+        const recompile = this.sun.castShadow !== s.shadows || this.renderer.shadowMap.type !== type;
+        this.sun.castShadow = s.shadows;
+        this.renderer.shadowMap.type = type;
+        if (this.sun.shadow.mapSize.x !== s.shadow) {
+            this.sun.shadow.mapSize.set(s.shadow, s.shadow);
+            this.sun.shadow.map?.dispose();
+            this.sun.shadow.map = null;
+        }
+        this.dynamicShadows = s.dynamicShadows;
+        this.renderer.shadowMap.autoUpdate = s.dynamicShadows;
+        this.renderer.shadowMap.needsUpdate = true;
+        this.setCharacterShadows();
+        this.blobs.material.opacity = s.dynamicShadows ? 0.3 : 0.5;
+        this.water.material.uniforms.uDetail.value = s.waterDetail;
+        if (this.water.material.defines.WATER_DETAIL !== s.water) {
+            this.water.material.defines.WATER_DETAIL = s.water;
+            this.water.material.needsUpdate = true;
+        }
+        if (recompile) this.scene.traverse((o) => o.material && (o.material.needsUpdate = true));
+        this.resize();
+    }
+
+    /** Characters cast real shadows only when the shadow map is redrawn every frame. */
+    setCharacterShadows() {
+        const on = !!this.dynamicShadows;
+        const set = (a) => a?.model.traverse((o) => o.isMesh && (o.castShadow = on));
+        set(this.hero);
+        set(this.wizard);
+        for (const list of this.pool.values()) list.forEach(set);
+        this.enemies.forEach(set);
+    }
+
+    /** Soft round contact shadows under the characters: one instanced mesh. */
+    createBlobs() {
+        const c = document.createElement('canvas');
+        c.width = c.height = 64;
+        const g = c.getContext('2d');
+        const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+        grd.addColorStop(0, 'rgba(0,0,0,1)');
+        grd.addColorStop(0.5, 'rgba(0,0,0,0.6)');
+        grd.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = grd;
+        g.fillRect(0, 0, 64, 64);
+        const tex = new THREE.CanvasTexture(c);
+        const geo = new THREE.PlaneGeometry(0.8, 0.8).rotateX(-Math.PI / 2);
+        const mesh = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.5, depthWrite: false, color: 0x0b1a10 }), 12);
+        mesh.count = 0;
+        mesh.frustumCulled = false;
+        mesh.renderOrder = 1;
+        this.scene.add(mesh);
+        this._blob = new THREE.Object3D();
+        return mesh;
+    }
+
+    updateBlobs() {
+        const o = this._blob;
+        let n = 0;
+        const put = (a, s) => {
+            if (!a.root.visible) return;
+            const p = a.root.position;
+            const lift = Math.max(0, p.y);
+            o.position.set(p.x, 0.015, p.z);
+            o.scale.setScalar(s * a.root.scale.x * Math.max(0.3, 1 - lift * 0.5));
+            o.updateMatrix();
+            this.blobs.setMatrixAt(n++, o.matrix);
+        };
+        if (this.hero && p0(this.hero)) put(this.hero, 1);
+        if (this.wizard?.root.visible && p0(this.wizard)) put(this.wizard, 1.05);
+        for (const e of this.enemies) if (p0(e)) put(e, 1);
+        this.blobs.count = n;
+        this.blobs.instanceMatrix.needsUpdate = true;
+    }
+
     // ---- coordinates
-    world(x, z, y = 0) {
-        return new THREE.Vector3(x - this.cx, y, z - this.cz);
+    world(x, z, y = 0, out = new THREE.Vector3()) {
+        return out.set(x - this.cx, y, z - this.cz);
     }
 
     // ---- level build
@@ -298,133 +283,35 @@ export class World {
         this.level = level;
         this.cx = (level.width - 1) / 2;
         this.cz = (level.height - 1) / 2;
-        for (const t of this.tweens) t.cancel?.();
+        for (const t of this.tweens) t.resolve();
         this.tweens.clear();
-        this.board.traverse((o) => {
-            if (o.isMesh && o.geometry && !this.rockGeos.includes(o.geometry)) o.geometry.dispose();
-            if (o.isInstancedMesh && o.material !== mat(0xffffff)) o.material.dispose();
-        });
-        this.board.clear();
-        this.fx.clear();
-        this.highlights = [];
-        this.heat = null;
-
-        // Tiles: one instanced mesh for grass, one for stone, each a tall block
-        // reaching under the water so the island has cliffs.
-        const land = [];
-        const rock = [];
-        for (let z = 0; z < level.height; z++) {
-            for (let x = 0; x < level.width; x++) {
-                const t = tileAt(level, x, z);
-                if (t === SEA) continue;
-                (t === WALL ? rock : land).push({ x, z });
-            }
+        this.clearHighlights();
+        this.clearHeat();
+        this.island?.dispose();
+        for (const g of this.spotRings || []) {
+            g.removeFromParent();
+            g.material.dispose();
         }
-        // Each tile is a solid earth block reaching under the water (the island's
-        // cliffs) with a slightly smaller cap on top, so the grid reads clearly.
-        const colored = (g, pick) => {
-            const colors = [];
-            const n = g.attributes.normal;
-            const p = g.attributes.position;
-            for (let i = 0; i < n.count; i++) {
-                const c = pick(n.getY(i), p.getY(i));
-                colors.push(c.r, c.g, c.b);
-            }
-            g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-            return g;
-        };
-        const earthTop = new THREE.Color(0x4a3524);
-        const earth = new THREE.Color(0x8a5a35);
-        const earthDeep = new THREE.Color(0x3d2a1c);
-        const baseGeo = colored(new THREE.BoxGeometry(1, 1.5, 1).translate(0, -0.83, 0), (ny, y) => (ny > 0.5 ? earthTop : y > -0.3 ? earth : earthDeep));
-        const capGeo = (top, side) => {
-            const a = new THREE.Color(top);
-            const b = new THREE.Color(side);
-            return colored(new THREE.BoxGeometry(0.93, 0.14, 0.93).translate(0, -0.07, 0), (ny) => (ny > 0.5 ? a : b));
-        };
-        const instanced = (list, geo, shade) => {
-            if (!list.length) return;
-            const m = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, flatShading: true }), list.length);
-            const o = new THREE.Object3D();
-            const c = new THREE.Color();
-            list.forEach(({ x, z }, i) => {
-                o.position.copy(this.world(x, z));
-                o.updateMatrix();
-                m.setMatrixAt(i, o.matrix);
-                if (shade) {
-                    const checker = (x + z) % 2 ? 1.0 : 0.88;
-                    const jitter = 0.95 + ((x * 7 + z * 13) % 5) * 0.02;
-                    c.setScalar(checker * jitter);
-                    m.setColorAt(i, c);
-                }
-            });
-            m.receiveShadow = true;
-            this.board.add(m);
-        };
-        instanced([...land, ...rock], baseGeo, false);
-        instanced(land, capGeo(0x4f9636, 0x3c7228), true);
-        instanced(rock, capGeo(0x6f7580, 0x555a63), true);
+        this.quality.pause(1.5);
 
-        // Boulders on rock tiles: one instanced mesh per boulder shape.
-        const o = new THREE.Object3D();
-        const tint = new THREE.Color();
-        this.rockGeos.forEach((geo, g) => {
-            const mine = rock.filter(({ x, z }) => (x * 3 + z * 5) % this.rockGeos.length === g);
-            if (!mine.length) return;
-            const m = new THREE.InstancedMesh(geo, mat(0xffffff), mine.length);
-            mine.forEach(({ x, z }, i) => {
-                o.position.copy(this.world(x, z));
-                o.rotation.set(0, ((x * 31 + z * 17) % 12) * 0.5, 0);
-                o.updateMatrix();
-                m.setMatrixAt(i, o.matrix);
-                m.setColorAt(i, tint.set((x + z) % 2 ? 0x7d8590 : 0x737b86));
-            });
-            m.castShadow = true;
-            m.receiveShadow = true;
-            this.board.add(m);
+        this.island = buildIsland(level, (x, z, y) => this.world(x, z, y), {
+            groundMaterial: this.groundMaterial,
+            windUniforms: this.windUniforms,
+            quality: this.quality.settings.grass,
         });
+        this.scene.add(this.island.group);
+        this.shadowY = NaN;
 
-        // Tufts of grass and the odd flower, for life (one instanced mesh).
-        const tufts = [];
-        land.forEach(({ x, z }) => {
-            const r = (x * 73 + z * 151) % 11;
-            if (r > 3) return;
-            for (let k = 0; k < 3; k++) {
-                const p = this.world(x, z, 0.06);
-                p.x += (((r + k * 5) % 7) / 7 - 0.5) * 0.7;
-                p.z += (((r * 3 + k * 2) % 7) / 7 - 0.5) * 0.7;
-                tufts.push({ p, flower: k === 2 && r === 0 });
-            }
-        });
-        if (tufts.length) {
-            const m = new THREE.InstancedMesh(new THREE.ConeGeometry(0.035, 0.12, 3), mat(0xffffff), tufts.length);
-            o.rotation.set(0, 0, 0);
-            tufts.forEach(({ p, flower }, i) => {
-                o.position.copy(p);
-                o.updateMatrix();
-                m.setMatrixAt(i, o.matrix);
-                m.setColorAt(i, tint.set(flower ? 0xfde047 : 0x3f8a25));
-            });
-            this.board.add(m);
-        }
-
-        // Wizard spots: glowing rune rings.
+        // Wizard spots: glowing rune circles.
         this.spotRings = level.wizardSpots.map((s) => {
-            const g = new THREE.Group();
-            const ring = new THREE.Mesh(
-                new THREE.RingGeometry(0.3, 0.4, 24),
-                new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }),
+            const m = new THREE.Mesh(
+                this.hintGeo,
+                new THREE.MeshBasicMaterial({ map: this.runeTex, color: 0xfacc15, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending }),
             );
-            ring.rotation.x = -Math.PI / 2;
-            const inner = new THREE.Mesh(
-                new THREE.RingGeometry(0.16, 0.2, 6),
-                new THREE.MeshBasicMaterial({ color: 0xc4b5fd, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false }),
-            );
-            inner.rotation.x = -Math.PI / 2;
-            g.add(ring, inner);
-            g.position.copy(this.world(s.x, s.z, 0.015));
-            this.board.add(g);
-            return g;
+            m.scale.setScalar(0.95);
+            this.world(s.x, s.z, 0.012, m.position);
+            this.scene.add(m);
+            return m;
         });
 
         // Water knows where the shore is.
@@ -433,22 +320,38 @@ export class World {
         this.water.material.uniforms.uMask.value = shoreMask(level, pad);
         this.water.material.uniforms.uRect.value.set(-this.cx - 0.5 - pad, -this.cz - 0.5 - pad, level.width + pad * 2, level.height + pad * 2);
 
-        // Characters.
-        for (const e of this.enemies) this.scene.remove(e);
+        // Enemies: reuse pooled actors, cycling through the three kinds.
+        for (const e of this.enemies) {
+            e.root.removeFromParent();
+            this.pool.get(e.kind).push(e);
+        }
+        const used = new Map();
         this.enemies = level.enemies.map((e, i) => {
-            const m = createEnemy(i);
-            m.position.copy(this.world(e.x, e.z));
-            m.userData.phase = i * 1.7;
-            this.scene.add(m);
-            return m;
+            const kind = ENEMY_KINDS[(i + (level.id?.length || 0)) % ENEMY_KINDS.length];
+            if (!this.pool.has(kind)) this.pool.set(kind, []);
+            const list = this.pool.get(kind);
+            const n = used.get(kind) || 0;
+            used.set(kind, n + 1);
+            let a = list.pop();
+            if (!a) {
+                a = new Actor(kind, i);
+                a.model.traverse((o) => o.isMesh && (o.castShadow = !!this.dynamicShadows));
+            }
+            a.phase = i * 1.7;
+            a.nextTaunt = 3 + Math.random() * 8;
+            a.dying = false;
+            this.scene.add(a.root);
+            a.play('idle', { fade: 0, speed: 0.9 + (i % 3) * 0.08 });
+            if (a.current) a.current.time = Math.random() * a.current.getClip().duration;
+            return a;
         });
-        this.wizard.visible = level.wizardSpots.length > 0;
+        this.wizard.root.visible = level.wizardSpots.length > 0;
 
         // Sun and shadows sized to the board.
-        const span = Math.max(level.width, level.height) / 2 + 1.5;
-        this.sun.position.set(5, 11, 7);
+        const span = Math.max(level.width, level.height) / 2 + 1.2;
+        this.sun.position.copy(SUN_DIR).multiplyScalar(14);
         this.sun.target.position.set(0, 0, 0);
-        Object.assign(this.sun.shadow.camera, { left: -span, right: span, top: span, bottom: -span, near: 1, far: 30 });
+        Object.assign(this.sun.shadow.camera, { left: -span, right: span, top: span, bottom: -span, near: 2, far: 30 });
         this.sun.shadow.camera.updateProjectionMatrix();
 
         this.view.targetAz = this.view.azimuth = 0;
@@ -462,45 +365,50 @@ export class World {
     /** Place everything to match `state` instantly. */
     sync(state, { facing } = {}) {
         const level = this.level;
-        this.hero.position.copy(this.world(state.x, state.z));
-        this.hero.visible = true;
-        this.hero.rotation.set(0, facing !== undefined ? ANGLE[facing] : this.hero.rotation.y, 0);
-        this.hero.scale.setScalar(1);
-        this.hero.userData.parts.body.rotation.set(0, 0, 0);
-        this.hero.userData.parts.body.position.set(0, 0, 0);
-        this.enemies.forEach((m, i) => {
+        const hero = this.hero;
+        this.world(state.x, state.z, 0, hero.root.position);
+        hero.root.visible = true;
+        hero.root.rotation.set(0, facing !== undefined ? ANGLE[facing] : hero.root.rotation.y, 0);
+        hero.root.scale.setScalar(1);
+        hero.body.rotation.set(0, 0, 0);
+        hero.body.position.set(0, 0, 0);
+        hero.body.scale.setScalar(1);
+        hero.play('idle', { fade: 0.1 });
+        this.enemies.forEach((a, i) => {
             const alive = (state.alive >>> i) & 1;
-            m.visible = !!alive;
-            m.position.copy(this.world(level.enemies[i].x, level.enemies[i].z));
-            m.rotation.set(0, m.rotation.y, 0);
-            m.scale.setScalar(1);
+            a.root.visible = !!alive;
+            a.dying = false;
+            this.world(level.enemies[i].x, level.enemies[i].z, 0, a.root.position);
+            a.root.rotation.x = a.root.rotation.z = 0;
+            a.root.scale.setScalar(1);
+            a.body.position.set(0, 0, 0);
+            if (alive) a.play('idle', { fade: 0.1 });
         });
         const w = wizardAt(level, state);
         if (w) {
-            this.wizard.position.copy(this.world(w.x, w.z));
-            this.wizard.scale.setScalar(1);
+            this.world(w.x, w.z, 0, this.wizard.root.position);
+            this.wizard.root.scale.setScalar(1);
         }
         this.wizIdx = state.wiz;
     }
 
     /** A little drop-in when a level appears. */
     introduce() {
-        const all = [this.hero, ...this.enemies, ...(this.wizard.visible ? [this.wizard] : [])];
-        all.forEach((m, i) => {
-            const y = m.position.y;
-            m.position.y = y + 3;
-            this.tween(0.45, (t) => (m.position.y = y + 3 * (1 - ease.outCubic(t))), { delay: 0.05 * i });
+        const all = [this.hero, ...this.enemies, ...(this.wizard.root.visible ? [this.wizard] : [])];
+        all.forEach((a, i) => {
+            const p = a.root.position;
+            p.y = 3;
+            this.tween(0.45, (t) => (p.y = 3 * (1 - ease.outCubic(t))), { delay: 0.05 * i });
         });
-        this.board.position.y = -0.6;
-        this.tween(0.5, (t) => (this.board.position.y = -0.6 * (1 - ease.outBack(t))));
+        const g = this.island.group;
+        g.position.y = -0.6;
+        this.tween(0.5, (t) => (g.position.y = -0.6 * (1 - ease.outBack(t))));
     }
 
     // ---- tweens
     tween(duration, fn, { delay = 0 } = {}) {
         return new Promise((resolve) => {
-            const tw = { start: this.time + delay, duration, fn, resolve };
-            tw.cancel = () => resolve();
-            this.tweens.add(tw);
+            this.tweens.add({ start: this.time + delay, duration, fn, resolve });
         });
     }
 
@@ -510,11 +418,11 @@ export class World {
 
     // ---- animations
     face(dir) {
-        const target = ANGLE[dir];
-        const from = this.hero.rotation.y;
-        let d = target - from;
-        d = Math.atan2(Math.sin(d), Math.cos(d));
-        return this.tween(0.08, (t) => (this.hero.rotation.y = from + d * ease.outQuad(t)));
+        const root = this.hero.root;
+        const from = root.rotation.y;
+        const d = angleTo(from, ANGLE[dir]);
+        if (Math.abs(d) < 0.01) return Promise.resolve();
+        return this.tween(0.08, (t) => (root.rotation.y = from + d * ease.outQuad(t)));
     }
 
     /**
@@ -523,21 +431,28 @@ export class World {
      */
     async slide(from, dir, result, cb = {}, speed = 1) {
         await this.face(dir);
-        const parts = this.hero.userData.parts;
-        const start = this.world(from.x, from.z);
+        const hero = this.hero;
+        const start = this.world(from.x, from.z, 0, new THREE.Vector3());
         const end = result.path[result.path.length - 1];
-        const endPos = this.world(end.x, end.z);
+        const endPos = this.world(end.x, end.z, 0, new THREE.Vector3());
         const n = result.path.length;
-        const dur = (0.1 + 0.07 * n) / speed;
+        const dur = (0.12 + 0.075 * n) / speed;
         const { dx, dz } = DELTA[dir];
+        hero.play('run', { fade: 0.08, speed: 1.25 * speed });
         let dustT = 0;
+        let swung = false;
         await this.tween(dur, (t) => {
             const k = result.event === 'fall' ? ease.inQuad(t) : ease.inOutCubic(t);
-            this.hero.position.lerpVectors(start, endPos, k);
-            parts.body.rotation.x = Math.sin(t * Math.PI) * 0.35;
-            if (t - dustT > 0.12) {
+            hero.root.position.lerpVectors(start, endPos, k);
+            hero.body.rotation.x = Math.sin(t * Math.PI) * 0.18;
+            if (result.event === 'defeat' && !swung && t > 1 - Math.min(0.5, 0.18 / dur)) {
+                swung = true;
+                hero.play('attack', { fade: 0.06, once: true, speed: 1.5 });
+                if (!hero.mixer) this.swing();
+            }
+            if (t - dustT > 0.1) {
                 dustT = t;
-                this.particles.burst(this.hero.position.clone().add(new THREE.Vector3(0, 0.05, 0)), {
+                this.particles.burst(_v.copy(hero.root.position).setY(0.05), {
                     count: 2,
                     colors: [0xd6c3a1, 0xb59f7a],
                     speed: 0.3,
@@ -547,18 +462,17 @@ export class World {
                 });
             }
         });
-        parts.body.rotation.x = 0;
+        hero.body.rotation.x = 0;
 
         if (result.event === 'defeat') {
             cb.onDefeat?.(result.enemy);
             this.defeat(result.enemy, dx, dz);
-            await this.tween(0.16, (t) => {
-                parts.swordArm.rotation.x = -Math.sin(t * Math.PI) * 1.6;
-            });
-            parts.swordArm.rotation.x = 0;
+            await this.wait(0.22 / speed);
+            hero.play('idle', { fade: 0.3 });
         } else if (result.event === 'stop') {
             cb.onStop?.();
-            this.particles.burst(endPos.clone().add(new THREE.Vector3(dx * 0.35, 0.1, dz * 0.35)), {
+            hero.play('idle', { fade: 0.15 });
+            this.particles.burst(_v.copy(endPos).add(_v2.set(dx * 0.35, 0.1, dz * 0.35)), {
                 count: 8,
                 colors: [0xd6c3a1, 0xffffff],
                 speed: 0.8,
@@ -568,52 +482,59 @@ export class World {
             });
             await this.tween(0.16, (t) => {
                 const s = Math.sin(t * Math.PI);
-                this.hero.scale.set(1 + s * 0.12, 1 - s * 0.15, 1 + s * 0.12);
+                hero.body.scale.set(1 + s * 0.1, 1 - s * 0.12, 1 + s * 0.1);
             });
-            this.hero.scale.setScalar(1);
+            hero.body.scale.setScalar(1);
         } else if (result.event === 'fall') {
             await this.fall(dx, dz, cb);
         }
     }
 
+    /** Fallback sword swing for the procedural warrior. */
+    swing() {
+        const arm = this.hero.parts?.swordArm;
+        if (!arm) return;
+        this.tween(0.16, (t) => (arm.rotation.x = -Math.sin(t * Math.PI) * 1.6)).then(() => (arm.rotation.x = 0));
+    }
+
     async fall(dx, dz, cb) {
-        const p0 = this.hero.position.clone();
-        await this.tween(0.4, (t) => {
-            this.hero.position.set(p0.x + dx * 0.6 * t, p0.y + 0.5 * Math.sin(t * Math.PI * 0.6) - 1.6 * t * t, p0.z + dz * 0.6 * t);
-            this.hero.rotation.x = t * 1.2 * (dz || 0);
-            this.hero.rotation.z = -t * 1.2 * (dx || 0);
+        const hero = this.hero;
+        const p0 = hero.root.position.clone();
+        hero.play('fall', { fade: 0.08, once: true, speed: 1.6 });
+        await this.tween(0.45, (t) => {
+            hero.root.position.set(p0.x + dx * 0.7 * t, p0.y + 0.45 * Math.sin(t * Math.PI * 0.6) - 1.4 * t * t, p0.z + dz * 0.7 * t);
         });
         cb.onFall?.();
-        const at = this.hero.position.clone();
-        at.y = -0.3;
-        this.splash(at);
-        this.hero.visible = false;
-        this.hero.rotation.x = this.hero.rotation.z = 0;
+        this.splash(_v.copy(hero.root.position).setY(WATER_Y + 0.02));
+        hero.root.visible = false;
+        // The enemies enjoy that.
+        for (const e of this.enemies) if (e.root.visible && !e.dying && e.has('cheer')) e.play('cheer', { once: true, fade: 0.2 });
         await this.wait(0.35);
     }
 
     splash(at) {
-        this.particles.burst(at, { count: 40, colors: [0xffffff, 0xbae6fd, 0x7dd3fc], speed: 1.6, up: 3.2, gravity: 9, life: 0.9, spread: 0.3 });
+        this.particles.burst(at, { count: 44, colors: [0xffffff, 0xbae6fd, 0x7dd3fc], speed: 1.6, up: 3.2, gravity: 9, life: 0.9, spread: 0.3 });
         const ring = new THREE.Mesh(
-            new THREE.RingGeometry(0.2, 0.28, 28),
+            new THREE.RingGeometry(0.2, 0.28, 28).rotateX(-Math.PI / 2),
             new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, depthWrite: false }),
         );
-        ring.rotation.x = -Math.PI / 2;
-        ring.position.copy(at).setY(-0.26);
+        ring.position.copy(at).setY(WATER_Y + 0.06);
         this.fx.add(ring);
         this.tween(0.9, (t) => {
             ring.scale.setScalar(1 + t * 4);
             ring.material.opacity = 0.8 * (1 - t);
         }).then(() => {
-            this.fx.remove(ring);
+            ring.removeFromParent();
             ring.geometry.dispose();
+            ring.material.dispose();
         });
     }
 
     defeat(i, dx, dz) {
-        const m = this.enemies[i];
-        const p0 = m.position.clone();
-        this.particles.burst(p0.clone().add(new THREE.Vector3(0, 0.45, 0)), {
+        const a = this.enemies[i];
+        const p0 = a.root.position.clone();
+        a.dying = true;
+        this.particles.burst(_v.copy(p0).setY(0.45), {
             count: 36,
             colors: [0xfacc15, 0xfff3b0, 0xf97316, 0xffffff],
             speed: 2.4,
@@ -621,44 +542,54 @@ export class World {
             gravity: 5,
             life: 0.7,
         });
-        this.tween(0.55, (t) => {
-            m.position.set(p0.x + dx * 1.2 * t, p0.y + Math.sin(t * Math.PI) * 1.1, p0.z + dz * 1.2 * t);
-            m.rotation.x = t * 5 * (dz || 1);
-            m.rotation.z = -t * 5 * dx;
-            m.scale.setScalar(Math.max(0.001, 1 - ease.inQuad(t)));
+        // Face the hit, fall over backwards while knocked a little way back,
+        // then shrink away with a puff.
+        a.root.rotation.y = Math.atan2(-dx, -dz);
+        if (a.mixer) a.play('death', { fade: 0.05, once: true, speed: 1.3 });
+        const animated = !!a.mixer;
+        this.tween(0.85, (t) => {
+            const k = ease.outCubic(Math.min(1, t * 1.6));
+            a.root.position.set(p0.x + dx * 0.55 * k, p0.y + Math.sin(Math.min(1, t * 1.6) * Math.PI) * 0.25, p0.z + dz * 0.55 * k);
+            if (!animated) a.root.rotation.x = -t * 1.5;
+            if (t > 0.6) a.root.scale.setScalar(Math.max(0.001, 1 - ease.inQuad((t - 0.6) / 0.4)));
         }).then(() => {
-            m.visible = false;
-            m.rotation.set(0, 0, 0);
+            if (!a.dying) return;
+            a.root.visible = false;
+            this.particles.burst(_v.copy(a.root.position).setY(0.2), { count: 14, colors: [0xffffff, 0xe5e7eb], speed: 0.7, up: 1, gravity: 1, life: 0.6, spread: 0.3 });
         });
     }
 
     async magic(level, from, to, speed = 1) {
+        const wiz = this.wizard;
         const a = level.wizardSpots[from];
         const b = level.wizardSpots[to];
         const pa = this.world(a.x, a.z);
         const pb = this.world(b.x, b.z);
         const sparkle = { count: 26, colors: [0xc4b5fd, 0xfacc15, 0xffffff], speed: 0.9, up: 2.2, gravity: -0.5, life: 0.8, spread: 0.4 };
-        this.particles.burst(pa.clone().add(new THREE.Vector3(0, 0.3, 0)), sparkle);
+        wiz.play('cast', { fade: 0.08, once: true, speed: 1.8 * speed });
+        await this.wait(0.16 / speed);
+        this.particles.burst(_v.copy(pa).setY(0.5), sparkle);
+        const root = wiz.root;
         await this.tween(0.2 / speed, (t) => {
-            this.wizard.scale.set(1 - t, 1 + t * 0.6, 1 - t);
-            this.wizard.rotation.y = t * 6;
+            root.scale.set(1 - t, 1 + t * 0.6, 1 - t);
+            root.rotation.y += 0.25;
         });
-        this.wizard.position.copy(pb);
+        root.position.copy(pb);
         this.wizIdx = to;
-        this.particles.burst(pb.clone().add(new THREE.Vector3(0, 0.3, 0)), sparkle);
+        this.particles.burst(_v.copy(pb).setY(0.5), sparkle);
         await this.tween(0.24 / speed, (t) => {
             const k = ease.outBack(t);
-            this.wizard.scale.set(k, 1.6 - 0.6 * k, k);
-            this.wizard.rotation.y = 6 + t * 0.28;
+            root.scale.set(Math.max(0.001, k), 1.6 - 0.6 * k, Math.max(0.001, k));
         });
-        this.wizard.scale.setScalar(1);
+        root.scale.setScalar(1);
+        wiz.play('idle', { fade: 0.3 });
     }
 
     celebrate() {
-        const p = this.hero.position.clone();
+        const p = this.hero.root.position.clone();
         for (let k = 0; k < 4; k++) {
             setTimeout(() => {
-                this.particles.burst(p.clone().add(new THREE.Vector3((Math.random() - 0.5) * 2, 0.8, (Math.random() - 0.5) * 2)), {
+                this.particles.burst(_v.set(p.x + (Math.random() - 0.5) * 2, 0.8, p.z + (Math.random() - 0.5) * 2), {
                     count: 40,
                     colors: [0xfacc15, 0xffffff, 0xfde68a, 0x38bdf8],
                     speed: 2.6,
@@ -668,37 +599,40 @@ export class World {
                 });
             }, k * 180);
         }
-        const parts = this.hero.userData.parts;
-        this.tween(0.9, (t) => {
-            this.hero.position.y = Math.abs(Math.sin(t * Math.PI * 2)) * 0.35;
-            parts.swordArm.rotation.x = -Math.min(1, t * 3) * 2.6;
+        const hero = this.hero;
+        // Turn to the camera, raise the sword and hop.
+        const face = hero.root.rotation.y;
+        const d = angleTo(face, Math.atan2(this.camera.position.x - hero.root.position.x, this.camera.position.z - hero.root.position.z));
+        hero.play('attack2', { fade: 0.1, once: true, speed: 0.9 });
+        if (!hero.mixer) this.swing();
+        if (this.wizard.root.visible) this.wizard.play('cast', { fade: 0.2, once: true });
+        this.tween(1.1, (t) => {
+            hero.root.rotation.y = face + d * ease.outCubic(Math.min(1, t * 3));
+            hero.root.position.y = Math.abs(Math.sin(t * Math.PI * 2)) * 0.3;
         }).then(() => {
-            this.hero.position.y = 0;
-            parts.swordArm.rotation.x = 0;
+            hero.root.position.y = 0;
+            hero.play('idle', { fade: 0.4 });
+            if (this.wizard.root.visible) this.wizard.play('idle', { fade: 0.4 });
         });
     }
 
     // ---- hint / AI overlays
     clearHighlights() {
         for (const h of this.highlights) {
-            this.fx.remove(h);
-            h.geometry.dispose();
+            h.removeFromParent();
+            h.material.dispose();
+            if (h.geometry !== this.hintGeo) h.geometry.dispose();
         }
-        this.highlights = [];
+        this.highlights.length = 0;
     }
 
     /** Glowing tiles along a planned slide, or on the wizard's next spot. */
     showHint(cells, { color = 0xfacc15, arrowDir = null } = {}) {
         this.clearHighlights();
         cells.forEach((c, i) => {
-            const m = new THREE.Mesh(
-                new THREE.PlaneGeometry(0.9, 0.9),
-                new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }),
-            );
-            m.rotation.x = -Math.PI / 2;
-            m.position.copy(this.world(c.x, c.z, 0.02));
+            const m = new THREE.Mesh(this.hintGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
+            this.world(c.x, c.z, 0.02, m.position);
             m.userData.phase = i * 0.5;
-            m.userData.pulse = true;
             this.fx.add(m);
             this.highlights.push(m);
         });
@@ -718,10 +652,9 @@ export class World {
             );
             arrow.rotation.x = -Math.PI / 2;
             arrow.rotation.z = { up: 0, down: Math.PI, left: Math.PI / 2, right: -Math.PI / 2 }[arrowDir];
-            const p = this.hero.position.clone();
+            const p = this.hero.root.position;
             const { dx, dz } = DELTA[arrowDir];
             arrow.position.set(p.x + dx * 0.62, 0.05, p.z + dz * 0.62);
-            arrow.userData.pulse = true;
             arrow.userData.phase = 0;
             this.fx.add(arrow);
             this.highlights.push(arrow);
@@ -730,57 +663,68 @@ export class World {
 
     /**
      * Visualise a search: tiles light up in the order the solver expanded
-     * states there, building a heat map of where it "thought".
+     * states there, building a heat map of where it "thought". One instanced
+     * mesh (additive, brightness = heat), so it costs a single draw call.
      */
     async showSearch(trace, seconds = 1.4) {
         this.clearHeat();
         const level = this.level;
-        const counts = new Float32Array(level.width * level.height);
-        const geo = new THREE.PlaneGeometry(0.94, 0.94);
-        const tiles = new Map();
-        const tileFor = (idx) => {
-            if (!tiles.has(idx)) {
-                const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
-                m.rotation.x = -Math.PI / 2;
-                m.position.copy(this.world(idx % level.width, Math.floor(idx / level.width), 0.025));
-                this.fx.add(m);
-                tiles.set(idx, m);
-            }
-            return tiles.get(idx);
-        };
-        this.heat = { tiles, geo };
+        const cells = level.width * level.height;
+        const counts = new Float32Array(cells);
+        const flash = new Float32Array(cells);
+        const mesh = new THREE.InstancedMesh(
+            this.hintGeo,
+            new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
+            cells,
+        );
+        const o = new THREE.Object3D();
+        for (let i = 0; i < cells; i++) {
+            this.world(i % level.width, Math.floor(i / level.width), 0.025, o.position);
+            o.scale.setScalar(1.04);
+            o.updateMatrix();
+            mesh.setMatrixAt(i, o.matrix);
+            mesh.setColorAt(i, _c.setRGB(0, 0, 0));
+        }
+        mesh.frustumCulled = false;
+        this.fx.add(mesh);
+        this.heat = { mesh, counts, cells };
+        const base = new THREE.Color(0x22d3ee);
         let shown = 0;
         let max = 1;
+        const paint = (fade = 1) => {
+            for (let i = 0; i < cells; i++) {
+                if (!counts[i] && !flash[i]) continue;
+                const k = (0.12 + 0.45 * Math.sqrt(counts[i] / max) + flash[i] * 0.35) * fade;
+                mesh.setColorAt(i, _c.copy(base).multiplyScalar(k));
+            }
+            mesh.instanceColor.needsUpdate = true;
+        };
+        this.heat.paint = paint;
         await this.tween(seconds, (t) => {
             const upto = Math.floor(trace.length * t);
             for (; shown < upto; shown++) {
                 const idx = trace[shown];
                 counts[idx]++;
-                max = Math.max(max, counts[idx]);
-                tileFor(idx).userData.flash = 1;
+                if (counts[idx] > max) max = counts[idx];
+                flash[idx] = 1;
             }
-            for (const [idx, m] of tiles) {
-                const f = (m.userData.flash = Math.max(0, (m.userData.flash || 0) - 0.08));
-                m.material.opacity = 0.12 + 0.45 * Math.sqrt(counts[idx] / max) + f * 0.35;
-            }
+            for (let i = 0; i < cells; i++) if (flash[i] > 0) flash[i] = Math.max(0, flash[i] - 0.08);
+            paint();
         });
     }
 
     clearHeat() {
         if (!this.heat) return;
-        for (const m of this.heat.tiles.values()) {
-            this.fx.remove(m);
-            m.material.dispose();
-        }
-        this.heat.geo.dispose();
+        this.heat.mesh.removeFromParent();
+        this.heat.mesh.material.dispose();
+        this.heat.mesh.dispose();
         this.heat = null;
     }
 
     fadeHeat() {
-        if (!this.heat) return;
-        const tiles = [...this.heat.tiles.values()];
-        const start = tiles.map((m) => m.material.opacity);
-        this.tween(0.6, (t) => tiles.forEach((m, i) => (m.material.opacity = start[i] * (1 - t) * 0.5 + start[i] * 0.15 * (1 - t))));
+        const heat = this.heat;
+        if (!heat) return;
+        this.tween(0.6, (t) => heat === this.heat && heat.paint(1 - t * 0.7));
     }
 
     // ---- camera
@@ -830,49 +774,53 @@ export class World {
         cam.updateProjectionMatrix();
         const hw = this.level.width / 2 + 0.1;
         const hd = this.level.height / 2 + 0.1;
-        const corners = [];
-        for (const x of [-hw, hw]) for (const z of [-hd, hd]) for (const y of [-0.3, 0.9]) corners.push(new THREE.Vector3(x, y, z));
-        const dir = this.viewDir(this.view.polar, this.view.azimuth);
+        const dir = this.viewDir(this.view.polar, this.view.azimuth, _v2);
         let near = 3;
         let far = 80;
-        const v = new THREE.Vector3();
         for (let i = 0; i < 22; i++) {
             const mid = (near + far) / 2;
             cam.position.copy(dir).multiplyScalar(mid);
             cam.lookAt(0, 0, 0);
             cam.updateMatrixWorld();
-            const ok = corners.every((c) => {
-                v.copy(c).project(cam);
-                return Math.abs(v.x) < (W < 600 ? 0.97 : 0.92) && Math.abs(v.y) < 0.9 * free;
-            });
+            let ok = true;
+            for (let k = 0; k < 8 && ok; k++) {
+                _v.set(k & 1 ? hw : -hw, k & 2 ? 0.9 : -0.3, k & 4 ? hd : -hd).project(cam);
+                ok = Math.abs(_v.x) < (W < 600 ? 0.97 : 0.92) && Math.abs(_v.y) < 0.9 * free;
+            }
             if (ok) far = mid;
             else near = mid;
         }
         this.fitDistance = far;
+        this.fitted.az = this.view.azimuth;
+        this.fitted.polar = this.view.polar;
         // Shift the image so the board centres in the free area between the HUD bars.
         const shift = (this.insets.top - this.insets.bottom) / 2;
         cam.setViewOffset(W, H, 0, -shift, W, H);
         this.applyCamera();
     }
 
-    viewDir(polar, az) {
-        return new THREE.Vector3(Math.sin(polar) * Math.sin(az), Math.cos(polar), Math.sin(polar) * Math.cos(az));
+    viewDir(polar, az, out = new THREE.Vector3()) {
+        return out.set(Math.sin(polar) * Math.sin(az), Math.cos(polar), Math.sin(polar) * Math.cos(az));
     }
 
     applyCamera() {
         const d = (this.fitDistance || 12) / this.view.zoom;
-        this.camera.position.copy(this.viewDir(this.view.polar, this.view.azimuth)).multiplyScalar(d);
+        this.camera.position.copy(this.viewDir(this.view.polar, this.view.azimuth, _v2)).multiplyScalar(d);
         this.camera.lookAt(0, 0, 0);
-        this.scene.fog.near = d * 0.9;
-        this.scene.fog.far = d * 2.6;
+        this.scene.fog.near = d * 1.1;
+        this.scene.fog.far = d * 3.2;
     }
 
     // ---- frame
     frame() {
+        const now = performance.now();
+        const interval = now - this.lastFrame;
+        this.lastFrame = now;
+        this.quality.sample(interval);
         const dt = Math.min(0.1, this.clock.getDelta()) * this.timeScale;
         this.time += dt;
         const t = this.time;
-        for (const tw of [...this.tweens]) {
+        for (const tw of this.tweens) {
             if (t < tw.start) continue;
             const k = Math.min(1, (t - tw.start) / tw.duration);
             tw.fn(k);
@@ -882,56 +830,71 @@ export class World {
             }
         }
         const v = this.view;
-        const prev = `${v.azimuth.toFixed(4)}${v.polar.toFixed(4)}${v.zoom.toFixed(4)}`;
-        v.azimuth += (v.targetAz - v.azimuth) * Math.min(1, dt * 8);
-        v.polar += (v.targetPolar - v.polar) * Math.min(1, dt * 8);
-        v.zoom += (v.targetZoom - v.zoom) * Math.min(1, dt * 8);
-        if (prev !== `${v.azimuth.toFixed(4)}${v.polar.toFixed(4)}${v.zoom.toFixed(4)}`) {
-            if (Math.abs(v.polar - (this.fittedPolar ?? v.polar)) > 0.02 || Math.abs(v.azimuth - (this.fittedAz ?? v.azimuth)) > 0.02) {
-                this.fittedPolar = v.polar;
-                this.fittedAz = v.azimuth;
-                this.fitCamera();
-            } else this.applyCamera();
+        const az = v.azimuth;
+        const po = v.polar;
+        const zo = v.zoom;
+        const f = Math.min(1, dt * 8);
+        v.azimuth += (v.targetAz - v.azimuth) * f;
+        v.polar += (v.targetPolar - v.polar) * f;
+        v.zoom += (v.targetZoom - v.zoom) * f;
+        if (Math.abs(az - v.azimuth) + Math.abs(po - v.polar) + Math.abs(zo - v.zoom) > 1e-5) {
+            if (Math.abs(v.polar - this.fitted.polar) > 0.02 || Math.abs(v.azimuth - this.fitted.az) > 0.02) this.fitCamera();
+            else this.applyCamera();
         }
 
-        // Idle life.
-        if (this.level) {
-            const hp = this.hero.userData.parts;
-            hp.body.position.y = Math.abs(Math.sin(t * 2.2)) * 0.02;
-            hp.shieldArm.rotation.x = Math.sin(t * 2.2) * 0.05;
-            this.enemies.forEach((m) => {
-                if (!m.visible) return;
-                const p = m.userData.parts;
-                p.body.position.y = Math.abs(Math.sin(t * 3 + m.userData.phase)) * 0.04;
-                p.spear.rotation.z = Math.sin(t * 1.5 + m.userData.phase) * 0.12;
-                // Turn to watch the warrior.
-                const a = Math.atan2(this.hero.position.x - m.position.x, this.hero.position.z - m.position.z);
-                let d = a - m.rotation.y;
-                d = Math.atan2(Math.sin(d), Math.cos(d));
-                m.rotation.y += d * Math.min(1, dt * 4);
-            });
-            if (this.wizard.visible) {
-                const p = this.wizard.userData.parts;
-                p.body.position.y = 0.04 + Math.sin(t * 1.8) * 0.04;
-                p.crystal.rotation.y = t * 2;
-                p.crystal.material.emissiveIntensity = 1.2 + Math.sin(t * 4) * 0.4;
-                const a = Math.atan2(this.hero.position.x - this.wizard.position.x, this.hero.position.z - this.wizard.position.z);
-                let d = a - this.wizard.rotation.y;
-                d = Math.atan2(Math.sin(d), Math.cos(d));
-                if (Math.abs(this.wizard.scale.x - 1) < 0.01) this.wizard.rotation.y += d * Math.min(1, dt * 3);
+        if (this.level && this.hero) {
+            const hero = this.hero;
+            hero.update(dt);
+            if (!hero.mixer) hero.body.position.y = Math.abs(Math.sin(t * 2.2)) * 0.02;
+            for (const e of this.enemies) {
+                if (!e.root.visible) continue;
+                e.update(dt);
+                if (e.dying) continue;
+                if (!e.mixer) e.body.position.y = Math.abs(Math.sin(t * 3 + e.phase)) * 0.04;
+                // Turn to watch the warrior; now and then, taunt him.
+                const a = Math.atan2(hero.root.position.x - e.root.position.x, hero.root.position.z - e.root.position.z);
+                e.root.rotation.y += angleTo(e.root.rotation.y, a) * Math.min(1, dt * 4);
+                e.nextTaunt -= dt;
+                if (e.nextTaunt < 0 && e.mixer) {
+                    e.nextTaunt = 6 + Math.random() * 10;
+                    if (e.current === e.actions.get('idle')) {
+                        e.play('taunt', { once: true, fade: 0.25 });
+                        e.backToIdle = t + e.actions.get('taunt').getClip().duration - 0.25;
+                    }
+                }
+                if (e.backToIdle && t > e.backToIdle) {
+                    e.backToIdle = 0;
+                    if (e.current === e.actions.get('taunt')) e.play('idle', { fade: 0.3 });
+                }
             }
-            this.spotRings?.forEach((g, i) => {
+            const wiz = this.wizard;
+            if (wiz.root.visible) {
+                wiz.update(dt);
+                if (Math.abs(wiz.root.scale.x - 1) < 0.01) {
+                    const a = Math.atan2(hero.root.position.x - wiz.root.position.x, hero.root.position.z - wiz.root.position.z);
+                    wiz.root.rotation.y += angleTo(wiz.root.rotation.y, a) * Math.min(1, dt * 3);
+                }
+                if (!wiz.mixer) wiz.body.position.y = 0.04 + Math.sin(t * 1.8) * 0.04;
+            }
+            const rings = this.spotRings;
+            for (let i = 0; i < rings.length; i++) {
                 const active = i === this.wizIdx;
-                g.rotation.y = t * (active ? 0.8 : 0.3);
-                g.children[0].material.opacity = active ? 0.8 : 0.35 + Math.sin(t * 2 + i) * 0.1;
-            });
-            for (const h of this.highlights) {
-                if (h.userData.pulse) h.material.opacity = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t * 6 - h.userData.phase));
+                rings[i].rotation.y = t * (active ? 0.8 : 0.3);
+                rings[i].material.opacity = active ? 0.85 : 0.4 + Math.sin(t * 2 + i) * 0.12;
             }
+            for (const h of this.highlights) h.material.opacity = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t * 6 - h.userData.phase));
         }
+        this.updateBlobs();
+        if (!this.dynamicShadows && this.island && this.island.group.position.y !== this.shadowY) {
+            this.shadowY = this.island.group.position.y;
+            this.renderer.shadowMap.needsUpdate = true;
+        }
+        this.sky.position.copy(this.camera.position);
         this.water.material.uniforms.uTime.value = t;
+        this.windUniforms.uTime.value = t;
         this.particles.update(dt);
-        this.onFrame?.(dt);
+        this.renderer.info.reset();
         this.renderer.render(this.scene, this.camera);
+        this.perf?.frame(interval, performance.now() - now);
     }
 }

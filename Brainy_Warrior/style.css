@@ -281,6 +281,58 @@ svg {
     border-color: var(--line);
 }
 
+/* ---------- loading state (character models) ---------- */
+.loading {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: grid;
+    place-content: center;
+    gap: 14px;
+    justify-items: center;
+    background: radial-gradient(circle at 50% 45%, rgba(14, 15, 20, 0.7), rgba(9, 9, 11, 0.94));
+    color: var(--text);
+    font: 600 15px/1.2 var(--display);
+    letter-spacing: 0.02em;
+}
+.loading[hidden] {
+    display: none;
+}
+.loading p {
+    margin: 0;
+}
+.loading-track {
+    width: min(240px, 60vw);
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+}
+.loading-bar {
+    height: 100%;
+    background: var(--accent);
+    transform: scaleX(0.04);
+    transform-origin: left;
+    transition: transform 0.2s ease-out;
+}
+
+/* ---------- developer perf overlay (?perf=1) ---------- */
+.perf-overlay {
+    position: fixed;
+    left: 8px;
+    bottom: 8px;
+    z-index: 60;
+    margin: 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(9, 9, 11, 0.82);
+    border: 1px solid var(--line);
+    color: #d4d4d8;
+    font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+    pointer-events: none;
+    white-space: pre;
+}
+
 .toast {
     position: fixed;
     left: 50%;

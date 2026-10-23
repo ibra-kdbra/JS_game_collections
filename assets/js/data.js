@@ -157,7 +157,7 @@ export const games = [
     slug: 'brainy-warrior',
     title: 'Brainy Warrior 3D',
     href: 'Brainy_Warrior/index.html',
-    blurb: 'Slide your warrior into every enemy without falling into the sea, and move the wizard to make your own walls. A 3D island puzzle with 29 levels, hints, and five search algorithms (A* in WebAssembly) that you can watch solve it.',
+    blurb: 'Slide your warrior into every enemy without falling into the sea, and move the wizard to make your own walls. A 3D island puzzle with 34 levels, hints, and five search algorithms (A* in WebAssembly) that you can watch solve it.',
     genre: 'puzzle',
     inputs: ['keyboard', 'touch'],
     mobile: true,

@@ -62,11 +62,19 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | HuggersFight, ReWire sounds | Generated with [ZzFX](https://github.com/KilledByAPixel/ZzFX) | Frank Force | MIT |
 | Hub music circle | Plays YouTube embeds chosen by the visitor or a default playlist. Nothing is hosted here | YouTube | YouTube terms |
 
+## 3D models
+
+| File | What it is | Source | Licence |
+| --- | --- | --- | --- |
+| `Brainy_Warrior/models/warrior.glb`, `wizard.glb` | Warrior and wizard, animated | *RPG Characters - Nov 2020* by [Quaternius](https://quaternius.com), converted and compressed (see `Brainy_Warrior/models/LICENSE.txt`) | CC0 1.0 |
+| `Brainy_Warrior/models/orc.glb`, `orc-skull.glb`, `tribal.glb` | Enemies, animated | *Ultimate Monsters* by [Quaternius](https://quaternius.com), converted and compressed | CC0 1.0 |
+
 ## Libraries
 
 | Library | Where | Licence |
 | --- | --- | --- |
-| three.js | `assets/vendor/three/`, `MoonLDR/vendor/three/`, `Brainy_Warrior/vendor/three-0.150.1/` | MIT (licence files included) |
+| three.js | `assets/vendor/three/`, `MoonLDR/vendor/three/`, `Brainy_Warrior/vendor/three-0.150.1/` (with the `GLTFLoader`, `SkeletonUtils` and `BufferGeometryUtils` addons from the r150 tag in `addons/`) | MIT (licence files included) |
+| meshoptimizer decoder | `Brainy_Warrior/vendor/meshoptimizer/` (decodes the compressed character models) | MIT (licence file included) |
 | GSAP and ScrollTrigger | `assets/vendor/gsap/`, `Hangman/libs/` | GreenSock standard licence (free to use) |
 | Font Awesome Free (icon subset) | `assets/vendor/fontawesome/`, `Tetris/fonts/` | Icons CC BY 4.0, fonts SIL OFL 1.1, code MIT |
 | p5.js 1.11.2 | `TowerDefense/vendor/` | LGPL-2.1 (licence file included) |

@@ -1,0 +1,22 @@
+Character models in this folder
+===============================
+
+warrior.glb, wizard.glb
+    From "RPG Characters - Nov 2020" by Quaternius (https://quaternius.com).
+orc.glb, orc-skull.glb, tribal.glb
+    From "Ultimate Monsters" by Quaternius (https://quaternius.com).
+
+Both packs are released under CC0 1.0 Universal (Public Domain Dedication):
+https://creativecommons.org/publicdomain/zero/1.0/
+
+The files were converted with Brainy_Warrior/tools/pack-models.py (meshes and
+props merged into one skinned mesh per character, textures atlased and resized,
+unused animation clips removed) and then simplified and compressed with
+gltfpack from meshoptimizer (https://github.com/zeux/meshoptimizer, MIT). The
+wizard's hat is not in these files: the game adds it in code (js/actors.js).
+
+The original licence text shipped with both packs reads:
+
+    LowPoly Models by @Quaternius
+    License: CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
+    https://creativecommons.org/publicdomain/zero/1.0/
