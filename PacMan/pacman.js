@@ -3067,13 +3067,9 @@ var switchRenderer = function(i) {
 };
 
 var getDevicePixelRatio = function() {
-    // Only consider the device pixel ratio for devices that are <= 320 pixels in width.
-    // This is necessary for the iPhone4's retina display; otherwise the game would be blurry.
-    // The iPad3's retina display @ 2048x1536 starts slowing the game down.
-    return 1;
-    if (window.innerWidth <= 320) {
-        return window.devicePixelRatio || 1;
-    }
+    // Draw at one canvas pixel per CSS pixel. Matching high-density screens looks a
+    // little sharper but quadruples the fill cost (measured: main-thread time per
+    // frame nearly doubles on a throttled phone), so the browser scales it instead.
     return 1;
 };
 
@@ -3099,8 +3095,8 @@ var initRenderer = function(){
 
         // set the size of the canvas in browser pixels
         var ratio = getDevicePixelRatio();
-        canvas.style.width = canvas.width / ratio;
-        canvas.style.height = canvas.height / ratio;
+        canvas.style.width = canvas.width / ratio + "px";
+        canvas.style.height = canvas.height / ratio + "px";
 
         if (resets > 0) {
             ctx.restore();
@@ -3119,29 +3115,73 @@ var initRenderer = function(){
         resets++;
     };
 
-    // Space taken on touch screens by the on-screen D-pad (bottom-left).
+    // Space taken on touch screens by the on-screen D-pad (bottom-left):
+    // its right edge and its top edge, with a little clearance.
     var getTouchPad = function() {
         var pad = document.querySelector('.gk-touch:not([hidden]) .gk-dpad');
         if (!pad) {
             return null;
         }
         var rect = pad.getBoundingClientRect();
-        return { width: rect.width + 24, height: rect.height + 24 };
+        return { right: rect.right + 8, top: rect.top - 8 };
     };
 
-    // get the target scale that will cause the canvas to fit the window
+    // Safe-area insets (notch, rounded corners, home indicator), read from CSS.
+    var safeProbe;
+    var getSafeArea = function() {
+        if (!safeProbe) {
+            safeProbe = document.createElement('div');
+            safeProbe.style.cssText = 'position:fixed;left:0;top:0;visibility:hidden;pointer-events:none;' +
+                'padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+            document.body.appendChild(safeProbe);
+        }
+        var cs = getComputedStyle(safeProbe);
+        return {
+            top: parseFloat(cs.paddingTop) || 0,
+            right: parseFloat(cs.paddingRight) || 0,
+            bottom: parseFloat(cs.paddingBottom) || 0,
+            left: parseFloat(cs.paddingLeft) || 0
+        };
+    };
+
+    // get the scale and position that fit the canvas in the window,
+    // clear of the safe areas and the on-screen D-pad
     var getLayout = function() {
-        var w = window.innerWidth - 10;
-        var h = window.innerHeight - 10;
-        var fit = function(w, h) { return Math.min(w / screenWidth, h / screenHeight); };
-        var top = 0;
+        var safe = getSafeArea();
+        var margin = 4;
+        var x0 = safe.left + margin;
+        var y0 = safe.top + margin;
+        var w = window.innerWidth - safe.left - safe.right - 2*margin;
+        var h = window.innerHeight - safe.top - safe.bottom - 2*margin;
+        var fit = function(w, h) { return Math.max(0.1, Math.min(w / screenWidth, h / screenHeight)); };
         var s = fit(w, h);
+        var box = { x: x0, y: y0, w: w, h: h };
         var pad = getTouchPad();
         if (pad) {
             // the maze goes beside the D-pad or above it, whichever is bigger
-            s = Math.max(fit(w - 2*pad.width, h), fit(w, h - pad.height));
+            var besideW = x0 + w - Math.max(x0, pad.right);
+            var aboveH = Math.min(y0 + h, pad.top) - y0;
+            var beside = fit(besideW, h);
+            var above = fit(w, aboveH);
+            if (beside > above) {
+                s = beside;
+                box = { x: x0 + w - besideW, y: y0, w: besideW, h: h };
+            }
+            else {
+                s = above;
+                box = { x: x0, y: y0, w: w, h: aboveH };
+            }
         }
-        return { scale: s * getDevicePixelRatio(), top: top };
+        var cw = screenWidth * s;
+        var ch = screenHeight * s;
+        var left = box.x + (box.w - cw) / 2;
+        var top = box.y + (box.h - ch) / 2;
+        // beside the D-pad, stay centred on the screen when that still clears it
+        var centred = x0 + (w - cw) / 2;
+        if (box.x > x0 && centred >= box.x) {
+            left = centred;
+        }
+        return { scale: s * getDevicePixelRatio(), left: Math.floor(left), top: Math.floor(top) };
     };
     var getTargetScale = function() {
         return getLayout().scale;
@@ -3159,20 +3199,11 @@ var initRenderer = function(){
         center();
     };
 
-    // center the canvas in the window
+    // place the canvas in the window
     var center = function() {
-        var s = getTargetScale()/getDevicePixelRatio();
-        var w = screenWidth*s;
-        var x = Math.max(0,(window.innerWidth-10)/2 - w/2);
-        var y = 0;
-        /*
-        canvas.style.position = "absolute";
-        canvas.style.left = x;
-        canvas.style.top = y;
-        console.log(canvas.style.left);
-        */
-        document.body.style.marginLeft = (window.innerWidth - w)/2 + "px";
-        document.body.style.paddingTop = getLayout().top + "px";
+        var layout = getLayout();
+        document.body.style.marginLeft = layout.left + "px";
+        document.body.style.paddingTop = layout.top + "px";
     };
 
     // create foreground and background canvases
@@ -4298,7 +4329,7 @@ var Button = function(x,y,w,h,onclick) {
         var fingerCount = evt.touches.length;
         if (fingerCount == 1) {
             var pos = getPointerPos(evt.touches[0]);
-            (that.startedInside=that.contains(pos.x,pos.y)) ? that.focus() : that.blur();
+            (that.startedInside=that.containsTouch(pos.x,pos.y)) ? that.focus() : that.blur();
         }
         else {
             touchcancel(evt);
@@ -4310,7 +4341,7 @@ var Button = function(x,y,w,h,onclick) {
         if (fingerCount == 1) {
             if (that.startedInside) {
                 var pos = getPointerPos(evt.touches[0]);
-                that.contains(pos.x, pos.y) ? that.focus() : that.blur();
+                that.containsTouch(pos.x, pos.y) ? that.focus() : that.blur();
             }
         }
         else {
@@ -4381,6 +4412,16 @@ Button.prototype = {
     contains: function(x,y) {
         return x >= this.x && x <= this.x+this.w &&
                y >= this.y && y <= this.y+this.h;
+    },
+
+    // Fingers get a slightly larger target: grow the button towards 44 CSS pixels,
+    // but by at most half a tile so neighbouring menu buttons never overlap.
+    containsTouch: function(x,y) {
+        var s = renderScale / getDevicePixelRatio();
+        var padX = Math.min(tileSize/2, Math.max(0, (44/s - this.w)/2));
+        var padY = Math.min(tileSize/2, Math.max(0, (44/s - this.h)/2));
+        return x >= this.x-padX && x <= this.x+this.w+padX &&
+               y >= this.y-padY && y <= this.y+this.h+padY;
     },
 
     click: function() {
