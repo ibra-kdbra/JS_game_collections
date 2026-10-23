@@ -156,6 +156,13 @@ export class World {
 
         this.groundMaterial = new THREE.MeshLambertMaterial({ map: createGroundAtlas(), vertexColors: true });
         this.blobs = this.createBlobs();
+        // A gold ring under the warrior, so he stands out in a crowd of orcs.
+        this.heroRing = new THREE.Mesh(
+            new THREE.RingGeometry(0.3, 0.37, 40).rotateX(-Math.PI / 2),
+            new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.7, depthWrite: false }),
+        );
+        this.heroRing.renderOrder = 2;
+        this.scene.add(this.heroRing);
         this.windUniforms = { uTime: { value: 0 } };
         this.runeTex = runeTexture();
         this.hintGeo = new THREE.PlaneGeometry(0.9, 0.9).rotateX(-Math.PI / 2);
@@ -214,6 +221,11 @@ export class World {
         this.setCharacterShadows();
         this.blobs.material.opacity = s.dynamicShadows ? 0.3 : 0.5;
         this.water.material.uniforms.uDetail.value = s.waterDetail;
+        const map = this.groundMaterial.map;
+        if (map.anisotropy !== s.aniso) {
+            map.anisotropy = s.aniso;
+            map.needsUpdate = true;
+        }
         if (this.water.material.defines.WATER_DETAIL !== s.water) {
             this.water.material.defines.WATER_DETAIL = s.water;
             this.water.material.needsUpdate = true;
@@ -548,6 +560,7 @@ export class World {
         if (a.mixer) a.play('death', { fade: 0.05, once: true, speed: 1.3 });
         const animated = !!a.mixer;
         this.tween(0.85, (t) => {
+            if (!a.dying) return; // undone or restarted meanwhile
             const k = ease.outCubic(Math.min(1, t * 1.6));
             a.root.position.set(p0.x + dx * 0.55 * k, p0.y + Math.sin(Math.min(1, t * 1.6) * Math.PI) * 0.25, p0.z + dz * 0.55 * k);
             if (!animated) a.root.rotation.x = -t * 1.5;
@@ -885,6 +898,12 @@ export class World {
             for (const h of this.highlights) h.material.opacity = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t * 6 - h.userData.phase));
         }
         this.updateBlobs();
+        if (this.hero) {
+            const hp = this.hero.root.position;
+            this.heroRing.visible = this.hero.root.visible && hp.y > -0.3 && !!this.level;
+            this.heroRing.position.set(hp.x, 0.02, hp.z);
+            this.heroRing.material.opacity = 0.55 + Math.sin(t * 3) * 0.15;
+        }
         if (!this.dynamicShadows && this.island && this.island.group.position.y !== this.shadowY) {
             this.shadowY = this.island.group.position.y;
             this.renderer.shadowMap.needsUpdate = true;

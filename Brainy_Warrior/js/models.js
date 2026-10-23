@@ -1,4 +1,5 @@
-// Procedural low-poly models: warrior, enemy, wizard, rocks. No asset files.
+// Procedural low-poly characters: the fallback when the glTF models in
+// models/ can't load (or with ?models=simple). No asset files.
 import * as THREE from 'three';
 
 const mats = new Map();
@@ -201,27 +202,4 @@ export function createWizard() {
     compact(root);
     root.userData.parts = { body, head, staff, crystal };
     return root;
-}
-
-/** A few jittered boulder shapes, shared by every rock tile. */
-export function createRockGeometries(count = 4) {
-    const out = [];
-    for (let k = 0; k < count; k++) {
-        const g = new THREE.DodecahedronGeometry(0.42, 0);
-        const p = g.attributes.position;
-        const seen = new Map();
-        for (let i = 0; i < p.count; i++) {
-            const key = `${p.getX(i).toFixed(3)},${p.getY(i).toFixed(3)},${p.getZ(i).toFixed(3)}`;
-            if (!seen.has(key)) {
-                const s = 0.82 + Math.abs(Math.sin((i + 1) * 12.9898 * (k + 1))) * 0.3;
-                seen.set(key, s);
-            }
-            const s = seen.get(key);
-            p.setXYZ(i, p.getX(i) * s, p.getY(i) * s * 0.85, p.getZ(i) * s);
-        }
-        g.computeVertexNormals();
-        g.translate(0, 0.28, 0);
-        out.push(g);
-    }
-    return out;
 }

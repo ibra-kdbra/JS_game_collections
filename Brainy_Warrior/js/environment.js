@@ -181,6 +181,9 @@ export function createWater(detail = 2) {
     const water = new THREE.Mesh(geo, material);
     water.name = 'water';
     water.frustumCulled = false;
+    // After the island and characters, so the hidden water under them is
+    // rejected by the depth test instead of shaded.
+    water.renderOrder = 5;
     return water;
 }
 
@@ -279,6 +282,8 @@ export function createSky() {
     const sky = new THREE.Mesh(new THREE.SphereGeometry(100, 24, 12), material);
     sky.name = 'sky';
     sky.frustumCulled = false;
-    sky.renderOrder = -1;
+    // Drawn after everything opaque: at the far plane it only shades the
+    // pixels nothing else covered (early depth test rejects the rest).
+    sky.renderOrder = 10;
     return sky;
 }

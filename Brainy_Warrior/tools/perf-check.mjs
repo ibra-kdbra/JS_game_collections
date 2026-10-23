@@ -25,7 +25,7 @@ export const BUDGET = {
     textures: 32, //         live GPU textures
     downloadBytes: 5 * 1024 * 1024, // everything the game fetches, uncompressed
     modelBytes: 1024 * 1024, // the character models together
-    heapMB: 64, //           JS heap after visiting every level
+    heapMB: 32, //           JS heap after visiting every level
 };
 
 const ROOT = normalize(join(fileURLToPath(import.meta.url), '../../..'));
@@ -94,7 +94,7 @@ for (let i = 0; i < ids.length; i++) {
 // Collect garbage first, so the heap reflects what the game keeps alive.
 const cdp = await page.context().newCDPSession(page);
 await cdp.send('HeapProfiler.collectGarbage');
-const heapMB = await page.evaluate(() => (performance.memory ? performance.memory.usedJSHeapSize / 1048576 : 0));
+const heapMB = (await cdp.send('Runtime.getHeapUsage')).usedSize / 1048576;
 const total = [...served.values()].reduce((a, b) => a + b, 0);
 const modelBytes = [...served].filter(([u]) => u.endsWith('.glb')).reduce((a, [, b]) => a + b, 0);
 console.log(`\nModels: ${models}. Load to first level: ${loadMs} ms (headless, CPU rendering).`);

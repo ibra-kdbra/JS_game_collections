@@ -11,10 +11,10 @@ export const TIERS = [
     // dynamicShadows: characters cast real shadows and the shadow map is redrawn
     // every frame. Otherwise only the island casts (boulders, palms), the map is
     // drawn once per level, and characters stand on soft blob shadows.
-    { name: 'high', dpr: 2, shadow: 2048, soft: true, dynamicShadows: true, shadows: true, grass: 1, waterDetail: 1, water: 2 },
-    { name: 'medium', dpr: 1.5, shadow: 1024, soft: false, dynamicShadows: false, shadows: true, grass: 1, waterDetail: 1, water: 1 },
-    { name: 'low', dpr: 1, shadow: 1024, soft: false, dynamicShadows: false, shadows: true, grass: 0.6, waterDetail: 0.8, water: 0 },
-    { name: 'lowest', dpr: 0.8, shadow: 512, soft: false, dynamicShadows: false, shadows: false, grass: 0.4, waterDetail: 0.6, water: 0 },
+    { name: 'high', dpr: 2, shadow: 2048, soft: true, dynamicShadows: true, shadows: true, grass: 1, waterDetail: 1, water: 2, aniso: 4 },
+    { name: 'medium', dpr: 1.5, shadow: 1024, soft: false, dynamicShadows: false, shadows: true, grass: 1, waterDetail: 1, water: 1, aniso: 1 },
+    { name: 'low', dpr: 1, shadow: 1024, soft: false, dynamicShadows: false, shadows: true, grass: 0.6, waterDetail: 0.8, water: 0, aniso: 1 },
+    { name: 'lowest', dpr: 0.8, shadow: 512, soft: false, dynamicShadows: false, shadows: false, grass: 0.4, waterDetail: 0.6, water: 0, aniso: 1 },
 ];
 
 export class Quality {

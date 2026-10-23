@@ -168,7 +168,6 @@ export function createGroundAtlas() {
     const tex = new THREE.CanvasTexture(canvas);
     tex.flipY = false;
     tex.encoding = THREE.sRGBEncoding;
-    tex.anisotropy = 4;
     tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
     return tex;
 }
