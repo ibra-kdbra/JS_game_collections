@@ -157,7 +157,7 @@ export const games = [
     slug: 'brainy-warrior',
     title: 'Brainy Warrior 3D',
     href: 'Brainy_Warrior/index.html',
-    blurb: 'A 3D sliding logic puzzle game based on Brainy Warrior. Slide the hero to defeat all enemies. Built with Three.js and features a BFS auto-solver.',
+    blurb: 'Slide your warrior into every enemy without falling into the sea, and move the wizard to make your own walls. A 3D island puzzle with 29 levels, hints, and five search algorithms (A* in WebAssembly) that you can watch solve it.',
     genre: 'puzzle',
     inputs: ['keyboard', 'touch'],
     mobile: true,
