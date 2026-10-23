@@ -958,3 +958,48 @@ kbd {
 .reduce-motion .rec {
   animation: none;
 }
+
+/* Phones: no text under 12px. */
+@media (pointer: coarse), (max-width: 560px) {
+  .hud-mode-sub,
+  .stat dt,
+  .small,
+  .eyebrow,
+  .mode-idx,
+  .mode-desc,
+  .mode-best,
+  .toggle-state,
+  .arena-name,
+  .arena-meta,
+  .arena-best,
+  .result dt {
+    font-size: 12px;
+  }
+
+  .stat dt {
+    letter-spacing: 0.04em;
+  }
+}
+
+/* Small boards (landscape phones with the d-pad on): the start hint wraps
+   inside the board instead of running over the controls. */
+.ready {
+  max-width: calc(100% - 16px);
+  box-sizing: border-box;
+  white-space: normal;
+  text-align: center;
+  width: max-content;
+}
+
+/* Landscape phones: a slightly smaller d-pad leaves more room for the board. */
+@media (orientation: landscape) and (max-height: 560px) {
+  body .gk-touch .gk-dpad {
+    grid-template-columns: repeat(3, 48px);
+    grid-template-rows: repeat(3, 48px);
+  }
+
+  body .gk-touch {
+    padding-left: max(10px, env(safe-area-inset-left));
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+}
