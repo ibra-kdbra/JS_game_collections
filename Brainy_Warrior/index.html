@@ -2,82 +2,156 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Brainy Warrior 3D</title>
-    <meta name="description" content="A 3D sliding logic puzzle. Slide the hero to defeat every enemy without falling into the water.">
+    <meta name="description" content="A 3D sliding logic puzzle. Slide the warrior into every enemy without falling into the sea, move the wizard to make your own walls, and watch five search algorithms solve each level.">
+    <meta name="theme-color" content="#09090b">
+    <link rel="icon" href="../assets/icons/brainy-warrior.svg" type="image/svg+xml">
     <link rel="stylesheet" href="style.css">
     <script type="importmap">
-      {
-        "imports": {
-          "three": "./vendor/three-0.150.1/three.module.min.js"
-        }
-      }
+      { "imports": { "three": "./vendor/three-0.150.1/three.module.min.js" } }
     </script>
 </head>
 <body>
-    <div class="layout">
-        <aside class="sidebar">
-            <header class="glass-panel hud">
-                <h1 class="title">Brainy Warrior 3D</h1>
-                <p id="level-name" class="level-name"></p>
-                <div class="stats">
-                    <div class="stat-box">
-                        <span class="stat-label">Moves</span>
-                        <span id="move-count" class="stat-value">0</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-label">Par</span>
-                        <span id="par-count" class="stat-value">0</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-label">Enemies</span>
-                        <span id="enemy-count" class="stat-value">0</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-label">Swords</span>
-                        <span id="sword-count" class="stat-value">0</span>
-                    </div>
-                </div>
-                <p id="level-hint" class="hint"></p>
-                <p class="controls-help">
-                    <b>Arrows / WASD</b> slide &middot; <b>Space</b> wizard &middot; <b>Z</b> undo &middot; <b>R</b> restart &middot; <b>H</b> solution &middot; <b>L</b> levels
-                </p>
-            </header>
+    <main id="stage" class="stage" aria-label="Puzzle board. Arrow keys or swipes slide the warrior."></main>
 
-            <nav class="glass-panel actions" aria-label="Level actions">
-                <button id="btn-undo" class="action-btn" type="button">Undo</button>
-                <button id="btn-restart" class="action-btn" type="button">Restart</button>
-                <button id="btn-wizard" class="action-btn wizard-btn" type="button" hidden>Wizard</button>
-                <button id="btn-solve" class="action-btn" type="button">Show solution</button>
-                <button id="btn-levels" class="action-btn" type="button">Levels</button>
-            </nav>
-        </aside>
+    <header class="hud" id="hud">
+        <div class="hud-card hud-level">
+            <span class="lvl-badge" id="lvl-num">1</span>
+            <div class="lvl-text">
+                <h1 id="level-name">Brainy Warrior</h1>
+                <p id="level-tip" class="tip"></p>
+            </div>
+        </div>
+        <div class="hud-card hud-stats" aria-live="polite">
+            <div class="stat"><span>Moves</span><b id="moves">0</b></div>
+            <div class="stat"><span>Optimal</span><b id="optimal">0</b></div>
+            <div class="stat"><span>Enemies</span><b id="enemies">0</b></div>
+        </div>
+        <nav class="hud-card toolbar" aria-label="Game actions">
+            <button class="tool" id="btn-undo" type="button" title="Undo (Z)" aria-label="Undo">
+                <svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span>Undo</span>
+            </button>
+            <button class="tool" id="btn-restart" type="button" title="Restart (R)" aria-label="Restart">
+                <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span>Restart</span>
+            </button>
+            <button class="tool tool-magic" id="btn-magic" type="button" title="Magic: move the wizard (Space)" aria-label="Magic: move the wizard" hidden>
+                <svg viewBox="0 0 24 24"><path d="m15 4-1.5 3L10 8.5l3.5 1.5L15 13l1.5-3L20 8.5 16.5 7z"/><path d="M4 20 13 11"/></svg><span>Magic</span>
+            </button>
+            <button class="tool" id="btn-hint" type="button" title="Hint (H)" aria-label="Hint">
+                <svg viewBox="0 0 24 24"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V16h8v-1.3A7 7 0 0 0 12 2z"/></svg><span>Hint</span>
+            </button>
+            <button class="tool" id="btn-ai" type="button" title="Watch the AI solve (I)" aria-label="Watch the AI solve">
+                <svg viewBox="0 0 24 24"><rect x="5" y="7" width="14" height="12" rx="2"/><path d="M12 3v4M9 12h.01M15 12h.01M9 16h6M2 12h3M19 12h3"/></svg><span>AI</span>
+            </button>
+            <button class="tool" id="btn-levels" type="button" title="Levels (L)" aria-label="Levels">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>Levels</span>
+            </button>
+            <button class="tool tool-icon" id="btn-sound" type="button" title="Sound (M)" aria-label="Mute sound" aria-pressed="false">
+                <svg viewBox="0 0 24 24" class="on"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>
+                <svg viewBox="0 0 24 24" class="off"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m22 9-6 6M16 9l6 6"/></svg>
+            </button>
+            <button class="tool tool-icon" id="btn-help" type="button" title="How to play (?)" aria-label="How to play">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></svg>
+            </button>
+        </nav>
+    </header>
 
-        <main id="game-container" aria-label="Puzzle board. Use the arrow keys or swipe to slide."></main>
+    <div id="banner" class="banner" role="status" hidden>
+        <p id="banner-text"></p>
+        <button id="banner-btn" class="btn btn-primary" type="button" hidden>Undo</button>
     </div>
 
-    <div id="toast" class="toast" role="status" hidden></div>
+    <section id="ai-panel" class="ai-panel" aria-labelledby="ai-title" hidden>
+        <div class="ai-head">
+            <h2 id="ai-title">Watch the AI solve</h2>
+            <button class="close" id="ai-close" type="button" aria-label="Close">&times;</button>
+        </div>
+        <div class="algos" id="algos" role="radiogroup" aria-label="Search algorithm"></div>
+        <p class="algo-note" id="algo-note"></p>
+        <dl class="ai-stats" id="ai-stats">
+            <div><dt>Expanded</dt><dd id="ai-expanded">-</dd></div>
+            <div><dt>Generated</dt><dd id="ai-generated">-</dd></div>
+            <div><dt>Moves</dt><dd id="ai-moves">-</dd></div>
+            <div><dt>Time</dt><dd id="ai-time">-</dd></div>
+        </dl>
+        <div class="ai-actions">
+            <button class="btn btn-primary" id="ai-run" type="button">Solve from start</button>
+            <button class="btn" id="ai-compare" type="button">Compare all</button>
+        </div>
+        <table class="compare" id="compare" hidden>
+            <thead><tr><th>Algorithm</th><th>Expanded</th><th>Moves</th><th></th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </section>
 
-    <div id="won-overlay" class="overlay" hidden>
-        <div class="glass-panel center-panel" role="dialog" aria-labelledby="won-title">
-            <h2 id="won-title" class="massive-text">Level cleared!</h2>
+    <div id="won" class="overlay" hidden>
+        <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="won-title">
+            <div class="stars" id="won-stars" aria-hidden="true"></div>
+            <h2 id="won-title">Victory!</h2>
             <p id="won-text"></p>
-            <p id="won-best" class="badge" hidden>New best!</p>
+            <p id="won-best" class="pill" hidden>New best</p>
             <div class="dialog-actions">
-                <button id="btn-replay" class="action-btn" type="button">Replay</button>
-                <button id="btn-next" class="action-btn primary-btn" type="button">Next level</button>
+                <button class="btn" id="won-replay" type="button">Replay</button>
+                <button class="btn" id="won-levels" type="button">Levels</button>
+                <button class="btn btn-primary" id="won-next" type="button">Next level</button>
             </div>
         </div>
     </div>
 
-    <div id="levels-overlay" class="overlay" hidden>
-        <div class="glass-panel center-panel levels-panel" role="dialog" aria-labelledby="levels-title">
-            <h2 id="levels-title">Levels</h2>
-            <p class="levels-note">Clear a level to unlock the next. Match par for a perfect clear.</p>
-            <div id="level-grid" class="level-grid"></div>
-            <button id="btn-close-levels" class="action-btn" type="button">Close</button>
+    <div id="lost" class="overlay overlay-soft" hidden>
+        <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="lost-title">
+            <div class="splash-icon" aria-hidden="true">
+                <svg viewBox="0 0 48 48"><path d="M24 6c6 9 11 15 11 22a11 11 0 0 1-22 0c0-7 5-13 11-22z"/></svg>
+            </div>
+            <h2 id="lost-title">Splash!</h2>
+            <p id="lost-text">Nothing stopped your warrior, so he slid into the sea.</p>
+            <div class="dialog-actions">
+                <button class="btn" id="lost-restart" type="button">Restart</button>
+                <button class="btn btn-primary" id="lost-undo" type="button">Undo move</button>
+            </div>
         </div>
     </div>
+
+    <div id="levels" class="overlay" hidden>
+        <div class="dialog dialog-wide" role="dialog" aria-modal="true" aria-labelledby="levels-title">
+            <div class="levels-head">
+                <h2 id="levels-title">Levels</h2>
+                <p class="levels-total" id="levels-total"></p>
+                <button class="close" id="levels-close" type="button" aria-label="Close">&times;</button>
+            </div>
+            <p class="levels-note">Clear a level to unlock the next. Three stars means you matched the optimal solution.</p>
+            <div id="level-grid" class="level-grid"></div>
+        </div>
+    </div>
+
+    <div id="help" class="overlay" hidden>
+        <div class="dialog dialog-wide help" role="dialog" aria-modal="true" aria-labelledby="help-title">
+            <div class="levels-head">
+                <h2 id="help-title">How to play</h2>
+                <button class="close" id="help-close" type="button" aria-label="Close">&times;</button>
+            </div>
+            <ul class="rules">
+                <li><b>Slide.</b> Each move sends the warrior in a straight line until something stops him.</li>
+                <li><b>Defeat every enemy.</b> Slide into an enemy to defeat it. You stop on its tile.</li>
+                <li><b>Mind the sea.</b> Rocks stop you on the tile in front of them. With nothing to stop you, you fall in and lose.</li>
+                <li><b>Use the wizard.</b> He blocks you like a rock. <b>Magic</b> sends him to his next glowing circle (one move).</li>
+                <li><b>Think ahead.</b> Every level has an optimal solution. Match it for three stars.</li>
+            </ul>
+            <table class="keys">
+                <tr><th>Slide</th><td>Arrow keys / WASD, or swipe</td></tr>
+                <tr><th>Magic</th><td>Space or E</td></tr>
+                <tr><th>Undo / Restart</th><td>Z / R</td></tr>
+                <tr><th>Hint / Watch AI</th><td>H / I</td></tr>
+                <tr><th>Camera</th><td>Drag to tilt, scroll or pinch to zoom, double-click to reset</td></tr>
+            </table>
+            <div class="dialog-actions">
+                <button class="btn btn-primary" id="help-ok" type="button">Let's go</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast" role="status" hidden></div>
 
     <script type="module" src="js/game.js"></script>
 </body>

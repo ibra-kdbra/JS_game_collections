@@ -1,372 +1,662 @@
-import * as THREE from 'three';
+// Brainy Warrior 3D: game flow, input, UI and progress.
+// Rules live in rules.js, the solver in wasm/solver.cpp, drawing in scene.js.
 import { LEVELS } from './levels.js';
-import { LevelRenderer } from './level.js';
-import { Player } from './player.js';
-import { Wizard } from './wizard.js';
-import { solve } from './solver.js';
-import { DIRECTIONS, enemiesLeft, initialState, isWon, moveWizard, slide } from './rules.js';
-import { createLoop } from '../../assets/kit/loop.js';
+import { apply, enemiesLeft, initialState, isWon, magic, slide } from './rules.js';
+import { World } from './scene.js';
+import { ALGORITHMS, solve, solverReady } from './solver-client.js';
+import { sfx, setMuted, isMuted, unlock as unlockAudio } from './audio.js';
 import { createStore, recordBest } from '../../assets/kit/storage.js';
 import { createTouchControls, onSwipe } from '../../assets/kit/input.js';
 import { initShell } from '../../assets/kit/shell.js';
 
 const SLUG = 'brainy-warrior';
-const SOLUTION_STEP_MS = 420;
-
 const store = createStore(SLUG);
 const $ = (id) => document.getElementById(id);
-const ui = {
-    container: $('game-container'),
-    levelName: $('level-name'),
-    levelHint: $('level-hint'),
-    moves: $('move-count'),
-    par: $('par-count'),
-    enemies: $('enemy-count'),
-    swords: $('sword-count'),
-    toast: $('toast'),
-    won: $('won-overlay'),
-    wonText: $('won-text'),
-    wonBest: $('won-best'),
-    levels: $('levels-overlay'),
-    levelGrid: $('level-grid'),
-    btnNext: $('btn-next'),
-    btnWizard: $('btn-wizard'),
-    btnSolve: $('btn-solve'),
-};
-
-// Progress: { unlocked: highest playable index, best: { [index]: fewest moves } }.
-const progress = store.get('progress', { unlocked: 0, best: {} });
-const saveProgress = () => store.set('progress', progress);
 
 initShell({ slug: SLUG });
-const touch = createTouchControls({
-    dpad: { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' },
-    buttons: [
-        { label: 'Wizard', key: ' ' },
-        { label: 'Undo', key: 'z', small: true },
-    ],
-});
-const touchWizardButton = [...touch.el.querySelectorAll('button')].find((b) => b.textContent === 'Wizard');
-const hasTouch = !touch.el.hidden;
 
-// The on-screen pad would sit on top of dialogs, so it hides while one is open.
-function setDialog(el, open) {
-    el.hidden = !open;
-    if (!hasTouch) return;
-    if (ui.won.hidden && ui.levels.hidden) touch.show();
-    else touch.hide();
-}
+// ------------------------------------------------------------ progress --
+// { [levelId]: { best: moves, stars: 0-3, ai?: true } }
+const progress = store.get('progress-v2', {});
+const saveProgress = () => store.set('progress-v2', progress);
+const isCleared = (i) => !!progress[LEVELS[i].id];
+const isUnlocked = (i) => i === 0 || isCleared(i - 1) || isCleared(i);
+const totalStars = () => LEVELS.reduce((n, l) => n + (progress[l.id]?.stars || 0), 0);
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0f172a);
-scene.fog = new THREE.Fog(0x0f172a, 18, 40);
-const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-ui.container.appendChild(renderer.domElement);
+setMuted(store.get('muted', false));
 
-scene.add(new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 0.7));
-const sun = new THREE.DirectionalLight(0xffffff, 0.9);
-sun.castShadow = true;
-sun.shadow.mapSize.set(1024, 1024);
-scene.add(sun, sun.target);
-
-const board = new LevelRenderer(scene);
-const player = new Player(board.hero, onStepEvent);
-
+// --------------------------------------------------------------- state --
 let levelIdx = 0;
 let level = null;
 let state = null;
 let history = [];
-let moves = 0;
-let wizard = null;
-let solutionQueue = [];
-let solutionTimer = 0;
-let usedSolution = false;
-let won = false;
+let mode = 'play'; // play | busy | won | lost | ai
+let queued = null;
+let hintsUsed = 0;
+let stuck = false;
+let aiAlg = store.get('ai-alg', 'astar');
+let aiRun = 0; // bumps to cancel a running AI playback
+
+const world = new World($('stage'));
+
+// --------------------------------------------------------------- touch --
+const touch = createTouchControls({
+    dpad: { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' },
+    buttons: [
+        { label: 'Magic', key: ' ' },
+        { label: 'Undo', key: 'z', small: true },
+    ],
+});
+const hasTouch = !touch.el.hidden;
+const touchMagic = [...touch.el.querySelectorAll('button')].find((b) => b.textContent === 'Magic');
+
+function layout() {
+    // Tell the camera how much of the screen the HUD and touch pad cover.
+    const hud = $('hud').getBoundingClientRect();
+    let bottom = 16;
+    if (hasTouch && !touch.el.hidden) bottom = Math.max(bottom, window.innerHeight - touch.el.getBoundingClientRect().top + 4);
+    if (!$('ai-panel').hidden && window.innerWidth <= 720) {
+        bottom = Math.max(bottom, window.innerHeight - $('ai-panel').getBoundingClientRect().top + 6);
+    }
+    world.setInsets({ top: hud.bottom + 6, bottom });
+}
+addEventListener('resize', () => requestAnimationFrame(layout));
+
+// ---------------------------------------------------------------- HUD --
+function updateHud() {
+    const moves = history.length;
+    $('lvl-num').textContent = levelIdx + 1;
+    $('level-name').textContent = level.name;
+    $('moves').textContent = moves;
+    $('moves').className = moves > level.par ? 'over' : moves === level.par && isWon(state) ? 'on-par' : '';
+    $('optimal').textContent = level.par;
+    $('enemies').textContent = enemiesLeft(state);
+    $('btn-undo').disabled = history.length === 0;
+}
+
 let toastTimer = 0;
-
-function fitCamera() {
-    const width = ui.container.clientWidth;
-    const height = ui.container.clientHeight;
-    renderer.setSize(width, height, false);
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
-    if (!level) return;
-
-    const cx = (board.width - 1) / 2;
-    const cz = (board.depth - 1) / 2;
-    const view = new THREE.Vector3(0, 1, 0.62).normalize();
-    const corners = [];
-    for (const x of [-0.6, board.width - 0.4]) {
-        for (const z of [-0.6, board.depth - 0.4]) {
-            for (const y of [-0.5, 1]) corners.push(new THREE.Vector3(x, y, z));
-        }
-    }
-    // Binary search for the closest distance that keeps the whole board on screen.
-    let near = 2;
-    let far = 80;
-    for (let i = 0; i < 24; i++) {
-        const mid = (near + far) / 2;
-        camera.position.set(cx, 0, cz).addScaledVector(view, mid);
-        camera.lookAt(cx, 0, cz);
-        camera.updateMatrixWorld();
-        const fits = corners.every((c) => {
-            const p = c.clone().project(camera);
-            return Math.abs(p.x) < 0.94 && Math.abs(p.y) < 0.94;
-        });
-        if (fits) far = mid;
-        else near = mid;
-    }
-    camera.position.set(cx, 0, cz).addScaledVector(view, far);
-    camera.lookAt(cx, 0, cz);
-    sun.position.set(cx + 6, 14, cz + 8);
-    sun.target.position.set(cx, 0, cz);
-    const span = Math.max(board.width, board.depth);
-    Object.assign(sun.shadow.camera, { left: -span, right: span, top: span, bottom: -span });
-    sun.shadow.camera.updateProjectionMatrix();
-}
-
-function showToast(text, ms = 1600) {
-    ui.toast.textContent = text;
-    ui.toast.hidden = false;
+function toast(text, ms = 1500) {
+    const el = $('toast');
+    el.textContent = text;
+    el.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => (ui.toast.hidden = true), ms);
+    toastTimer = setTimeout(() => (el.hidden = true), ms);
 }
 
-function updateUI() {
-    ui.moves.textContent = moves;
-    ui.par.textContent = level.par;
-    ui.enemies.textContent = enemiesLeft(level, state);
-    ui.swords.textContent = state.swords;
-    ui.swords.parentElement.hidden = !level.entities.some((e) => e.type === 'sword');
+function banner(text, { action = null, good = false } = {}) {
+    const el = $('banner');
+    if (!text) {
+        el.hidden = true;
+        return;
+    }
+    $('banner-text').textContent = text;
+    el.classList.toggle('good', good);
+    const btn = $('banner-btn');
+    btn.hidden = !action;
+    if (action) {
+        btn.textContent = action.label;
+        btn.onclick = action.run;
+    }
+    el.hidden = false;
 }
 
-function loadLevel(idx) {
+function anyDialogOpen() {
+    return ['won', 'lost', 'levels', 'help'].some((id) => !$(id).hidden);
+}
+
+function showDialog(id, open) {
+    $(id).hidden = !open;
+    if (hasTouch) {
+        if (anyDialogOpen() || !$('ai-panel').hidden) touch.hide();
+        else touch.show();
+    }
+    if (open) ($(id).querySelector('.btn-primary:not([hidden])') || $(id).querySelector('button'))?.focus({ preventScroll: true });
+    layout();
+}
+
+// -------------------------------------------------------------- levels --
+function loadLevel(idx, { keepAi = false } = {}) {
+    aiRun++;
     levelIdx = Math.max(0, Math.min(idx, LEVELS.length - 1));
     level = LEVELS[levelIdx];
-    board.build(level);
-    wizard = level.wizard ? new Wizard(board.root, level.wizard.positions) : null;
     state = initialState(level);
     history = [];
-    moves = 0;
-    won = false;
-    usedSolution = false;
-    solutionQueue = [];
-    player.place(state.x, state.z);
-    ui.levelName.textContent = `${levelIdx + 1}. ${level.name}`;
-    ui.levelHint.textContent = level.hint;
-    setDialog(ui.won, false);
-    ui.btnWizard.hidden = !wizard;
-    if (touchWizardButton) touchWizardButton.hidden = !wizard;
-    store.set('lastLevel', levelIdx);
-    updateUI();
-    fitCamera();
+    hintsUsed = 0;
+    stuck = false;
+    queued = null;
+    mode = 'play';
+    $('level-tip').textContent = level.tip;
+    const hasWizard = level.wizardSpots.length > 1;
+    $('btn-magic').hidden = !hasWizard;
+    if (touchMagic) touchMagic.hidden = !hasWizard;
+    ['won', 'lost', 'levels'].forEach((id) => ($(id).hidden = true));
+    if (!keepAi) closeAi();
+    showDialog('won', false);
+    banner(null);
+    world.build(level, state);
+    store.set('last-level', level.id);
+    updateHud();
+    layout();
 }
 
-function applyState(next) {
-    state = next;
-    player.place(state.x, state.z);
-    board.syncEntities(state.alive);
-    wizard?.place(state.wizardIdx);
-    updateUI();
-}
-
-function onStepEvent(step) {
-    if (step.event === 'kill') board.defeat(step.id);
-    if (step.event === 'pickup') board.defeat(step.id);
-}
-
-function act(action) {
-    if (won || player.isMoving || wizard?.teleport > 0) return false;
-    if (action === 'wizard') {
-        const next = moveWizard(level, state);
-        if (!next) {
-            showToast(wizard ? 'The wizard can’t teleport onto someone.' : 'No wizard on this level.');
-            return false;
-        }
-        history.push(state);
-        state = next;
-        moves++;
-        wizard.moveTo(state.wizardIdx);
-        updateUI();
-        return true;
-    }
-    const { dx, dz } = DIRECTIONS[action];
-    const result = slide(level, state, dx, dz);
-    if (!result) {
-        player.nudge(dx, dz);
-        return false;
-    }
-    const before = state;
-    history.push(before);
-    moves++;
-    updateUI();
-    player.follow(result.steps, () => {
-        if (result.died) {
-            // A fall costs nothing but time: the hero climbs back to where the slide began.
-            history.pop();
-            moves--;
-            solutionQueue = [];
-            applyState(before);
-            showToast('Splash! You slid into the water.');
-            return;
-        }
-        state = result.state;
-        updateUI();
-        if (isWon(level, state)) finishLevel();
-    });
-    return true;
+function restart() {
+    if (mode === 'busy') return;
+    aiRun++;
+    state = initialState(level);
+    history = [];
+    stuck = false;
+    queued = null;
+    mode = 'play';
+    showDialog('won', false);
+    showDialog('lost', false);
+    banner(null);
+    world.clearHighlights();
+    world.clearHeat();
+    world.sync(state, { facing: 'down' });
+    updateHud();
 }
 
 function undo() {
-    if (won || player.isMoving || history.length === 0) return;
-    solutionQueue = [];
-    moves--;
-    applyState(history.pop());
+    if (mode === 'busy' || mode === 'ai' || !history.length) return;
+    state = history.pop();
+    mode = 'play';
+    stuck = false;
+    showDialog('lost', false);
+    showDialog('won', false);
+    banner(null);
+    world.clearHighlights();
+    world.sync(state);
+    sfx.undo();
+    updateHud();
+    checkStuck();
 }
 
-function finishLevel() {
-    won = true;
-    const best = progress.best[levelIdx];
-    const isNewBest = !usedSolution && (best === undefined || moves < best);
-    if (isNewBest) progress.best[levelIdx] = moves;
-    progress.unlocked = Math.max(progress.unlocked, Math.min(levelIdx + 1, LEVELS.length - 1));
-    saveProgress();
-    const cleared = Object.keys(progress.best).length;
-    recordBest(SLUG, cleared, { label: `${cleared}/${LEVELS.length} levels` });
-
-    let text = `${moves} moves (par ${level.par}).`;
-    if (usedSolution) text += ' Solved with help, so it doesn\u2019t count as a best.';
-    else if (moves <= level.par) text += ' Perfect: you matched the solver!';
-    else if (!isNewBest) text += ` Your best is ${best}.`;
-    ui.wonText.textContent = text;
-    ui.wonBest.hidden = !isNewBest || best === undefined;
-    ui.btnNext.textContent = levelIdx === LEVELS.length - 1 ? 'Level select' : 'Next level';
-    setDialog(ui.won, true);
-    ui.btnNext.focus({ preventScroll: true });
-}
-
-function showSolution() {
-    if (won || player.isMoving) return;
-    const path = solve(level, state);
-    if (!path) {
-        showToast('No way to win from here. Undo or restart.', 2400);
+// ---------------------------------------------------------------- moves --
+async function act(action, { fromAi = false, speed = 1 } = {}) {
+    if (mode === 'busy' && !fromAi) {
+        queued = action;
         return;
     }
-    usedSolution = true;
-    solutionQueue = path;
-    solutionTimer = SOLUTION_STEP_MS / 1000;
-    showToast(`Solution: ${path.length} move${path.length === 1 ? '' : 's'} from here.`);
+    if (mode !== 'play' && !(fromAi && mode === 'ai')) return;
+    const result = apply(level, state, action);
+    if (!result) {
+        sfx.blocked();
+        if (action === 'magic' && level.wizardSpots.length > 1) toast('The wizard has nowhere free to go');
+        return;
+    }
+    world.clearHighlights();
+    banner(null);
+    const prev = state;
+    history.push(prev);
+    state = result.state;
+    mode = fromAi ? 'ai' : 'busy';
+    updateHud();
+
+    if (action === 'magic') {
+        sfx.magic();
+        await world.magic(level, result.from, result.to, speed);
+    } else {
+        sfx.slide(result.path.length);
+        await world.slide(prev, action, result, { onDefeat: () => sfx.defeat(), onStop: () => sfx.stop(), onFall: () => sfx.splash() }, speed);
+    }
+    if (fromAi) return;
+    mode = 'play';
+    afterMove();
+    if (queued && mode === 'play') {
+        const next = queued;
+        queued = null;
+        act(next);
+    }
+    queued = null;
 }
 
-function renderLevelGrid() {
-    ui.levelGrid.replaceChildren(
-        ...LEVELS.map((lvl, i) => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'level-btn';
-            const locked = i > progress.unlocked;
-            button.disabled = locked;
-            const best = progress.best[i];
-            button.innerHTML = `<span class="level-num">${i + 1}</span><span class="level-title"></span><span class="level-score"></span>`;
-            button.querySelector('.level-title').textContent = locked ? 'Locked' : lvl.name;
-            button.querySelector('.level-score').textContent =
-                best === undefined ? `par ${lvl.par}` : `best ${best} / par ${lvl.par}`;
-            if (best !== undefined && best <= lvl.par) button.classList.add('perfect');
-            if (i === levelIdx) button.setAttribute('aria-current', 'true');
-            button.addEventListener('click', () => {
-                setDialog(ui.levels, false);
-                loadLevel(i);
-            });
-            return button;
-        }),
-    );
+function afterMove({ ai = false } = {}) {
+    updateHud();
+    if (isWon(state)) return win({ ai });
+    if (state.dead) return lose();
+    checkStuck();
 }
 
-function openLevels() {
-    renderLevelGrid();
-    setDialog(ui.won, false);
-    setDialog(ui.levels, true);
-    ui.levelGrid.querySelector('[aria-current]')?.focus({ preventScroll: true });
+/** After every move, ask the solver whether the level can still be won. */
+function checkStuck() {
+    if (state.dead || isWon(state)) return;
+    const r = solve(level, state, 'astar');
+    stuck = !!r && !r.path && !r.overflow;
+    if (stuck) {
+        banner('No way to win from here.', { action: { label: 'Undo', run: undo } });
+    }
 }
 
-function nextLevel() {
-    if (levelIdx === LEVELS.length - 1) openLevels();
-    else loadLevel(levelIdx + 1);
+function win({ ai = false } = {}) {
+    mode = 'won';
+    queued = null;
+    world.celebrate();
+    sfx.win();
+    const moves = history.length;
+    const stars = ai ? 0 : starsFor(moves, level.par, hintsUsed);
+    const prev = progress[level.id];
+    let isNew = false;
+    if (!ai) {
+        isNew = !prev || prev.ai || moves < prev.best;
+        progress[level.id] = {
+            best: prev && !prev.ai ? Math.min(prev.best, moves) : moves,
+            stars: Math.max(prev?.stars || 0, stars),
+        };
+    } else if (!prev) {
+        progress[level.id] = { best: moves, stars: 0, ai: true };
+    }
+    saveProgress();
+    const total = totalStars();
+    recordBest(SLUG, total, { label: `${total}/${LEVELS.length * 3} stars` });
+
+    const starsEl = $('won-stars');
+    starsEl.innerHTML = [0, 1, 2].map((i) => starSvg(i < stars)).join('');
+    $('won-title').textContent = ai ? 'Solved by the AI' : stars === 3 ? 'Perfect!' : 'Victory!';
+    $('won-text').textContent = ai
+        ? `${ALGORITHMS.find((a) => a.id === aiAlg).name} cleared it in ${moves} moves (optimal is ${level.par}). Now try it yourself!`
+        : moves === level.par
+          ? `${plural(moves, 'move')}: you matched the optimal solution.${hintsUsed ? ` You used ${hintsUsed} hint${hintsUsed > 1 ? 's' : ''}.` : ''}`
+          : `${plural(moves, 'move')}. The optimal solution takes ${level.par}.${hintsUsed ? ` You used ${hintsUsed} hint${hintsUsed > 1 ? 's' : ''}.` : ''}`;
+    $('won-best').hidden = !(isNew && !ai && prev);
+    $('won-next').hidden = levelIdx >= LEVELS.length - 1;
+    setTimeout(() => {
+        if (mode === 'won') showDialog('won', true);
+    }, 900);
 }
 
-const KEY_ACTIONS = {
-    ArrowUp: 'up', w: 'up',
-    ArrowDown: 'down', s: 'down',
-    ArrowLeft: 'left', a: 'left',
-    ArrowRight: 'right', d: 'right',
-    ' ': 'wizard', e: 'wizard',
+function lose() {
+    mode = 'lost';
+    queued = null;
+    setTimeout(() => {
+        if (mode !== 'lost') return;
+        sfx.lose();
+        showDialog('lost', true);
+    }, 250);
+}
+
+export function starsFor(moves, par, hints) {
+    let s = moves <= par ? 3 : moves <= par + Math.max(2, Math.ceil(par / 4)) ? 2 : 1;
+    if (hints) s = Math.min(s, 2);
+    return s;
+}
+
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+const STAR_PATH = 'M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9z';
+const starSvg = (lit) => `<svg viewBox="0 0 24 24" class="${lit ? 'lit' : ''}"><path d="${STAR_PATH}"/></svg>`;
+
+// ---------------------------------------------------------------- hint --
+function hint() {
+    if (mode !== 'play') return;
+    const r = solve(level, state, 'astar');
+    if (!r) return toast('The solver is still loading');
+    if (!r.path) {
+        banner('No way to win from here.', { action: { label: 'Undo', run: undo } });
+        return;
+    }
+    hintsUsed++;
+    sfx.hint();
+    const action = r.path[0];
+    const left = r.path.length;
+    if (action === 'magic') {
+        const m = magic(level, state);
+        world.showHint([level.wizardSpots[m.to]], { color: 0xa78bfa });
+        toast(`Use magic. ${left} move${left > 1 ? 's' : ''} to go.`, 2200);
+    } else {
+        const s = slide(level, state, action);
+        world.showHint(s.path, { arrowDir: action });
+        toast(`Slide ${action}. ${left} move${left > 1 ? 's' : ''} to go.`, 2200);
+    }
+}
+
+// ----------------------------------------------------------- AI watch --
+function buildAlgoButtons() {
+    const box = $('algos');
+    box.innerHTML = '';
+    for (const a of ALGORITHMS) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'algo';
+        b.textContent = a.name;
+        b.title = a.long;
+        b.setAttribute('role', 'radio');
+        b.dataset.id = a.id;
+        b.addEventListener('click', () => {
+            aiAlg = a.id;
+            store.set('ai-alg', aiAlg);
+            sfx.click();
+            setAiStats(null);
+            renderAlgo();
+        });
+        box.append(b);
+    }
+    renderAlgo();
+}
+
+const ALGO_NOTES = {
+    bfs: 'Explores every position one move deeper at a time. Always finds the fewest moves.',
+    dfs: 'Dives down one line of moves until it wins or runs dry. Fast to code, rarely the shortest.',
+    ucs: 'Expands the cheapest path first, where cost is tiles travelled: the shortest run, not the fewest moves.',
+    greedy: 'Hill climbing: always tries the position that looks closest to the goal. Quick, but can wander.',
+    astar: 'Moves so far + a lower bound on moves left (enemies left, +1 if none is in line). Optimal and focused.',
 };
 
-window.addEventListener('keydown', (e) => {
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
-    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-    if (!ui.levels.hidden) {
-        if (key === 'Escape' || key === 'l') setDialog(ui.levels, false);
-        return;
-    }
-    if (!ui.won.hidden) {
-        if (key === 'Enter' && document.activeElement !== ui.btnNext) nextLevel();
-        return;
-    }
-    if (e.target.closest?.('button') && (key === ' ' || key === 'Enter')) return;
-    if (KEY_ACTIONS[key]) {
-        e.preventDefault();
-        solutionQueue = [];
-        act(KEY_ACTIONS[key]);
-    } else if (key === 'z' || key === 'u' || key === 'Backspace') {
-        undo();
-    } else if (key === 'r') {
-        loadLevel(levelIdx);
-    } else if (key === 'l') {
-        openLevels();
-    } else if (key === 'h') {
-        showSolution();
-    }
-});
+function renderAlgo() {
+    for (const b of $('algos').children) b.setAttribute('aria-checked', String(b.dataset.id === aiAlg));
+    $('algo-note').textContent = ALGO_NOTES[aiAlg];
+}
 
-onSwipe(renderer.domElement, (dir) => {
-    if (!ui.levels.hidden || !ui.won.hidden) return;
-    solutionQueue = [];
+function openAi() {
+    if (mode === 'busy') return;
+    $('ai-panel').hidden = false;
+    if (hasTouch) touch.hide();
+    $('compare').hidden = true;
+    layout();
+}
+
+function closeAi() {
+    aiRun++;
+    $('ai-panel').hidden = true;
+    world.clearHeat();
+    if (mode === 'ai') {
+        mode = 'play';
+        updateHud();
+        checkStuck();
+    }
+    if (hasTouch && !anyDialogOpen()) touch.show();
+    layout();
+}
+
+function setAiStats(r) {
+    $('ai-expanded').textContent = r ? r.expanded.toLocaleString() : '-';
+    $('ai-generated').textContent = r ? r.generated.toLocaleString() : '-';
+    $('ai-moves').textContent = r ? (r.path ? r.path.length : 'none') : '-';
+    $('ai-time').textContent = r ? `${r.ms < 1 ? r.ms.toFixed(2) : r.ms.toFixed(1)}ms` : '-';
+}
+
+async function runAi() {
+    if (mode === 'busy') return;
+    const run = ++aiRun;
+    restart();
+    aiRun = run;
+    mode = 'ai';
+    setAiStats(null);
+    $('ai-run').textContent = 'Stop';
+    const r = solve(level, state, aiAlg, { withTrace: true });
+    if (!r) {
+        toast('The solver is still loading');
+        mode = 'play';
+        return;
+    }
+    const thinking = setInterval(() => sfx.think(), 90);
+    await world.showSearch(r.trace || [], Math.min(2.4, 0.6 + (r.trace?.length || 0) / 600));
+    clearInterval(thinking);
+    if (run !== aiRun) return;
+    setAiStats(r);
+    world.fadeHeat();
+    if (!r.path) {
+        toast('No solution found');
+        mode = 'play';
+        $('ai-run').textContent = 'Solve from start';
+        return;
+    }
+    const speed = r.path.length > 16 ? 1.6 : 1.25;
+    for (const action of r.path) {
+        if (run !== aiRun) return;
+        await act(action, { fromAi: true, speed });
+        await world.wait(0.12);
+    }
+    if (run !== aiRun) return;
+    $('ai-run').textContent = 'Solve from start';
+    world.clearHeat();
+    afterMove({ ai: true });
+}
+
+function compareAll() {
+    const start = initialState(level);
+    const rows = ALGORITHMS.map((a) => ({ a, r: solve(level, start, a.id) }));
+    const tbody = $('compare').querySelector('tbody');
+    tbody.innerHTML = rows
+        .map(({ a, r }) => {
+            const len = r?.path?.length;
+            const opt = len === level.par;
+            return `<tr><td>${a.name}</td><td>${r ? r.expanded.toLocaleString() : '-'}</td><td class="${opt ? 'opt' : ''}">${len ?? '-'}</td><td>${opt ? 'optimal' : ''}</td></tr>`;
+        })
+        .join('');
+    $('compare').hidden = false;
+    sfx.click();
+}
+
+$('ai-run').addEventListener('click', () => {
+    if (mode === 'ai') {
+        aiRun++;
+        mode = 'play';
+        $('ai-run').textContent = 'Solve from start';
+        world.clearHeat();
+        updateHud();
+        checkStuck();
+    } else runAi();
+});
+$('ai-compare').addEventListener('click', compareAll);
+$('ai-close').addEventListener('click', closeAi);
+
+// --------------------------------------------------------- level select --
+function openLevels() {
+    const grid = $('level-grid');
+    grid.innerHTML = '';
+    LEVELS.forEach((l, i) => {
+        const p = progress[l.id];
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `level-card${i === levelIdx ? ' current' : ''}`;
+        b.disabled = !isUnlocked(i);
+        const wiz = l.wizardSpots.length > 1;
+        b.innerHTML = `<span class="num">${i + 1}</span><span class="name">${l.name}</span>
+            <span class="meta"><span class="mini-stars">${[0, 1, 2].map((k) => starSvg(k < (p?.stars || 0))).join('')}</span><span>${p && !p.ai ? `${p.best}/${l.par}` : `par ${l.par}`}</span></span>
+            ${b.disabled ? '<svg class="lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>' : wiz ? '<svg class="wiz" viewBox="0 0 24 24"><path d="m15 4-1.5 3L10 8.5l3.5 1.5L15 13l1.5-3L20 8.5 16.5 7z"/><path d="M4 20 13 11"/></svg>' : ''}`;
+        b.setAttribute('aria-label', `Level ${i + 1}: ${l.name}${b.disabled ? ' (locked)' : `, ${p?.stars || 0} stars`}`);
+        b.addEventListener('click', () => {
+            sfx.click();
+            loadLevel(i);
+        });
+        grid.append(b);
+    });
+    $('levels-total').textContent = `${totalStars()} / ${LEVELS.length * 3} stars`;
+    showDialog('levels', true);
+    grid.querySelector('.current')?.focus({ preventScroll: true });
+}
+
+// --------------------------------------------------------------- input --
+const KEYS = {
+    ArrowUp: 'up',
+    ArrowDown: 'down',
+    ArrowLeft: 'left',
+    ArrowRight: 'right',
+    w: 'up',
+    s: 'down',
+    a: 'left',
+    d: 'right',
+    ' ': 'magic',
+    e: 'magic',
+};
+
+function onKey(e) {
+    unlockAudio();
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (k === 'Escape') {
+        if (!$('levels').hidden) showDialog('levels', false);
+        else if (!$('help').hidden) showDialog('help', false);
+        else if (!$('ai-panel').hidden) closeAi();
+        else openLevels();
+        e.preventDefault();
+        return;
+    }
+    if (!$('won').hidden) {
+        if (k === 'Enter' || k === 'n') $('won-next').hidden ? openLevels() : loadLevel(levelIdx + 1);
+        else if (k === 'r') restart();
+        else if (k === 'z' || k === 'u' || k === 'Backspace') undo();
+        else return;
+        e.preventDefault();
+        return;
+    }
+    if (!$('levels').hidden || !$('help').hidden) return;
+    if (KEYS[k]) {
+        e.preventDefault();
+        if (e.repeat && mode === 'busy') return;
+        if (mode === 'lost') return;
+        act(KEYS[k]);
+        return;
+    }
+    const actions = {
+        z: undo,
+        u: undo,
+        Backspace: undo,
+        r: restart,
+        h: hint,
+        i: () => ($('ai-panel').hidden ? openAi() : closeAi()),
+        l: openLevels,
+        m: toggleSound,
+        '?': () => showDialog('help', true),
+        c: () => world.resetView(),
+    };
+    if (actions[k]) {
+        e.preventDefault();
+        actions[k]();
+    }
+}
+document.addEventListener('keydown', onKey);
+
+// Swipes (touch) slide the warrior; two fingers move the camera instead.
+const canvas = world.renderer.domElement;
+const pointers = new Map();
+let multiTouchUntil = 0;
+onSwipe(canvas, (dir) => {
+    if (performance.now() < multiTouchUntil) return;
+    if (mode === 'lost' || anyDialogOpen()) return;
     act(dir);
 });
-
-$('btn-restart').addEventListener('click', () => loadLevel(levelIdx));
-$('btn-undo').addEventListener('click', undo);
-$('btn-levels').addEventListener('click', openLevels);
-$('btn-close-levels').addEventListener('click', () => setDialog(ui.levels, false));
-ui.btnSolve.addEventListener('click', showSolution);
-ui.btnWizard.addEventListener('click', () => act('wizard'));
-ui.btnNext.addEventListener('click', nextLevel);
-$('btn-replay').addEventListener('click', () => loadLevel(levelIdx));
-
-new ResizeObserver(fitCamera).observe(ui.container);
-
-const loop = createLoop({
-    update(dt) {
-        player.update(dt);
-        wizard?.update(dt);
-        board.update(dt);
-        if (solutionQueue.length && !player.isMoving && !(wizard?.teleport > 0) && !won) {
-            solutionTimer -= dt;
-            if (solutionTimer <= 0) {
-                solutionTimer = SOLUTION_STEP_MS / 1000;
-                act(solutionQueue.shift());
-            }
-        }
+let pinchDist = 0;
+canvas.addEventListener('pointerdown', (e) => {
+    unlockAudio();
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, type: e.pointerType });
+    if (pointers.size >= 2) {
+        multiTouchUntil = performance.now() + 400;
+        const [a, b] = [...pointers.values()];
+        pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
+    }
+});
+canvas.addEventListener('pointermove', (e) => {
+    const p = pointers.get(e.pointerId);
+    if (!p) return;
+    const dx = e.clientX - p.x;
+    const dy = e.clientY - p.y;
+    if (p.type === 'mouse' && e.buttons) {
+        world.orbit(-dx * 0.005, -dy * 0.005);
+    } else if (pointers.size >= 2) {
+        multiTouchUntil = performance.now() + 400;
+        world.orbit(-dx * 0.0025, -dy * 0.0025);
+        p.x = e.clientX;
+        p.y = e.clientY;
+        const [a, b] = [...pointers.values()];
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinchDist) world.zoomBy(d / pinchDist);
+        pinchDist = d;
+        return;
+    }
+    p.x = e.clientX;
+    p.y = e.clientY;
+});
+const dropPointer = (e) => {
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) pinchDist = 0;
+};
+canvas.addEventListener('pointerup', dropPointer);
+canvas.addEventListener('pointercancel', dropPointer);
+canvas.addEventListener(
+    'wheel',
+    (e) => {
+        e.preventDefault();
+        world.zoomBy(e.deltaY > 0 ? 0.92 : 1.08);
     },
-    render() {
-        renderer.render(scene, camera);
-    },
+    { passive: false },
+);
+canvas.addEventListener('dblclick', () => world.resetView());
+
+function toggleSound() {
+    setMuted(!isMuted());
+    store.set('muted', isMuted());
+    $('btn-sound').setAttribute('aria-pressed', String(isMuted()));
+    $('btn-sound').setAttribute('aria-label', isMuted() ? 'Unmute sound' : 'Mute sound');
+}
+$('btn-sound').setAttribute('aria-pressed', String(isMuted()));
+
+const click = (id, fn) =>
+    $(id).addEventListener('click', (e) => {
+        unlockAudio();
+        e.currentTarget.blur();
+        fn();
+    });
+click('btn-undo', undo);
+click('btn-restart', restart);
+click('btn-magic', () => act('magic'));
+click('btn-hint', hint);
+click('btn-ai', () => ($('ai-panel').hidden ? openAi() : closeAi()));
+click('btn-levels', openLevels);
+click('btn-sound', toggleSound);
+click('btn-help', () => showDialog('help', true));
+click('won-next', () => loadLevel(levelIdx + 1));
+click('won-replay', () => loadLevel(levelIdx));
+click('won-levels', openLevels);
+click('lost-undo', undo);
+click('lost-restart', restart);
+click('levels-close', () => showDialog('levels', false));
+click('help-close', () => showDialog('help', false));
+click('help-ok', () => showDialog('help', false));
+for (const id of ['levels', 'help']) {
+    $(id).addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) showDialog(id, false);
+    });
+}
+
+// ---------------------------------------------------------------- start --
+buildAlgoButtons();
+const lastId = store.get('last-level', null);
+const lastIdx = LEVELS.findIndex((l) => l.id === lastId);
+loadLevel(lastIdx >= 0 && isUnlocked(lastIdx) ? lastIdx : 0);
+if (!store.get('seen-help', false)) {
+    showDialog('help', true);
+    store.set('seen-help', true);
+}
+solverReady.then((kind) => {
+    document.documentElement.dataset.solver = kind;
+    if (kind !== 'wasm') $('ai-compare').disabled = true;
 });
 
-loadLevel(Math.min(store.get('lastLevel', 0), progress.unlocked));
-loop.start();
+// Handy for automated checks and the curious: window.brainy.
+window.brainy = {
+    get level() {
+        return level;
+    },
+    get state() {
+        return state;
+    },
+    get mode() {
+        return mode;
+    },
+    get moves() {
+        return history.length;
+    },
+    get levelIndex() {
+        return levelIdx;
+    },
+    get idle() {
+        return world.tweens.size === 0;
+    },
+    get renderInfo() {
+        const r = world.renderer.info.render;
+        return { calls: r.calls, triangles: r.triangles };
+    },
+    solverReady,
+    loadLevel,
+    solve: (alg = 'astar') => solve(level, state, alg),
+};

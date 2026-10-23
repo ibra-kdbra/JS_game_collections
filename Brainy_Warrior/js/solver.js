@@ -1,38 +1,56 @@
-import { DIRECTIONS, isWon, moveWizard, slide, stateKey } from './rules.js';
-
-const MAX_STATES = 200000;
+// Reference solver in plain JavaScript: breadth-first search over the rules in
+// rules.js. The game normally uses the faster C++/WebAssembly solver
+// (wasm/solver.cpp); this one is the fallback when WebAssembly can't load and
+// the independent cross-check used by tools/verify-levels.mjs.
+import { initialState, isWon, stateKey, successors } from './rules.js';
 
 /**
- * Breadth-first search over puzzle states, so the first solution found uses the
- * fewest moves (slides and wizard teleports both count as one move).
- * Returns an array of actions ('up' | 'down' | 'left' | 'right' | 'wizard'),
- * `[]` when the state is already won, or `null` when no solution exists.
+ * Fewest-moves solution from `start`.
+ * Returns { path: action[] | null, expanded, generated }.
+ * `path` is [] when already won and null when the position can't be won.
  */
-export function solve(level, start) {
-    if (isWon(level, start)) return [];
-    const seen = new Set([stateKey(start)]);
-    let frontier = [{ state: start, path: [] }];
-
-    while (frontier.length > 0 && seen.size < MAX_STATES) {
+export function bfs(level, start = initialState(level), maxStates = 400000) {
+    if (isWon(start)) return { path: [], expanded: 0, generated: 1 };
+    const parent = new Map([[stateKey(start), null]]);
+    let frontier = [start];
+    let expanded = 0;
+    while (frontier.length && parent.size < maxStates) {
         const next = [];
-        for (const { state, path } of frontier) {
-            const options = Object.entries(DIRECTIONS).map(([action, { dx, dz }]) => {
-                const result = slide(level, state, dx, dz);
-                return [action, result && !result.died ? result.state : null];
-            });
-            options.push(['wizard', moveWizard(level, state)]);
-
-            for (const [action, after] of options) {
-                if (!after) continue;
-                const key = stateKey(after);
-                if (seen.has(key)) continue;
-                seen.add(key);
-                const route = [...path, action];
-                if (isWon(level, after)) return route;
-                next.push({ state: after, path: route });
+        for (const state of frontier) {
+            expanded++;
+            const key = stateKey(state);
+            for (const { action, state: after } of successors(level, state)) {
+                const k = stateKey(after);
+                if (parent.has(k)) continue;
+                parent.set(k, { key, action });
+                if (isWon(after)) {
+                    const path = [];
+                    for (let cur = parent.get(k); cur; cur = parent.get(cur.key)) path.unshift(cur.action);
+                    return { path, expanded, generated: parent.size };
+                }
+                next.push(after);
             }
         }
         frontier = next;
     }
-    return null;
+    return { path: null, expanded, generated: parent.size };
+}
+
+/** Average number of live moves per explored state (a difficulty signal). */
+export function branching(level, start = initialState(level), limit = 200000) {
+    const seen = new Set([stateKey(start)]);
+    const queue = [start];
+    let edges = 0;
+    for (let i = 0; i < queue.length && seen.size < limit; i++) {
+        const succ = successors(level, queue[i]);
+        edges += succ.length;
+        for (const { state } of succ) {
+            const k = stateKey(state);
+            if (!seen.has(k)) {
+                seen.add(k);
+                queue.push(state);
+            }
+        }
+    }
+    return { reachable: seen.size, branching: edges / queue.length };
 }
