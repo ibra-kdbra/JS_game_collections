@@ -23,10 +23,12 @@ export class View {
   }
 
   // Size the canvas to fit (availW x availH) CSS pixels with whole device pixels per cell.
+  // The backing store is capped at 2 device pixels per CSS pixel: sharper is invisible on
+  // a phone and only costs fill rate.
   fit(availW, availH) {
     if (!this.round) return;
     const { w, h } = this.round.board;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const cell = Math.max(2, Math.floor(Math.min((availW * dpr) / w, (availH * dpr) / h)));
     if (cell === this.cell && this.canvas.width === cell * w && this.canvas.height === cell * h) return;
     this.cell = cell;

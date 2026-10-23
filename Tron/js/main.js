@@ -3,6 +3,7 @@ import { createStore, recordBest } from '../../assets/kit/storage.js';
 import { createLoop } from '../../assets/kit/loop.js';
 import { createTouchControls, onSwipe, isTouchFirst } from '../../assets/kit/input.js';
 import { Round } from './round.js';
+import { ARENAS } from './board.js';
 import { View } from './view.js';
 import { Synth } from './audio.js';
 
@@ -117,9 +118,23 @@ function toMenu() {
 // ---------- Rounds ----------
 
 // A fresh board for the current settings; in the menu it doubles as a preview.
+// The board is turned upright when that gives it bigger cells in the space the stage
+// leaves for it (portrait phones, or the gap between the touch controls in landscape).
 function stageIsPortrait() {
-  const box = stage.getBoundingClientRect();
-  return box.width < box.height * 0.95;
+  const { w, h } = stageSpace();
+  const { long, short } = ARENAS[settings.arena];
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const upright = Math.floor(Math.min((w * dpr) / short, (h * dpr) / long));
+  const wide = Math.floor(Math.min((w * dpr) / long, (h * dpr) / short));
+  return upright > wide || (upright === wide && innerWidth < innerHeight);
+}
+
+function stageSpace() {
+  const style = getComputedStyle(stage);
+  return {
+    w: stage.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - 6,
+    h: stage.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom) - 6,
+  };
 }
 
 function newRound() {
@@ -291,16 +306,22 @@ function render() {
   else if (state === 'playing' && goFlash > 0) text = 'GO';
   const intro = state === 'menu' || state === 'countdown' || (state === 'paused' && resumeTo === 'countdown');
   view.draw(performance.now(), text, intro);
-  hud.blueBoost.style.transform = `scaleX(${round.blue.energy})`;
-  hud.orangeBoost.style.transform = `scaleX(${round.orange.energy})`;
+  setMeter(hud.blueBoost, round.blue.energy);
+  setMeter(hud.orangeBoost, round.orange.energy);
+}
+
+// Boost meters: only touch the DOM when the shown value changes.
+function setMeter(el, energy) {
+  const v = Math.round(energy * 100);
+  if (el.dataset.v === String(v)) return;
+  el.dataset.v = v;
+  el.style.transform = `scaleX(${v / 100})`;
 }
 
 const loop = createLoop({ update, render });
 
 function fitArena() {
-  const style = getComputedStyle(stage);
-  const w = stage.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - 6;
-  const h = stage.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom) - 6;
+  const { w, h } = stageSpace();
   view.fit(w, h);
 }
 
