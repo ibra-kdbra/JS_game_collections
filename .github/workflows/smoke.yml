@@ -30,6 +30,8 @@ jobs:
         run: node Minesweeper/test/solver.test.mjs
       - name: Souls Bumper levels
         run: node Souls-Bumper/tools/verify-levels.mjs
+      - name: Gravity Wells puzzles
+        run: node Gravity_Wells/tools/verify-puzzles.mjs
 
   smoke:
     name: Browser smoke test
