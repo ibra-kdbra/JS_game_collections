@@ -9,23 +9,32 @@ enemies on random maps or hold the line on hand-made ones.
 - **Maps**: 8 random layouts, 8 designed maps, and your own: build one in the
   [map editor](../td-editor/index.html) and press **Play this map**, or paste a map string with **Import map**.
 
-Your best result (waves cleared) is saved per map, mode and difficulty.
+Pick a map, mode and difficulty on the map screen. Winning the campaign earns up to
+three stars depending on how many lives you keep; stars and your best wave are shown
+per map, mode and difficulty.
+
+The wave panel shows what the next wave brings (new enemy types are marked), a
+countdown between waves and a button to send the next wave early for bonus gold.
+Select a tower to see its stats, what the upgrade changes, its sell price and
+which enemy it targets (First, Last, Strongest or Closest). The menu (Esc) has
+sound, damage numbers, health bars, particles and back-to-back waves.
 
 ### Touch
 
-Pick a tower, tap a tile to see its range, tap the same tile again to build.
-Tap a built tower to upgrade or sell it. Designed maps get bigger tiles with the phone held sideways.
+Pick a tower, tap a tile to see its range and whether it fits, then tap the same
+tile again or press **Build**. Tap a built tower to upgrade, sell or retarget it.
 
 ### Keyboard and mouse
 
-* Mouse: click a tile to build the selected tower, click a tower to select it
-* 1-7: choose a tower to build (Gun, Laser, Slow, Sniper, Rocket, Bomb, Tesla)
-* Esc: cancel building / deselect
+* Mouse: click a tile to build the selected tower (you keep building until you
+  run out of gold), click a tower to select it, right click to stop
+* 1-7: choose a tower to build (Gun, Laser, Slow, Sniper, Rocket, Bomb, Tesla); the same key again puts it away
+* Esc: cancel building / deselect, otherwise open the menu
 * Space: start, pause and resume
 * T: game speed 1x / 2x / 3x
-* N: call the next wave early (bonus cash)
-* S: sell the selected tower
-* U: upgrade the selected tower
+* N: send the next wave early (bonus gold)
+* U / S: upgrade / sell the selected tower
+* C: change the selected tower's target
 * R: restart
 * V: mute sound
 * M: import a map string (restarts the game)
@@ -37,4 +46,4 @@ Debug keys: F shows FPS, G toggles god mode, H toggles enemy health bars,
 P toggles particle effects, Q stops towers firing, W starts waves back to back.
 
 Libraries (in `vendor/`): p5.js 1.11.2 (LGPL-2.1) and lz-string 1.5.0 (MIT).
-Sound credits are in [sounds/README.md](sounds/README.md).
+Weapon sound credits are in [sounds/README.md](sounds/README.md); interface sounds are synthesised with Web Audio.

@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#09090b">
     <title>Tower Defense</title>
     <link href="css/style.css" rel="stylesheet">
     <link href="./imgs/tower.svg" rel="icon" type="image/svg+xml" />
@@ -26,129 +27,177 @@
     <script src="scripts/tiles.js" defer></script>
     <script src="scripts/waves.js" defer></script>
     <script src="scripts/sketch.js" defer></script>
+    <script src="scripts/hud.js" defer></script>
   </head>
   <body>
-    <header>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <symbol id="i-heart" viewBox="0 0 24 24"><path fill="currentColor" d="M12 21 3.5 12.6A5.2 5.2 0 0 1 12 6a5.2 5.2 0 0 1 8.5 6.6Z"/></symbol>
+      <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/><path d="M12 7v10M9.5 9.5h4a1.75 1.75 0 0 1 0 3.5h-3a1.75 1.75 0 0 0 0 3.5h4" fill="none" stroke="#09090b" stroke-width="1.8" stroke-linecap="round"/></symbol>
+      <symbol id="i-wave" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 21V4m0 0h11l-2 4 2 4H5"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path fill="currentColor" d="M7 4.5v15l12.5-7.5Z"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><path fill="currentColor" d="M6 4h4.5v16H6zm7.5 0H18v16h-4.5z"/></symbol>
+      <symbol id="i-next" viewBox="0 0 24 24"><path fill="currentColor" d="M4 5v14l8-7Zm8 0v14l8-7Z"/></symbol>
+      <symbol id="i-sound" viewBox="0 0 24 24"><path fill="currentColor" d="M4 9h4l5-4v14l-5-4H4Z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></symbol>
+      <symbol id="i-mute" viewBox="0 0 24 24"><path fill="currentColor" d="M4 9h4l5-4v14l-5-4H4Z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="m16 9 6 6m0-6-6 6"/></symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="m6 6 12 12M18 6 6 18"/></symbol>
+      <symbol id="i-star" viewBox="0 0 24 24"><path fill="currentColor" d="m12 2.5 2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5-4.9-4.5 6.6-.8Z"/></symbol>
+    </svg>
+
+    <header id="hud">
       <h1>Tower Defense</h1>
+      <div class="stats" aria-live="off">
+        <span class="stat lives" id="lives-stat" title="Lives">
+          <svg aria-hidden="true"><use href="#i-heart"/></svg>
+          <b id="health">40</b><span class="sr">lives</span>
+        </span>
+        <span class="stat gold" id="gold-stat" title="Gold">
+          <svg aria-hidden="true"><use href="#i-coin"/></svg>
+          <b id="cash">75</b><span class="sr">gold</span>
+        </span>
+        <span class="stat wave" title="Wave">
+          <svg aria-hidden="true"><use href="#i-wave"/></svg>
+          <b id="wave">1</b><small id="wave-total">/30</small>
+        </span>
+      </div>
+      <div class="hud-buttons">
+        <button type="button" id="mute" class="icon-btn" aria-label="Mute sound (V)" title="Sound (V)">
+          <svg aria-hidden="true"><use href="#i-sound"/></svg>
+        </button>
+        <button type="button" id="menu-btn" class="icon-btn" aria-label="Menu (Esc)" title="Menu (Esc)">
+          <svg aria-hidden="true"><use href="#i-menu"/></svg>
+        </button>
+      </div>
     </header>
 
-    <main>
-      <aside id="store">
-        <h2>Store</h2>
-        <div class="store-grid">
-          <button class="gun" data-tower="gun"><span>Gun</span><b>$25</b><kbd>1</kbd></button>
-          <button class="laser" data-tower="laser"><span>Laser</span><b>$75</b><kbd>2</kbd></button>
-          <button class="slow" data-tower="slow"><span>Slow</span><b>$100</b><kbd>3</kbd></button>
-          <button class="sniper" data-tower="sniper"><span>Sniper</span><b>$150</b><kbd>4</kbd></button>
-          <button class="rocket" data-tower="rocket"><span>Rocket</span><b>$250</b><kbd>5</kbd></button>
-          <button class="bomb" data-tower="bomb"><span>Bomb</span><b>$250</b><kbd>6</kbd></button>
-          <button class="tesla" data-tower="tesla"><span>Tesla</span><b>$300</b><kbd>7</kbd></button>
-        </div>
-      </aside>
+    <aside id="store" aria-label="Build towers">
+      <h2>Build <small>keys 1-7</small></h2>
+      <div class="store-grid" id="store-grid"></div>
+    </aside>
 
-      <div id="sketch-holder"></div>
+    <div id="sketch-holder">
+      <div id="banner" class="banner" aria-live="polite"></div>
+      <div id="map-tip" class="map-tip"></div>
+    </div>
 
-      <div id="side">
-        <aside id="status">
-          <div class="stats">
-            <span id="wave">Wave 1</span>
-            <span id="health">&#9829; 40</span>
-            <span id="cash">$55</span>
-          </div>
-          <div class="horiz-buttons">
-            <button id="pause">Start</button>
-            <button id="speed" title="Game speed (T)">1x</button>
-            <button id="next-wave" title="Call the next wave early for bonus cash (N)">Next</button>
-          </div>
-          <p id="wave-note"></p>
-        </aside>
-
-        <aside id="info">
-          <div id="info-div">
-            <h3 id="name"></h3>
-            <dl class="info-stats">
-              <dt>Damage</dt><dd id="damage"></dd>
-              <dt>Type</dt><dd id="type"></dd>
-              <dt>Range</dt><dd id="range"></dd>
-              <dt>Cooldown</dt><dd id="cooldown"></dd>
-              <dt>Value</dt><dd id="sellPrice"></dd>
-            </dl>
-            <div class="horiz-buttons" id="info-buttons">
-              <button id="sell">Sell</button>
-              <button id="upgrade">Upgrade</button>
-            </div>
-            <div class="horiz-buttons" id="place-buttons">
-              <button id="cancel">Cancel (Esc)</button>
-            </div>
-          </div>
-          <p id="hint"></p>
-        </aside>
-
-        <details id="options" open>
-          <summary>Game &amp; maps</summary>
-          <label>Map
-            <select id="map">
-              <optgroup label="Random">
-                <option value="empty2">Empty (2 spawns)</option>
-                <option value="empty3">Empty (3 spawns)</option>
-                <option value="sparse2" selected>Sparse (2 spawns)</option>
-                <option value="sparse3">Sparse (3 spawns)</option>
-                <option value="dense2">Dense (2 spawns)</option>
-                <option value="dense3">Dense (3 spawns)</option>
-                <option value="solid2">Solid (2 spawns)</option>
-                <option value="solid3">Solid (3 spawns)</option>
-              </optgroup>
-              <optgroup label="Designed">
-                <option value="spiral">Spiral</option>
-                <option value="loops">Loops</option>
-                <option value="branch">Branch</option>
-                <option value="branchAlt">Branch (Alt)</option>
-                <option value="fork">Fork</option>
-                <option value="walls">Walls</option>
-                <option value="city">City</option>
-                <option value="freeway">Freeway</option>
-              </optgroup>
-              <optgroup label="Yours">
-                <option id="custom" value="custom" disabled>Custom (import or editor)</option>
-              </optgroup>
-            </select>
-          </label>
-          <label>Mode
-            <select id="mode">
-              <option value="campaign" selected>Campaign (30 waves)</option>
-              <option value="endless">Endless (random waves)</option>
-            </select>
-          </label>
-          <label>Difficulty
-            <select id="difficulty">
-              <option value="easy">Easy</option>
-              <option value="normal" selected>Normal</option>
-              <option value="hard">Hard</option>
-            </select>
-          </label>
-          <p id="best"></p>
-          <div class="horiz-buttons">
-            <button id="restart">Restart (R)</button>
-            <button id="mute">Sound on</button>
-          </div>
-          <div class="horiz-buttons">
-            <button class="io" id="import">Import map</button>
-            <button class="io" id="export">Export map</button>
-          </div>
-          <p><a href="../td-editor/index.html">Open the map editor</a></p>
-        </details>
+    <section id="controls" aria-label="Wave controls">
+      <div class="wave-head">
+        <span id="wave-label">Wave 1</span>
+        <span id="wave-timer"></span>
       </div>
-    </main>
-
-    <dialog id="end-dialog" class="td-dialog">
-      <form method="dialog">
-        <h2 id="end-title"></h2>
-        <p id="end-text"></p>
-        <div class="dialog-buttons">
-          <button value="close" class="dialog-cancel">Look at the map</button>
-          <button value="retry" class="dialog-ok">Play again</button>
+      <div id="preview" class="chips"></div>
+      <div class="ctrl-row">
+        <button type="button" id="pause" class="primary">
+          <svg aria-hidden="true"><use href="#i-play"/></svg><span>Start</span>
+        </button>
+        <div class="seg" role="group" aria-label="Game speed (T)">
+          <button type="button" data-speed="1" aria-pressed="true">1x</button>
+          <button type="button" data-speed="2" aria-pressed="false">2x</button>
+          <button type="button" data-speed="3" aria-pressed="false">3x</button>
         </div>
-      </form>
-    </dialog>
+      </div>
+      <button type="button" id="next-wave" title="Call the next wave now for bonus gold (N)">
+        <span class="fill" id="next-fill"></span>
+        <svg aria-hidden="true"><use href="#i-next"/></svg>
+        <span id="next-label">Send next wave</span>
+      </button>
+    </section>
+
+    <aside id="inspector" aria-live="polite"></aside>
+
+    <!-- Level select -->
+    <div id="levels" class="overlay" role="dialog" aria-modal="true" aria-labelledby="levels-title" hidden>
+      <div class="panel wide">
+        <div class="panel-head">
+          <h2 id="levels-title">Choose a map</h2>
+          <button type="button" class="icon-btn" data-close aria-label="Close">
+            <svg aria-hidden="true"><use href="#i-close"/></svg>
+          </button>
+        </div>
+        <div class="option-rows">
+          <div class="seg big" role="group" aria-label="Mode" id="mode-seg">
+            <button type="button" data-mode="campaign">Campaign <small>30 waves</small></button>
+            <button type="button" data-mode="endless">Endless <small>no limit</small></button>
+          </div>
+          <div class="seg big" role="group" aria-label="Difficulty" id="diff-seg">
+            <button type="button" data-diff="easy">Easy</button>
+            <button type="button" data-diff="normal">Normal</button>
+            <button type="button" data-diff="hard">Hard</button>
+          </div>
+          <p id="diff-note" class="note"></p>
+        </div>
+        <h3>Designed maps</h3>
+        <div class="map-grid" id="maps-designed"></div>
+        <h3>Random maps <small>new layout every game</small></h3>
+        <div class="map-grid" id="maps-random"></div>
+        <h3>Your map</h3>
+        <div class="map-grid" id="maps-custom"></div>
+        <p class="note">Make your own in the <a href="../td-editor/index.html">map editor</a>, or paste a map string with <button type="button" class="link" id="import">Import map</button>.</p>
+      </div>
+    </div>
+
+    <!-- Pause menu and settings -->
+    <div id="menu" class="overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title" hidden>
+      <div class="panel">
+        <div class="panel-head">
+          <h2 id="menu-title">Paused</h2>
+          <button type="button" class="icon-btn" data-close aria-label="Resume">
+            <svg aria-hidden="true"><use href="#i-close"/></svg>
+          </button>
+        </div>
+        <p class="note" id="menu-where"></p>
+        <div class="menu-buttons">
+          <button type="button" class="primary" data-close>Resume</button>
+          <button type="button" id="restart">Restart</button>
+          <button type="button" id="open-levels">Change map</button>
+        </div>
+        <h3>Settings</h3>
+        <div class="toggles">
+          <label class="toggle"><span>Sound</span><input type="checkbox" role="switch" id="set-sound"><i></i></label>
+          <label class="toggle"><span>Damage numbers</span><input type="checkbox" role="switch" id="set-numbers"><i></i></label>
+          <label class="toggle"><span>Enemy health bars</span><input type="checkbox" role="switch" id="set-bars"><i></i></label>
+          <label class="toggle"><span>Explosion particles</span><input type="checkbox" role="switch" id="set-effects"><i></i></label>
+          <label class="toggle"><span>Send waves back to back</span><input type="checkbox" role="switch" id="set-autosend"><i></i></label>
+        </div>
+        <details class="help">
+          <summary>How to play and shortcuts</summary>
+          <p>Enemies walk from the green spawn tiles to the red exit. Every one that gets through costs lives. Towers block the way, so you can build a maze; you can never wall the exit off completely.</p>
+          <dl class="keys">
+            <dt>1 - 7</dt><dd>Pick a tower to build</dd>
+            <dt>Click / tap</dt><dd>Build (touch: tap to aim, then tap again or press Build)</dd>
+            <dt>Esc / right click</dt><dd>Cancel building, deselect, open this menu</dd>
+            <dt>Space</dt><dd>Start, pause and resume</dd>
+            <dt>T</dt><dd>Game speed 1x / 2x / 3x</dd>
+            <dt>N</dt><dd>Send the next wave early for bonus gold</dd>
+            <dt>U / S</dt><dd>Upgrade / sell the selected tower</dd>
+            <dt>C</dt><dd>Change the selected tower's target</dd>
+            <dt>R</dt><dd>Restart</dd>
+            <dt>V</dt><dd>Sound on or off</dd>
+            <dt>M / X</dt><dd>Import / export a map string</dd>
+          </dl>
+        </details>
+        <div class="menu-buttons small">
+          <button type="button" id="export">Export map</button>
+          <a class="button" href="../td-editor/index.html">Map editor</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Victory / defeat -->
+    <div id="end" class="overlay" role="dialog" aria-modal="true" aria-labelledby="end-title" hidden>
+      <div class="panel end-panel">
+        <p class="end-kicker" id="end-kicker"></p>
+        <h2 id="end-title"></h2>
+        <div class="stars" id="end-stars"></div>
+        <p id="end-text" class="end-text"></p>
+        <dl class="end-stats" id="end-stats"></dl>
+        <div class="menu-buttons">
+          <button type="button" class="primary" id="end-next">Next map</button>
+          <button type="button" id="end-retry">Play again</button>
+          <button type="button" id="end-levels">Change map</button>
+          <button type="button" class="ghost" data-close>Look at the map</button>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

@@ -1,6 +1,41 @@
+/* Tower Defense map editor: Game Lab's Cyber Yellow & Obsidian look, flat colours. */
+
 @font-face {
-    font-family: 'Source Code Pro';
-    src: url('../fonts/SourceCodePro-Regular.ttf');
+    font-family: 'Chakra Petch';
+    src: url('../../assets/fonts/chakra-petch-latin-700-normal.woff2') format('woff2');
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Albert Sans';
+    src: url('../../assets/fonts/albert-sans-latin-400-normal.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Albert Sans';
+    src: url('../../assets/fonts/albert-sans-latin-600-normal.woff2') format('woff2');
+    font-weight: 600;
+    font-display: swap;
+}
+
+:root {
+    --bg: #09090b;
+    --panel: #12131a;
+    --panel-2: #1a1c24;
+    --panel-3: #252833;
+    --line: #2a2d38;
+    --line-hi: rgba(250, 204, 21, 0.45);
+    --accent: #facc15;
+    --ink: #09090b;
+    --text: #f4f4f5;
+    --muted: #a1a1aa;
+    --red: #f87171;
+    --display: 'Chakra Petch', system-ui, sans-serif;
+    --body: 'Albert Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color-scheme: dark;
 }
 
 *, *::before, *::after {
@@ -15,25 +50,22 @@ html, body {
 }
 
 body {
-    background-color: #000;
-    color: #00E640;
-    font-family: 'Source Code Pro', monospace;
+    background-color: var(--bg);
+    color: var(--text);
+    font: 14px/1.35 var(--body);
     height: 100dvh;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
+    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    -webkit-tap-highlight-color: transparent;
 }
 
-/* Green borders, margins, and navy blue background */
 header, aside, #sketch-holder {
-    border: 1px solid #00E640;
+    background: var(--panel);
+    border: 1px solid var(--line);
     border-radius: 10px;
 }
 
-header, aside {
-    background-color: #013243;
-}
-
-/* Page content */
 header {
     margin: 4px 4px 0;
     padding: 10px 14px;
@@ -41,22 +73,29 @@ header {
 
 h1, h2, h3 {
     margin: 0;
-    text-align: center;
-    text-shadow: 1px 1px 0 #000;
+    font-family: var(--display);
+    font-weight: 700;
 }
 
 h1 {
-    font-size: 1.6em;
+    font-size: 22px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-left: 12px;
 }
 
 h2 {
-    font-size: 1.1em;
-    margin: 10px 0 6px;
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 14px 0 6px;
 }
 
 main {
     display: grid;
-    grid-template-columns: 210px minmax(0, 1fr) 240px;
+    grid-template-columns: 220px minmax(0, 1fr) 250px;
     grid-template-areas: "tiles sketch side";
     gap: 4px;
     padding: 4px;
@@ -87,22 +126,9 @@ p {
     grid-area: tiles;
 }
 
-#tiles button, #utils button, #status button {
-    color: #000;
-    width: 100%;
-    text-align: center;
-    text-shadow: none;
-}
-
-#tiles button.active {
-    outline: 3px solid #fff;
-    outline-offset: -3px;
-    font-weight: 700;
-}
-
 #sketch-holder {
     grid-area: sketch;
-    background-color: #000;
+    background: var(--bg);
     overflow: hidden;
     position: relative;
     min-height: 0;
@@ -117,27 +143,86 @@ canvas {
     right: 0;
     top: 0;
     touch-action: none;
+    cursor: crosshair;
 }
 
-button, select {
-    background-color: #22313F;
-    border: 1px solid rgba(0, 0, 0, 0.6);
-    border-radius: 4px;
-    color: #00E640;
-    font-family: 'Source Code Pro', monospace;
-    font-size: 0.85em;
-    text-shadow: 1px 1px 0 #000;
+/* ---------- Buttons ---------- */
+
+main button, .td-dialog button {
+    --sw: transparent;
+    font: 600 13px/1.1 var(--body);
+    color: var(--text);
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    min-height: 36px;
+    width: 100%;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    text-align: left;
     cursor: pointer;
+    touch-action: manipulation;
 }
 
-button {
-    min-height: 30px;
+main button::before {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    background: var(--sw);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    flex: none;
 }
 
-button:focus-visible {
-    outline: 2px solid #fff;
+main button:hover {
+    border-color: var(--line-hi);
+    background: var(--panel-3);
+}
+
+main button:active {
+    transform: translateY(1px);
+}
+
+main button:focus-visible {
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
 }
+
+#tiles button.active {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+    background: var(--panel-3);
+}
+
+.layer-seg {
+    display: flex;
+    gap: 3px;
+    padding: 3px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+
+.layer-seg button {
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    min-height: 34px;
+}
+
+.layer-seg button::before {
+    display: none;
+}
+
+.layer-seg button[aria-pressed="true"] {
+    background: var(--accent);
+    color: var(--ink);
+}
+
+/* ---------- Side panel ---------- */
 
 .aside-holder {
     grid-area: side;
@@ -148,12 +233,21 @@ button:focus-visible {
 }
 
 #status {
-    font-size: 0.95em;
     flex: none;
 }
 
-#status h2 {
+#status h2, #utils h2 {
     margin-top: 0;
+}
+
+#dim, #coord {
+    font: 700 15px var(--display);
+    margin: 2px 0;
+}
+
+#coord {
+    color: var(--muted);
+    font-size: 13px;
 }
 
 .size-row {
@@ -164,26 +258,31 @@ button:focus-visible {
     margin: 4px 0;
 }
 
-#status .size-row button {
-    font-size: 1.1em;
+.size-row button, button.zoom {
+    justify-content: center;
+    font-size: 18px;
+    min-height: 40px;
+}
+
+.size-row button::before {
+    display: none;
 }
 
 #status .play {
-    min-height: 40px;
-    font-size: 1em;
-    font-weight: 700;
+    min-height: 46px;
+    justify-content: center;
+    font-size: 15px;
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--ink);
 }
 
-.play {
-    background-color: #00E640;
+#status .play::before {
+    display: none;
 }
 
 #utils {
     flex: 1;
-}
-
-#utils h2 {
-    margin-top: 0;
 }
 
 #utils .group + .group, #utils .group + p {
@@ -194,80 +293,26 @@ button:focus-visible {
     display: none;
 }
 
-.light {
-    color: #FFF !important;
-}
+/* ---------- Dialogs and toasts (../TowerDefense/scripts/ui.js) ---------- */
 
-/* Phones and narrow tablets in portrait: map on top, tools below */
-@media (max-width: 899px) and (orientation: portrait) {
-    header {
-        padding: 8px;
-    }
-
-    h1 {
-        font-size: 1.2em;
-        text-align: left;
-    }
-
-    main {
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: minmax(0, 1fr) minmax(0, 40%);
-        grid-template-areas: "sketch sketch" "tiles side";
-    }
-
-    .aside-holder {
-        overflow-y: auto;
-    }
-
-    #status, #utils {
-        overflow: visible;
-    }
-
-    h2 {
-        font-size: 1em;
-    }
-}
-
-/* Phones in landscape: tools in two side columns, no header */
-@media (max-height: 560px) and (orientation: landscape) {
-    body {
-        grid-template-rows: minmax(0, 1fr);
-    }
-
-    header {
-        display: none;
-    }
-
-    main {
-        grid-template-columns: 180px minmax(0, 1fr) 200px;
-    }
-
-    #tiles {
-        padding-top: 8px;
-    }
-
-    .aside-holder {
-        overflow-y: auto;
-    }
-
-    #status, #utils {
-        overflow: visible;
-    }
-}
-
-/* Dialogs and toasts (../TowerDefense/scripts/ui.js) */
 .td-dialog {
-    background-color: #013243;
-    border: 1px solid #00E640;
-    border-radius: 10px;
-    color: #00E640;
-    font-family: 'Source Code Pro', monospace;
+    background: var(--panel);
+    border: 1px solid var(--line-hi);
+    border-radius: 14px;
+    color: var(--text);
+    font-family: var(--body);
     width: min(440px, calc(100vw - 32px));
     padding: 18px;
 }
 
+.td-dialog h2 {
+    font-size: 18px;
+    color: var(--accent);
+    margin: 0 0 10px;
+}
+
 .td-dialog::backdrop {
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(9, 9, 11, 0.8);
 }
 
 .td-dialog form {
@@ -276,12 +321,11 @@ button:focus-visible {
 
 .td-dialog textarea {
     width: 100%;
-    background: #000;
-    color: #fff;
-    border: 1px solid #00E640;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--line);
     border-radius: 6px;
-    font-family: inherit;
-    font-size: 0.8em;
+    font: 12px/1.4 ui-monospace, monospace;
     padding: 8px;
     resize: vertical;
     word-break: break-all;
@@ -295,18 +339,14 @@ button:focus-visible {
 
 .dialog-buttons button {
     flex: 1;
-    min-height: 42px;
-    color: #000;
-    text-shadow: none;
-    font-size: 0.95em;
+    min-height: 44px;
+    justify-content: center;
 }
 
 .dialog-ok {
-    background-color: #00E640;
-}
-
-.dialog-cancel {
-    background-color: #95a5a6;
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--ink);
 }
 
 #toasts {
@@ -323,197 +363,141 @@ button:focus-visible {
 }
 
 .toast {
-    background: #013243;
-    border: 1px solid #00E640;
+    background: var(--panel-2);
+    border: 1px solid var(--line-hi);
     border-radius: 8px;
-    color: #fff;
+    color: var(--text);
     padding: 8px 14px;
-    font-size: 0.85em;
+    font-size: 14px;
     max-width: calc(100vw - 32px);
 }
 
 .toast-error {
-    border-color: #ff6b6b;
+    border-color: var(--red);
 }
 
+/* ---------- Phones and narrow tablets in portrait: map on top, tools below ---------- */
+
+@media (max-width: 899px) and (orientation: portrait) {
+    header {
+        padding: 8px;
+    }
+
+    h1 {
+        font-size: 17px;
+        text-align: left;
+    }
+
+    main {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: minmax(0, 1fr) minmax(0, 42%);
+        grid-template-areas: "sketch sketch" "tiles side";
+    }
+
+    aside {
+        padding: 8px;
+    }
+
+    .aside-holder {
+        overflow-y: auto;
+    }
+
+    #status, #utils {
+        overflow: visible;
+    }
+
+    main button {
+        min-height: 40px;
+    }
+}
+
+/* ---------- Phones in landscape: tools in two side columns, no header ---------- */
+
+@media (max-height: 560px) and (orientation: landscape) {
+    body {
+        grid-template-rows: minmax(0, 1fr);
+    }
+
+    header {
+        display: none;
+    }
+
+    main {
+        grid-template-columns: 190px minmax(0, 1fr) 200px;
+    }
+
+    #tiles {
+        padding-top: 8px;
+    }
+
+    .aside-holder {
+        overflow-y: auto;
+    }
+
+    #status, #utils {
+        overflow: visible;
+    }
+
+    main button {
+        min-height: 40px;
+    }
+}
+
+
+/* ---------- Swatch colours ---------- */
 
 /* Grid tile types */
-
-.empty {
-    background-color: rgb(255, 255, 255);
-}
-
-.wall {
-    background-color: rgb(108, 122, 137);
-}
-
-.path {
-    background-color: rgb(191, 85, 236);
-}
-
-.tower {
-    background-color: rgb(25, 181, 254);
-}
-
-.enemy {
-    background-color: rgb(233, 212, 96);
-}
-
+.empty { --sw: rgb(255, 255, 255); }
+.wall { --sw: rgb(108, 122, 137); }
+.path { --sw: rgb(191, 85, 236); }
+.tower { --sw: rgb(25, 181, 254); }
+.enemy { --sw: rgb(233, 212, 96); }
 
 /* Special types */
+.spawn { --sw: rgb(0, 230, 64); }
+.exit { --sw: rgb(207, 0, 15); }
 
-.spawn {
-    background-color: rgb(0, 230, 64);
-}
+/* Path types and utilities */
+.dir { --sw: rgb(248, 148, 6); }
+.fill { --sw: rgb(54, 215, 183); }
+.io { --sw: rgb(224, 130, 131); }
+.zoom { --sw: rgb(82, 179, 217); }
+.disp { --sw: rgb(191, 85, 236); }
 
-.exit {
-    background-color: rgb(207, 0, 15);
-}
+/* City */
+.road { --sw: rgb(210, 77, 87); }
+.sidewalk { --sw: rgb(149, 165, 166); }
+.grass { --sw: rgb(30, 130, 76); }
 
-
-/* Path types */
-
-.dir {
-    background-color: rgb(248, 148, 6);
-}
-
-
-/* Utilities */
-
-.fill {
-    background-color: rgb(54, 215, 183);
-}
-
-.io {
-    background-color: rgb(224, 130, 131);
-}
-
-.zoom {
-    background-color: rgb(82, 179, 217);
-}
-
-.disp {
-    background-color: rgb(191, 85, 236);
-}
-
-
-
-.road {
-    background-color: rgb(210, 77, 87);
-}
-
-.sidewalk {
-    background-color: rgb(149, 165, 166);
-}
-
-.grass {
-    background-color: rgb(30, 130, 76);
-}
-
-
-/* Deco */
-
-.emptyD {
-    background-color: #000;
-}
-
-.wallD {
-    background-color: rgb(1, 50, 67);
-}
-
-.towerD {
-    background-color: rgb(51, 110, 123);
-}
-
+/* Decorative */
+.emptyD { --sw: #000; }
+.wallD { --sw: rgb(1, 50, 67); }
+.towerD { --sw: rgb(51, 110, 123); }
 
 /* Color Set 0 */
-
-.c0_lightBrown {
-    background-color: rgb(206, 171, 171);
-}
-
-.c0_lightPurple {
-    background-color: rgb(123, 95, 167);
-}
-
-.c0_mediumPurple {
-    background-color: rgb(117, 65, 129);
-}
-
-.c0_darkPurple {
-    background-color: rgb(55, 12, 63);
-}
-
-.c0_paleGreen {
-    background-color: rgb(212, 244, 194);
-}
-
-
+.c0_lightBrown { --sw: rgb(206, 171, 171); }
+.c0_lightPurple { --sw: rgb(123, 95, 167); }
+.c0_mediumPurple { --sw: rgb(117, 65, 129); }
+.c0_darkPurple { --sw: rgb(55, 12, 63); }
+.c0_paleGreen { --sw: rgb(212, 244, 194); }
 
 /* Color Set 1 */
-
-.c1_darkBlue {
-    background-color: rgb(10, 25, 50);
-}
-
-.c1_mediumBlue {
-    background-color: rgb(22, 64, 122);
-}
-
-.c1_lightBlue {
-    background-color: rgb(34, 189, 197);
-}
-
-.c1_darkPurple {
-    background-color: rgb(112, 35, 143);
-}
-
-.c1_neonPink {
-    background-color: rgb(232, 33, 215);
-}
-
+.c1_darkBlue { --sw: rgb(10, 25, 50); }
+.c1_mediumBlue { --sw: rgb(22, 64, 122); }
+.c1_lightBlue { --sw: rgb(34, 189, 197); }
+.c1_darkPurple { --sw: rgb(112, 35, 143); }
+.c1_neonPink { --sw: rgb(232, 33, 215); }
 
 /* Color Set 2 */
-
-.c2_darkRed {
-    background-color: rgb(135, 6, 13);
-}
-
-.c2_navyBlue {
-    background-color: rgb(1, 18, 57);
-}
-
-.c2_darkBlue {
-    background-color: rgb(3, 36, 97);
-}
-
-.c2_paleYellow {
-    background-color: rgb(232, 228, 197);
-}
-
-.c2_lightYellow {
-    background-color: rgb(248, 241, 193);
-}
-
+.c2_darkRed { --sw: rgb(135, 6, 13); }
+.c2_navyBlue { --sw: rgb(1, 18, 57); }
+.c2_darkBlue { --sw: rgb(3, 36, 97); }
+.c2_paleYellow { --sw: rgb(232, 228, 197); }
+.c2_lightYellow { --sw: rgb(248, 241, 193); }
 
 /* Neon */
-
-.neon_pink {
-    background-color: rgb(255, 0, 153);
-}
-
-.neon_yellow {
-    background-color: rgb(243, 243, 21);
-}
-
-.neon_green {
-    background-color: rgb(131, 245, 44);
-}
-
-.neon_orange {
-    background-color: rgb(255, 102, 0);
-}
-
-.neon_purple {
-    background-color: rgb(110, 13, 208);
-}
+.neon_pink { --sw: rgb(255, 0, 153); }
+.neon_yellow { --sw: rgb(243, 243, 21); }
+.neon_green { --sw: rgb(131, 245, 44); }
+.neon_orange { --sw: rgb(255, 102, 0); }
+.neon_purple { --sw: rgb(110, 13, 208); }

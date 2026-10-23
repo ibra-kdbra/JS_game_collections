@@ -10,7 +10,7 @@ It uses p5.js and lz-string from `../TowerDefense/vendor/`.
 
 * Mouse or touch: paint the selected tile (drag to paint a line)
 * Columns / Rows buttons, or [ and ] (with Shift for rows): change the map size (resets the map)
-* Spacebar: toggle the decorative display layer
+* Gameplay / Decoration buttons or Spacebar: switch between the gameplay tiles and the decorative display layer
 * 0-8 and arrow keys: select tiles to place
 * C: clear decorative display tiles
 * D: toggle automatically updating the display layer as you draw

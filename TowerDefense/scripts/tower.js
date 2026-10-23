@@ -34,6 +34,7 @@ class Tower {
         this.range = 3;
         this.totalCost = 0;
         this.type = 'physical';     // damage type
+        this.targetMode = 'first';  // which enemy in range to shoot (see pickTarget)
         this.upgrades = [];
     }
 
@@ -135,7 +136,7 @@ class Tower {
         if (entities.length === 0) return;
         let t = getTaunting(entities);
         if (t.length > 0) entities = t;
-        let e = getFirst(entities);
+        let e = pickTarget(entities, this.targetMode, this.pos);
         if (typeof e === 'undefined') return;
         this.onAim(e);
     }

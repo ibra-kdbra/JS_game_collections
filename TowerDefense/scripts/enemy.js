@@ -16,6 +16,7 @@ class Enemy {
         this.weak = [];
         this.speed = 1;
         this.taunt = false;
+        this.hit = 0;           // ticks left of the hit flash
     }
 
     applyEffect(name, duration) {
@@ -44,23 +45,39 @@ class Enemy {
             mult = 1;
         }
 
-        if (this.health > 0) this.health -= amt * mult;
+        const dealt = this.health > 0 ? amt * mult : 0;
+        if (this.health > 0) this.health -= dealt;
+        if (dealt >= 2) this.hit = 6;
+        if (dealt > 0) onEnemyHit(this, dealt, type);
         if (this.health <= 0) this.onKilled();
     }
 
+    // Short white ring after a hit
+    drawHit() {
+        if (this.hit <= 0) return;
+        noFill();
+        stroke(255, 255, 255, 40 * this.hit);
+        strokeWeight(Math.max(1.5, ts / 12));
+        const d = (this.radius + 0.25) * ts;
+        ellipse(this.pos.x, this.pos.y, d, d);
+        strokeWeight(1);
+    }
+
+    // Health bar above the enemy once it has taken damage
     drawHealth() {
-        var percent = 1 - this.health / this.maxHealth;
-        if (percent === 0) return;
-        push();
-        translate(this.pos.x, this.pos.y);
-        stroke(255);
-        fill(207, 0, 15);
-        var edge = 0.7 * ts / 2;
-        var width = floor(edge * percent * 2);
-        var top = 0.2 * ts;
-        var height = 0.15 * ts;
-        rect(-edge, top, edge * percent * 2, height);
-        pop();
+        const left = Math.max(0, this.health / this.maxHealth);
+        if (left >= 1) return;
+        const w = Math.max(10, 0.8 * ts);
+        const h = Math.max(3, 0.14 * ts);
+        const x = this.pos.x - w / 2;
+        const y = this.pos.y - Math.max(this.radius, 0.6) * ts / 2 - h - 2;
+        noStroke();
+        fill(9, 9, 11, 220);
+        rect(x - 1, y - 1, w + 2, h + 2);
+        if (left > 0.6) fill(74, 222, 128);
+        else if (left > 0.3) fill(250, 204, 21);
+        else fill(248, 113, 113);
+        rect(x, y, w * left, h);
     }
 
     getColor() {
@@ -84,6 +101,7 @@ class Enemy {
     onExit() {
         if (!godMode) health -= this.damage;
         this.kill();
+        onEnemyLeaked(this);
     }
 
     onKilled() {
@@ -91,6 +109,7 @@ class Enemy {
             cash += this.cash;
             this.kill();
             playSound(this.sound);
+            onEnemyKilled(this);
         }
     }
 
@@ -115,6 +134,7 @@ class Enemy {
     }
 
     update() {
+        if (this.hit > 0) this.hit--;
         for (let i = this.effects.length - 1; i >= 0; i--) {
             let e = this.effects[i];
             e.update(this);
