@@ -83,9 +83,10 @@ check('daily board is identical for the same date', () => {
   const mk = () => generate({ ...DAILY, start: 8 * 16 + 8, rng: seeded('daily-2026-10-22') });
   assert.deepEqual(mk().mines, mk().mines);
 });
-check('puzzle ladder: every level solvable and meets its logic target', () => {
+check('puzzle ladder: every level solvable, meets its logic target and is no easier than the one before', () => {
   const t0 = Date.now();
   const rows = [];
+  let prevPair = 0;
   PUZZLES.forEach((p, i) => {
     const start = Math.floor(p.h / 2) * p.w + Math.floor(p.w / 2);
     const g = generate({ w: p.w, h: p.h, mines: p.mines, start, rng: seeded(`puzzle-${i + 1}`), minPair: p.pair, maxOpen: p.open });
@@ -94,7 +95,14 @@ check('puzzle ladder: every level solvable and meets its logic target', () => {
     assert.ok(solve(p.w, p.h, g.mines, start).solved, `level ${i + 1} unsolvable`);
     const opening = floodOpen(p.w, p.h, g.counts, new Uint8Array(p.w * p.h), start).length;
     assert.ok(opening <= p.open * (p.w * p.h - p.mines), `level ${i + 1} opens ${opening} cells at the start`);
-    rows.push(`${i + 1}:${p.w}x${p.h}/${p.mines} open ${opening} pair ${g.steps.pair}`);
+    rows.push(`${i + 1}:${p.w}x${p.h}/${p.mines} open ${opening} pair ${g.steps.pair} global ${g.steps.global} attempts ${g.attempts}`);
+    // The ladder never gets easier: logic needed and mine density only go up (or stay).
+    if (i > 0) {
+      const q = PUZZLES[i - 1];
+      assert.ok(g.steps.pair >= prevPair, `level ${i + 1} needs ${g.steps.pair} pair rounds, level ${i} needed ${prevPair}`);
+      assert.ok(p.mines / (p.w * p.h) >= q.mines / (q.w * q.h) - 0.01, `level ${i + 1} is less dense than level ${i}`);
+    }
+    prevPair = g.steps.pair;
   });
   console.log(`       ${PUZZLES.length} levels in ${Date.now() - t0} ms\n       ${rows.join('\n       ')}`);
 });

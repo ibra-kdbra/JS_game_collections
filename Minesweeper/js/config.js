@@ -68,24 +68,27 @@ export const VIEW = {
 /**
  * Puzzle mode: a fixed ladder of seeded boards. Each step adds size, density or
  * a stronger logic requirement, so the curve reads at a glance in the level list.
- *   pair: minimum rounds of pair/subset reasoning the solution must need
- *         (tuned to roughly the 75th-90th percentile for that size and density).
+ *   pair: minimum rounds of pair/subset reasoning the solution must need. Each
+ *         target is the count the seeded board actually needs, so the ladder
+ *         never gets easier (test/solver.test.mjs checks it) and the last
+ *         level reaches Expert density. Every board is found in a few hundred
+ *         attempts at most, well inside GEN.timeBudget on a phone.
  *   open: largest share of the safe cells the starting area may reveal, so the
  *         first levels are not half solved before the player moves.
  */
 export const PUZZLES = [
-  { w: 8, h: 8, mines: 7, pair: 0, open: 0.5 },
-  { w: 8, h: 8, mines: 9, pair: 0, open: 0.45 },
-  { w: 9, h: 9, mines: 11, pair: 1, open: 0.4 },
-  { w: 10, h: 10, mines: 14, pair: 1, open: 0.4 },
-  { w: 10, h: 10, mines: 16, pair: 2, open: 0.35 },
-  { w: 12, h: 10, mines: 20, pair: 2, open: 0.35 },
-  { w: 12, h: 12, mines: 25, pair: 2, open: 0.3 },
-  { w: 14, h: 12, mines: 30, pair: 3, open: 0.3 },
-  { w: 14, h: 14, mines: 36, pair: 3, open: 0.3 },
-  { w: 16, h: 14, mines: 42, pair: 3, open: 0.25 },
-  { w: 16, h: 16, mines: 48, pair: 4, open: 0.25 },
-  { w: 20, h: 16, mines: 62, pair: 4, open: 0.25 },
+  { w: 8, h: 8, mines: 7, pair: 1, open: 0.5 },
+  { w: 8, h: 8, mines: 9, pair: 1, open: 0.45 },
+  { w: 9, h: 9, mines: 11, pair: 3, open: 0.4 },
+  { w: 10, h: 10, mines: 14, pair: 3, open: 0.4 },
+  { w: 10, h: 10, mines: 16, pair: 4, open: 0.35 },
+  { w: 12, h: 10, mines: 20, pair: 4, open: 0.35 },
+  { w: 12, h: 12, mines: 25, pair: 5, open: 0.3 },
+  { w: 14, h: 12, mines: 30, pair: 7, open: 0.3 },
+  { w: 14, h: 14, mines: 36, pair: 8, open: 0.3 },
+  { w: 16, h: 14, mines: 42, pair: 9, open: 0.25 },
+  { w: 16, h: 16, mines: 50, pair: 9, open: 0.25 },
+  { w: 20, h: 16, mines: 66, pair: 10, open: 0.25 },
 ];
 
 export const DAILY = { w: 16, h: 16, mines: 40 };
