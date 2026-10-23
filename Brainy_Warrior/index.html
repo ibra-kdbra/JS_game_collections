@@ -8,8 +8,14 @@
     <meta name="theme-color" content="#09090b">
     <link rel="icon" href="../assets/icons/brainy-warrior.svg" type="image/svg+xml">
     <link rel="stylesheet" href="style.css">
+    <link rel="modulepreload" href="vendor/three-0.150.1/three.module.min.js">
     <script type="importmap">
-      { "imports": { "three": "./vendor/three-0.150.1/three.module.min.js" } }
+      {
+        "imports": {
+          "three": "./vendor/three-0.150.1/three.module.min.js",
+          "three/addons/": "./vendor/three-0.150.1/addons/"
+        }
+      }
     </script>
 </head>
 <body>
@@ -152,6 +158,11 @@
     </div>
 
     <div id="toast" class="toast" role="status" hidden></div>
+
+    <div id="loading" class="loading" role="status" hidden>
+        <p>Summoning the warriors&hellip;</p>
+        <div class="loading-track"><div class="loading-bar" id="loading-bar"></div></div>
+    </div>
 
     <script type="module" src="js/game.js"></script>
 </body>

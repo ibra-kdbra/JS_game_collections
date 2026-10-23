@@ -5,8 +5,10 @@
 //    optimal move count, and it must equal the level's `par`.
 //  * Replays the WASM solutions move by move through the game's own rules
 //    (js/rules.js) and checks they really win, so the C++ and JS rules can't drift.
-//  * Reports the other algorithms (DFS, UCS, Greedy) for comparison, plus the
-//    difficulty measures used to order the levels.
+//  * Reports the other algorithms (DFS, UCS, Greedy) for comparison.
+//  * Prints the difficulty table (tools/difficulty.mjs) and checks the ramp:
+//    levels 1-3 are easy, 4-8 medium, and from level 9 on the score never
+//    drops by more than a small tolerance, ending on the hardest level.
 //
 // Run from the repo root:  node Brainy_Warrior/tools/verify-levels.mjs
 import { readFileSync } from 'node:fs';
@@ -14,6 +16,7 @@ import { LEVELS } from '../js/levels.js';
 import { bfs, branching } from '../js/solver.js';
 import { apply, initialState, isWon } from '../js/rules.js';
 import { createWasmSolver } from '../js/wasm-solver.js';
+import { BANDS, band, measure } from './difficulty.mjs';
 
 const wasm = await createWasmSolver(readFileSync(new URL('../wasm/solver.wasm', import.meta.url)));
 
@@ -81,6 +84,37 @@ for (const level of LEVELS) {
         }
     }
 }
+// Difficulty table and ramp.
+console.log('\nDifficulty (see tools/difficulty.mjs)');
+console.log(' #  level                  par  reach  dead  trap  optSh  sols  magic  enemies  bot    score  band');
+const scores = [];
+LEVELS.forEach((level, i) => {
+    const m = measure(level);
+    scores.push(m.score);
+    console.log(
+        `${pad(i + 1, 2)}  ${level.name.padEnd(22)} ${pad(m.opt, 3)} ${pad(m.reach, 6)} ${m.dead.toFixed(2).padStart(5)} ${m.pathTrap.toFixed(2).padStart(5)}` +
+            ` ${m.pathOpt.toFixed(2).padStart(6)} ${pad(m.solutions, 5)} ${pad(m.magic, 6)} ${pad(m.enemies, 8)}  ${m.bot.toFixed(3)} ${m.score.toFixed(1).padStart(6)}  ${band(m.score)}`,
+    );
+});
+const TOLERANCE = 2;
+const ramp = (cond, what) => {
+    if (!cond) {
+        failures++;
+        console.log(`FAIL ramp: ${what}`);
+    }
+};
+scores.slice(0, 3).forEach((s, i) => ramp(s <= BANDS.easyMax, `level ${i + 1} should be easy (score ${s} > ${BANDS.easyMax})`));
+scores.slice(3, 8).forEach((s, i) => ramp(s > BANDS.easyMax && s <= BANDS.mediumMax, `level ${i + 4} should be medium (score ${s})`));
+const mediumTop = Math.max(...scores.slice(0, 8));
+for (let i = 8; i < scores.length; i++) {
+    ramp(scores[i] > mediumTop, `level ${i + 1} should be harder than every level before 9 (${scores[i]} <= ${mediumTop})`);
+    if (i > 8) ramp(scores[i] >= scores[i - 1] - TOLERANCE, `level ${i + 1} (${scores[i]}) is easier than level ${i} (${scores[i - 1]})`);
+}
+ramp(scores.at(-1) === Math.max(...scores), 'the last level should be the hardest');
+const wizardAt = LEVELS.findIndex((l) => l.wizardSpots.length > 1);
+ramp(wizardAt >= 3 && wizardAt <= 7, `the wizard should be introduced in levels 4-8 (first at ${wizardAt + 1})`);
+console.log(`Ramp: 1-3 easy (<= ${BANDS.easyMax}), 4-8 medium (<= ${BANDS.mediumMax}), 9+ non-decreasing within ${TOLERANCE}.`);
+
 console.log(`\nA* hints match BFS from ${checked} mid-game positions, winnable or not.`);
 
 // Rule spot checks on a tiny hand-made board.

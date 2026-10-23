@@ -622,11 +622,19 @@ for (const id of ['levels', 'help']) {
 buildAlgoButtons();
 const lastId = store.get('last-level', null);
 const lastIdx = LEVELS.findIndex((l) => l.id === lastId);
-loadLevel(lastIdx >= 0 && isUnlocked(lastIdx) ? lastIdx : 0);
-if (!store.get('seen-help', false)) {
-    showDialog('help', true);
-    store.set('seen-help', true);
-}
+// The character models load lazily; show a short loading state meanwhile.
+const loading = $('loading');
+const loadingTimer = setTimeout(() => (loading.hidden = false), 150);
+world.onProgress = (p) => ($('loading-bar').style.transform = `scaleX(${Math.max(0.04, p)})`);
+const ready = world.ready.then(() => {
+    clearTimeout(loadingTimer);
+    loading.hidden = true;
+    loadLevel(lastIdx >= 0 && isUnlocked(lastIdx) ? lastIdx : 0);
+    if (!store.get('seen-help', false)) {
+        showDialog('help', true);
+        store.set('seen-help', true);
+    }
+});
 solverReady.then((kind) => {
     document.documentElement.dataset.solver = kind;
     if (kind !== 'wasm') $('ai-compare').disabled = true;
@@ -653,10 +661,24 @@ window.brainy = {
         return world.tweens.size === 0;
     },
     get renderInfo() {
-        const r = world.renderer.info.render;
-        return { calls: r.calls, triangles: r.triangles };
+        const info = world.renderer.info;
+        return {
+            calls: info.render.calls,
+            triangles: info.render.triangles,
+            textures: info.memory.textures,
+            geometries: info.memory.geometries,
+            programs: info.programs.length,
+            quality: world.quality.settings.name,
+            models: world.gltf ? 'gltf' : 'procedural',
+        };
     },
+    get levelIds() {
+        return LEVELS.map((l) => l.id);
+    },
+    ready,
     solverReady,
+    // The 3D world, for the perf overlay and profiling (?perf=1 only).
+    world: new URLSearchParams(location.search).get('perf') === '1' ? world : undefined,
     loadLevel,
     solve: (alg = 'astar') => solve(level, state, alg),
 };
