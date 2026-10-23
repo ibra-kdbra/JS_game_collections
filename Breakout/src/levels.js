@@ -217,21 +217,6 @@ b2b2b2b*b2b2
 eeeeeeeeeeee`,
   },
   {
-    name: 'Hourglass',
-    act: 1,
-    tip: 'The neck is narrow, but the sides are open.',
-    map: `
-aaaaaaaaaaaa
-.bbbbbbbbbb.
-..cccccccc..
-...#dddd#...
-....#ee#....
-....#..#....
-...#2222#...
-..33333333..
-.2222222222.`,
-  },
-  {
     name: 'Overpass',
     act: 1,
     tip: 'Go around the steel shelf, not through it.',
@@ -259,19 +244,6 @@ dddddddddddd
 
   // ---------- Act III: Foundry. Everything, combined. ----------
   {
-    name: 'Switchback',
-    act: 2,
-    tip: 'Two shelves, two directions. Bank around them.',
-    map: `
-eeeeeeeeeeee
-e?eeeeeeee?e
-.........###
-cccccccccccc
-###.........
-............
-2222....2222`,
-  },
-  {
     name: 'Citadel',
     act: 2,
     tip: 'The keep has one door. Its charges do the rest.',
@@ -285,6 +257,19 @@ cccccccccccc
 ..##2..2##..
 ............
 1..........1`,
+  },
+  {
+    name: 'Switchback',
+    act: 2,
+    tip: 'Two shelves, two directions. Bank around them.',
+    map: `
+eeeeeeeeeeee
+e?eeeeeeee?e
+.........###
+cccccccccccc
+###.........
+............
+2222....2222`,
   },
   {
     name: 'Minefield',
@@ -357,6 +342,21 @@ cccccccccccc
 dddddddddddd
 ............
 .*........*.`,
+  },
+  {
+    name: 'Hourglass',
+    act: 2,
+    tip: 'The neck is narrow, but the sides are open.',
+    map: `
+aaaaaaaaaaaa
+.bbbbbbbbbb.
+..cccccccc..
+...#dddd#...
+....#ee#....
+....#..#....
+...#2222#...
+..33333333..
+.2222222222.`,
   },
   {
     name: 'Labyrinth',
