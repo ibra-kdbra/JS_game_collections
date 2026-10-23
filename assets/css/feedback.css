@@ -9,8 +9,6 @@
     position: fixed;
     inset: 0;
     background: rgba(9, 9, 11, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
     z-index: 1000;
     display: flex;
     justify-content: center;
@@ -27,7 +25,7 @@
 
 /* Modal Content */
 .feedback-modal-content {
-    background: rgba(18, 19, 26, 0.96);
+    background: var(--surface, #12131a);
     border: 1px solid rgba(250, 204, 21, 0.3);
     border-radius: var(--radius-lg);
     width: 90%;
@@ -36,7 +34,7 @@
     display: flex;
     flex-direction: column;
     position: relative;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(250, 204, 21, 0.2);
+    box-shadow: 6px 6px 0 var(--primary, #facc15);
     transform: scale(0.95);
     transition: transform var(--transition-fast);
 }
@@ -152,7 +150,7 @@
     outline: none;
     border-color: var(--primary);
     background: rgba(9, 9, 11, 0.95);
-    box-shadow: 0 0 15px rgba(250, 204, 21, 0.25);
+    box-shadow: 3px 3px 0 var(--primary, #facc15);
 }
 
 /* Star Rating */
@@ -199,13 +197,12 @@
     letter-spacing: 0.03em;
     cursor: pointer;
     transition: all var(--transition-fast);
-    box-shadow: 0 0 15px rgba(250, 204, 21, 0.25);
+    box-shadow: 3px 3px 0 var(--primary, #facc15);
 }
 
 .btn-submit:hover {
     background: var(--primary-light);
     transform: translateY(-1px);
-    box-shadow: 0 4px 20px rgba(250, 204, 21, 0.4);
 }
 
 .btn-submit:disabled {
