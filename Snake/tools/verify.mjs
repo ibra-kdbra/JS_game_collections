@@ -4,6 +4,8 @@
  *
  * 1. Every arena map parses, every floor cell is reachable, no wrap gap leads into a wall.
  * 2. A bot plays every arena through the real simulation and must reach the target length.
+ *    A casual bot (tools/casual-bot.mjs) rates each arena; each third of the
+ *    campaign must be harder for it (fewer clears) than the third before.
  * 3. The daily board and food order are identical for the same date, and differ between dates.
  * 4. Turn-queue and no-reverse rules behave as specified.
  * Exits non-zero on any failure.
@@ -12,6 +14,7 @@ import { ARENAS, parseMap } from '../js/arenas.js';
 import { CONFIG } from '../js/config.js';
 import { advance, buildBoard, createGame, dailyBoard, fingerprint, floodFill, queueTurn, stepCell, stepsPerMove } from '../js/game.js';
 import { botMove } from '../js/bot.js';
+import { casualRun } from './casual-bot.mjs';
 
 let failures = 0;
 const fail = (msg) => {
@@ -59,6 +62,7 @@ ARENAS.forEach((arena, i) => {
 
 console.log('2. Every arena is completable (bot through the real rules, 12 seeds each)');
 const SEEDS = 12;
+const CASUAL = 60;
 const results = [];
 ARENAS.forEach((arena, i) => {
   let wins = 0;
@@ -71,11 +75,23 @@ ARENAS.forEach((arena, i) => {
       bestTime = Math.min(bestTime, s.time);
     } else deaths[s.cause ?? 'timeout'] = (deaths[s.cause ?? 'timeout'] ?? 0) + 1;
   }
-  results.push({ i, wins });
-  const line = `${String(i + 1).padStart(2)} ${arena.name.padEnd(13)} ${wins}/${SEEDS} cleared, fastest ${(bestTime / 60).toFixed(1)}s ${Object.keys(deaths).length ? JSON.stringify(deaths) : ''}`;
+  let casual = 0;
+  for (let seed = 1; seed <= CASUAL; seed++) if (casualRun(i, seed).won) casual++;
+  results.push({ i, wins, casual });
+  const line = `${String(i + 1).padStart(2)} ${arena.name.padEnd(13)} ${wins}/${SEEDS} cleared, fastest ${(bestTime / 60).toFixed(1)}s, casual ${String(casual).padStart(2)}/${CASUAL} ${Object.keys(deaths).length ? JSON.stringify(deaths) : ''}`;
   if (!wins) fail(line);
   else console.log(`  ok ${line}`);
 });
+
+{
+  const third = Math.ceil(ARENAS.length / 3);
+  const rates = [0, 1, 2].map((k) => {
+    const part = results.slice(k * third, (k + 1) * third);
+    return part.reduce((a, r) => a + r.casual, 0) / (part.length * CASUAL);
+  });
+  console.log(`  casual clear rate by thirds: ${rates.map((r) => `${Math.round(r * 100)}%`).join(', ')}`);
+  if (!(rates[0] > rates[1] && rates[1] > rates[2])) fail('the arenas do not get harder third by third');
+}
 
 console.log('3. Daily seed');
 for (const day of ['2026-10-22', '2026-10-23', '2027-02-28']) {
