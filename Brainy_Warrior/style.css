@@ -959,7 +959,9 @@ body {
         display: none;
     }
 
-    .tool {
+    .tool,
+    .tool-icon {
+        flex: 1;
         height: 44px;
         min-height: 44px;
     }
