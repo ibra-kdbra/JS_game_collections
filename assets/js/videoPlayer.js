@@ -23,12 +23,29 @@ export class VideoPlayerComponent {
         </div>
       </div>
 
+      <!-- Ask before any music plays -->
+      <div id="music-prompt" class="music-prompt" role="dialog" aria-labelledby="music-prompt-title" hidden>
+        <i class="fas fa-volume-up music-prompt-icon" aria-hidden="true"></i>
+        <div class="music-prompt-text">
+          <strong id="music-prompt-title">Play background music?</strong>
+          <span>Starts from the top. Pause it any time from the record.</span>
+        </div>
+        <div class="music-prompt-actions">
+          <button type="button" id="music-prompt-later" class="btn-modal">No thanks</button>
+          <button type="button" id="music-prompt-play" class="btn-modal primary">Play</button>
+        </div>
+      </div>
+
       <!-- Playlist Modal -->
       <div id="playlist-modal" class="playlist-modal hidden" role="dialog" aria-modal="true" aria-labelledby="playlist-title">
         <div class="playlist-content">
           <h2 class="playlist-title" id="playlist-title">Load Media</h2>
           <label class="playlist-desc" for="media-input">Enter a YouTube Video URL or Playlist ID</label>
           <input type="text" id="media-input" placeholder="YouTube URL or ID" class="playlist-input" autocomplete="off">
+          <div class="playlist-presets" aria-label="Quick picks">
+            <button type="button" class="btn-preset" data-preset="DP3rDP02lE0">Gaming mix</button>
+            <button type="button" class="btn-preset" data-preset="https://www.youtube.com/watch?v=hvFznnxLXys">Donkey Kong theme</button>
+          </div>
           <div class="playlist-actions">
             <button type="button" id="close-modal-btn" class="btn-modal">Cancel</button>
             <button type="button" id="load-media-btn" class="btn-modal primary">Load</button>

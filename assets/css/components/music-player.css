@@ -233,3 +233,120 @@
 .btn-modal.primary:hover {
     background: var(--primary-light);
 }
+.playlist-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    margin: -0.75rem 0 1.5rem;
+}
+
+.btn-preset {
+    padding: 0.35rem 0.85rem;
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(250, 204, 21, 0.3);
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn-preset:hover,
+.btn-preset:focus-visible {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* Spinning record while music plays */
+.music-player-container.is-playing .music-thumbnail {
+    opacity: 1;
+    animation: music-spin 6s linear infinite;
+    border-radius: 50%;
+}
+
+@keyframes music-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* "Play background music?" card */
+.music-prompt {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    z-index: 90;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.75rem 0.85rem;
+    align-items: center;
+    width: min(340px, calc(100vw - 2rem));
+    padding: 1rem 1.1rem;
+    background: var(--surface);
+    border: 1px solid rgba(250, 204, 21, 0.3);
+    border-radius: var(--radius-lg);
+    box-shadow: 5px 5px 0 var(--primary);
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    pointer-events: auto;
+}
+
+.music-prompt[hidden] {
+    display: none;
+}
+
+.music-prompt.is-open {
+    opacity: 1;
+    transform: none;
+}
+
+.music-prompt-icon {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #09090b;
+}
+
+.music-prompt-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    text-align: left;
+}
+
+.music-prompt-text strong {
+    font-family: var(--font-display);
+    color: var(--text-primary, #fff);
+    font-size: 0.95rem;
+}
+
+.music-prompt-text span {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.35;
+}
+
+.music-prompt-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+}
+
+@media (max-width: 539px) {
+    .music-prompt {
+        right: 1rem;
+        left: 1rem;
+        bottom: 1rem;
+        width: auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .music-player-container.is-playing .music-thumbnail { animation: none; }
+    .music-prompt { transition: none; }
+}
