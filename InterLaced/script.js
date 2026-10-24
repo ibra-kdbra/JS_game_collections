@@ -2420,8 +2420,11 @@ function Interlaced() {
           remove(decryptElement, 'spinner');
           decryptElement.innerHTML = 'done.';
 
+          // Keep the email's line layout; on phones only the indentation is
+          // fixed, so long lines wrap at word boundaries.
+          const keep = document.body.classList.contains('phone') ? / {2,}/g : /\s/g;
           emailElement.innerHTML = rot13(emailElement.textContent, true).
-            replace(/&/g, '<br>').replace(/\s/g, '&nbsp;');
+            replace(/&/g, '<br>').replace(keep, (spaces) => '&nbsp;'.repeat(spaces.length));
           add(emailElement, 'decrypt');
 
           attachmentElement.innerHTML = 'interlaced.zip (13 KB)';
@@ -2582,8 +2585,10 @@ window.addEventListener('load', function() {
 }, false);
 
 // Fit the fixed 980x620 display to the window. On phones the terminal uses the
-// whole screen with its own font size, and the mesh view is turned sideways
-// when the phone is held upright.
+// whole screen with its own font size, and the mesh view is laid out at the
+// phone's real size (style.css, body.phone.mode-mesh) instead of being scaled
+// down, so its tools and text stay a usable size. Held upright, the mesh view
+// is turned sideways to use the long side of the screen.
 function resizeDisplay() {
   const container = $('game-container');
   const width = window.innerWidth;
@@ -2597,11 +2602,21 @@ function resizeDisplay() {
   }
 
   const rotate = phone && height > width;
-  const fitWidth = rotate ? height : width;
+  if (phone) {
+    container.style.setProperty('--mesh-w', (rotate ? height : width) + 'px');
+    container.style.setProperty('--mesh-h', (rotate ? width : height) + 'px');
+    container.style.transform = rotate ? 'rotate(90deg)' : '';
+    return;
+  }
+
   // A small margin above and below on larger screens
-  const fitHeight = (rotate ? width : height) - (phone ? 0 : 24);
-  const scale = Math.min(fitWidth / 980, fitHeight / 620);
-  container.style.transform = (rotate ? 'rotate(90deg) ' : '') + 'scale(' + scale + ')';
+  const scale = Math.min(width / 980, (height - 24) / 620);
+  container.style.transform = 'scale(' + scale + ')';
 }
 
-window.addEventListener('resize', resizeDisplay);
+// Resizing re-lays out the display once per frame at most
+let resizeFrame = 0;
+window.addEventListener('resize', function() {
+  cancelAnimationFrame(resizeFrame);
+  resizeFrame = requestAnimationFrame(resizeDisplay);
+});
