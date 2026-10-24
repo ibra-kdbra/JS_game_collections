@@ -110,8 +110,8 @@
   }
 }
 
-/* ---------- Phones: 12px minimum text ---------- */
-@media (max-width: 768px) {
+/* ---------- Phones (also held sideways): 12px minimum text ---------- */
+@media (max-width: 768px), (max-height: 500px) {
   .art-tile-tags,
   .tag,
   .meta-chip {
