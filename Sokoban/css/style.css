@@ -818,6 +818,135 @@ dialog[open] .star.on:nth-child(2) {
   }
 }
 
+/* ---------- Phones: readable text, 44px buttons, more room for the board ---------- */
+
+@media (pointer: coarse), (max-width: 720px) {
+  .eyebrow,
+  .counter dt,
+  .panel h3,
+  .level-tile .name,
+  .done-stats dt,
+  .continue-btn small {
+    font-size: 12px;
+  }
+
+  .hud-actions .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .hud-id {
+    min-width: 0;
+  }
+
+  .hud-id .eyebrow {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* Narrow phones: level codes like 1-10 stay on one line in a five-column grid. */
+@media (max-width: 400px) {
+  dialog.panel {
+    width: calc(100vw - 16px);
+    padding: 16px 14px;
+  }
+
+  .level-grid {
+    gap: 5px;
+  }
+
+  .level-tile {
+    padding: 7px 5px;
+  }
+
+  .level-tile .code {
+    font-size: 18px;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+}
+
+/* Landscape phones: a 48px d-pad on the left and the buttons stacked on the
+   right leave a wider board between them. */
+@media (orientation: landscape) and (max-height: 560px) {
+  body .gk-touch {
+    padding-left: max(10px, env(safe-area-inset-left));
+    padding-right: max(10px, env(safe-area-inset-right));
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
+  body .gk-touch .gk-dpad {
+    grid-template-columns: repeat(3, 48px);
+    grid-template-rows: repeat(3, 48px);
+  }
+
+  body .gk-touch .gk-buttons {
+    flex-direction: column-reverse;
+    flex-wrap: nowrap;
+    align-items: center;
+    max-width: none;
+  }
+
+  body .gk-touch .gk-btn {
+    width: 64px;
+    height: 64px;
+  }
+
+  body .gk-touch .gk-btn--small {
+    width: auto;
+    height: 44px;
+  }
+
+  .gk-has-touch .stage {
+    margin: 0 max(80px, calc(env(safe-area-inset-right) + 74px)) 0 max(150px, calc(env(safe-area-inset-left) + 144px));
+  }
+}
+
+/* Landscape phones: the cleared card fits the height without scrolling. */
+@media (orientation: landscape) and (max-height: 440px) {
+  dialog.panel--done {
+    width: min(92vw, 520px);
+    padding: 14px 18px;
+  }
+
+  .stamp {
+    margin: 0 0 4px;
+    font-size: 34px;
+    border-width: 3px;
+  }
+
+  .stars {
+    margin: 6px 0 2px;
+  }
+
+  .star {
+    width: 22px;
+    height: 22px;
+  }
+
+  .done-stats {
+    margin: 8px 0 4px;
+  }
+
+  .done-stats div {
+    padding: 4px 8px;
+  }
+
+  .done-stats dd {
+    font-size: 18px;
+  }
+
+  .done-note {
+    margin: 4px 0 8px;
+  }
+
+  .done-actions {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

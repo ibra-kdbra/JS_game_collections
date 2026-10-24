@@ -183,7 +183,9 @@ h3 {
   50% { opacity: 0.98; }
 }
 
-#b {
+/* The flicker runs on the scanline layer only, so the board's canvases are
+   not re-composited at full opacity changes every frame. */
+#b::before {
   animation: flicker 0.15s infinite linear;
 }
 
@@ -487,30 +489,455 @@ h3 {
   100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
 }
 
-/* In landscape the buttons stack in two rows so they fit beside the playfield. */
-@media (orientation: landscape) {
-  .gk-touch .gk-buttons {
-    max-width: 170px;
+/* ============================
+   Touch screens
+   The layout (cell size, panel widths, margins) is computed in resize();
+   these rules style the pieces it places.
+=============================== */
+.touch-only {
+  display: none;
+}
+
+html.tt-touch,
+html.tt-touch body {
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.tt-touch body {
+  height: 100vh;
+  height: 100dvh;
+  position: fixed;
+  inset: 0;
+}
+
+.tt-touch #touchPause {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: 8px auto 0;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  touch-action: manipulation;
+}
+
+#touchPause svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.tt-touch #a {
+  cursor: pointer;
+}
+
+.tt-touch h3 {
+  font-size: 12px;
+  line-height: 24px;
+  letter-spacing: 0.04em;
+}
+
+.tt-touch #stats th {
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.tt-touch #stats td {
+  font-size: 100%;
+  white-space: nowrap;
+}
+
+.tt-touch #stats #time {
+  font-size: 12px;
+  padding-top: 2px;
+}
+
+.tt-touch #stats tr {
+  margin-bottom: 4px;
+}
+
+/* Tall phones: hold, stats and pause in a strip above the board and queue. */
+#content.tt-strip {
+  flex-wrap: wrap;
+  border-radius: 8px 8px 0 0;
+}
+
+#content.tt-strip #d {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 44px;
+  grid-template-rows: 18px auto;
+  align-content: center;
+  align-items: center;
+  column-gap: 8px;
+  padding: 0 6px;
+  box-sizing: border-box;
+}
+
+#content.tt-strip #d > h3 {
+  grid-area: 1 / 1;
+  line-height: 18px;
+}
+
+#content.tt-strip #a {
+  grid-area: 2 / 1;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+}
+
+#content.tt-strip #touchPause {
+  grid-area: 1 / 3 / 3 / 4;
+  margin: 0;
+}
+
+#content.tt-strip #replay {
+  display: none !important;
+}
+
+#content.tt-strip #stats {
+  grid-area: 1 / 2 / 3 / 3;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+#content.tt-strip #stats tbody {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: auto;
+}
+
+#content.tt-strip #stats tr {
+  width: auto;
+  margin: 0;
+  min-width: 0;
+}
+
+#content.tt-strip #stats tr:nth-child(4) {
+  display: none;
+}
+
+#content.tt-strip #stats #time {
+  font-size: 13px;
+}
+
+/* On-screen buttons */
+#pad {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 0 max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  pointer-events: none;
+}
+
+.tt-touch.tt-playing:not(.tt-nobuttons) #pad {
+  display: flex;
+}
+
+.pad-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 84px));
+  grid-auto-rows: var(--pad-row, 56px);
+  gap: 8px;
+  flex: 0 1 50%;
+}
+
+.pad-right {
+  justify-content: end;
+}
+
+#pad button {
+  pointer-events: auto;
+  touch-action: none;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  border-radius: 12px;
+  background: rgba(18, 19, 26, 0.72);
+  color: #fff;
+  font: 900 16px/1 'Source Sans Pro', sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background-color 60ms ease;
+}
+
+#pad button[data-pressed] {
+  background: #facc15;
+  border-color: #facc15;
+  color: #09090b;
+}
+
+#pad svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+#pad .pad-drop {
+  grid-column: span 2;
+}
+
+#pad .pad-rot {
+  font-size: 30px;
+  font-weight: 400;
+  text-transform: none;
+}
+
+.tt-landscape #pad {
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+.tt-landscape .pad-group {
+  grid-template-columns: repeat(2, 56px);
+  flex: none;
+}
+
+/* Menus: full screen on touch screens, readable and easy to tap. */
+.tt-touch .menu:not(#go):not(#pause) {
+  position: fixed;
+  inset: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  box-sizing: border-box;
+  visibility: hidden;
+  transition: opacity 0.3s ease-out, visibility 0s linear 0.3s;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
+.tt-touch .menu.on:not(#go):not(#pause) {
+  visibility: visible;
+  transition: opacity 0.3s ease-out;
+}
+
+.tt-touch .menu > * {
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.tt-touch .menu li a,
+.tt-touch .button {
+  box-sizing: border-box;
+  min-height: 48px;
+  font-size: 1.15rem;
+  touch-action: manipulation;
+}
+
+.tt-touch .menu li a {
+  width: 86%;
+  margin: 5px 0;
+}
+
+.tt-touch .menu-row {
+  gap: 8px;
+}
+
+.tt-touch .menu-row a {
+  width: 42%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tt-touch .menu a small {
+  font-size: 12px;
+}
+
+.tt-touch .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 140px;
+}
+
+.tt-touch #settings > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tt-touch #settings b {
+  width: 7.5em;
+}
+
+.tt-touch #settings span {
+  margin: 0;
+}
+
+.tt-touch #settings .left,
+.tt-touch #settings .right {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  touch-action: manipulation;
+}
+
+html:not(.tt-touch) #Buttons {
+  display: none;
+}
+
+.tt-touch .key-help,
+.tt-touch #controls {
+  display: none;
+}
+
+.tt-touch .touch-help {
+  display: block;
+  text-align: left;
+  line-height: 1.45;
+  padding: 0 4px;
+}
+
+/* Pause and game over: buttons below the board (portrait) or beside it (landscape). */
+.tt-touch #go,
+.tt-touch #pause {
+  position: fixed;
+  inset: 0;
+  width: auto;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0 max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  box-sizing: border-box;
+  visibility: hidden;
+  overflow: hidden;
+}
+
+.tt-touch #go.on,
+.tt-touch #pause.on {
+  visibility: visible;
+}
+
+.tt-touch #pause.on {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.tt-touch #go ul,
+.tt-touch #pause ul,
+.tt-touch .go-note {
+  position: static;
+}
+
+.tt-touch #go ul,
+.tt-touch #pause ul {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.tt-touch #go li,
+.tt-touch #pause li {
+  flex: 1;
+  min-width: 0;
+}
+
+.tt-touch #go li a,
+.tt-touch #pause li a {
+  width: 100%;
+  margin: 0;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1.15;
+}
+
+.tt-touch .go-note {
+  margin: 0 0 8px;
+  text-shadow: 0 1px 3px #000;
+}
+
+.tt-landscape #go,
+.tt-landscape #pause {
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.tt-landscape #go ul,
+.tt-landscape #pause ul,
+.tt-landscape .go-note {
+  flex-direction: column;
+  width: min(180px, calc((100vw - var(--board-w, 200px)) / 2 - 24px));
+}
+
+.tt-landscape .go-note {
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #b::before {
+    animation: none;
   }
 }
 
-/* On-screen controls: the pad's up arrow is the hard drop. */
-.gk-dpad-up::after {
-  content: 'DROP';
-  position: absolute;
-  margin-top: 30px;
-  font-size: 9px;
-  letter-spacing: 0.08em;
+.tt-touch .menu li.menu-row {
+  display: flex;
+  justify-content: center;
 }
 
-.gk-dpad-up {
-  position: relative;
+/* Landscape phones: the modes in two columns so the menu fits the height. */
+.tt-landscape .menu > ul {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+  max-width: 640px;
 }
 
-.gk-touch .gk-btn {
-  font-size: 26px;
+.tt-landscape .menu > ul li a {
+  width: 100%;
+  margin: 0;
 }
 
-.gk-touch .gk-btn--small {
-  font-size: 15px;
+.tt-landscape .menu li.menu-row a {
+  width: 50%;
+}
+
+.tt-landscape .menu h1 {
+  margin: 0.2em 0 0.3em;
+}
+
+.tt-landscape #stats tr:nth-child(4) {
+  display: none;
+}
+
+.tt-touch .menu li.menu-row {
+  width: 86%;
+  margin: 0 auto;
+}
+
+.tt-touch .menu li.menu-row a {
+  flex: 1;
+  margin: 5px 0;
+}
+
+.tt-landscape #go > *,
+.tt-landscape #pause > * {
+  margin-right: 0;
 }

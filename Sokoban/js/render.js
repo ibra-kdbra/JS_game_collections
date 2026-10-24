@@ -50,7 +50,7 @@ export function createRenderer(canvas) {
   function resize(w, h) {
     cssW = Math.max(1, Math.floor(w));
     cssH = Math.max(1, Math.floor(h));
-    dpr = Math.min(window.devicePixelRatio || 1, 3);
+    dpr = Math.min(window.devicePixelRatio || 1, 2); // 2x looks the same on phones and paints far fewer pixels
     canvas.width = Math.round(cssW * dpr);
     canvas.height = Math.round(cssH * dpr);
     layout();

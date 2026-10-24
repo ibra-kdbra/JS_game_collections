@@ -59,12 +59,15 @@ let drag = null;
 function computeLayout() {
   const vw = document.documentElement.clientWidth || innerWidth;
   const vh = window.visualViewport?.height ?? innerHeight;
-  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  // The canvas covers the whole window and redraws every frame: 2x density
+  // looks the same on 3x phones and paints less than half the pixels.
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const pad = 8;
   const hudTopH = 96;
   const sideW = 176;
   const topScale = Math.min((vw - pad * 2 - 12) / F.w, (vh - hudTopH - pad * 2 - 6) / F.h);
-  const sideScale = Math.min((vw - (sideW + 24) * 2) / F.w, (vh - pad * 2 - 12) / F.h);
+  // Side layout: the HUD sits left of the field, so only that side is reserved.
+  const sideScale = Math.min((vw - (sideW + 24) - pad * 2) / F.w, (vh - pad * 2 - 12) / F.h);
   const side = sideScale > topScale;
   const scale = Math.max(0.2, side ? sideScale : topScale);
   const w = F.w * scale;
@@ -72,7 +75,8 @@ function computeLayout() {
   let x;
   let y;
   if (side) {
-    x = (vw - w) / 2;
+    // Centred when there is room, otherwise just clear of the HUD.
+    x = Math.min(Math.max((vw - w) / 2, sideW + 24), vw - pad - w);
     y = (vh - h) / 2;
   } else {
     x = (vw - w) / 2;
@@ -103,8 +107,11 @@ function placeHud() {
   const msg = $('fieldMsg');
   msg.style.left = `${layout.x}px`;
   msg.style.width = `${layout.w}px`;
-  msg.style.top = `${layout.y + layout.h * 0.42}px`;
-  msg.style.height = `${layout.h * 0.44}px`;
+  // Small fields (landscape phones) give the level card more of the height.
+  const compact = layout.h < 400;
+  msg.classList.toggle('is-compact', compact);
+  msg.style.top = `${layout.y + layout.h * (compact ? 0.36 : 0.42)}px`;
+  msg.style.height = `${layout.h * (compact ? 0.54 : 0.44)}px`;
   const toast = $('toast');
   toast.style.left = `${layout.x + layout.w / 2}px`;
   toast.style.top = `${layout.y + layout.h * 0.36}px`;
@@ -804,11 +811,20 @@ document.addEventListener('visibilitychange', () => {
 
 /* ---------- Boot ---------- */
 
-addEventListener('resize', computeLayout);
+// Resize events come in bursts (rotation, the address bar): lay out once per frame.
+let layoutQueued = false;
+function queueLayout() {
+  if (layoutQueued) return;
+  layoutQueued = true;
+  requestAnimationFrame(() => {
+    layoutQueued = false;
+    computeLayout();
+  });
+}
+addEventListener('resize', queueLayout);
+window.visualViewport?.addEventListener('resize', queueLayout);
 addEventListener('load', computeLayout);
-window.visualViewport?.addEventListener('resize', computeLayout);
-addEventListener('load', computeLayout);
-addEventListener('orientationchange', () => setTimeout(computeLayout, 120));
+addEventListener('orientationchange', () => setTimeout(queueLayout, 120));
 
 computeLayout();
 buildLegend();

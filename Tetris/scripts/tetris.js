@@ -182,6 +182,7 @@ var settings = {
   'Soft Drop': 31,
   'Lock Delay': 30,
   Size: 0,
+  Buttons: 0,
   Sound: 0,
   Volume: 100,
   Block: 0,
@@ -211,6 +212,7 @@ var setting = {
   })(),
   'Lock Delay': range(0, 101),
   Size: ['Auto', 'Small', 'Medium', 'Large'],
+  Buttons: ['On', 'Off'],
   Sound: ['Off', 'On'],
   Volume: range(0, 101),
   Block: ['Shaded', 'Solid', 'Glossy', 'Arika', 'World'],
@@ -309,80 +311,73 @@ var flags = {
 /**
  * Lays out the hold panel, playfield and next queue to fit the screen.
  *  Canvases are sized in device pixels (cellSize) and shown at CSS size, so
- *  blocks stay sharp on high-DPI screens. Narrow screens get smaller side
- *  panels, and room is left for the on-screen controls on touch screens.
+ *  blocks stay sharp on high-DPI screens; the density is capped at 2, which
+ *  looks the same on phones and keeps the canvases small. Touch screens get
+ *  their own layout around the on-screen buttons (layoutTouch).
  */
+var renderScale = 1;
+var MAX_RENDER_SCALE = 2;
+
 function resize() {
+  resizeQueued = false;
   var a = document.getElementById('a');
   var b = document.getElementById('b');
   var c = document.getElementById('c');
   var d = document.getElementById('d');
 
-  var dpr = window.devicePixelRatio || 1;
-  var touch = document.documentElement.classList.contains('gk-has-touch');
-  var portrait = window.innerHeight > window.innerWidth;
-  var narrow = window.innerWidth < 700;
-
-  // Space taken by the touch controls.
-  var top = touch && !portrait ? 8 : 12;
-  var bottom = touch && portrait ? 204 : 12;
-  var sides = touch && !portrait ? 196 : 8;
-  var availW = window.innerWidth - sides * 2;
-  var availH = window.innerHeight - top - bottom;
-
-  // Side panels are 4 cells wide, scaled down on narrow screens.
-  var sideScale = narrow ? 0.6 : 1;
-  var cssCell = Math.min(availH / 20, availW / (10 + 8 * sideScale + 0.5));
-  if (settings.Size === 1) cssCell = Math.min(cssCell, 15);
-  else if (settings.Size === 2) cssCell = Math.min(cssCell, 30);
-  else if (settings.Size === 3) cssCell = Math.min(cssCell, 45);
-  cssCell = Math.max(Math.floor(cssCell), 8);
-  cellSize = Math.round(cssCell * dpr);
-
+  var dpr = Math.min(window.devicePixelRatio || 1, MAX_RENDER_SCALE);
+  renderScale = dpr;
   var px = function(n) {
     return n + 'px';
   };
-  var boardW = cssCell * 10;
-  var boardH = cssCell * 20;
-  var sideW = Math.round(cssCell * 4 * sideScale);
 
-  stackCanvas.width = activeCanvas.width = bgStackCanvas.width = cellSize * 10;
-  stackCanvas.height = activeCanvas.height = bgStackCanvas.height = cellSize * 20;
-  [stackCanvas, activeCanvas, bgStackCanvas].forEach(function(canvas) {
-    canvas.style.width = px(boardW);
-    canvas.style.height = px(boardH);
-  });
-  b.style.width = px(boardW);
-  b.style.height = px(boardH);
+  if (document.documentElement.classList.contains('tt-touch')) {
+    layoutTouch(a, b, c, d, dpr, px);
+  } else {
+    var narrow = window.innerWidth < 700;
+    var top = 12;
+    var bottom = 12;
+    var availW = window.innerWidth - 16;
+    var availH = window.innerHeight - top - bottom;
 
-  holdCanvas.width = cellSize * 4;
-  holdCanvas.height = cellSize * 2;
-  holdCanvas.style.width = px(sideW);
-  holdCanvas.style.height = px(sideW / 2);
-  a.style.width = px(sideW);
-  a.style.height = px(sideW / 2);
-  d.style.width = px(sideW);
-  d.style.height = px(boardH);
+    // Side panels are 4 cells wide, scaled down on narrow screens.
+    var sideScale = narrow ? 0.6 : 1;
+    var cssCell = Math.min(availH / 20, availW / (10 + 8 * sideScale + 0.5));
+    cssCell = Math.max(Math.floor(capCellSize(cssCell)), 8);
+    cellSize = Math.round(cssCell * dpr);
 
-  previewCanvas.width = cellSize * 4;
-  previewCanvas.height = cellSize * 20;
-  previewCanvas.style.width = px(sideW);
-  previewCanvas.style.height = px(Math.round(boardH * sideScale));
-  c.style.width = px(sideW);
-  c.style.height = px(boardH);
+    var boardW = cssCell * 10;
+    var boardH = cssCell * 20;
+    var sideW = Math.round(cssCell * 4 * sideScale);
+    sizeBoard(b, boardW, boardH, px);
 
-  var content = document.getElementById('content');
-  content.style.marginTop = px(top);
-  content.style.marginBottom = px(bottom);
+    holdCanvas.width = cellSize * 4;
+    holdCanvas.height = cellSize * 2;
+    holdCanvas.style.width = px(sideW);
+    holdCanvas.style.height = px(sideW / 2);
+    a.style.width = px(sideW);
+    a.style.height = px(sideW / 2);
+    d.style.width = px(sideW);
+    d.style.height = px(boardH);
 
-  // Scale the text with the playfield.
-  msg.style.lineHeight = px(boardH);
-  msg.style.fontSize = ~~(boardW / 6) + 'px';
-  stats.style.fontSize = Math.max(~~((sideW / 4) * (narrow ? 0.9 : 0.68)), 9) + 'px';
-  stats.style.width = px(sideW);
-  document.documentElement.style.fontSize = Math.max(~~(boardW / 16), 12) + 'px';
-  for (var i = 0, len = h3.length; i < len; i++) {
-    h3[i].style.fontSize = Math.max(~~(sideW / 5), 10) + 'px';
+    previewCanvas.width = cellSize * 4;
+    previewCanvas.height = cellSize * 20;
+    previewCanvas.style.width = px(sideW);
+    previewCanvas.style.height = px(Math.round(boardH * sideScale));
+    c.style.width = px(sideW);
+    c.style.height = px(boardH);
+
+    var content = document.getElementById('content');
+    content.style.marginTop = px(top);
+    content.style.marginBottom = px(bottom);
+
+    // Scale the text with the playfield.
+    stats.style.fontSize = Math.max(~~((sideW / 4) * (narrow ? 0.9 : 0.68)), 9) + 'px';
+    stats.style.width = px(sideW);
+    document.documentElement.style.fontSize = Math.max(~~(boardW / 16), 12) + 'px';
+    for (var i = 0, len = h3.length; i < len; i++) {
+      h3[i].style.fontSize = Math.max(~~(sideW / 5), 10) + 'px';
+    }
   }
 
   // Redraw graphics
@@ -402,7 +397,145 @@ function resize() {
     piece.draw();
   }
 }
-addEventListener('resize', resize, false);
+
+/** Applies the Size setting (Auto, Small, Medium, Large) to a cell size. */
+function capCellSize(cssCell) {
+  if (settings.Size === 1) return Math.min(cssCell, 15);
+  if (settings.Size === 2) return Math.min(cssCell, 30);
+  if (settings.Size === 3) return Math.min(cssCell, 45);
+  return cssCell;
+}
+
+function sizeBoard(b, boardW, boardH, px) {
+  stackCanvas.width = activeCanvas.width = bgStackCanvas.width = cellSize * 10;
+  stackCanvas.height = activeCanvas.height = bgStackCanvas.height = cellSize * 20;
+  [stackCanvas, activeCanvas, bgStackCanvas].forEach(function(canvas) {
+    canvas.style.width = px(boardW);
+    canvas.style.height = px(boardH);
+  });
+  b.style.width = px(boardW);
+  b.style.height = px(boardH);
+  msg.style.lineHeight = px(boardH);
+  msg.style.fontSize = ~~(boardW / 6) + 'px';
+}
+
+/** Safe-area insets (notches, home indicator) in CSS pixels. */
+var safeProbe;
+function safeInsets() {
+  if (!safeProbe) {
+    safeProbe = document.createElement('div');
+    safeProbe.style.cssText =
+      'position:fixed;visibility:hidden;pointer-events:none;top:0;left:0;' +
+      'padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+    document.body.appendChild(safeProbe);
+  }
+  var cs = getComputedStyle(safeProbe);
+  return {
+    t: parseFloat(cs.paddingTop) || 0,
+    r: parseFloat(cs.paddingRight) || 0,
+    b: parseFloat(cs.paddingBottom) || 0,
+    l: parseFloat(cs.paddingLeft) || 0,
+  };
+}
+
+/**
+ * Touch layout. Portrait: the board as large as fits, with hold and stats
+ *  either in a column on the left or, on tall phones, in a strip above, the
+ *  queue on the right and the buttons below. Landscape: hold, board and queue
+ *  in the middle with a button cluster on each side.
+ */
+function layoutTouch(a, b, c, d, dpr, px) {
+  var ins = safeInsets();
+  var vw = window.innerWidth - ins.l - ins.r;
+  var vh = window.innerHeight - ins.t - ins.b;
+  var portrait = vh >= vw;
+  var buttons = settings.Buttons !== 1;
+  var pad = 6;
+  var gap = 8;
+  var strip = false;
+  var stripH = 60;
+  var cell, side, row, availW, availH;
+  var sideFor = function(cell) {
+    return Math.min(Math.max(Math.round(cell * 2.6), 56), 84);
+  };
+  var fit = function(w, h) {
+    var c = h / 20;
+    for (var i = 0; i < 4; i++) c = Math.min(h / 20, (w - 2 * sideFor(c)) / 10);
+    return c;
+  };
+
+  if (portrait) {
+    row = vh >= 700 ? 60 : 52;
+    availW = vw - pad * 2;
+    availH = vh - pad * 2 - (buttons ? row * 2 + gap * 2 : 0);
+    cell = fit(availW, availH);
+    var cellStrip = Math.min((availH - stripH) / 20, (availW - 56) / 10);
+    if (cellStrip > cell * 1.06) {
+      strip = true;
+      cell = cellStrip;
+    }
+  } else {
+    row = 56;
+    availH = vh - pad * 2;
+    availW = vw - pad * 2 - (buttons ? (row * 2 + gap * 3) * 2 : 0);
+    cell = fit(availW, availH);
+  }
+  cell = Math.max(Math.floor(capCellSize(cell)), 8);
+  side = strip ? 56 : sideFor(cell);
+  cellSize = Math.round(cell * dpr);
+
+  var boardW = cell * 10;
+  var boardH = cell * 20;
+  sizeBoard(b, boardW, boardH, px);
+
+  // Spare height in portrait makes the buttons bigger.
+  if (portrait && buttons) {
+    var spare = vh - pad * 2 - boardH - (strip ? stripH : 0) - gap * 2;
+    row = Math.max(row, Math.min(68, Math.floor(spare / 2) - 4));
+  }
+
+  var holdW = strip ? 64 : side;
+  holdCanvas.width = cellSize * 4;
+  holdCanvas.height = cellSize * 2;
+  holdCanvas.style.width = px(holdW);
+  holdCanvas.style.height = px(holdW / 2);
+  a.style.width = px(holdW);
+  a.style.height = px(holdW / 2);
+  d.style.width = strip ? px(boardW + side) : px(side);
+  d.style.height = strip ? px(stripH) : px(boardH);
+
+  previewCanvas.width = cellSize * 4;
+  previewCanvas.height = cellSize * 20;
+  previewCanvas.style.width = px(side);
+  previewCanvas.style.height = px(Math.min(side * 5, boardH - 30));
+  c.style.width = px(side);
+  c.style.height = px(boardH);
+
+  var content = document.getElementById('content');
+  content.classList.toggle('tt-strip', strip);
+  content.style.marginTop = px(ins.t + pad);
+  content.style.marginBottom = px(ins.b + pad + (portrait && buttons ? row * 2 + gap * 2 : 0));
+  stats.style.width = strip ? '' : px(side);
+  stats.style.fontSize = Math.round(Math.min(26, Math.max(17, side / 3.2))) + 'px';
+
+  var root = document.documentElement;
+  root.classList.toggle('tt-landscape', !portrait);
+  root.classList.toggle('tt-nobuttons', !buttons);
+  root.style.setProperty('--pad-row', px(row));
+  root.style.setProperty('--board-w', px(boardW + side * 2));
+  root.style.fontSize = Math.min(Math.max(Math.round(Math.min(vw, vh) / 24), 14), 18) + 'px';
+}
+
+// Resizing waits for the next frame, so a burst of resize events (rotating
+// the phone, the address bar sliding) lays out once.
+var resizeQueued = false;
+function queueResize() {
+  if (resizeQueued) return;
+  resizeQueued = true;
+  requestAnimationFrame(resize);
+}
+addEventListener('resize', queueResize, false);
+addEventListener('orientationchange', queueResize, false);
 
 /**
  * ========================== Model ===========================================
@@ -430,6 +563,7 @@ function init(gt) {
   //Reset
   column = 0;
   keysDown = 0;
+  Touch.reset();
   lastKeys = 0;
   released = 255;
   //TODO Check if needed.
@@ -522,6 +656,7 @@ function pause() {
   if (gameState === 0 && !paused) {
     paused = true;
     keysDown = 0;
+    Touch.reset();
     msg.innerHTML = 'Paused';
     menu(4);
     if (typeof audioManager !== 'undefined') {
@@ -987,6 +1122,8 @@ function update() {
     keysDown = replayKeys[frame];
   }
 
+  Touch.apply();
+
   if (!(lastKeys & flags.holdPiece) && flags.holdPiece & keysDown) {
     piece.hold();
   }
@@ -1038,9 +1175,17 @@ function update() {
  * Runs every animation frame. Game logic advances in fixed 60 Hz steps, so
  *  speed, DAS and gravity are the same on 60 Hz and 120 Hz screens.
  */
+var playingClass = false;
 function gameLoop(now) {
   requestAnimationFrame(gameLoop);
   stepper.advance(now, step);
+
+  // The on-screen buttons show only while a game is being played.
+  var playing = (gameState === 0 || gameState === 2) && !paused && !watchingReplay;
+  if (playing !== playingClass) {
+    playingClass = playing;
+    document.documentElement.classList.toggle('tt-playing', playing);
+  }
 
   if (gameState === 0) {
     if (

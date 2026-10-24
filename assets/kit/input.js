@@ -59,12 +59,13 @@ export function tapKey(key, target = document) {
 
 export const isTouchFirst = () => matchMedia('(pointer: coarse)').matches;
 
-function holdButton(el, key, target, repeatMs) {
+function holdButton(el, key, target, repeatMs, repeatDelayMs = repeatMs) {
   let timer = 0;
   let pointer = null;
   const release = () => {
     if (pointer === null) return;
     pointer = null;
+    clearTimeout(timer);
     clearInterval(timer);
     el.removeAttribute('data-pressed');
     sendKey('keyup', key, target);
@@ -76,7 +77,14 @@ function holdButton(el, key, target, repeatMs) {
     el.setPointerCapture(e.pointerId);
     el.setAttribute('data-pressed', '');
     sendKey('keydown', key, target);
-    if (repeatMs) timer = setInterval(() => sendKey('keydown', key, target), repeatMs);
+    if (repeatMs) {
+      // The first repeat waits repeatDelayMs, so a normal tap never sends two presses.
+      timer = setTimeout(() => {
+        if (pointer === null) return;
+        sendKey('keydown', key, target);
+        timer = setInterval(() => sendKey('keydown', key, target), repeatMs);
+      }, repeatDelayMs);
+    }
     navigator.vibrate?.(8);
   });
   el.addEventListener('pointerup', release);
@@ -88,13 +96,15 @@ function holdButton(el, key, target, repeatMs) {
 /**
  * @param {object} options
  * @param {{up?:string,down?:string,left?:string,right?:string}} [options.dpad]
- * @param {{label:string,key:string,small?:boolean}[]} [options.buttons]
+ * @param {{label:string,key:string,small?:boolean,repeatMs?:number,repeatDelayMs?:number}[]} [options.buttons]
  * @param {'touch'|'always'} [options.show='touch']
  * @param {number} [options.repeatMs=0]  Auto-repeat keydown while held (for menus); 0 = hold only.
+ * @param {number} [options.repeatDelayMs=repeatMs]  Wait before the first repeat. Set it longer than
+ *   repeatMs (e.g. 300) so a quick tap never counts twice.
  * @param {EventTarget} [options.target=document]
  * @returns {{ el: HTMLElement, show(): void, hide(): void, destroy(): void }}
  */
-export function createTouchControls({ dpad, buttons = [], show = 'touch', repeatMs = 0, target = document } = {}) {
+export function createTouchControls({ dpad, buttons = [], show = 'touch', repeatMs = 0, repeatDelayMs, target = document } = {}) {
   ensureKitStyles();
   const root = document.createElement('div');
   root.className = 'gk-touch';
@@ -110,7 +120,7 @@ export function createTouchControls({ dpad, buttons = [], show = 'touch', repeat
       b.tabIndex = -1;
       b.className = `gk-dpad-${dir}`;
       b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6l7 10H5z"/></svg>';
-      holdButton(b, dpad[dir], target, repeatMs);
+      holdButton(b, dpad[dir], target, repeatMs, repeatDelayMs ?? repeatMs);
       pad.append(b);
     }
     root.append(pad);
@@ -125,7 +135,8 @@ export function createTouchControls({ dpad, buttons = [], show = 'touch', repeat
       b.tabIndex = -1;
       b.className = spec.small ? 'gk-btn gk-btn--small' : 'gk-btn';
       b.textContent = spec.label;
-      holdButton(b, spec.key, target, spec.repeatMs ?? repeatMs);
+      const ms = spec.repeatMs ?? repeatMs;
+      holdButton(b, spec.key, target, ms, spec.repeatDelayMs ?? repeatDelayMs ?? ms);
       group.append(b);
     }
     root.append(group);
