@@ -1003,3 +1003,11 @@ kbd {
     padding-bottom: max(10px, env(safe-area-inset-bottom));
   }
 }
+
+/* Landscape phones: mode rows and buttons keep a 44px touch height. */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 560px) {
+  .mode,
+  .btn {
+    min-height: 44px;
+  }
+}
