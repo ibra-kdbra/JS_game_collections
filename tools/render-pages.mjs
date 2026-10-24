@@ -46,7 +46,7 @@ function gameCard(game, index) {
           <div class="game-card-inner">
             <div class="game-card-preview">
               <div class="game-card-tags">${tags.map((tag) => TAG[tag]).join('')}</div>
-              <img src="${t.src}" srcset="${t.srcset}" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="${index < 3 ? 'eager' : 'lazy'}" decoding="async">
+              <img src="${t.src}" srcset="${t.srcset}" sizes="(min-width: 1200px) 400px, (min-width: 700px) 50vw, 100vw" width="480" height="300" alt="" loading="${index < 3 ? 'eager' : 'lazy'}"${index === 0 ? ' fetchpriority="high"' : ''} decoding="async">
               <span class="game-card-best" hidden></span>
             </div>
             <div class="game-card-content">

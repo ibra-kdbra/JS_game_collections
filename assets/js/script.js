@@ -251,6 +251,7 @@ function renderRecent() {
         img.alt = '';
         img.width = 88;
         img.height = 55;
+        img.loading = 'lazy';
         img.decoding = 'async';
         text.className = 'recent-text';
         title.className = 'recent-title';
