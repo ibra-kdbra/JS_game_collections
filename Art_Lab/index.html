@@ -35,6 +35,7 @@
     <link rel="stylesheet" href="../assets/css/variables.css" />
     <link rel="stylesheet" href="../assets/vendor/fontawesome/fontawesome.css" />
     <link rel="stylesheet" href="../assets/css/feedback.css" />
+    <link rel="stylesheet" href="../assets/css/components/music-player.css" />
     <link rel="stylesheet" href="css/deck.css" />
     <link rel="modulepreload" href="js/cards.js" />
     <script type="module" src="js/deck.js"></script>
@@ -211,6 +212,12 @@
       </section>
     </main>
 
+    <!-- Music player (same as the hub), placed in the top bar's icon group -->
+    <script type="module">
+      import { VideoPlayerComponent } from '../assets/js/videoPlayer.js';
+      new VideoPlayerComponent().render('.nav-icons-group');
+    </script>
+    <script type="module" src="../assets/js/musicPlayer.js"></script>
     <script type="module">
       import { FeedbackUI } from '../assets/js/feedback/FeedbackUI.js';
       new FeedbackUI('art_lab_hub');

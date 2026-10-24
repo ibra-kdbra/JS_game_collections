@@ -158,6 +158,8 @@ html:not([data-view]) .js-only { display: none; }
   .icon-btn--text { padding: 0 9px; }
   .bar-title { font-size: 14px; }
 }
+/* With the music player in the bar, the narrowest phones keep the icons and drop the title */
+@media (max-width: 359px) { .bar-title { display: none; } .bar .nav-icons-group { margin-left: auto; } }
 
 /* ---------- Buttons ---------- */
 .btn {
