@@ -7,7 +7,7 @@ export class VideoPlayerComponent {
           <img id="music-thumbnail" class="music-thumbnail" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3C/svg%3E" alt="">
         </button>
         <!-- Youtube Iframe -->
-        <iframe id="youtube-player" class="music-iframe" title="Background music player" tabindex="-1" aria-hidden="true" allow="autoplay; encrypted-media"></iframe>
+        <iframe id="youtube-player" class="music-iframe" title="Background music player" tabindex="-1" aria-hidden="true"></iframe>
       
         <!-- Controls -->
         <div class="music-controls">
