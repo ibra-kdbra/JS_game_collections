@@ -12,7 +12,7 @@
 //
 // Run from the repo root:  node Brainy_Warrior/tools/verify-levels.mjs
 import { readFileSync } from 'node:fs';
-import { LEVELS } from '../js/levels.js';
+import { BAND_NAMES, LEVELS, bandOf } from '../js/levels.js';
 import { bfs, branching } from '../js/solver.js';
 import { apply, initialState, isWon } from '../js/rules.js';
 import { createWasmSolver } from '../js/wasm-solver.js';
@@ -88,9 +88,11 @@ for (const level of LEVELS) {
 console.log('\nDifficulty (see tools/difficulty.mjs)');
 console.log(' #  level                  par  reach  dead  trap  optSh  sols  magic  enemies  bot    score  band');
 const scores = [];
+const bandMismatch = [];
 LEVELS.forEach((level, i) => {
     const m = measure(level);
     scores.push(m.score);
+    if (BAND_NAMES[bandOf(i)] !== band(m.score)) bandMismatch.push(`${i + 1} ${level.name} is ${band(m.score)}, bandOf() says ${BAND_NAMES[bandOf(i)]}`);
     console.log(
         `${pad(i + 1, 2)}  ${level.name.padEnd(22)} ${pad(m.opt, 3)} ${pad(m.reach, 6)} ${m.dead.toFixed(2).padStart(5)} ${m.pathTrap.toFixed(2).padStart(5)}` +
             ` ${m.pathOpt.toFixed(2).padStart(6)} ${pad(m.solutions, 5)} ${pad(m.magic, 6)} ${pad(m.enemies, 8)}  ${m.bot.toFixed(3)} ${m.score.toFixed(1).padStart(6)}  ${band(m.score)}`,
@@ -111,6 +113,7 @@ for (let i = 8; i < scores.length; i++) {
     if (i > 8) ramp(scores[i] >= scores[i - 1] - TOLERANCE, `level ${i + 1} (${scores[i]}) is easier than level ${i} (${scores[i - 1]})`);
 }
 ramp(scores.at(-1) === Math.max(...scores), 'the last level should be the hardest');
+for (const m of bandMismatch) ramp(false, `level ${m} (update BAND_STARTS in js/levels.js)`);
 const wizardAt = LEVELS.findIndex((l) => l.wizardSpots.length > 1);
 ramp(wizardAt >= 3 && wizardAt <= 7, `the wizard should be introduced in levels 4-8 (first at ${wizardAt + 1})`);
 console.log(`Ramp: 1-3 easy (<= ${BANDS.easyMax}), 4-8 medium (<= ${BANDS.mediumMax}), 9+ non-decreasing within ${TOLERANCE}.`);

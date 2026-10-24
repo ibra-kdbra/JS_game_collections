@@ -607,3 +607,10 @@ export function parseLevel({ id, name, tip, par, source, map }) {
 }
 
 export const LEVELS = MAPS.map(parseLevel);
+
+// Where each difficulty band starts in LEVELS (0-based). The music follows the
+// band; tools/verify-levels.mjs checks these against the measured scores.
+export const BAND_STARTS = { medium: 3, hard: 14, expert: 28 };
+export const BAND_NAMES = ['easy', 'medium', 'hard', 'expert'];
+/** 0 easy, 1 medium, 2 hard, 3 expert. */
+export const bandOf = (i) => (i >= BAND_STARTS.expert ? 3 : i >= BAND_STARTS.hard ? 2 : i >= BAND_STARTS.medium ? 1 : 0);

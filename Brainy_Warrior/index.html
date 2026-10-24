@@ -54,7 +54,7 @@
             <button class="tool" id="btn-levels" type="button" title="Levels (L)" aria-label="Levels">
                 <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>Levels</span>
             </button>
-            <button class="tool tool-icon" id="btn-sound" type="button" title="Sound (M)" aria-label="Mute sound" aria-pressed="false">
+            <button class="tool tool-icon" id="btn-sound" type="button" title="Sound (M). Hold for music only (Shift+M)" aria-label="Mute sound" aria-pressed="false">
                 <svg viewBox="0 0 24 24" class="on"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>
                 <svg viewBox="0 0 24 24" class="off"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m22 9-6 6M16 9l6 6"/></svg>
             </button>
@@ -151,7 +151,23 @@
                 <tr><th>Undo / Restart</th><td>Z / R</td></tr>
                 <tr><th>Hint / Watch AI</th><td>H / I</td></tr>
                 <tr><th>Camera</th><td>Drag to tilt, scroll or pinch to zoom, double-click to reset</td></tr>
+                <tr><th>Sound / Music</th><td>M mutes everything; Shift+M, or holding the speaker button, switches only the music</td></tr>
             </table>
+            <section class="audio-opts" aria-labelledby="audio-title">
+                <h3 id="audio-title">Sound</h3>
+                <div class="audio-row">
+                    <label class="switch"><input type="checkbox" id="opt-music"><span>Music</span></label>
+                    <label class="volume">
+                        <span>Volume</span>
+                        <input type="range" id="opt-volume" min="0" max="100" step="5" value="50" aria-label="Music volume">
+                        <output id="opt-volume-out" for="opt-volume">50%</output>
+                    </label>
+                </div>
+                <div class="audio-row">
+                    <label class="switch"><input type="checkbox" id="opt-sfx"><span>Sound effects</span></label>
+                </div>
+                <p class="audio-muted" id="audio-muted" hidden>All sound is muted with the speaker button. Switch something on here to hear it again.</p>
+            </section>
             <div class="dialog-actions">
                 <button class="btn btn-primary" id="help-ok" type="button">Let's go</button>
             </div>

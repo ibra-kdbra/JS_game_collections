@@ -1,10 +1,11 @@
 // Brainy Warrior 3D: game flow, input, UI and progress.
 // Rules live in rules.js, the solver in wasm/solver.cpp, drawing in scene.js.
-import { LEVELS } from './levels.js';
+import { LEVELS, bandOf } from './levels.js';
 import { apply, enemiesLeft, initialState, isWon, magic, slide } from './rules.js';
 import { World } from './scene.js';
 import { ALGORITHMS, solve, solverReady } from './solver-client.js';
-import { sfx, setMuted, isMuted, unlock as unlockAudio } from './audio.js';
+import { audioInfo, configure as configureAudio, getSettings as audioSettings, jingle, musicCue, sfx, unlock as unlockAudio } from './audio.js';
+import { DEFAULT_VOLUME } from './music-score.js';
 import { createStore, recordBest } from '../../assets/kit/storage.js';
 import { createTouchControls, onSwipe } from '../../assets/kit/input.js';
 import { initShell } from '../../assets/kit/shell.js';
@@ -23,7 +24,14 @@ const isCleared = (i) => !!progress[LEVELS[i].id];
 const isUnlocked = (i) => i === 0 || isCleared(i - 1) || isCleared(i);
 const totalStars = () => LEVELS.reduce((n, l) => n + (progress[l.id]?.stars || 0), 0);
 
-setMuted(store.get('muted', false));
+// Sound settings: the toolbar speaker mutes everything; music and sound
+// effects can also be switched separately (in the help dialog).
+configureAudio({
+    muted: store.get('muted', false),
+    sfx: store.get('sfx', true),
+    music: store.get('music', true),
+    volume: store.get('music-volume', DEFAULT_VOLUME),
+});
 
 // --------------------------------------------------------------- state --
 let levelIdx = 0;
@@ -36,6 +44,7 @@ let hintsUsed = 0;
 let stuck = false;
 let aiAlg = store.get('ai-alg', 'astar');
 let aiRun = 0; // bumps to cancel a running AI playback
+let enemyCount = 0;
 
 const world = new World($('stage'));
 
@@ -93,6 +102,8 @@ function updateHud() {
     $('optimal').textContent = level.par;
     $('enemies').textContent = enemiesLeft(state);
     $('btn-undo').disabled = history.length === 0;
+    // The music adds a sparkle while the last enemy stands.
+    musicCue.nearEnd(enemyCount > 1 && enemiesLeft(state) === 1 && !state.dead && !isWon(state));
 }
 
 let toastTimer = 0;
@@ -141,11 +152,14 @@ function loadLevel(idx, { keepAi = false } = {}) {
     levelIdx = Math.max(0, Math.min(idx, LEVELS.length - 1));
     level = LEVELS[levelIdx];
     state = initialState(level);
+    enemyCount = enemiesLeft(state);
     history = [];
     hintsUsed = 0;
     stuck = false;
     queued = null;
     mode = 'play';
+    musicCue.band(bandOf(levelIdx));
+    musicCue.ai(false);
     $('level-tip').textContent = level.tip;
     const hasWizard = level.wizardSpots.length > 1;
     $('btn-magic').hidden = !hasWizard;
@@ -163,6 +177,7 @@ function loadLevel(idx, { keepAi = false } = {}) {
 function restart() {
     if (mode === 'busy') return;
     aiRun++;
+    musicCue.ai(false);
     state = initialState(level);
     history = [];
     stuck = false;
@@ -215,6 +230,7 @@ async function act(action, { fromAi = false, speed = 1 } = {}) {
 
     if (action === 'magic') {
         sfx.magic();
+        musicCue.magic();
         await world.magic(level, result.from, result.to, speed);
     } else {
         sfx.slide(result.path.length);
@@ -235,15 +251,16 @@ function afterMove({ ai = false } = {}) {
     updateHud();
     if (isWon(state)) return win({ ai });
     if (state.dead) return lose();
-    checkStuck();
+    checkStuck({ cue: true });
 }
 
 /** After every move, ask the solver whether the level can still be won. */
-function checkStuck() {
+function checkStuck({ cue = false } = {}) {
     if (state.dead || isWon(state)) return;
     const r = solve(level, state, 'astar');
     stuck = !!r && !r.path && !r.overflow;
     if (stuck) {
+        if (cue) jingle('stuck');
         banner('No way to win from here.', { action: { label: 'Undo', run: undo } });
     }
 }
@@ -252,7 +269,8 @@ function win({ ai = false } = {}) {
     mode = 'won';
     queued = null;
     world.celebrate();
-    sfx.win();
+    musicCue.ai(false);
+    jingle('win');
     const moves = history.length;
     const stars = ai ? 0 : starsFor(moves, level.par, hintsUsed);
     const prev = progress[level.id];
@@ -290,7 +308,7 @@ function lose() {
     queued = null;
     setTimeout(() => {
         if (mode !== 'lost') return;
-        sfx.lose();
+        jingle('fall');
         showDialog('lost', true);
     }, 250);
 }
@@ -377,6 +395,7 @@ function openAi() {
 
 function closeAi() {
     aiRun++;
+    musicCue.ai(false);
     $('ai-panel').hidden = true;
     document.body.classList.remove('ai-open');
     world.clearHeat();
@@ -402,12 +421,14 @@ async function runAi() {
     restart();
     aiRun = run;
     mode = 'ai';
+    musicCue.ai(true);
     setAiStats(null);
     $('ai-run').textContent = 'Stop';
     const r = solve(level, state, aiAlg, { withTrace: true });
     if (!r) {
         toast('The solver is still loading');
         mode = 'play';
+        musicCue.ai(false);
         return;
     }
     const thinking = setInterval(() => sfx.think(), 90);
@@ -419,6 +440,7 @@ async function runAi() {
     if (!r.path) {
         toast('No solution found');
         mode = 'play';
+        musicCue.ai(false);
         $('ai-run').textContent = 'Solve from start';
         return;
     }
@@ -453,6 +475,7 @@ $('ai-run').addEventListener('click', () => {
     if (mode === 'ai') {
         aiRun++;
         mode = 'play';
+        musicCue.ai(false);
         $('ai-run').textContent = 'Solve from start';
         world.clearHeat();
         updateHud();
@@ -538,7 +561,7 @@ function onKey(e) {
         h: hint,
         i: () => ($('ai-panel').hidden ? openAi() : closeAi()),
         l: openLevels,
-        m: toggleSound,
+        m: () => (e.shiftKey ? toggleMusic() : toggleSound()),
         '?': () => showDialog('help', true),
         c: () => world.resetView(),
     };
@@ -605,13 +628,82 @@ canvas.addEventListener(
 );
 canvas.addEventListener('dblclick', () => world.resetView());
 
-function toggleSound() {
-    setMuted(!isMuted());
-    store.set('muted', isMuted());
-    $('btn-sound').setAttribute('aria-pressed', String(isMuted()));
-    $('btn-sound').setAttribute('aria-label', isMuted() ? 'Unmute sound' : 'Mute sound');
+// ---------------------------------------------------------------- sound --
+const STORE_KEYS = { muted: 'muted', sfx: 'sfx', music: 'music', volume: 'music-volume' };
+function setAudio(next) {
+    configureAudio(next);
+    const s = audioSettings();
+    for (const k of Object.keys(next)) store.set(STORE_KEYS[k], s[k]);
+    renderAudio();
 }
-$('btn-sound').setAttribute('aria-pressed', String(isMuted()));
+const musicAudible = (s) => s.music && s.volume > 0;
+const silent = (s) => s.muted || (!s.sfx && !musicAudible(s));
+
+/** Toolbar speaker and M: everything on or off. */
+function toggleSound() {
+    const s = audioSettings();
+    if (!silent(s)) return setAudio({ muted: true });
+    // Unmuting with both switched off in the settings turns both back on.
+    if (!s.sfx && !musicAudible(s)) setAudio({ muted: false, sfx: true, music: true, volume: s.volume || DEFAULT_VOLUME });
+    else setAudio({ muted: false });
+}
+
+/** Hold the speaker, or Shift+M: only the music. */
+function toggleMusic() {
+    const s = audioSettings();
+    const on = s.muted || !musicAudible(s);
+    setAudio(on ? { muted: false, music: true, volume: s.volume || DEFAULT_VOLUME } : { music: false });
+    toast(on ? 'Music on' : 'Music off', 1100);
+}
+
+function renderAudio() {
+    const s = audioSettings();
+    const off = silent(s);
+    const btn = $('btn-sound');
+    btn.setAttribute('aria-pressed', String(off));
+    btn.setAttribute('aria-label', off ? 'Unmute sound' : 'Mute sound');
+    $('opt-music').checked = !s.muted && s.music;
+    $('opt-sfx').checked = !s.muted && s.sfx;
+    $('opt-volume').value = String(Math.round(s.volume * 100));
+    $('opt-volume-out').textContent = `${Math.round(s.volume * 100)}%`;
+    $('audio-muted').hidden = !s.muted;
+}
+
+$('opt-music').addEventListener('change', (e) => setAudio(e.target.checked ? { music: true, muted: false } : { music: false }));
+$('opt-sfx').addEventListener('change', (e) => setAudio(e.target.checked ? { sfx: true, muted: false } : { sfx: false }));
+$('opt-volume').addEventListener('input', (e) => {
+    const volume = Number(e.target.value) / 100;
+    configureAudio(volume > 0 ? { volume, music: true, muted: false } : { volume });
+    renderAudio();
+});
+$('opt-volume').addEventListener('change', (e) => {
+    const volume = Number(e.target.value) / 100;
+    setAudio(volume > 0 ? { volume, music: true, muted: false } : { volume });
+});
+
+// A long press on the speaker switches only the music.
+{
+    const btn = $('btn-sound');
+    let timer = 0;
+    let held = false;
+    btn.addEventListener('pointerdown', () => {
+        held = false;
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+            held = true;
+            toggleMusic();
+        }, 550);
+    });
+    for (const type of ['pointerup', 'pointerleave', 'pointercancel']) btn.addEventListener(type, () => clearTimeout(timer));
+    btn.addEventListener('contextmenu', (e) => e.preventDefault());
+    btn.addEventListener('click', (e) => {
+        unlockAudio();
+        e.currentTarget.blur();
+        if (held) held = false;
+        else toggleSound();
+    });
+}
+renderAudio();
 
 const click = (id, fn) =>
     $(id).addEventListener('click', (e) => {
@@ -625,7 +717,6 @@ click('btn-magic', () => act('magic'));
 click('btn-hint', hint);
 click('btn-ai', () => ($('ai-panel').hidden ? openAi() : closeAi()));
 click('btn-levels', openLevels);
-click('btn-sound', toggleSound);
 click('btn-help', () => showDialog('help', true));
 click('won-next', () => loadLevel(levelIdx + 1));
 click('won-replay', () => loadLevel(levelIdx));
@@ -700,6 +791,9 @@ window.brainy = {
     },
     ready,
     solverReady,
+    get audio() {
+        return audioInfo();
+    },
     // The 3D world, for the perf overlay and profiling (?perf=1 only).
     world: new URLSearchParams(location.search).get('perf') === '1' ? world : undefined,
     loadLevel,
