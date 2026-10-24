@@ -65,6 +65,14 @@ tile again or press **Build**. While placing, the row of towers in the panel
 switches type. Tap a built tower to upgrade, sell or retarget it. Pinch or use the
 + and - buttons to zoom, drag to look around.
 
+On small phones held upright (up to 380 px wide or 700 px tall) the map gets most
+of the screen: the wave panel is one row (enemy preview, start, a speed button
+that steps 1x / 2x / 3x, next wave), the build menu shows pictures and prices
+(names are in the button labels), and the selected tower or the tower being
+placed gets a short panel with Upgrade, Sell, target, Build and Cancel always in
+view (phones held sideways use the same short panel). The map sits at the top and
+the strip under it holds the tips, the hint and the zoom buttons.
+
 ### Keyboard and mouse
 
 * Mouse: click a tile to build the selected tower (you keep building until you

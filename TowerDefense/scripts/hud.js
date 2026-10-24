@@ -234,7 +234,16 @@ function updateInfo() {
     const subject = placing ? `place-${towerType}` : sel || 'idle';
     if (subject !== lastSubject) el.scrollTop = 0;
     lastSubject = subject;
-    if (placing) el.innerHTML = placeHTML();
+    if (placing) {
+        el.innerHTML = placeHTML();
+        // The tower row scrolls on the smallest phones: keep the chosen one in view
+        const on = el.querySelector('.cmp-switch [aria-pressed="true"]');
+        const row = on && on.parentNode;
+        if (row && row.scrollWidth > row.clientWidth) {
+            const r = on.getBoundingClientRect();
+            row.scrollLeft += r.left - row.getBoundingClientRect().left - (row.clientWidth - r.width) / 2;
+        }
+    }
     else if (sel) el.innerHTML = selectedHTML(sel);
     else el.innerHTML = idleHTML();
     // Touch has no hover: show the upgraded range while a tower is selected
@@ -297,8 +306,21 @@ function overHTML() {
         </div>`;
 }
 
+// Row of towers to switch to while placing (phones)
+const switchRow = (cls) => `<div class="switch ${cls}" role="group" aria-label="Switch tower">${TOWER_ORDER.map(n =>
+    `<button type="button" data-act="switch" data-tower="${n}" aria-label="${esc(tower[n].title)} $${tower[n].cost}" aria-pressed="${n === towerType}"${!godMode && cash < tower[n].cost ? ' class="poor"' : ''}>${towerPic(n, 64)}</button>`).join('')}</div>`;
+
 function placeHTML() {
     const t = createTower(0, 0, tower[towerType]);
+    // Small phones: the tower row, one line of status, Build and Cancel
+    if (compactPanels.matches) {
+        return `${switchRow('cmp-switch')}
+            <p class="place-status" id="place-status"></p>
+            <div class="insp-actions">
+                <button type="button" class="primary" data-act="build" id="build-btn">Build ${esc(t.title.replace(' Tower', ''))} $${t.cost}</button>
+                <button type="button" data-act="cancel" aria-label="Stop building (Esc)">Cancel</button>
+            </div>`;
+    }
     return `<div class="insp-head">${towerPic(towerType, 64)}
             <div><h2>${esc(t.title)} <span class="price">$${t.cost}</span></h2><p class="blurb">${esc(TOWER_BLURBS[towerType])}</p><p>${typeTag(t)} ${tagsHTML(towerType)}</p></div>
             <button type="button" class="icon-btn" data-act="cancel" aria-label="Stop building (Esc)">${icon('close')}</button>
@@ -306,8 +328,7 @@ function placeHTML() {
         ${statGrid(t)}
         ${statLine(t)}
         <div class="insp-bars">${barsHTML(t)}</div>
-        <div class="switch phone-only" role="group" aria-label="Switch tower">${TOWER_ORDER.map(n =>
-            `<button type="button" data-act="switch" data-tower="${n}" aria-label="${esc(tower[n].title)} $${tower[n].cost}" aria-pressed="${n === towerType}"${!godMode && cash < tower[n].cost ? ' class="poor"' : ''}>${towerPic(n, 64)}</button>`).join('')}</div>
+        ${switchRow('phone-only')}
         <p class="place-status" id="place-status"></p>
         <div class="insp-actions">
             <button type="button" class="primary" data-act="build" id="build-btn">Build $${t.cost}</button>
@@ -346,6 +367,20 @@ function selectedHTML(t) {
             <div><dt>Damage dealt</dt><dd id="t-dealt">${liveValue('t-dealt')}</dd></div>
             <div><dt>Spent</dt><dd>$${t.totalCost}</dd></div>
         </dl>`;
+    // Small phones: name and level, then Upgrade, Sell and close in one row, the
+    // target under it; the numbers follow if the panel is scrolled
+    if (compactPanels.matches) {
+        return `<p class="cmp-line"><span><b>${esc(t.title)}</b> Level ${now}/${level}</span><span class="need" id="up-need" hidden></span></p>
+            <div class="insp-actions cmp-actions">${quickUp}
+                <button type="button" class="sell" data-act="sell">Sell +$${t.sellPrice()}</button>
+                <button type="button" class="icon-btn" data-act="cancel" aria-label="Deselect (Esc)">${icon('close')}</button>
+            </div>
+            ${hasTargeting(t) ? `<div class="seg target-seg" role="group" aria-label="Target">${Object.entries(targetModes).map(([m, label]) =>
+                `<button type="button" data-act="target" data-mode="${m}" aria-pressed="${t.targetMode === m}">${label}</button>`).join('')}</div>` : ''}
+            ${statLine(t)}
+            ${upLine}
+            ${record}`;
+    }
     return `<div class="insp-head">${towerPic(t.name, 64)}
             <div><h2>${esc(t.title)}</h2><p>Level ${now} of ${level} &middot; ${typeTag(t)} ${tagsHTML(t.name)}</p></div>
             <button type="button" class="icon-btn" data-act="cancel" aria-label="Deselect (Esc)">${icon('close')}</button>
@@ -425,7 +460,8 @@ function updatePlaceStatus() {
             kind = 'bad';
         } else {
             text = ghost ? 'Good spot. Tap it again or press Build.' : 'Good spot.';
-            if (grid[p.x][p.y] === 0) text += ' Yellow arrows show the new way.';
+            if (compactPanels.matches) text = ghost ? 'Good spot: tap again or press Build' : 'Good spot';
+            else if (grid[p.x][p.y] === 0) text += ' Yellow arrows show the new way.';
             kind = 'ok';
         }
     }
@@ -497,6 +533,13 @@ $('inspector').addEventListener('click', e => {
 }));
 
 
+// The side panels are built differently on small phones
+compactPanels.addEventListener('change', () => {
+    lastSubject = null;
+    updateInfo();
+});
+
+
 // ---------- HUD, wave preview and controls ----------
 
 const shown = {};
@@ -523,6 +566,9 @@ function updateControls() {
     document.querySelectorAll('[data-speed]').forEach(b => {
         b.setAttribute('aria-pressed', String(Number(b.dataset.speed) === speed));
     });
+    const cyc = $('speed-cycle');
+    cyc.textContent = `${speed}x`;
+    cyc.setAttribute('aria-label', `Game speed ${speed}x, tap for ${speed % 3 + 1}x (T)`);
     const mute = $('mute');
     mute.innerHTML = icon(muteSounds ? 'mute' : 'sound');
     mute.setAttribute('aria-label', muteSounds ? 'Turn sound on (V)' : 'Mute sound (V)');
@@ -561,7 +607,7 @@ function chipsHTML(counts, fresh = []) {
         const info = ENEMY_INFO[name] || { title: name };
         const boss = Art.ENEMY_ART[name] && Art.ENEMY_ART[name].boss;
         return `<span class="chip${boss ? ' boss' : ''}" data-enemy="${name}" title="${esc(info.title)}: ${esc(info.blurb || '')}">
-            ${enemyPic(name, 52)}${esc(info.title)} <b>&times;${counts[name] * mult}</b>
+            ${enemyPic(name, 52)}<span class="nm">${esc(info.title)} </span><b>&times;${counts[name] * mult}</b>
             ${fresh.includes(name) ? '<span class="new">NEW</span>' : ''}</span>`;
     }).join('');
 }
@@ -583,7 +629,8 @@ function updateStatus() {
     $('lives-stat').classList.toggle('low', health <= maxHealth * 0.25);
 
     // Wave preview
-    const key = `${wave}|${toWait}|${started}|${gameOver}|${spawnpoints.length}|${gameMode}`;
+    const small = compactView.matches;
+    const key = `${wave}|${toWait}|${started}|${gameOver}|${spawnpoints.length}|${gameMode}|${small}`;
     if (shown.waveKey !== key) {
         shown.waveKey = key;
         let label;
@@ -601,7 +648,7 @@ function updateStatus() {
             counts = countWave(upcoming);
             fresh = newInWave(wave + 1);
         } else {
-            label = upcoming ? `Wave ${wave} · next up` : `Final wave`;
+            label = upcoming ? (small ? 'Next wave' : `Wave ${wave} · next up`) : `Final wave`;
             counts = countWave(upcoming);
             fresh = newInWave(wave + 1);
         }
@@ -674,6 +721,10 @@ document.querySelectorAll('[data-speed]').forEach(b => {
         setSpeed(Number(b.dataset.speed));
         b.blur();
     });
+});
+$('speed-cycle').addEventListener('click', e => {
+    cycleSpeed();
+    e.currentTarget.blur();
 });
 $('next-wave').addEventListener('click', e => {
     callNextWave();
