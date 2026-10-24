@@ -128,10 +128,61 @@ This runs the WASM BFS and A\* and the independent JavaScript BFS on every level
 | Hint | H | **Hint** |
 | Watch the AI | I | **AI** |
 | Levels | L / Esc | **Levels** |
-| Sound | M | Speaker button |
+| Sound (everything on/off) | M | Speaker button |
+| Music only | Shift+M | Hold the speaker button |
 | Camera | Drag to tilt, scroll to zoom, double-click or C to reset | Two fingers to tilt and pinch to zoom |
 
 Progress (best moves and stars per level) is saved in the browser through the Game Lab kit's `createStore`. Total stars are reported to the hub.
+
+The help dialog (**?**) also holds the sound settings: **Music** on/off, the music **volume** and **Sound effects** on/off. The speaker button mutes everything at once and remembers the choice; switching music or effects back on in the settings lifts that mute. All four settings are saved with `createStore` (`muted`, `music`, `music-volume`, `sfx`).
+
+## Music
+
+The theme is original and generated in code: there are no audio files. `js/music-score.js` holds the composition as text and numbers, `js/music.js` plays it with WebAudio, and `js/audio.js` mixes it with the sound effects.
+
+**The piece.** A calm island tune in D major at 84 bpm with a light swing, written to sit under thinking rather than on top of it: the melody is short and leaves whole bars empty. Its motif is four notes, A D E F#, answered by E D E and a fall to B and A. The calm arrangement is an intro (heard once) and seven 8-bar sections: **A** (the motif on kalimba), **B** (a longer flute answer), **C** (a breather: pad, sparse arpeggio, a distant echo of the motif on bells and the sea washing in), **A2** (the motif on flute with a marimba countermelody), **D** (a bridge that climbs through E minor and F# minor), **B2** and **C2**. That is 2 minutes 40 seconds before the chords come round again, and each pass changes the instruments of the melody and the arpeggio patterns, while the arpeggio thins out at random, so the exact same music does not repeat.
+
+**Instruments.** All synthesised: an FM kalimba, marimba and bell (a sine carrier with a fast-falling modulator), a breathy flute (sine, a touch of octave, delayed vibrato and a noise breath), a pad of four voices that glide to the nearest note of each chord (voice leading), a round bass, a shaker, a tuned wood tok, a hand drum and, in the background of the breathers, the sea. Everything goes through a generated 2.4 s reverb (`ConvolverNode` with a noise impulse that darkens as it decays) and a dotted-eighth echo with filtered feedback.
+
+**It follows the game.**
+
+| Situation | Music |
+| --- | --- |
+| Easy levels (1-3) | Pad, sparse arpeggio, soft bass and melody, barely any percussion |
+| Medium (4-14) | Fuller bass, shaker, countermelody, a quiet drum |
+| Hard (15-28) | Everything a little fuller, hand drum, brighter pad |
+| Expert (29-34) | A second arrangement in D Dorian (Dm7, Em7, Fmaj7, G; Bbmaj7, C) with the motif in minor and a low pulse drum. It takes over at the next bar line |
+| Last enemy standing | A high glockenspiel layer on the off-beats |
+| Watch the AI | A soft ticking arpeggio, and the melody steps back |
+| Wizard magic | A falling run of bells in the current chord |
+| Level won | A stinger: a rising D major arpeggio, flute and bells (also after the minor expert music) |
+| Fell into the sea / no way to win | A short, soft falling phrase / a two-note sigh |
+
+Layers fade in and out over a couple of seconds. The music dips briefly under every sound effect and further under the stingers. When the music is on, the stingers replace the win and lose jingles; with music off, the sound effects play them (now in D as well).
+
+**Level.** The music is quiet by design: at the default volume (50%) the loudest three seconds of music measure about -30 dBFS (peaks about -14 dBFS), against about -18 dBFS for a sound effect while it plays. The bus gain is `MUSIC_LEVEL * volume²`. A soft clipper on the output (transparent below 0.8) makes sure music and effects together never clip.
+
+**Browsers.** Sound starts on the first tap, click or key (browsers require one; on iOS a silent buffer is played inside that gesture), and the music fades in over a few seconds. On iOS the audio session is set to *ambient*, so the game respects the silent switch and mixes with other apps. The audio context is suspended while the tab is hidden and resumes, mid-phrase, when it comes back, and is also suspended when everything is muted.
+
+**How it is scheduled.** A look-ahead scheduler wakes every 100 ms and places every note of the next 400 ms on the `AudioContext` clock, so timer jitter never reaches the beat. Each note builds a few nodes that stop themselves and are disconnected when they end; the pad, reverb and echo are built once. When the music is switched off the whole music graph is disconnected, so it costs nothing.
+
+**Tweaking it.** Everything musical is in `js/music-score.js`:
+
+- `TEMPO` (bpm) and `SWING`.
+- `SECTIONS`: chords (`'D | Bm7 | Asus4 A'`, one bar each, two chords split a bar), melodies (`'A4:2 D5:2 E5:4 | ...'`, lengths in sixteenths, each bar must add up to 16; a wrong bar throws an error that names it), and which arpeggio, bass and drum pattern each section uses. Arrays rotate on each pass.
+- `ARRANGEMENTS`: the order of the sections.
+- `LAYERS`: the level of each layer per band, `trim` in dB to balance them, and the reverb, echo and stereo spread.
+- `PATTERNS`: arpeggio, bass, shaker, wood, drum and pulse patterns (16 steps per bar).
+- `STINGERS`: the win, fall and stuck phrases.
+- `MUSIC_LEVEL` and `DEFAULT_VOLUME`: overall loudness.
+
+The voices themselves (FM ratios, envelopes, filter settings) are at the top of `createMusic` in `js/music.js` (`PLUCK`, `flute`, `bass`, `startPad`).
+
+**Hearing it without the game.** `tools/render-music.mjs` runs the same engine in an `OfflineAudioContext` in headless Chromium, plays a short script of game events, and writes WAV files (and MP3 with ffmpeg): a 92 s main preview (easy to hard, magic, last enemy, a win), a 50 s expert preview (with the AI ticking) and the three stingers. It prints the in-game level of each; the files are normalised for listening. `--only=lead,pad` renders only some layers.
+
+```sh
+node Brainy_Warrior/tools/render-music.mjs /tmp/brainy-music   # PLAYWRIGHT=..., CHROME=..., FFMPEG=... if not found
+```
 
 ## Graphics
 
@@ -208,12 +259,15 @@ The v2 scene leaked every level's character geometry and spent most of its draw 
 | `js/perf.js` | Adaptive quality tiers and the `?perf=1` overlay |
 | `js/color.js` | Colour management setup |
 | `js/models.js` | Procedural fallback characters |
-| `js/audio.js` | Synthesised WebAudio sound effects |
+| `js/audio.js` | Synthesised WebAudio sound effects, audio settings and the mix with the music |
+| `js/music.js` | Theme music engine: synth voices, reverb and echo, look-ahead scheduler, adaptive layers, stingers |
+| `js/music-score.js` | The theme as data: tempo, chords, melodies, patterns, layers and stingers |
 | `js/game.js` | Game flow, input, HUD, dialogs and progress |
 | `tools/verify-levels.mjs` | Level, solver and difficulty-ramp checks |
 | `tools/difficulty.mjs` | Difficulty measures and score |
 | `tools/generate-levels.mjs` | Solver-driven level generator |
 | `tools/perf-check.mjs` | Performance budget check |
+| `tools/render-music.mjs` | Renders music previews to WAV/MP3 |
 | `tools/pack-models.py` | Converts the character models (run by hand) |
 
 three.js 0.150.1 is vendored in `vendor/three-0.150.1/` with the `GLTFLoader`, `SkeletonUtils` and `BufferGeometryUtils` addons from the same release (MIT licence included), and the meshoptimizer decoder in `vendor/meshoptimizer/` (MIT). Everything runs offline, with no CDN and no build step.
