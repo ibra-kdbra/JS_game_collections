@@ -12,6 +12,7 @@ class Missile {
         // Misc
         this.alive = true;
         this.target = e;
+        this.source = dmgSource;    // the tower that launched it
         // Stats
         this.accAmt = 0.6;
         this.blastRadius = 1;
@@ -24,6 +25,7 @@ class Missile {
     }
 
     explode() {
+        dmgSource = this.source;
         playSound('boom');
         this.kill();
         const { x, y } = this.pos;

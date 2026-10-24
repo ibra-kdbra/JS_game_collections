@@ -401,6 +401,7 @@ tower.tesla = {
     damageMax: 50,
     damageMin: 30,
     range: 4,
+    type: 'energy',     // zaps (tanks and taunts resist energy as much as physical)
     
     // Methods
     onHit(e) {

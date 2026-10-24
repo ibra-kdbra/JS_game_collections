@@ -23,6 +23,7 @@ class Enemy {
         if (this.immune.includes(name)) return;
         for (let i = 0; i < this.effects.length; i++) if (this.effects[i].name === name) return;
         var e = createEffect(duration, effects[name]);
+        e.source = dmgSource;   // the tower that applied it gets the credit for its damage
         e.onStart(this);
         this.effects.push(e);
     }
@@ -45,11 +46,18 @@ class Enemy {
             mult = 1;
         }
 
-        const dealt = this.health > 0 ? amt * mult : 0;
-        if (this.health > 0) this.health -= dealt;
+        const before = this.health;
+        const dealt = before > 0 ? amt * mult : 0;
+        if (before > 0) this.health -= dealt;
         if (dealt >= 2) this.hit = 6;
         if (dealt > 0) onEnemyHit(this, dealt, type);
-        if (this.health <= 0) this.onKilled();
+        // Credit the tower that is firing (sketch.js sets dmgSource around each attack)
+        const src = dmgSource;
+        if (src && dealt > 0) src.dealt = (src.dealt || 0) + Math.min(dealt, before);
+        if (this.health <= 0) {
+            if (src && this.alive) src.kills = (src.kills || 0) + 1;
+            this.onKilled();
+        }
     }
 
     // Short white ring after a hit
@@ -123,7 +131,10 @@ class Enemy {
         const tx = Math.floor(this.pos.x / ts);
         const ty = Math.floor(this.pos.y / ts);
         if (outsideRect(tx, ty, 0, 0, cols, rows)) return;
-        const dir = paths[tx][ty];
+        let dir = paths[tx][ty];
+        // A crossing (no direction) keeps an enemy going straight; one standing still
+        // there (it can't happen on a portal's way, see the Hive) takes the shortest way
+        if (!dir && this.vel.x === 0 && this.vel.y === 0 && flowPaths) dir = flowPaths[tx][ty];
         if (atTileCenter(this.pos.x, this.pos.y, tx, ty)) {
             if (dir === null) return;
             const speed = this.pxSpeed();
@@ -138,9 +149,11 @@ class Enemy {
         if (this.hit > 0) this.hit--;
         for (let i = this.effects.length - 1; i >= 0; i--) {
             let e = this.effects[i];
+            dmgSource = e.source || null;
             e.update(this);
             if (e.isDead()) this.effects.splice(i, 1);
         }
+        dmgSource = null;
         this.vel.limit(96 / ts);
         this.vel.limit(this.pxSpeed());
 
