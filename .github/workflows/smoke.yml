@@ -36,6 +36,8 @@ jobs:
         run: node ReWire/tools/verify-levels.mjs
       - name: Raven levels
         run: node Raven/tools/verify-levels.mjs
+      - name: Tower Defense campaign maps
+        run: node TowerDefense/tools/verify-maps.mjs
 
   smoke:
     name: Browser smoke test
@@ -51,3 +53,5 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Open every page at phone and desktop size
         run: node tools/smoke.mjs
+      - name: Tower Defense aiming during explosions
+        run: node TowerDefense/tools/aim-test.mjs

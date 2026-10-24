@@ -54,3 +54,10 @@ const endlessHpGrowth = 0.05;
 
 // Bonus cash for calling a wave early: one dollar per this many ticks skipped.
 const earlyCallTicks = 30;
+
+// Gold for clearing wave n, per portal on the map (every portal sends the whole
+// wave, so maps with more portals need more towers)
+const waveBonus = (n, portals) => (10 + 2 * n) * portals;
+
+// Extra starting gold for every portal after the first
+const portalCash = 25;

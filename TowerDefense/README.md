@@ -6,8 +6,11 @@ enemies on random maps or hold the line on hand-made ones.
 - **Campaign**: 30 authored waves that introduce one enemy type at a time. Clear wave 30 to win.
 - **Endless**: random waves that keep getting tougher.
 - **Difficulty**: Easy, Normal or Hard (lives, starting cash, enemy health and the pause between waves).
-- **Maps**: 8 random layouts, 8 designed maps, and your own: build one in the
-  [map editor](../td-editor/index.html) and press **Play this map**, or paste a map string with **Import map**.
+- **Maps**: 18 campaign maps in order of difficulty, 8 random layouts, and your own: build one in the
+  [map editor](../td-editor/index.html) (it can open the campaign maps too) and press **Play this map**,
+  or paste a map string with **Import map**.
+- **Gold**: enemies pay a bounty, every cleared wave pays (10 + 2 x wave) gold per portal, and
+  maps with more portals start with $25 more per extra portal. A Hive's portal closes when its wave ends.
 
 Pick a map, mode and difficulty on the map screen. Winning the campaign earns up to
 three stars depending on how many lives you keep; stars and your best wave are shown
@@ -18,13 +21,30 @@ types are marked; tap one to read about it), a countdown between waves and a but
 to send the next wave early for bonus gold. The build menu compares towers with
 power, range and rate bars. Select a tower to see its stats, what the upgrade
 changes (the bars and the upgraded range on the map show it too), its sell price
-and which enemy it targets (First, Last, Strongest or Closest). The menu (Esc) has
-sound, damage numbers, health bars, particles, screen shake, vibration (phones)
-and back-to-back waves. The first game shows a few short tips; they can be skipped
+and which enemy it targets (First, Last, Strongest or Closest). Each tower also counts its kills and the damage it has dealt. The menu (Esc) has
+sound, screen shake (Off, Subtle or Full; Subtle only shakes for bosses and lost
+lives), vibration (phones only), damage numbers, health bars, particles and
+back-to-back waves. The shake only moves the picture of the map, never what you
+point at: clicks and taps always land on the tile under the pointer. The first game shows a few short tips; they can be skipped
 or replayed from the menu.
 
 Arrows on the ground show the way enemies will walk. While you place a tower on
 open ground, yellow arrows show the new way they would take.
+
+### Campaign maps
+
+`scripts/maps.js` holds the maps. The first eight are map strings from the editor;
+the ten newer ones (Switchback, Twin Rivers, Crossroads, Open Field, Labyrinth, Moat,
+Canyon, Bottleneck, Portal Storm, Gauntlet) are drawn as text with `fromText`, one
+character per tile. `CAMPAIGN` sets their order and an optional per-map enemy health
+(`hp`) for maps that are much harder than their place in the list.
+
+`node TowerDefense/tools/verify-maps.mjs` runs the real game logic in Node with a
+simple bot that follows a fixed build list, and fails if any campaign map's routes are
+broken or the bot can't win it on Normal. `--rate` also measures each map's margin
+(how much more enemy health the bot can take); the campaign order follows it.
+`node TowerDefense/tools/aim-test.mjs` (Playwright) clicks towers in a late wave full
+of explosions and checks that every click selects the tower under the pointer.
 
 ### Look
 
