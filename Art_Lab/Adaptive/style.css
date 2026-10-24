@@ -257,9 +257,12 @@ img {
         overscroll-behavior-y: none;
     }
 
+    /* Two lines reserved so the title font arriving doesn't move the page */
     .titre {
         margin: 1.25rem auto 1rem auto;
-        font-size: 1.3rem;
+        font-size: 1.2rem;
+        line-height: 1.25;
+        min-height: 2.5em;
         letter-spacing: 0.1rem;
     }
 
@@ -350,5 +353,37 @@ img {
     .imageFooter {
         width: 2rem;
         padding: 6px;
+    }
+}
+
+/* Reserve the canvas' height (script.js compactHeight) before p5 creates it,
+   so the controls below don't jump down when it appears. */
+@media screen and (max-width: 700px) and (orientation: portrait), screen and (max-height: 500px) and (orientation: portrait) {
+    .visu {
+        min-height: calc(min(68dvh, (100vw - 26px) * 1.3) + 2px);
+    }
+}
+
+@media screen and (max-width: 700px) and (orientation: landscape), screen and (max-height: 500px) and (orientation: landscape) {
+    .visu {
+        min-height: calc(82dvh + 2px);
+    }
+}
+
+/* Fixed-width cells, so the web font arriving can't re-wrap the buttons */
+@media screen and (max-width: 700px), screen and (max-height: 500px) {
+    .liste,
+    .presets {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+        gap: 6px;
+    }
+
+    .liste .bouton,
+    .presets .bouton {
+        width: auto;
+        margin: 0;
+        justify-content: center;
+        text-align: center;
     }
 }
