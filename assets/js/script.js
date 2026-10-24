@@ -24,6 +24,7 @@ let searchTerms = [];
  * Initialize the application
  */
 document.addEventListener('DOMContentLoaded', () => {
+    initArtlabTeaser();
     initElements();
     restoreFiltersFromUrl();
     initSearch();
@@ -290,6 +291,65 @@ function initRecent() {
         initBests();
         renderRecent();
     });
+}
+
+/**
+ * Art Lab teaser: a sealed pack (rendered by tools/render-pages.mjs). Shows the
+ * "opened" copy once this browser has opened the pack in the Art Lab
+ * (`artlab.opened`, written by Art_Lab/js/deck.js), leans toward a mouse, and
+ * teases the tear once when it first scrolls into view.
+ */
+function readArtlabOpened() {
+    try {
+        return JSON.parse(localStorage.getItem('artlab.opened') ?? 'false') === true;
+    } catch {
+        return false;
+    }
+}
+
+function initArtlabTeaser() {
+    const teaser = document.getElementById('artlab-teaser');
+    if (!teaser) return;
+    const tilt = teaser.querySelector('.tz-tilt');
+    const sync = () => {
+        teaser.dataset.state = readArtlabOpened() ? 'opened' : 'sealed';
+    };
+    sync();
+    window.addEventListener('storage', (e) => {
+        if (e.key === null || e.key === 'artlab.opened') sync();
+    });
+
+    // Lean toward a mouse pointer (not touch: a finger is scrolling the page).
+    let frame = 0;
+    teaser.addEventListener('pointermove', (e) => {
+        if (e.pointerType !== 'mouse' || reduceMotion.matches) return;
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(() => {
+            const r = teaser.getBoundingClientRect();
+            const x = (e.clientX - r.left) / r.width - 0.5;
+            const y = (e.clientY - r.top) / r.height - 0.5;
+            tilt.style.setProperty('--ry', `${(x * 16).toFixed(2)}deg`);
+            tilt.style.setProperty('--rx', `${(-y * 12).toFixed(2)}deg`);
+        });
+    });
+    teaser.addEventListener('pointerleave', () => {
+        cancelAnimationFrame(frame);
+        tilt.style.removeProperty('--rx');
+        tilt.style.removeProperty('--ry');
+    });
+
+    // The first time the pack scrolls into view, lift the strip and let the cards peek.
+    if (!('IntersectionObserver' in window)) return;
+    const seen = new IntersectionObserver((entries) => {
+        if (!entries.some(entry => entry.isIntersecting)) return;
+        seen.disconnect();
+        if (reduceMotion.matches || teaser.dataset.state !== 'sealed') return;
+        setTimeout(() => {
+            teaser.classList.add('is-peek');
+            setTimeout(() => teaser.classList.remove('is-peek'), 1500);
+        }, 600);
+    }, { threshold: 0.6 });
+    seen.observe(teaser.querySelector('.tz-stage'));
 }
 
 /**

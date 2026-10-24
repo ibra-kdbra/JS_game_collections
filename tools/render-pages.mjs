@@ -64,38 +64,50 @@ function gameCard(game, index) {
         </a>`;
 }
 
+/**
+ * The hub's Art Lab teaser: the sealed booster pack from the Art Lab opening,
+ * drawn in CSS (no artwork, no images), and a button into the Art Lab.
+ * Both the sealed and the opened copy are rendered; script.js sets data-state
+ * to "opened" once this browser has opened the pack (artlab.opened).
+ */
 function artlabShowcase() {
+  const n = experiments.length;
+  const holo = experiments.filter((exp) => exp.rarity === 3).length;
+  const back = '<span class="tz-back"><i></i></span>';
   return `
-        <div class="artlab-gallery">
-          <a href="{base}Art_Lab/index.html" class="artlab-main-card">
-            <div class="artlab-icon"><i class="fas fa-flask" aria-hidden="true"></i></div>
-            <h3 class="artlab-card-title">Art Lab</h3>
-            <p class="artlab-card-desc">Math with Art create wonders</p>
-            <div class="artlab-stats">
-              <span><i class="fas fa-layer-group" aria-hidden="true"></i> ${experiments.length} Experiments</span>
-            </div>
-            <span class="artlab-enter-btn">
-              <span>Explore Collection</span>
-              <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        <div class="artlab-teaser" id="artlab-teaser" data-state="sealed">
+          <a class="tz-stage" href="{base}Art_Lab/index.html" tabindex="-1" aria-hidden="true">
+            <span class="tz-tilt">
+              <span class="tz-cards">${back.repeat(3)}</span>
+              <span class="tz-pack">
+                <span class="tz-shadow"></span>
+                <span class="tz-half tz-top"><span class="tz-skin"><span class="tz-crimp"></span><span class="tz-sheen"></span></span></span>
+                <span class="tz-half tz-body"><span class="tz-skin">
+                  <span class="tz-head"><span class="tz-series">Series 01</span><span class="tz-count">${n} cards</span></span>
+                  <span class="tz-name">Art<br>Lab</span>
+                  <span class="tz-sub">Generative edition</span>
+                  <span class="tz-window"><span class="tz-strip">${back.repeat(8)}</span></span>
+                  <span class="tz-foot"><span>Holo inside</span><span class="tz-barcode"></span></span>
+                  <span class="tz-crimp tz-crimp-bottom"></span>
+                  <span class="tz-sheen"></span>
+                </span></span>
+                <span class="tz-tear"><span class="tz-tear-tag">Tear</span></span>
+              </span>
             </span>
           </a>
-          <ul class="artlab-strip" aria-label="Art Lab pieces">${experiments
-            .map((exp, i) => {
-              const t = thumbSet(exp.slug, '{base}');
-              return `
-            <li>
-              <a class="art-tile" href="{base}${esc(exp.href)}" target="_blank" rel="noopener">
-                <img src="${t.src}" srcset="${t.srcset}" sizes="(min-width: 1100px) 300px, (min-width: 700px) 45vw, 72vw" width="480" height="300" alt="" loading="lazy" decoding="async">
-                <span class="art-tile-caption">
-                  <span class="art-tile-number">${String(i + 1).padStart(2, '0')}</span>
-                  <span class="art-tile-title">${esc(exp.title)}</span>
-                  <span class="art-tile-tags">${exp.tags.map(esc).join(' / ')}</span>
-                </span>
-              </a>
-            </li>`;
-            })
-            .join('')}
-          </ul>
+          <div class="tz-copy">
+            <p class="tz-eyebrow"><span class="tz-badge"><span data-when="sealed">Sealed</span><span data-when="opened">Opened</span></span> Series 01 &middot; ${n} cards</p>
+            <h3 class="tz-title"><span data-when="sealed">${n} cards. One sealed pack.</span><span data-when="opened">Your deck is waiting.</span></h3>
+            <p class="tz-desc">Flow fields, particle storms and live shaders: generative pieces you can play with. <span data-when="sealed">Tear the pack open to see what you pull.</span><span data-when="opened">Your cards are where you left them.</span></p>
+            <p class="tz-meter">
+              <span class="tz-pips" aria-hidden="true">${'<i></i>'.repeat(n)}</span>
+              <span data-when="sealed">${n} sealed cards &middot; ${holo} holo inside</span><span data-when="opened">Set complete &middot; ${n}/${n}</span>
+            </p>
+            <a class="btn btn-primary tz-cta" href="{base}Art_Lab/index.html">
+              <span data-when="sealed">Open the pack</span><span data-when="opened">Back to the deck</span>
+              <i class="fas fa-arrow-right" aria-hidden="true"></i>
+            </a>
+          </div>
         </div>
       `;
 }
