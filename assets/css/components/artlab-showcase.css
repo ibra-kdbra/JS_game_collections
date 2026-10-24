@@ -483,25 +483,37 @@
 /* ---------- Narrow screens: the pack on top, the copy below ---------- */
 @media (max-width: 539px) {
   .artlab-teaser {
-    --pw: min(200px, 52vw);
+    --pw: min(150px, 40vw);
     grid-template-columns: minmax(0, 1fr);
     box-shadow: 5px 5px 0 #000;
   }
 
+  /* Just enough room above the pack for the cards to peek out (they rise about 0.3 x --pw). */
   .tz-stage {
+    padding: calc(var(--pw) * 0.3) 1rem calc(var(--pw) * 0.1);
     border-right: 0;
     border-bottom: 2px solid var(--primary);
   }
 
   .tz-copy {
     align-items: stretch;
-    gap: 0.75rem;
-    padding: 1.4rem 1.1rem 1.5rem;
+    gap: 0.6rem;
+    padding: 1.1rem 1rem 1.2rem;
+  }
+
+  .tz-title {
+    font-size: 1.4rem;
   }
 
   .tz-desc {
     max-width: none;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .tz-meter {
+    gap: 0.5rem;
+    font-size: 0.75rem;
   }
 
   .tz-cta {
