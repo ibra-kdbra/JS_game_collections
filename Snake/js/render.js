@@ -38,7 +38,7 @@ export function createRenderer(canvas) {
   let cell = 1;
 
   function resize(w, h) {
-    dpr = Math.min(3, window.devicePixelRatio || 1);
+    dpr = Math.min(2, window.devicePixelRatio || 1); // 2x looks the same on phones and paints far fewer pixels
     cssW = w;
     cssH = h;
     canvas.width = Math.round(w * dpr);
