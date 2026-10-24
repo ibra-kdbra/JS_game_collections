@@ -1,7 +1,7 @@
 import { fetchPlaylistItems } from './youtube.js';
 
-const GAMING_MUSIC_PLAYLIST_ID = 'DP3rDP02lE0';
-const DONKEY_KONG_VIDEO_ID = 'hvFznnxLXys'; // Donkey Kong (Arcade) full soundtrack
+const GAMING_MUSIC_PLAYLIST_ID = 'gaming-mix'; // the built-in rotation below
+const DONKEY_KONG_VIDEO_ID = 'DP3rDP02lE0';
 const DEFAULT_VIDEO_IDS = ["X2V0ag9mCjc", "CPIyuGoH_24", "-tOSh9bDh00", DONKEY_KONG_VIDEO_ID];
 const PREF_KEY = 'musicPref'; // 'on' | 'off'
 
@@ -70,7 +70,9 @@ async function initMusicPlayer() {
   // Pick the track to play (shows its cover) without loading the player.
   async function chooseMedia(input) {
     const fallback = { type: 'playlist', id: GAMING_MUSIC_PLAYLIST_ID };
-    currentMedia = input === GAMING_MUSIC_PLAYLIST_ID ? fallback : (parseYoutubeUrl(input) || fallback);
+    // The bare Donkey Kong id was the old default setting; it means the mix.
+    const isMix = input === GAMING_MUSIC_PLAYLIST_ID || input === DONKEY_KONG_VIDEO_ID;
+    currentMedia = isMix ? fallback : (parseYoutubeUrl(input) || fallback);
     store.set('youtubeMedia', input);
     playlist = [];
 
@@ -82,7 +84,8 @@ async function initMusicPlayer() {
       if (currentMedia.id !== GAMING_MUSIC_PLAYLIST_ID) {
         try { playlist = await fetchPlaylistItems(currentMedia.id); } catch { playlist = []; }
       }
-      currentVideoId = pickFromPlaylist();
+      // The mix opens with the Donkey Kong theme; the change button rotates from there.
+      currentVideoId = currentMedia.id === GAMING_MUSIC_PLAYLIST_ID ? DONKEY_KONG_VIDEO_ID : pickFromPlaylist();
     }
     elements.thumbnail.src = thumbFor(currentVideoId);
   }

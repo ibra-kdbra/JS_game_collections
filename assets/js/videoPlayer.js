@@ -43,8 +43,8 @@ export class VideoPlayerComponent {
           <label class="playlist-desc" for="media-input">Enter a YouTube Video URL or Playlist ID</label>
           <input type="text" id="media-input" placeholder="YouTube URL or ID" class="playlist-input" autocomplete="off">
           <div class="playlist-presets" aria-label="Quick picks">
-            <button type="button" class="btn-preset" data-preset="DP3rDP02lE0">Gaming mix</button>
-            <button type="button" class="btn-preset" data-preset="https://www.youtube.com/watch?v=hvFznnxLXys">Donkey Kong theme</button>
+            <button type="button" class="btn-preset" data-preset="gaming-mix">Gaming mix</button>
+            <button type="button" class="btn-preset" data-preset="https://www.youtube.com/watch?v=DP3rDP02lE0">Donkey Kong theme</button>
           </div>
           <div class="playlist-actions">
             <button type="button" id="close-modal-btn" class="btn-modal">Cancel</button>
