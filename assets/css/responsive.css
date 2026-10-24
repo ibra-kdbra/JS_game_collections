@@ -96,3 +96,44 @@
     padding: 2rem 0.75rem;
   }
 }
+
+/* ---------- Touch screens: 44px targets ---------- */
+@media (pointer: coarse) {
+  .corner-link,
+  .corner-back {
+    width: 44px;
+    height: 44px;
+  }
+
+  .filter-btn {
+    min-height: 44px;
+  }
+}
+
+/* ---------- Phones: 12px minimum text ---------- */
+@media (max-width: 768px) {
+  .art-tile-tags,
+  .tag,
+  .meta-chip {
+    font-size: 0.75rem;
+  }
+}
+
+/* Extra-small phones: the three stats stay on one row */
+@media (max-width: 400px) {
+  .hero-stats {
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+
+  .stat-item {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.6rem 0.4rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+  }
+}
