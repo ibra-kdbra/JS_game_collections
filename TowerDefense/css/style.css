@@ -480,6 +480,11 @@ header {
     border-color: var(--line-hi);
 }
 
+/* One button that steps through the speeds, on small phones */
+#speed-cycle {
+    display: none;
+}
+
 /* Build menu */
 
 #store {
@@ -780,7 +785,7 @@ body.touch #sketch-holder[data-gutter="bottom"] .map-tip {
 }
 
 #sketch-holder[data-gutter="right"][data-wide="1"] .map-tip,
-body.touch #sketch-holder[data-gutter="right"] .map-tip {
+body.touch #sketch-holder[data-gutter="right"]:not([data-wide="narrow"]) .map-tip {
     left: auto;
     right: 6px;
     bottom: 6px;
@@ -799,7 +804,8 @@ body.touch #sketch-holder[data-gutter="right"] .map-tip {
     opacity: 0.6;
 }
 
-#sketch-holder[data-gutter="none"] .map-tip {
+#sketch-holder[data-gutter="none"] .map-tip,
+#sketch-holder[data-gutter="right"][data-wide="narrow"] .map-tip {
     bottom: 3px;
     font-size: 12px;
     padding: 4px 10px;
@@ -2351,6 +2357,292 @@ body.game-over .store-grid {
 
     .map-tip {
         max-width: calc(100% - 70px);
+    }
+}
+
+/* ---------- Small phones held upright: the map gets most of the screen ----------
+   One slim row for the wave (preview, start, speed, next), a short fixed-height
+   panel for the build menu or the selected tower (the map never changes size when
+   it switches), and the zoom buttons in the free strip under the map.
+   Same query as compactView in render.js. */
+
+@media (orientation: portrait) and (max-width: 380px), (orientation: portrait) and (max-width: 899px) and (max-height: 700px) {
+    body {
+        gap: 4px;
+        padding-top: max(4px, env(safe-area-inset-top));
+        padding-bottom: max(5px, env(safe-area-inset-bottom));
+    }
+
+    header {
+        padding: 2px 3px 2px 4px;
+    }
+
+    #hud {
+        min-height: 0;
+        gap: 4px;
+    }
+
+    .stats {
+        gap: 4px;
+        overflow: visible;
+    }
+
+    .stat {
+        font-size: 15px;
+        padding: 3px 8px 3px 6px;
+        gap: 4px;
+    }
+
+    .stat svg {
+        font-size: 15px;
+    }
+
+    /* Zoom: pinch, or the see-through buttons on the map */
+    body.touch .zoom-ctl.in-hud {
+        display: none;
+    }
+
+    body.touch .zoom-ctl.on-map {
+        display: grid;
+    }
+
+    #sketch-holder .zoom-ctl button {
+        background: rgba(18, 19, 26, 0.7);
+    }
+
+    #side {
+        grid-template-rows: auto 124px;
+        gap: 4px;
+    }
+
+    /* Wave: label and enemies on the left, buttons on the right, one row */
+    #controls {
+        padding: 4px;
+        grid-template-columns: minmax(0, 1fr) 44px 44px auto;
+        grid-template-rows: auto auto;
+        column-gap: 4px;
+        row-gap: 2px;
+    }
+
+    .ctrl-row {
+        display: contents;
+    }
+
+    .wave-head {
+        grid-area: 1 / 1;
+        font-size: 12px;
+        margin: 1px 2px 0;
+        min-width: 0;
+    }
+
+    #wave-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+    }
+
+    #preview {
+        grid-area: 2 / 1;
+        min-height: 30px;
+        gap: 3px;
+    }
+
+    .chip {
+        min-height: 30px;
+        padding: 1px 7px 1px 2px;
+        gap: 3px;
+    }
+
+    .chip img {
+        width: 24px;
+        height: 24px;
+    }
+
+    .chip .nm {
+        display: none;
+    }
+
+    #pause {
+        grid-area: 1 / 2 / 3;
+        width: 44px;
+    }
+
+    .ctrl-row .seg {
+        display: none;
+    }
+
+    #speed-cycle {
+        display: inline-flex;
+        grid-area: 1 / 3 / 3;
+        width: 44px;
+        padding: 0;
+        font: 700 15px/1 var(--display);
+    }
+
+    #next-wave {
+        grid-area: 1 / 4 / 3;
+        min-width: 52px;
+        padding: 0 8px;
+        gap: 4px;
+    }
+
+    /* Build menu: 4 + 3 buttons, picture and price (the name is in the label) */
+    #store {
+        padding: 4px;
+        overflow: hidden;
+    }
+
+    .store-grid {
+        gap: 4px;
+    }
+
+    .tower-btn {
+        grid-template-areas: "icon" "cost";
+        min-height: 54px;
+        height: 54px;
+        padding: 2px;
+        row-gap: 1px;
+    }
+
+    .tower-btn .name {
+        display: none;
+    }
+
+    .tower-btn .pic {
+        width: 34px;
+        height: 34px;
+    }
+
+    .tower-btn .cost {
+        font-size: 13px;
+    }
+
+    body.touch #sketch-holder[data-gutter="bottom"] .map-tip {
+        white-space: normal;
+        border-radius: 10px;
+        max-width: calc(100% - 118px);
+        font-size: 12px;
+        line-height: 1.3;
+    }
+
+    /* Tips: across the strip under the map, small enough to leave the map free */
+    .coach {
+        left: 4px;
+        right: 4px;
+        bottom: 4px;
+        width: auto;
+        padding: 6px 8px 0 10px;
+    }
+
+    .coach p {
+        font-size: 13px;
+        line-height: 1.3;
+    }
+
+    .coach-actions {
+        gap: 14px;
+    }
+
+    .banner {
+        padding: 6px 12px;
+    }
+
+    .banner strong {
+        font-size: 18px;
+    }
+
+    .banner .faces img {
+        width: 28px;
+        height: 28px;
+    }
+}
+
+/* Short side panel for the selected tower and for placing, on small phones held
+   either way (same query as compactPanels in render.js): Upgrade, Sell, target,
+   Build and Cancel always in view without scrolling */
+
+@media (orientation: portrait) and (max-width: 380px), (orientation: portrait) and (max-width: 899px) and (max-height: 700px), (orientation: landscape) and (max-height: 560px) {
+    #inspector {
+        padding: 4px 5px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    #inspector > * {
+        flex: none;
+        margin: 0;
+    }
+
+    /* Selected tower: name and level, Upgrade / Sell / close, target */
+    .cmp-line {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--muted);
+        white-space: nowrap;
+        padding: 0 2px;
+    }
+
+    .cmp-line > span:first-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
+    }
+
+    .cmp-line b {
+        font: 700 13px/16px var(--display);
+        color: var(--text);
+        margin-right: 4px;
+    }
+
+    .cmp-line .need {
+        margin: 0;
+        font-size: 12px;
+        flex: none;
+    }
+
+    .cmp-actions {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px;
+        gap: 4px;
+    }
+
+    .cmp-actions button {
+        min-width: 0;
+        padding: 0 6px;
+        font-size: 13px;
+    }
+
+    .target-seg button {
+        font-size: 13px;
+        padding: 0 2px;
+    }
+
+    /* Placing: tower row, status, Build and Cancel */
+    .switch.cmp-switch {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(44px, 1fr));
+        gap: 3px;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    #inspector .place-status {
+        font-size: 12px;
+        line-height: 16px;
+        padding: 0 0 0 6px;
+        border-radius: 0;
+        background: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    #inspector .insp-actions {
+        gap: 4px;
     }
 }
 

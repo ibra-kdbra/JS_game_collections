@@ -5,6 +5,12 @@
 // World units are the game's pixels (a tile is `ts` wide); the camera maps them
 // to the screen. Sprites come from Art.build at the current on-screen tile size.
 
+// Small phones held upright (the same query as the compact layout in style.css):
+// short side panels, and the map sits at the top of its box
+const compactView = matchMedia('(orientation: portrait) and (max-width: 380px), (orientation: portrait) and (max-width: 899px) and (max-height: 700px)');
+// Short side panels (selected tower, placing): those phones, and phones held sideways
+const compactPanels = matchMedia(`${compactView.media}, (orientation: landscape) and (max-height: 560px)`);
+
 const Renderer = (() => {
     const TAU = Math.PI * 2;
     const params = new URLSearchParams(location.search);
@@ -16,6 +22,7 @@ const Renderer = (() => {
     let dpr = 1;
     let cssW = 0;
     let cssH = 0;
+    let holderH = 0;        // the map's box; taller than the canvas on small phones
 
     // Camera: world point at the centre of the view, and zoom (1 = whole map fits)
     let zoom = 1;
@@ -83,10 +90,17 @@ const Renderer = (() => {
     function resize() {
         if (!holder) return;
         const w = holder.clientWidth;
-        const h = holder.clientHeight;
+        let h = holder.clientHeight;
+        // Small phones: the canvas only covers the map (it sits at the top); the
+        // strip under it is page, not canvas pixels the GPU has to fill every frame
+        if (compactView.matches && cols && rows) h = Math.min(h, Math.ceil(rows * ts) + 4);
         const q = FX.quality;
-        const nd = Math.min(window.devicePixelRatio || 1, q === 0 ? 1.25 : 2);
-        if (w === cssW && h === cssH && nd === dpr) return;
+        // The narrowest phones show the map much bigger than the old layout did: draw
+        // it at 1.5 device pixels per CSS pixel there, so a frame costs no more than before
+        const nd = Math.min(window.devicePixelRatio || 1, q === 0 ? 1.25 : compactView.matches && w < 340 ? 1.5 : 2);
+        const hh = holder.clientHeight;
+        if (w === cssW && h === cssH && nd === dpr && hh === holderH) return;
+        holderH = hh;
         cssW = w;
         cssH = h;
         dpr = nd;
@@ -134,11 +148,14 @@ const Renderer = (() => {
         ox = cssW / 2 - camX * zoom;
         oy = cssH / 2 - camY * zoom;
         // A map smaller than the view is centred, but keeps a strip free at the bottom
-        // (or the right) for the hint and the zoom buttons, so they never cover it
+        // (or the right) for the hint and the zoom buttons, so they never cover it.
+        // On small phones the map sits at the top and the canvas ends under it: the
+        // strip below (holder, not canvas) holds the tips, the hint and the zoom buttons
         const sx = cssW - mw * zoom;
         const sy = cssH - mh * zoom;
-        const g = gutterFor(mw, mh);
-        if (g.side === 'bottom' && sy > 0) oy = Math.min(sy / 2, sy - GUTTER);
+        let g = gutterFor(mw, mh);
+        if (holderH - cssH >= GUTTER) g = { side: 'bottom', size: holderH - cssH + (sy > 0 ? sy - Math.min(sy / 2, 2) : 0) };
+        if (g.side === 'bottom' && sy > 0) oy = compactView.matches ? Math.min(sy / 2, 2) : Math.min(sy / 2, sy - GUTTER);
         if (g.side === 'right' && sx > 0) ox = Math.min(sx / 2, sx - GUTTER);
         layoutGutter(g);
     }
@@ -160,7 +177,7 @@ const Renderer = (() => {
         if (key === gutterKey || !holder) return;
         gutterKey = key;
         holder.dataset.gutter = g.side;
-        holder.dataset.wide = g.size >= 170 ? '1' : '0';
+        holder.dataset.wide = g.size >= 170 ? '1' : g.size < 110 ? 'narrow' : '0';
         holder.style.setProperty('--gutter', `${Math.round(g.size)}px`);
     }
 
