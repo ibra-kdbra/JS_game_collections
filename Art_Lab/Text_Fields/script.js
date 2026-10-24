@@ -204,7 +204,8 @@ class Effect {
         this.height = this.canvas.height;
 
         this.particles = [];
-        this.numberOfParticles = 4000;
+        // A live preview in the Art Lab (?embed=1) is a small frame: fewer lines.
+        this.numberOfParticles = window.ArtEmbed && window.ArtEmbed.on ? 1500 : 4000;
         this.cellSize = 20;
         this.rows = 0;
         this.cols = 0;

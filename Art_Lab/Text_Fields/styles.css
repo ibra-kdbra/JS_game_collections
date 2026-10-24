@@ -159,3 +159,16 @@ body {
     font-size: 14px;
   }
 }
+
+/* ---------- Art Lab live preview (?embed=1, see ../js/embed.js) ----------
+   Only the canvas shows, filling the frame; the options button, panel and
+   colour pickers stay hidden and out of reach. */
+html.is-embed body {
+  visibility: hidden;
+}
+
+html.is-embed #canvas1 {
+  visibility: visible;
+  width: 100vw;
+  height: 100vh;
+}

@@ -625,3 +625,20 @@ a, a:visited{
     margin-top: 5px;
   }
 }
+
+/* ---------- Art Lab live preview (?embed=1, see ../../js/embed.js) ----------
+   Only the canvas shows, filling the frame; the intro, controls, buttons and
+   credits stay hidden and out of reach. */
+html.is-embed body {
+  visibility: hidden;
+}
+
+html.is-embed #canvas {
+  visibility: visible;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  object-fit: cover;
+}

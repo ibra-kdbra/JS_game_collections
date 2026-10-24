@@ -8,7 +8,7 @@
  * - Navigations always try the network first, so a deploy shows up on the next visit.
  */
 
-const VERSION = 'v3';
+const VERSION = 'v4';
 const SHELL_CACHE = `gamelab-shell-${VERSION}`;
 const RUNTIME_CACHE = `gamelab-runtime-${VERSION}`;
 const RUNTIME_MAX_ENTRIES = 300;
@@ -32,7 +32,7 @@ const SHELL = [
   './assets/css/components/recent.css',
   './assets/css/components/footer.css',
   './assets/css/components/music-player.css',
-  './assets/css/artlab.css',
+  './Art_Lab/css/deck.css',
   './assets/css/feedback.css',
   './assets/vendor/fontawesome/fontawesome.css',
   './assets/vendor/fontawesome/fa-solid-900.woff2',
@@ -42,7 +42,11 @@ const SHELL = [
   './assets/vendor/three/three.module.min.js',
   './assets/js/data.js',
   './assets/js/script.js',
-  './assets/js/artlab.js',
+  './Art_Lab/js/deck.js',
+  './Art_Lab/js/cards.js',
+  './Art_Lab/js/pack.js',
+  './Art_Lab/js/stack.js',
+  './assets/kit/storage.js',
   './assets/js/dropEffect.js',
   './assets/js/videoPlayer.js',
   './assets/js/musicPlayer.js',

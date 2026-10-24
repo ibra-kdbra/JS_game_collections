@@ -40,6 +40,11 @@ let palettes =
 };
 const paletteNames = Object.keys(palettes);
 
+// Art Lab live preview (?embed=1): a small frame, so fewer particles, and the
+// preview fades in only once the first image is drawn.
+const embedded = !!(window.ArtEmbed && window.ArtEmbed.on);
+if (embedded) window.ArtEmbed.manualReady = true;
+
 // Configuration
 let gui = new dat.gui.GUI( { autoPlace: false } );
 gui.close();
@@ -49,7 +54,7 @@ const CONFIG = {
     attractionStrength: { value: 85.0, min: 1.0, max: 200.0, step: 1.0 },
     particleOpacity: { value: 0.2, min: 0.05, max: 1.0, step: 0.05 },
     particleSize: { value: 0.8, min: 0.3, max: 1.5, step: 0.1 },
-    particleCount: { value: 300000, min: 200000, max: 600000, step: 1000 },
+    particleCount: { value: embedded ? 120000 : 300000, min: 200000, max: 600000, step: 1000 },
     edgeThreshold: { value: 0.4, min: 0.1, max: 1.5, step: 0.05 },
     noiseType: '2D',
     flowFieldScale: { value: 4.0, min: 1.0, max: 10.0, step: 1.0 },
@@ -384,7 +389,10 @@ function calculateDivisibleDimensions(width, height, maxSize) {
 // Modified resizeCanvasToImage function
 function resizeCanvasToImage(image) {
   console.log("Original image size: "+image.width+", "+image.height);
-  const maxSize = Math.min(window.innerWidth, window.innerHeight) - 40;
+  // Art Lab live preview (?embed=1): cover the frame, at most 1.5 pixels per CSS pixel.
+  const maxSize = embedded
+    ? Math.round(Math.max(window.innerWidth, window.innerHeight) * window.ArtEmbed.dpr(1.5))
+    : Math.min(window.innerWidth, window.innerHeight) - 40;
   const dimensions = calculateDivisibleDimensions(image.width, image.height, maxSize);
   
   canvas.width = dimensions.width;
@@ -576,6 +584,7 @@ async function loadDefaultImage() {
       currentImage = defaultImg;
       resizeCanvasToImage(defaultImg);
       await safeRestartAnimation();
+      if (embedded) requestAnimationFrame(() => requestAnimationFrame(window.ArtEmbed.ready));
   } catch (error) {
       console.error('Error loading default image:', error);
   }
@@ -584,9 +593,9 @@ async function loadDefaultImage() {
 // Initialize the application
 window.addEventListener('load', async () => {
   await initWebGL();
-  
+
   setTimeout(() => {
     loadDefaultImage();
-  }, 1000);
+  }, embedded ? 30 : 1000);
 
 });

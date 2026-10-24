@@ -8,6 +8,12 @@
  * genre   – one of GENRES, used by the genre filter.
  * inputs  – controls the game supports: keyboard, mouse, touch, gamepad.
  * mobile  – true only when the game has been checked at phone size and plays by touch.
+ *
+ * Experiments also carry their Art Lab card details:
+ * engine   – what the piece runs on, shown as the card's badge.
+ * input    – how you play with it: Watch, Keys or Panel.
+ * rarity   – 1 common, 2 uncommon, 3 holo (a collector touch on the card).
+ * controls – one line on how to play with it, shown in the card's details.
  */
 
 export const GENRES = {
@@ -207,6 +213,10 @@ export const experiments = [
     href: 'Art_Lab/BlossomingFlowers/index.html',
     blurb: 'Pure CSS blossoming flowers animation. Watch as petals unfold in a mesmerizing dance of color and motion.',
     tags: ['CSS Art', 'Animation'],
+    engine: 'CSS',
+    input: 'Watch',
+    rarity: 1,
+    controls: 'No input: sit back and let it bloom. Pure CSS, no canvas.',
   },
   {
     slug: 'flow-fields',
@@ -214,6 +224,10 @@ export const experiments = [
     href: 'Art_Lab/Simple/index.html',
     blurb: 'Experiment with flow fields. Press D to debug or double touch. Watch particles dance through invisible currents.',
     tags: ['Canvas', 'Particles'],
+    engine: 'Canvas',
+    input: 'Keys',
+    rarity: 1,
+    controls: 'D or a double tap shows the hidden field. The corner button opens colours and screenshots.',
   },
   {
     slug: 'text-fields',
@@ -221,6 +235,10 @@ export const experiments = [
     href: 'Art_Lab/Text_Fields/index.html',
     blurb: 'Typography meets generative art. Text rendered as particle systems moving through flow fields.',
     tags: ['Typography', 'Canvas'],
+    engine: 'Canvas',
+    input: 'Keys',
+    rarity: 2,
+    controls: 'D or a double tap shows the field under the letters. The corner button sets your own text and colours.',
   },
   {
     slug: 'experimental-math',
@@ -228,6 +246,10 @@ export const experiments = [
     href: 'Art_Lab/Experimental_math/index.html',
     blurb: 'Low-level mathematical explorations with flow fields. Visualize equations in motion.',
     tags: ['Math', 'Generative'],
+    engine: 'Canvas',
+    input: 'Watch',
+    rarity: 1,
+    controls: 'No input: the equations drift and redraw on their own.',
   },
   {
     slug: 'adaptive-fields',
@@ -235,6 +257,10 @@ export const experiments = [
     href: 'Art_Lab/Adaptive/index.html',
     blurb: 'Try multiple variations with adaptive flow fields that respond to your interaction.',
     tags: ['Interactive', 'Canvas'],
+    engine: 'p5.js',
+    input: 'Panel',
+    rarity: 2,
+    controls: 'Pick colours, border rules and presets; type a value and press Enter to apply it.',
   },
   {
     slug: 'lsd',
@@ -242,6 +268,10 @@ export const experiments = [
     href: 'Art_Lab/LSD/index.html',
     blurb: 'Create psychedelic animations in real-time. A trip through color and form.',
     tags: ['Psychedelic', 'Real-time'],
+    engine: 'WebGL',
+    input: 'Keys',
+    rarity: 3,
+    controls: 'R randomise, Space pause, S screenshot, V record a clip, M music.',
   },
   {
     slug: 'particular-drift',
@@ -249,6 +279,10 @@ export const experiments = [
     href: 'Art_Lab/ParticularDrift/index.html',
     blurb: 'Watch particles drift through space in this meditative visual experience.',
     tags: ['Particles', 'Ambient'],
+    engine: 'WebGL 2',
+    input: 'Keys',
+    rarity: 3,
+    controls: 'U upload your own image, R randomise, C colours, S save, V record.',
   },
 ];
 

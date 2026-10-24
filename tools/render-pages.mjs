@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Pre-renders the registry (assets/js/data.js) into the static pages, so the
- * game grid, Art Lab showcase and experiment carousel are in the HTML before
+ * game grid, Art Lab showcase and the Art Lab's "All pieces" list are in the HTML before
  * any JavaScript runs (faster first paint, works without JS, indexable).
  *
  * Usage: node tools/render-pages.mjs          (writes files)
@@ -100,33 +100,30 @@ function artlabShowcase() {
       `;
 }
 
-function experimentCard(exp, i) {
+const RARITY = ['', 'Common', 'Uncommon', 'Holo'];
+
+/** One piece in the Art Lab's "All pieces" list. */
+function artlabTile(exp, i) {
   const t = thumbSet(exp.slug, '{base}');
+  const no = `${String(i + 1).padStart(2, '0')} / ${String(experiments.length).padStart(2, '0')}`;
+  const rarity = exp.rarity || 1;
   return `
-          <article class="experiment-card" style="animation-delay: ${(i * 0.08).toFixed(2)}s;">
-            <a href="{base}${esc(exp.href)}" target="_blank" rel="noopener" class="experiment-card-link">
-              <div class="experiment-card-inner">
-                <div class="experiment-card-preview">
-                  <span class="experiment-number">${String(i + 1).padStart(2, '0')}</span>
-                  <img src="${t.src}" srcset="${t.srcset}" sizes="340px" width="480" height="300" alt="" loading="${i < 4 ? 'eager' : 'lazy'}" decoding="async">
-                </div>
-                <div class="experiment-card-content">
-                  <h3 class="experiment-card-title">${esc(exp.title)}</h3>
-                  <p class="experiment-card-description">${esc(exp.blurb)}</p>
-                  <div class="experiment-tags">${exp.tags.map((tag) => `<span class="experiment-tag">${esc(tag)}</span>`).join('')}</div>
-                  <div class="experiment-card-action">
-                    <span class="experiment-link">View Experiment <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
-                  </div>
-                </div>
-              </div>
-            </a>
-          </article>`;
+          <li class="tile" data-rarity="${rarity}">
+            <img class="tile-art" src="${t.src}" srcset="${t.srcset}" sizes="(min-width: 1100px) 340px, (min-width: 640px) 45vw, 100vw" width="480" height="300" alt="" loading="${i < 3 ? 'eager' : 'lazy'}" decoding="async">
+            <div class="tile-body">
+              <p class="tile-meta"><span class="tile-no">${no}</span><span class="tile-engine">${esc(exp.engine || 'Canvas')}</span><span class="tile-rarity">${RARITY[rarity]} <span aria-hidden="true">${'◆'.repeat(rarity)}${'◇'.repeat(3 - rarity)}</span></span></p>
+              <h3 class="tile-title">${esc(exp.title)}</h3>
+              <p class="tile-desc">${esc(exp.blurb)}</p>
+              <p class="tile-tags">${exp.tags.map(esc).join(' · ')}</p>
+              <a class="btn btn-primary tile-enter" href="{base}${esc(exp.href)}" target="_blank" rel="noopener" aria-label="Enter ${esc(exp.title)} (opens in a new tab)">Enter <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a>
+            </div>
+          </li>`;
 }
 
 const blocks = {
   games: games.map(gameCard).join('') + '\n      ',
   'artlab-showcase': artlabShowcase(),
-  experiments: experiments.map(experimentCard).join('') + '\n        ',
+  'artlab-grid': experiments.map(artlabTile).join('') + '\n        ',
   'game-count': String(games.length),
   'exp-count': String(experiments.length),
 };
