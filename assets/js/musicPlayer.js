@@ -107,6 +107,9 @@ async function initMusicPlayer() {
       ? `&origin=${encodeURIComponent(window.location.origin)}`
       : '';
     const id = currentVideoId;
+    // Chromium needs autoplay delegated to the iframe; Firefox and Safari don't know the
+    // feature and log a warning for it, so it is only set where it is understood.
+    if ('featurePolicy' in document && !elements.player.allow) elements.player.allow = 'autoplay';
     elements.player.src = `https://www.youtube-nocookie.com/embed/${id}?enablejsapi=1&autoplay=1&start=0&loop=1&playlist=${id}&controls=0&modestbranding=1&playsinline=1${originParam}`;
     started = true;
     setPlaying(true);
