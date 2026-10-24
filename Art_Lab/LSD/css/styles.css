@@ -589,8 +589,9 @@ a, a:visited{
     z-index: 200 !important;
   }
 
+  /* Leaves room for the Zen Mode button on the left */
   .dg.main {
-    max-width: calc(100vw - 8px);
+    width: min(245px, calc(100vw - 104px)) !important;
   }
 
   .dg.main > ul {
@@ -603,7 +604,7 @@ a, a:visited{
     font-size: 12px !important;
   }
 
-  .dg li:not(.folder) {
+  .dg ul:not(.closed) > li:not(.folder) {
     height: 40px !important;
     line-height: 40px !important;
   }

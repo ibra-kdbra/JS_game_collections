@@ -341,3 +341,94 @@ td {
 a, a:visited{
   color:rgb(161, 50, 154);
 }
+/* ---------- Phones (also held sideways) ---------- */
+@media (max-width: 900px), (max-height: 500px) {
+  html,
+  body {
+    overscroll-behavior: none;
+  }
+
+  /* Room for the collapsed controls bar above the art */
+  .canvasDiv {
+    margin-top: 44px;
+    width: 100vw;
+  }
+
+  #canvas {
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 44px - 64px);
+  }
+
+  #buttonTable {
+    margin: 0 auto;
+  }
+
+  .menuButton {
+    min-width: 44px;
+    min-height: 44px;
+    margin: 6px 1px;
+    font-size: 1.35em;
+  }
+
+  #imageInputLabel {
+    display: inline-flex;
+    align-items: center;
+    box-sizing: border-box;
+    white-space: nowrap;
+    padding: 0 8px;
+    font-size: 1em;
+  }
+
+  /* dat.GUI: collapsed until opened, scrolls inside itself, 40px rows, 12px labels */
+  .dg.main {
+    max-width: calc(100vw - 8px);
+  }
+
+  .dg.main > ul {
+    max-height: calc(100dvh - 44px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .dg {
+    font-size: 12px !important;
+  }
+
+  .dg ul:not(.closed) > li:not(.folder) {
+    height: 40px !important;
+    line-height: 40px !important;
+  }
+
+  .dg li.title,
+  .dg .close-button {
+    height: 40px !important;
+    line-height: 40px !important;
+  }
+
+  .dg .c input[type='text'],
+  .dg .c select {
+    height: 30px;
+    font-size: 14px;
+  }
+
+  .dg .c .slider {
+    height: 30px;
+    margin-top: 5px;
+  }
+}
+
+/* Extra-small phones: the five buttons fit on one row */
+@media (max-width: 360px) {
+  #buttonTable td {
+    padding: 0;
+  }
+
+  .menuButton {
+    font-size: 1.2em;
+  }
+
+  #imageInputLabel {
+    font-size: 0.8em;
+    padding: 0 4px;
+  }
+}
