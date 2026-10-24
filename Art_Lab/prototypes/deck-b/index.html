@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#09090b" />
+  <meta name="robots" content="noindex" />
+  <title>Deck B: Dealer's Table | Art Lab prototypes</title>
+  <link href="../../../assets/icons/video_game.svg" rel="icon" type="image/svg+xml" />
+  <link rel="preload" href="../../../assets/fonts/chakra-petch-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="../shared/proto.css" />
+  <link rel="stylesheet" href="b.css" />
+  <script type="module" src="b.js"></script>
+</head>
+<body class="deck-b">
+  <header class="bar">
+    <a class="icon-btn" href="../index.html" aria-label="Back to prototypes">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6l-6 6 6 6M8 12h12"/></svg>
+    </a>
+    <h1 class="bar-title"><b>B</b> Dealer's Table <span>Art Lab · shuffle and deal</span></h1>
+    <button class="icon-btn" id="tilt-btn" type="button" aria-pressed="false" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M3 8v8M21 8v8"/></svg><span class="lbl">Tilt</span>
+    </button>
+    <button class="icon-btn" id="sound-btn" type="button" aria-label="Sound" aria-pressed="false"></button>
+    <button class="icon-btn" id="replay-btn" type="button" aria-label="Shuffle again">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h4l10 10h4M3 17h4l3-3M14 10l3-3h4M18 4l3 3-3 3M18 14l3 3-3 3"/></svg><span class="lbl">Shuffle again</span>
+    </button>
+  </header>
+
+  <main class="table" id="table">
+    <div class="mat" id="mat" aria-hidden="true"></div>
+    <div class="dealt" id="dealt" role="list" aria-label="Dealt cards"></div>
+    <button class="deal-btn btn btn-primary" id="deal-btn" type="button" hidden>Shuffle &amp; deal</button>
+    <p class="status" id="status" aria-live="polite"></p>
+    <div class="scrim" id="scrim" hidden></div>
+  </main>
+</body>
+</html>

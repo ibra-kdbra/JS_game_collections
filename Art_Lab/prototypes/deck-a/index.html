@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#09090b" />
+  <meta name="robots" content="noindex" />
+  <title>Deck A: Booster Pack | Art Lab prototypes</title>
+  <link href="../../../assets/icons/video_game.svg" rel="icon" type="image/svg+xml" />
+  <link rel="preload" href="../../../assets/fonts/chakra-petch-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="../shared/proto.css" />
+  <link rel="stylesheet" href="a.css" />
+  <script type="module" src="a.js"></script>
+</head>
+<body class="deck-a">
+  <header class="bar">
+    <a class="icon-btn" href="../index.html" aria-label="Back to prototypes">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6l-6 6 6 6M8 12h12"/></svg>
+    </a>
+    <h1 class="bar-title"><b>A</b> Booster Pack <span>Art Lab · Series 01</span></h1>
+    <button class="icon-btn" id="sound-btn" type="button" aria-label="Sound" aria-pressed="false"></button>
+    <button class="icon-btn" id="replay-btn" type="button" aria-label="New pack">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg><span class="lbl">New pack</span>
+    </button>
+  </header>
+
+  <main class="stage" id="stage">
+    <div class="pack" id="pack">
+      <div class="pack-half pack-top" aria-hidden="true">
+        <div class="pack-skin">
+          <div class="crimp"></div>
+          <div class="pack-sheen"></div>
+        </div>
+      </div>
+      <div class="pack-half pack-body" aria-hidden="true">
+        <div class="pack-skin">
+          <div class="pack-head">
+            <span class="pack-series">Series 01</span>
+            <span class="pack-count">7 cards</span>
+          </div>
+          <div class="pack-name">Art<br>Lab</div>
+          <div class="pack-sub">Generative edition</div>
+          <div class="pack-window"><div class="pack-strip" id="pack-strip"></div></div>
+          <div class="pack-foot">
+            <span>1 in 3 holo</span>
+            <span class="barcode"></span>
+          </div>
+          <div class="crimp crimp-bottom"></div>
+          <div class="pack-sheen"></div>
+        </div>
+      </div>
+      <div class="tear-guide" aria-hidden="true">
+        <span class="tear-progress" id="tear-progress"></span>
+        <span class="tear-hint">Tear <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </div>
+      <button class="pack-hit" id="pack-hit" type="button" aria-label="Tear open the Art Lab pack"></button>
+    </div>
+
+    <div class="cards" id="cards" role="list" aria-label="Your cards"></div>
+
+    <div class="hud">
+      <div class="stamp" id="stamp" hidden><b>Set complete</b><span>7 / 7</span></div>
+      <p class="hint" id="hint" aria-live="polite">Drag along the top edge to tear, or tap</p>
+      <div class="hud-actions">
+        <button class="btn" id="reveal-all" type="button" hidden>Reveal all</button>
+      </div>
+    </div>
+  </main>
+
+  <div class="inspect" id="inspect" role="dialog" aria-modal="true" aria-labelledby="ins-title" hidden>
+    <div class="inspect-body">
+      <div class="inspect-card" id="ins-card"></div>
+      <div class="inspect-info">
+        <p class="info-no" id="ins-no"></p>
+        <h2 class="info-title" id="ins-title"></h2>
+        <div class="info-tags" id="ins-tags"></div>
+        <p class="info-desc" id="ins-desc"></p>
+        <dl class="info-stats" id="ins-stats"></dl>
+        <p class="info-ctrl" id="ins-ctrl"></p>
+        <div class="inspect-actions">
+          <a class="btn btn-primary" id="ins-enter" href="#" target="_blank" rel="noopener">Enter piece
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a>
+          <button class="btn" id="ins-prev" type="button" aria-label="Previous card">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+          <button class="btn" id="ins-next" type="button" aria-label="Next card">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        </div>
+      </div>
+      <button class="icon-btn inspect-close" id="ins-close" type="button" aria-label="Close (Esc)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+  </div>
+</body>
+</html>

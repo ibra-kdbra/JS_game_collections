@@ -1,0 +1,160 @@
+/* Deck B: a deck on the table that shuffles and deals itself into a spread. */
+html, body { overflow: hidden; overscroll-behavior: none; }
+
+.table {
+  position: fixed;
+  inset: var(--bar-h) 0 0 0;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Slot outlines on the play mat: where each card will land. */
+.mat { position: absolute; inset: 0; pointer-events: none; }
+.mat-slot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--cw);
+  height: calc(var(--cw) * 1.4);
+  margin: calc(var(--cw) * -0.7) 0 0 calc(var(--cw) / -2);
+  border: 2px dashed #2f313b;
+  border-radius: calc(var(--cw) * 0.045);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: calc(var(--cw) * 0.16);
+  color: #24262e;
+}
+.mat-deck {
+  border: 2px solid var(--line-accent);
+  border-style: solid;
+  color: transparent;
+}
+.mat-deck::after {
+  content: 'Deck';
+  position: absolute;
+  bottom: -26px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.dealt {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+}
+
+.bcard {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--cw);
+  height: calc(var(--cw) * 1.4);
+  margin: calc(var(--cw) * -0.7) 0 0 calc(var(--cw) / -2);
+}
+.bcard .card { --cw: 100%; width: 100%; }
+.card-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.card-hit:disabled { cursor: default; }
+.bcard.is-held { visibility: hidden; }
+.is-dealt .bcard .card { transition: transform 0.18s var(--ease-out); }
+.is-dealt .bcard:hover .card { transform: translateY(-4%); }
+.is-dealt .bcard:hover { z-index: 30 !important; }
+
+.deal-btn {
+  position: absolute;
+  left: 50%;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 40;
+}
+.deal-btn:hover { transform: translate(calc(-50% - 2px), -2px); }
+
+.status {
+  position: absolute;
+  left: 50%;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 65;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.status:empty { display: none; }
+.status b { color: var(--primary); }
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  background: rgba(9, 9, 11, 0.9);
+}
+
+/* The card you picked up: a real-size copy, so text stays crisp. */
+.held {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 70;
+  margin: calc(var(--cw) * -0.7) 0 0 calc(var(--cw) / -2);
+  touch-action: none;
+}
+
+/* Info side (the back once dealt) */
+.card-back.is-info {
+  background: var(--surface);
+  background-image: none;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  place-items: initial;
+  text-align: left;
+  gap: 3cqw;
+  padding: 7cqw 7cqw 6.5cqw;
+  border-color: var(--primary);
+  overflow: hidden;
+}
+.card-back.is-info::before { display: none; }
+.bi-top { display: flex; justify-content: space-between; align-items: center; font-family: var(--font-display); font-weight: 700; font-size: max(11px, 4.4cqw); letter-spacing: 0.08em; color: var(--primary); text-transform: uppercase; }
+.bi-top span:last-child { color: var(--text-3); }
+.bi-title { font-family: var(--font-display); font-weight: 800; font-size: max(18px, 10cqw); line-height: 1; text-transform: uppercase; }
+.bi-tags { display: flex; flex-wrap: wrap; gap: 1.6cqw; }
+.bi-tags .chip { font-size: max(10px, 3.4cqw); }
+.bi-desc { font-size: max(12px, 4.6cqw); color: var(--text-2); line-height: 1.45; }
+.bi-ctrl { font-size: max(11px, 3.9cqw); color: var(--text-2); padding: 2.4cqw 3cqw; border-left: 1cqw solid var(--primary); background: var(--bg); }
+.bi-ctrl b { display: block; color: var(--primary); font-family: var(--font-display); letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.9em; }
+.bi-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2cqw; padding-top: 3cqw; border-top: 1px solid var(--line); font-size: max(11px, 3.8cqw); }
+.bi-stats dt { color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.85em; }
+.bi-stats dd { font-family: var(--font-display); font-weight: 700; }
+.bi-actions { margin-top: auto; display: flex; gap: 2.4cqw; }
+.bi-actions .btn { min-height: max(38px, 12cqw); padding: 0 4cqw; font-size: max(12px, 4cqw); }
+.bi-actions .btn-primary { flex: 1; }
+
+@container (max-width: 250px) {
+  .bi-ctrl, .bi-stats, .bi-tags { display: none; }
+  .bi-desc { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+}
+
+@media (max-height: 480px) and (orientation: landscape) {
+  .status { font-size: 11px; padding: 4px 8px; bottom: 6px; }
+  .deal-btn { bottom: 8px; min-height: 38px; }
+}

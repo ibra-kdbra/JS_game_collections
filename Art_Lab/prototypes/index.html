@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#09090b" />
+  <meta name="robots" content="noindex" />
+  <title>Art Lab entrance: deck prototypes</title>
+  <link href="../../assets/icons/video_game.svg" rel="icon" type="image/svg+xml" />
+  <link rel="stylesheet" href="shared/proto.css" />
+  <style>
+    body { min-height: 100%; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: calc(var(--bar-h) + 40px) 20px 48px; }
+    .kicker { font-family: var(--font-display); font-weight: 700; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--primary); }
+    h2.lead { font-family: var(--font-display); font-weight: 800; font-size: clamp(30px, 5vw, 52px); line-height: 1; text-transform: uppercase; margin: 10px 0 14px; }
+    .intro { max-width: 640px; color: var(--text-2); }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-top: 36px; }
+    .tile {
+      display: flex; flex-direction: column; gap: 12px;
+      padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
+      text-decoration: none; transition: transform 0.08s, border-color 0.08s, box-shadow 0.08s;
+    }
+    .tile:hover, .tile:focus-visible { transform: translate(-3px, -3px); border-color: var(--primary); box-shadow: 5px 5px 0 var(--primary); }
+    .tile-art { position: relative; height: 150px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); overflow: hidden; }
+    .mini { position: absolute; width: 64px; height: 90px; border: 2px solid #34353f; border-radius: 5px; background: #12131a; box-shadow: 3px 3px 0 #000; overflow: hidden; }
+    .mini img { width: 100%; height: 62%; object-fit: cover; display: block; border-bottom: 2px solid #000; }
+    .mini::after { content: ''; position: absolute; left: 6px; right: 14px; bottom: 9px; height: 5px; background: #3a3c48; }
+    .mini.back { background: #0e0f14 repeating-conic-gradient(rgba(250, 204, 21, 0.12) 0 25%, transparent 0 50%) 0 0 / 8px 8px; }
+    .mini.back::after { display: none; }
+    .pack { position: absolute; left: 50%; bottom: -26px; width: 84px; height: 110px; margin-left: -42px; background: #15161d; border-left: 4px solid var(--primary); box-shadow: 4px 4px 0 #000; font-family: var(--font-display); font-weight: 800; color: var(--primary); font-size: 20px; line-height: 0.85; padding: 14px 10px; text-transform: uppercase; }
+    .tile-letter { font-family: var(--font-display); font-weight: 800; font-size: 13px; letter-spacing: 0.12em; color: var(--ink); background: var(--primary); padding: 2px 8px; border-radius: 3px; align-self: flex-start; }
+    .tile h3 { font-family: var(--font-display); font-weight: 800; font-size: 24px; line-height: 1.05; text-transform: uppercase; }
+    .tile p { color: var(--text-2); font-size: 15px; }
+    .tile .go { margin-top: auto; font-family: var(--font-display); font-weight: 700; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--primary); }
+    .foot { margin-top: 36px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; color: var(--text-3); font-size: 14px; }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <a class="icon-btn" href="../index.html" aria-label="Back to the current Art Lab">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6l-6 6 6 6M8 12h12"/></svg>
+    </a>
+    <h1 class="bar-title"><b>Art Lab</b> Entrance prototypes</h1>
+  </header>
+
+  <main class="wrap">
+    <p class="kicker">For discussion</p>
+    <h2 class="lead">Opening the deck</h2>
+    <p class="intro">Three ways into the Art Lab, each built around opening a deck of cards. All three use the real seven pieces: tap Enter on any card to open the piece in a new tab. Sound is off by default; every prototype has a replay button.</p>
+
+    <div class="grid">
+      <a class="tile" href="deck-a/">
+        <div class="tile-art" aria-hidden="true">
+          <span class="mini" style="left:22%;top:16px;transform:rotate(-14deg)"><img src="../../assets/thumbs/blossoming-flowers-480.webp" alt="" width="480" height="300"></span>
+          <span class="mini back" style="left:50%;margin-left:-32px;top:6px"></span>
+          <span class="mini" style="right:22%;top:16px;transform:rotate(14deg)"><img src="../../assets/thumbs/lsd-480.webp" alt="" width="480" height="300"></span>
+          <span class="pack">Art<br>Lab</span>
+        </div>
+        <span class="tile-letter">A</span>
+        <h3>Booster Pack</h3>
+        <p>Tear a sealed foil pack along its top edge; seven cards burst into a fan and you flip each one to reveal it, with holo pulls for the WebGL pieces.</p>
+        <span class="go">Open prototype &rarr;</span>
+      </a>
+      <a class="tile" href="deck-b/">
+        <div class="tile-art" aria-hidden="true">
+          <span class="mini" style="left:12%;top:12px;transform:rotate(-2deg)"><img src="../../assets/thumbs/text-fields-480.webp" alt="" width="480" height="300"></span>
+          <span class="mini" style="left:38%;top:12px;transform:rotate(1.5deg)"><img src="../../assets/thumbs/experimental-math-480.webp" alt="" width="480" height="300"></span>
+          <span class="mini back" style="left:64%;top:30px;transform:rotate(-22deg) scale(1.08)"></span>
+          <span class="mini back" style="left:44%;top:60px;transform:rotate(1deg)"></span>
+        </div>
+        <span class="tile-letter">B</span>
+        <h3>Dealer's Table</h3>
+        <p>The deck riffle-shuffles itself and deals onto a play mat. Hover tilts a card; click picks it up and turns it over to its back: description, controls, Enter.</p>
+        <span class="go">Open prototype &rarr;</span>
+      </a>
+      <a class="tile" href="deck-c/">
+        <div class="tile-art" aria-hidden="true">
+          <span class="mini back" style="left:50%;margin-left:-26px;top:22px;transform:rotate(5deg)"></span>
+          <span class="mini back" style="left:50%;margin-left:-30px;top:20px;transform:rotate(-3deg)"></span>
+          <span class="mini" style="left:50%;margin-left:-34px;top:16px"><img src="../../assets/thumbs/adaptive-fields-480.webp" alt="" width="480" height="300"></span>
+          <span class="mini" style="left:70%;top:24px;transform:rotate(18deg);opacity:.7"><img src="../../assets/thumbs/particular-drift-480.webp" alt="" width="480" height="300"></span>
+        </div>
+        <span class="tile-letter">C</span>
+        <h3>Card Box</h3>
+        <p>Lift the flap of a tuck box and slide the deck out. Flick through a living stack where the top card's art drifts, or switch it to a live running preview.</p>
+        <span class="go">Open prototype &rarr;</span>
+      </a>
+    </div>
+
+    <p class="foot">Compare with the current page: <a class="btn" href="../index.html">Art Lab today</a></p>
+  </main>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#09090b" />
+  <meta name="robots" content="noindex" />
+  <title>Deck C: Card Box | Art Lab prototypes</title>
+  <link href="../../../assets/icons/video_game.svg" rel="icon" type="image/svg+xml" />
+  <link rel="preload" href="../../../assets/fonts/chakra-petch-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="../shared/proto.css" />
+  <link rel="stylesheet" href="c.css" />
+  <script type="module" src="c.js"></script>
+</head>
+<body class="deck-c is-closed">
+  <header class="bar">
+    <a class="icon-btn" href="../index.html" aria-label="Back to prototypes">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6l-6 6 6 6M8 12h12"/></svg>
+    </a>
+    <h1 class="bar-title"><b>C</b> Card Box <span>Art Lab · flip through the deck</span></h1>
+    <button class="icon-btn" id="sound-btn" type="button" aria-label="Sound" aria-pressed="false"></button>
+    <button class="icon-btn" id="replay-btn" type="button" aria-label="Put the deck back in the box">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg><span class="lbl">Re-box</span>
+    </button>
+  </header>
+
+  <main class="browser" id="browser" aria-roledescription="carousel" aria-label="Art Lab deck">
+    <div class="card-area" id="card-area">
+      <div class="stack" id="stack">
+        <div class="boxpart box-shade" aria-hidden="true"></div>
+        <div class="boxpart box-flap" id="box-flap" aria-hidden="true">
+          <div class="flap-out"><span>Lift to open</span></div>
+          <div class="flap-in"></div>
+        </div>
+        <div class="boxpart box-front" aria-hidden="true">
+          <div class="box-band"></div>
+          <span class="box-kicker">Series 01 &middot; Generative</span>
+          <div class="box-copy">
+            <span class="box-name">Art<br>Lab</span>
+            <span class="box-sub">7 generative cards</span>
+          </div>
+          <div class="box-foot"><span>Deck</span><span>No. 01&ndash;07</span></div>
+        </div>
+        <div class="boxpart box-window" aria-hidden="true"></div>
+        <div class="boxpart box-seal" id="box-seal" aria-hidden="true">Open</div>
+        <button class="boxpart box-hit" id="box-hit" type="button" aria-label="Open the Art Lab card box"></button>
+      </div>
+    </div>
+
+    <section class="info" id="info" aria-live="polite">
+      <div class="info-inner" id="info-inner">
+        <p class="info-no">Art Lab &middot; Series 01</p>
+        <h2 class="info-title">A deck of seven</h2>
+        <p class="info-desc">Generative pieces in canvas, WebGL, p5 and pure CSS. Lift the flap to take the deck out.</p>
+        <div class="info-actions"><button class="btn btn-primary" id="open-btn" type="button">Open the box</button></div>
+      </div>
+    </section>
+
+    <nav class="pips" id="pips" aria-label="Cards" hidden>
+      <button class="btn pip-nav" id="prev-btn" type="button" aria-label="Previous card">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <div class="pip-row" id="pip-row"></div>
+      <button class="btn pip-nav" id="next-btn" type="button" aria-label="Next card">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+    </nav>
+  </main>
+</body>
+</html>
