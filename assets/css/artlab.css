@@ -610,3 +610,18 @@ body#artlab-body {
   outline: 2px solid var(--artlab-primary);
   outline-offset: -2px;
 }
+
+/* ---------- Touch screens and phones ---------- */
+@media (pointer: coarse) {
+  .corner-link,
+  .corner-back {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (max-width: 768px), (max-height: 500px) {
+  .experiment-tag {
+    font-size: 0.75rem;
+  }
+}
