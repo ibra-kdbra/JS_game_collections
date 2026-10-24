@@ -112,7 +112,6 @@
 
 /* ---------- Phones (also held sideways): 12px minimum text ---------- */
 @media (max-width: 768px), (max-height: 500px) {
-  .art-tile-tags,
   .tag,
   .meta-chip {
     font-size: 0.75rem;
