@@ -109,7 +109,7 @@ class Effect {
         this.height = this.canvas.height;
         this.particles = [];
         // A live preview in the Art Lab (?embed=1) is a small frame: fewer lines.
-        this.numberOfParticles = window.ArtEmbed && window.ArtEmbed.on ? 700 : 3000;
+        this.numberOfParticles = window.ArtEmbed && window.ArtEmbed.on ? 400 : 3000;
         this.cellSize = 20;
         this.curve = 5;
         this.zoom = 0.12;

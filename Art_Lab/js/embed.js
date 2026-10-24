@@ -9,9 +9,9 @@
  *   panels, buttons and intro and pin its main canvas to the frame;
  * - mutes everything: media elements never play, Web Audio stays suspended,
  *   and alert() is a no-op;
- * - pauses the piece while it is off screen or the tab is hidden: animation
- *   frames are held back (and CSS animations paused via `is-idle` on <html>)
- *   until it is visible again;
+ * - runs the piece at most at 30 frames a second, and pauses it while it is
+ *   off screen or the tab is hidden: animation frames are held back (and CSS
+ *   animations paused via `is-idle` on <html>) until it is visible again;
  * - exposes `window.ArtEmbed` for piece-specific savings:
  *     ArtEmbed.on            true in embed mode
  *     ArtEmbed.dpr(max=1.5)  device pixel ratio, capped in embed mode
@@ -95,25 +95,40 @@
   // ---------- Pause when not seen ----------
   var nativeRAF = window.requestAnimationFrame.bind(window);
   var nativeCAF = window.cancelAnimationFrame.bind(window);
+  // A preview runs at most at 30 frames a second (it shares the Art Lab's
+  // thread), and not at all while it can't be seen: frame callbacks wait.
+  var FRAME_MS = 1000 / 30;
   var visible = !document.hidden;
   var inView = true;
   var active = visible && inView;
-  var held = new Map(); // fake id -> callback, while paused
-  var moved = new Map(); // fake id -> real id, once resumed
-  var nextId = -1;
+  var pending = new Map(); // id -> { cb, raf }
+  var nextId = 1;
+  var lastFrame = -1e9;
+
+  function schedule(id) {
+    var e = pending.get(id);
+    e.raf = nativeRAF(function (t) {
+      e.raf = 0;
+      if (!pending.has(id) || !active) return; // held until visible again
+      // several loops may share a frame; otherwise skip frames to keep 30 fps
+      if (t !== lastFrame && t - lastFrame < FRAME_MS - 2) return schedule(id);
+      lastFrame = t;
+      pending.delete(id);
+      e.cb(t);
+    });
+  }
 
   window.requestAnimationFrame = function (cb) {
-    if (active) return nativeRAF(cb);
-    var id = nextId--;
-    held.set(id, cb);
+    var id = nextId++;
+    pending.set(id, { cb: cb, raf: 0 });
+    if (active) schedule(id);
     return id;
   };
   window.cancelAnimationFrame = function (id) {
-    if (id < 0) {
-      held.delete(id);
-      if (moved.has(id)) nativeCAF(moved.get(id));
-      moved.delete(id);
-    } else nativeCAF(id);
+    var e = pending.get(id);
+    if (!e) return;
+    if (e.raf) nativeCAF(e.raf);
+    pending.delete(id);
   };
 
   function update() {
@@ -122,11 +137,9 @@
     active = now;
     root.classList.toggle('is-idle', !active);
     if (active) {
-      moved.clear();
-      held.forEach(function (cb, id) {
-        moved.set(id, nativeRAF(cb));
+      pending.forEach(function (e, id) {
+        if (!e.raf) schedule(id);
       });
-      held.clear();
     }
   }
 
