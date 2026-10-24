@@ -1209,3 +1209,17 @@ body {
 .not-loaded * {
   animation-play-state: paused !important;
 }
+
+/* Phones: the garden stands on the visible bottom edge (not behind the
+   browser bar), and upright screens show it a little larger. */
+body {
+  min-height: 100dvh;
+  overscroll-behavior: none;
+}
+
+@media (orientation: portrait) and (max-width: 600px) {
+  .flowers {
+    transform: scale(1.2);
+    transform-origin: bottom center;
+  }
+}
