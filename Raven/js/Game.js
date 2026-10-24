@@ -6,7 +6,15 @@ class Game {
         this._losCanvas = document.getElementById('los');
         this._losCtx = this._losCanvas.getContext('2d');
         this.resize();
-        window.addEventListener('resize', () => this.resize());
+        // At most one resize per frame while the window is being resized or rotated
+        let resizeFrame = 0;
+        window.addEventListener('resize', () => {
+            if (resizeFrame) return;
+            resizeFrame = requestAnimationFrame(() => {
+                resizeFrame = 0;
+                this.resize();
+            });
+        });
 
         this._tileCanvas = document.getElementById('tile');
         this._tileCtx = this._tileCanvas.getContext('2d');
@@ -165,7 +173,12 @@ class Game {
         this.zoom = Math.min(1, Math.min(cssW, cssH) / 560);
         this.viewW = Math.round(cssW / this.zoom);
         this.viewH = Math.round(cssH / this.zoom);
-        const dpr = Math.min(window.devicePixelRatio || 1, 3);
+        // Text and on-screen buttons grow back on zoomed-out views so text stays
+        // readable (about 12px and up) and buttons stay finger-sized.
+        this.textScale = Math.min(1.8, Math.max(1, 12.5 / (16 * this.zoom)));
+        // Backing store capped at 2x: the view is redrawn every frame and a 3x
+        // canvas more than doubles the fill cost for no visible gain on a phone.
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
         this.pixelScale = dpr * this.zoom;
         [this.canvas, this._losCanvas].forEach(c => {
             c.width = Math.round(cssW * dpr);
@@ -461,9 +474,9 @@ class Game {
                 if (this.clearInfo) {
                     let info = Util.formatTime(this.clearInfo.ms) +
                         (this.clearInfo.isNew ? '  NEW BEST' : '  BEST ' + Util.formatTime(this.clearInfo.best));
-                    this.ctx.font = Asset.getFontString(18);
+                    this.ctx.font = Asset.getFontString(18 * this.textScale);
                     this.ctx.fillStyle = 'rgba(204, 204, 204, 0.8)';
-                    this.ctx.fillText(info, this.viewW / 2 - this.ctx.measureText(info).width / 2, this.viewH / 2 + 40);
+                    this.ctx.fillText(info, this.viewW / 2 - this.ctx.measureText(info).width / 2, this.viewH / 2 + 40 * this.textScale);
                 }
             }
 
@@ -497,17 +510,35 @@ class Game {
         }
 
         if (this.framems - this.levelms - delayStart < 3000) {
-            this.ctx.font = Asset.getFontString(22);
+            const k = this.textScale;
+            // The name shares the top row with the clock and, on touch screens, the pause button
+            const nameRoom = this.viewW - 36 - (this.touch.active ? this.touch.buttonSize + 12 : 0);
+            this.fitFont(this.level.name, 22 * k, nameRoom);
             this.ctx.fillStyle = 'rgba(204, 255, 204, 0.9)';
-            this.ctx.fillText(this.level.name.substring(0, nameChars), 18, 36);
+            this.ctx.fillText(this.level.name.substring(0, nameChars), 18, 36 * k);
 
             if (this.level.hint) {
                 const hint = this.touch.active && this.level.touchHint ? this.level.touchHint : this.level.hint;
-                this.ctx.font = Asset.getFontString(18);
+                this.ctx.font = Asset.getFontString(18 * k);
                 this.ctx.fillStyle = 'rgba(204, 204, 204, 0.8)';
-                this.ctx.fillText(hint.substring(0, hintChars), 18, this.viewH - 30);
+                // Wrap long hints on narrow views, bottom line kept where it always was
+                const lines = Util.wrapText(this.ctx, hint, this.viewW - 36);
+                let shown = hintChars;
+                lines.forEach((line, i) => {
+                    if (shown <= 0) return;
+                    const y = this.viewH - 30 * k - (lines.length - 1 - i) * 24 * k;
+                    this.ctx.fillText(line.substring(0, shown), 18, y);
+                    shown -= line.length + 1;
+                });
             }
         }
+    }
+
+    // Set the canvas font to `px`, smaller if needed so `text` fits in `maxW`
+    fitFont(text, px, maxW) {
+        this.ctx.font = Asset.getFontString(px);
+        const w = this.ctx.measureText(text).width;
+        if (w > maxW) this.ctx.font = Asset.getFontString(Math.floor(px * maxW / w));
     }
 
     // Level clock in the top right corner, next to the time to beat
@@ -515,9 +546,12 @@ class Game {
         if (this.intro || this.levelComplete) return;
         const best = GameKit.readBests('raven')['level' + (this.levelIndex + 1)];
         const text = Util.formatTime(this.levelTime * 1000) + (best ? ' / ' + Util.formatTime(best.value) : '');
-        this.ctx.font = Asset.getFontString(16);
+        const k = this.textScale;
+        this.ctx.font = Asset.getFontString(16 * k);
         this.ctx.fillStyle = 'rgba(204, 204, 204, 0.7)';
-        this.ctx.fillText(text, this.viewW - this.ctx.measureText(text).width - (this.touch.active ? 72 : 18), 32);
+        // On touch screens the clock sits under the pause button
+        const y = this.touch.active ? this.touch.pauseButton().y + this.touch.buttonSize + 22 * k : 32;
+        this.ctx.fillText(text, this.viewW - this.ctx.measureText(text).width - 18, y);
     }
 
     start() {

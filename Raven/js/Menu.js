@@ -18,8 +18,16 @@ class Menu {
         if (this.scale > 0) this.scale -= 1;
     }
 
+    // Row pitch in view pixels: 36 normally, more on zoomed-out phone views so each
+    // entry is close to a 44px finger target, as long as the list still fits.
+    entryHeight() {
+        const k = game.textScale;
+        const finger = 44 / game.zoom;
+        return Math.max(36 * k, Math.min(finger, (game.viewH - 80) / this._options.length));
+    }
+
     render() {
-        let entryHeight = 36;
+        let entryHeight = this.entryHeight();
 
         game.ctx.fillStyle = 'rgba(0,0,0,0.7)';
         game.ctx.fillRect(0, 0, game.viewW, game.viewH);
@@ -32,7 +40,7 @@ class Menu {
         game.ctx.translate(-game.viewW / 2, -game.viewH / 2);
 
         this._options.forEach((entry, idx) => {
-            game.ctx.font = Asset.getFontString(18);
+            game.ctx.font = Asset.getFontString(18 * game.textScale);
 
             entry.w = game.ctx.measureText(entry.text).width;
             entry.x = game.viewW / 2 - entry.w / 2;
@@ -75,9 +83,10 @@ class Menu {
 
     // Index of the entry under a point (generous enough for a fingertip), or -1
     entryAt(x, y) {
+        const h = this.entryHeight();
         return this._options.findIndex(entry =>
             x >= entry.x - 16 && x <= entry.x + entry.w + 16 &&
-            y >= entry.y - 26 && y <= entry.y + 10);
+            y >= entry.y - h * 0.72 && y <= entry.y + h * 0.28);
     }
 
     select() {

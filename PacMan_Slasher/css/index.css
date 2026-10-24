@@ -9,6 +9,9 @@
 
 html, body{
     margin: 0;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
     width: 100%;
     height: 100%;
     overflow: hidden;
@@ -93,7 +96,7 @@ canvas{
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .combo-bar{
@@ -111,8 +114,8 @@ canvas{
   transition: width 120ms linear;
 }
 
-/* Narrow screens: drop the HUD below the corner buttons. */
-@media (max-width: 640px){
+/* Narrow portrait screens: drop the HUD below the corner buttons. */
+@media (max-width: 640px) and (orientation: portrait){
   .hud{
     top: max(62px, calc(env(safe-area-inset-top) + 54px));
     width: calc(100vw - 32px);
@@ -267,7 +270,38 @@ canvas{
 }
 
 #credits{
-  bottom: 50px;
+  bottom: max(50px, calc(env(safe-area-inset-bottom) + 16px));
+}
+
+/* A finger-sized target without moving the line. */
+#credits a{
+  display: inline-block;
+  padding: 14px 6px;
+  margin: -14px 0;
+}
+
+/* Short screens (landscape phones): text at the top, Start and credits below it. */
+@media (max-height: 500px){
+  #text{
+    top: max(8px, env(safe-area-inset-top));
+    font-size: 12px;
+  }
+
+  #text .big{
+    font-size: 20px;
+    line-height: 20px;
+  }
+
+  .startButton{
+    bottom: max(48px, calc(env(safe-area-inset-bottom) + 40px));
+    height: 52px;
+    line-height: 52px;
+    font-size: 28px;
+  }
+
+  #credits{
+    bottom: max(20px, env(safe-area-inset-bottom));
+  }
 }
 
 .big{

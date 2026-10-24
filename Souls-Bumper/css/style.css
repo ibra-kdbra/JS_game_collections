@@ -247,10 +247,44 @@ html {
   }
 }
 
-/* In landscape the action buttons stack in two rows so they fit beside the play area. */
+/* Touch pad: the hero only goes left and right, so the pad is one row of two. */
+.gk-touch .gk-dpad {
+  grid-template-columns: repeat(2, 60px);
+  grid-template-rows: 60px;
+  gap: 8px;
+}
+
+.gk-touch .gk-dpad button {
+  grid-area: auto;
+}
+
+.gk-touch .gk-btn {
+  width: 68px;
+  height: 68px;
+}
+
+/* Portrait: Jump and Soul side by side, Reset and Pause above them. */
+@media (orientation: portrait) {
+  .gk-touch .gk-buttons {
+    max-width: 150px;
+    gap: 8px 10px;
+  }
+}
+
+/* Landscape: the buttons form one column at the right edge, Jump at the bottom,
+   so the play area keeps most of the width. */
 @media (orientation: landscape) {
   .gk-touch .gk-buttons {
-    max-width: 170px;
+    flex-direction: column-reverse;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    max-width: none;
+    gap: 8px;
+  }
+
+  .gk-touch .gk-btn--small {
+    width: 68px;
+    padding: 0;
   }
 }
 

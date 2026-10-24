@@ -12,9 +12,18 @@
     <link rel="apple-touch-icon-precomposed" href="icon/ios_icon.png"/>
     <link rel="icon" type="image/png" href="icon/favicon.png"/>
     <style>
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
         body {
             margin:0;
             background: #000;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
             /* Swipes steer Pac-Man; stop them from scrolling or zooming the page. */
             touch-action: none;
             overscroll-behavior: none;
@@ -25,6 +34,9 @@
             /*
             src: url('font/PressStart2P.ttf');
             */
+        }
+        #canvas {
+            display: block;
         }
         #canvas-warning {
             color: #FF0;

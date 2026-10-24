@@ -316,6 +316,23 @@ const Util = {
         check(entity.x, entity.y + entity.height / 2, 0, -1, ((entity.y + entity.height / 2) % 32));
     },
 
+    // Split text into lines no wider than maxWidth with the context's current font
+    wrapText(ctx, text, maxWidth) {
+        const lines = [];
+        let line = '';
+        text.split(' ').forEach(word => {
+            const next = line ? line + ' ' + word : word;
+            if (line && ctx.measureText(next).width > maxWidth) {
+                lines.push(line);
+                line = word;
+            } else {
+                line = next;
+            }
+        });
+        if (line) lines.push(line);
+        return lines;
+    },
+
     renderTogglePrompt(x, y) {
         let radius = (game.framems % 1000 < 500 ? 4 : 6);
         game.ctx.fillStyle = 'rgba(204, 204, 204, 168)';

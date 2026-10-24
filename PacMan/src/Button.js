@@ -52,7 +52,7 @@ var Button = function(x,y,w,h,onclick) {
         var fingerCount = evt.touches.length;
         if (fingerCount == 1) {
             var pos = getPointerPos(evt.touches[0]);
-            (that.startedInside=that.contains(pos.x,pos.y)) ? that.focus() : that.blur();
+            (that.startedInside=that.containsTouch(pos.x,pos.y)) ? that.focus() : that.blur();
         }
         else {
             touchcancel(evt);
@@ -64,7 +64,7 @@ var Button = function(x,y,w,h,onclick) {
         if (fingerCount == 1) {
             if (that.startedInside) {
                 var pos = getPointerPos(evt.touches[0]);
-                that.contains(pos.x, pos.y) ? that.focus() : that.blur();
+                that.containsTouch(pos.x, pos.y) ? that.focus() : that.blur();
             }
         }
         else {
@@ -135,6 +135,16 @@ Button.prototype = {
     contains: function(x,y) {
         return x >= this.x && x <= this.x+this.w &&
                y >= this.y && y <= this.y+this.h;
+    },
+
+    // Fingers get a slightly larger target: grow the button towards 44 CSS pixels,
+    // but by at most half a tile so neighbouring menu buttons never overlap.
+    containsTouch: function(x,y) {
+        var s = renderScale / getDevicePixelRatio();
+        var padX = Math.min(tileSize/2, Math.max(0, (44/s - this.w)/2));
+        var padY = Math.min(tileSize/2, Math.max(0, (44/s - this.h)/2));
+        return x >= this.x-padX && x <= this.x+this.w+padX &&
+               y >= this.y-padY && y <= this.y+this.h+padY;
     },
 
     click: function() {

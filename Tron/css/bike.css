@@ -35,6 +35,9 @@ html,
 body {
   margin: 0;
   height: 100%;
+  /* No double-tap zoom or pull to refresh; the menu panel still scrolls. */
+  touch-action: manipulation;
+  overscroll-behavior: none;
 }
 
 body {
@@ -280,7 +283,7 @@ p {
 
 .opt button,
 .link-btn {
-  min-height: 40px;
+  min-height: 44px;
   padding: 6px 14px;
   border: 2px solid rgba(255, 255, 255, 0.35);
   border-radius: 8px;
@@ -351,10 +354,20 @@ body.live .stage {
   touch-action: none;
 }
 
+/* START stays in reach while the settings scroll on short screens. */
+#menu .big-btn {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  flex: none;
+  box-shadow: 0 0 0 6px rgba(0, 0, 0, 0.92);
+}
+
 /* Room for the on-screen pad while a round is running: below the arena in
-   portrait, beside it in landscape. */
+   portrait, beside it in landscape. The kit pad is 3 x 56px plus its gaps and
+   sits max(16px, safe area) from the edge. */
 .gk-has-touch body.live {
-  --controls: 196px;
+  --controls: calc(180px + max(16px, env(safe-area-inset-bottom)));
 }
 
 @media (orientation: landscape) and (max-height: 560px) {
@@ -362,23 +375,150 @@ body.live .stage {
     --controls: 0px;
   }
 
+  /* D-pad on the left, Boost on the right, the arena in between. */
   .gk-has-touch body.live .stage {
-    padding-inline: 200px;
+    padding-left: calc(186px + max(16px, env(safe-area-inset-left)));
+    padding-right: calc(96px + max(16px, env(safe-area-inset-right)));
   }
 
   .top {
-    min-height: 0;
+    min-height: 52px;
     padding-block: 4px;
+  }
+
+  .top-actions {
+    top: max(4px, env(safe-area-inset-top));
   }
 
   .tron-logo {
     font-size: 26px;
+  }
+
+  /* While playing, the logo gives its row to the arena; the HUD moves up between
+     the corner buttons. */
+  body.live .top {
+    min-height: 0;
+    padding: 0;
+  }
+
+  body.live .tron-logo {
+    display: none;
+  }
+
+  body.live .hud {
+    width: min(100% - 240px, 520px);
+    padding-top: max(6px, env(safe-area-inset-top));
+  }
+
+  /* Settings in two columns so START fits on the screen. */
+  #menu:not([hidden]) {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    justify-content: center;
+    align-content: start;
+    gap: 8px 16px;
+    padding: 10px 8px;
+    width: min(100% - 20px, 720px);
+  }
+
+  #menu > :not(.opt, .big-btn) {
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+
+  /* START sits beside the last option row. */
+  #menu .big-btn {
+    position: static;
+    align-self: end;
+    justify-self: center;
+    margin: 0;
+    font-size: 22px;
+  }
+
+  #menu h2 {
+    font-size: 22px;
+  }
+
+  #menu .lead {
+    font-size: 13px;
+  }
+
+  /* Each setting: its label over one row of buttons. */
+  #menu .opt {
+    display: grid;
+    grid-auto-flow: column;
+    justify-content: center;
+  }
+
+  #menu .opt-label {
+    grid-row: 1;
+    grid-column: 1 / -1;
+  }
+
+  #menu .opt button {
+    grid-row: 2;
+  }
+
+  #menu .opt-label {
+    line-height: 1;
+  }
+}
+
+/* Very short landscape screens keep just the settings, START and the tips. */
+@media (orientation: landscape) and (max-height: 360px) {
+  #menu h2,
+  #menu .lead {
+    display: none;
+  }
+}
+
+/* Short screens: tighter menus. */
+@media (max-height: 740px), (max-width: 380px) {
+  .panel {
+    gap: 6px;
+    padding: 12px 10px;
+  }
+
+  .opt {
+    gap: 4px 6px;
+  }
+
+  .opt-label {
+    line-height: 1.1;
+  }
+
+  .opt button {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .panel h2 {
+    font-size: 22px;
+  }
+
+  .lead {
+    font-size: 14px;
   }
 }
 
 @media (max-width: 520px) {
   .top {
     min-height: 56px;
+  }
+
+  /* Pause on the left, sound on the right, so neither covers the logo. */
+  .top-actions {
+    left: max(10px, env(safe-area-inset-left));
+    justify-content: space-between;
+    pointer-events: none;
+  }
+
+  .top-actions > * {
+    pointer-events: auto;
+  }
+
+  #mute-btn {
+    margin-left: auto;
   }
 
   .hud {

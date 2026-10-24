@@ -15,7 +15,6 @@ class TouchControls {
         this.deadZone = 10;     // stick travel (view px) before anything happens
         this.stickRadius = 56;  // drawn size and maximum knob travel
         this.aimDistance = 150; // how far ahead of the player the crosshair sits
-        this.buttonSize = 48;
 
         const canvas = game.canvas;
         canvas.addEventListener('pointerdown', e => this.onDown(e));
@@ -28,6 +27,16 @@ class TouchControls {
                 this.release();
             }
         }, true);
+    }
+
+    // Sizes in view pixels, which shrink with the zoomed-out view on phones:
+    // keep the buttons about 46 CSS pixels and the stick ring about 40.
+    get buttonSize() {
+        return Math.max(48, 46 / this.game.zoom);
+    }
+
+    get ringRadius() {
+        return Math.max(this.stickRadius, 40 / this.game.zoom);
     }
 
     toView(e) {
@@ -81,7 +90,11 @@ class TouchControls {
             return;
         }
 
-        e.target.setPointerCapture(e.pointerId);
+        try {
+            e.target.setPointerCapture(e.pointerId);
+        } catch (err) {
+            // The pointer was already released (very short taps): nothing to capture.
+        }
         const stick = { id: e.pointerId, ox: p.x, oy: p.y, x: p.x, y: p.y };
         if (p.x < game.viewW / 2) {
             if (!this.move) this.move = stick;
@@ -154,15 +167,16 @@ class TouchControls {
             if (!stick) return;
             const dx = stick.x - stick.ox, dy = stick.y - stick.oy;
             const len = Math.hypot(dx, dy) || 1;
-            const reach = Math.min(len, this.stickRadius);
+            const ring = this.ringRadius;
+            const reach = Math.min(len, ring);
             ctx.strokeStyle = 'rgba(204, 204, 204, 0.35)';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(stick.ox, stick.oy, this.stickRadius, 0, 2 * Math.PI);
+            ctx.arc(stick.ox, stick.oy, ring, 0, 2 * Math.PI);
             ctx.stroke();
             ctx.fillStyle = 'rgba(204, 204, 204, 0.3)';
             ctx.beginPath();
-            ctx.arc(stick.ox + dx / len * reach, stick.oy + dy / len * reach, 22, 0, 2 * Math.PI);
+            ctx.arc(stick.ox + dx / len * reach, stick.oy + dy / len * reach, ring * 0.4, 0, 2 * Math.PI);
             ctx.fill();
         });
 
@@ -186,7 +200,7 @@ class TouchControls {
             ctx.fill();
             ctx.strokeStyle = 'rgba(204, 255, 204, 0.8)';
             ctx.stroke();
-            ctx.font = Asset.getFontString(16);
+            ctx.font = Asset.getFontString(16 * game.textScale);
             ctx.fillStyle = 'rgba(204, 255, 204, 0.9)';
             const w = ctx.measureText('USE').width;
             ctx.fillText('USE', ub.x + ub.w / 2 - w / 2, ub.y + ub.h / 2 + 5);

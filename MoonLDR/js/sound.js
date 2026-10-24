@@ -31,7 +31,8 @@ class sound{
             var buffer = 0.42;
             if(this.currentTime > this.duration - buffer){
                 this.currentTime = 0;
-                this.play();
+                // Releasing Thrust right here pauses it again: not an error.
+                this.play().catch(() => {});
             }
         });
     }

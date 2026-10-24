@@ -4,6 +4,10 @@ html, body {
     height: 100%;
     overflow: hidden;
     background-color: black;
+    /* The canvas takes every touch: no zoom, scroll or pull to refresh. */
+    touch-action: none;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 #stage {
