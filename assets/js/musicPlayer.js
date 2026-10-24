@@ -24,7 +24,6 @@ async function initMusicPlayer() {
 
   // Retry if elements not yet injected (by VideoPlayerComponent)
   if (!elements.musicSlider) {
-    console.log("Music player elements not found, retrying...");
     setTimeout(initMusicPlayer, 500);
     return;
   }
@@ -32,8 +31,6 @@ async function initMusicPlayer() {
   let isMuted = true; // Start muted to allow Autoplay
   let playlist = [];
   let currentMedia = { type: 'playlist', id: GAMING_MUSIC_PLAYLIST_ID };
-
-  // ... (Parsing and Loading logic remains similar) ...
 
   function parseYoutubeUrl(url) {
     const videoIdMatch = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
@@ -55,7 +52,9 @@ async function initMusicPlayer() {
     currentMedia = parsed || { type: 'playlist', id: GAMING_MUSIC_PLAYLIST_ID };
 
     // Save preference
-    localStorage.setItem('youtubeMedia', input);
+    try {
+      localStorage.setItem('youtubeMedia', input);
+    } catch {}
 
     if (currentMedia.type === 'playlist') {
       elements.changeButton.style.display = 'flex';
@@ -70,7 +69,6 @@ async function initMusicPlayer() {
     // Optimization: If using the default playlist and we know the API key is restricted,
     // skip the fetch entirely and use local defaults immediately.
     if (playlistId === GAMING_MUSIC_PLAYLIST_ID) {
-      console.log("Using local default mix (skipping API).");
       loadDefaultVideo();
       return;
     }
@@ -80,11 +78,9 @@ async function initMusicPlayer() {
       if (playlist.length > 0) {
         loadRandomVideo();
       } else {
-        console.error('Failed to load playlist. Using default videos.');
         loadDefaultVideo();
       }
     } catch (error) {
-      console.error('Error loading playlist. Using default videos.', error);
       loadDefaultVideo();
     }
   }
@@ -127,11 +123,17 @@ async function initMusicPlayer() {
 
   function openModal() {
     elements.playlistModal.classList.remove('hidden');
+    elements.mediaInput.focus();
   }
 
   function closeModal() {
     elements.playlistModal.classList.add('hidden');
+    elements.settingsBtn.focus();
   }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !elements.playlistModal.classList.contains('hidden')) closeModal();
+  });
 
   // Initial State
   // Start OFF as muted visually too
@@ -148,15 +150,11 @@ async function initMusicPlayer() {
     }
     elements.muteIcon.classList.toggle("fa-volume-up", !isMuted);
     elements.muteIcon.classList.toggle("fa-volume-mute", isMuted);
+    elements.muteCircle.setAttribute('aria-pressed', String(!isMuted));
+    elements.videoCircle.setAttribute('aria-pressed', String(!isMuted));
   };
 
-  // Event Listeners
-  // Note: Hover animations are now handled by CSS in music-player.css
-
-  // Debug: Check if buttons exist
-  if (!elements.closeModalBtn) console.error("Close Modal Button not found in DOM");
-  if (!elements.loadMediaBtn) console.error("Load Media Button not found in DOM");
-
+  // Event Listeners (hover/focus reveal of the controls is handled in music-player.css)
   elements.videoCircle.addEventListener("click", toggleMute);
   elements.muteCircle.addEventListener("click", toggleMute);
   elements.changeButton.addEventListener("click", loadRandomVideo);
@@ -179,7 +177,6 @@ async function initMusicPlayer() {
   if (elements.closeModalBtn) {
     elements.closeModalBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      console.log("Cancel clicked");
       closeModal();
     });
   }
@@ -187,20 +184,21 @@ async function initMusicPlayer() {
   if (elements.loadMediaBtn) {
     elements.loadMediaBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      console.log("Load clicked");
       const mediaInput = elements.mediaInput.value.trim();
       if (mediaInput) {
         loadMedia(mediaInput);
         closeModal();
       } else {
-        console.warn("Input is empty");
-        // Optional: Shake animation or alert
+        elements.mediaInput.focus();
       }
     });
   }
 
   // Load Initial Media
-  const savedMedia = localStorage.getItem('youtubeMedia') || GAMING_MUSIC_PLAYLIST_ID;
+  let savedMedia = GAMING_MUSIC_PLAYLIST_ID;
+  try {
+    savedMedia = localStorage.getItem('youtubeMedia') || GAMING_MUSIC_PLAYLIST_ID;
+  } catch {}
   elements.mediaInput.value = savedMedia;
   await loadMedia(savedMedia);
 }

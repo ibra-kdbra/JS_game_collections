@@ -59,8 +59,29 @@ To explore and run the games in this collection:
    ```bash
    cd JS_game_collections
    ```
-3. **Open the Index File:**
-     Launch index.html in your preferred web browser to access the game selection menu.
+3. **Serve it locally:** the hub uses ES modules, which browsers won't load from `file://`.
+   Any static server works:
+   ```bash
+   python3 -m http.server 8000
+   ```
+   Then open http://localhost:8000.
+
+### Adding or editing a game on the hub
+
+The hub and the Art Lab page are generated from one registry, `assets/js/data.js`.
+
+1. Add an entry to `games` (or `experiments`) with its `slug`, `title`, `href`, `blurb`,
+   `genre`, `inputs` and `mobile` flag. Set `mobile: true` only after checking the game at
+   phone size with touch.
+2. Add a 16:10 thumbnail as `assets/thumbs/<slug>-480.webp` and `<slug>-960.webp`.
+3. Re-render the pages so the list works without JavaScript:
+   ```bash
+   node tools/render-pages.mjs
+   ```
+   `node tools/render-pages.mjs --check` exits non-zero if the pages are stale.
+
+See [docs/UPGRADE_PLAN.md](docs/UPGRADE_PLAN.md) for the roadmap and [CREDITS.md](CREDITS.md) for
+the original authors and licences of the games, sounds and libraries.
 
 [Back to top](#javascript-game-collection)
 

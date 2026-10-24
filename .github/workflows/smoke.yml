@@ -1,0 +1,58 @@
+name: Checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  levels:
+    name: Pages and level checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Pre-rendered pages match data.js
+        run: node tools/render-pages.mjs --check
+      - name: Brainy Warrior levels
+        run: node Brainy_Warrior/tools/verify-levels.mjs
+      - name: Crate Lab levels
+        run: node Sokoban/tools/verify-levels.mjs
+      - name: Breakout levels
+        run: node Breakout/tools/verify-levels.mjs
+      - name: Snake
+        run: node Snake/tools/verify.mjs
+      - name: Minesweeper solver
+        run: node Minesweeper/test/solver.test.mjs
+      - name: Souls Bumper levels
+        run: node Souls-Bumper/tools/verify-levels.mjs
+      - name: Gravity Wells puzzles
+        run: node Gravity_Wells/tools/verify-puzzles.mjs
+      - name: ReWire levels
+        run: node ReWire/tools/verify-levels.mjs
+      - name: Raven levels
+        run: node Raven/tools/verify-levels.mjs
+      - name: Tower Defense campaign maps
+        run: node TowerDefense/tools/verify-maps.mjs
+
+  smoke:
+    name: Browser smoke test
+    # Playwright 1.56.1 has no Chromium build for ubuntu-latest (26.04); keep the runner it supports.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Open every page at phone and desktop size
+        run: node tools/smoke.mjs
+      - name: Tower Defense aiming during explosions
+        run: node TowerDefense/tools/aim-test.mjs

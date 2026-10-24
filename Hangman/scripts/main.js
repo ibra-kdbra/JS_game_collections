@@ -1,5 +1,5 @@
 const scene = document.querySelector("#scene");
-const parallaxInstance = new Parallax(scene);
+const parallaxInstance = createParallax(scene);
 const alphaContainer = document.querySelector(".alpha-container");
 const wordContainer = document.querySelector(".word-container");
 const modal = document.querySelector(".modal");
@@ -11,72 +11,113 @@ const scoreSpan = document.querySelector(".score span");
 const bestScoreSpan = document.querySelector(".best-score span");
 const diffSpan = document.querySelector(".category span:nth-child(2)");
 const catSpan = document.querySelector(".category span");
-const wordUrl = "https://api.datamuse.com/words?rel_trg=";
-const pokeUrl = "https://pokeapi.co/api/v2/pokemon/?limit=200";
-let words = [];
-let data = undefined;
-let current = 0;
-let wordArray;
-let hidden = {};
-let nextButton;
-let guesses = 5;
-let score = 0;
-let bestScore = 0;
-let category = "food";
-let queryParam = category;
-let diffValues = {
+const hintButton = document.querySelector(".hint-button");
+const menuStatus = document.querySelector(".menu-status");
+const retryButton = document.querySelector(".retry-button");
+const dailyButton = document.querySelector(".daily-button");
+const bonusButton = document.querySelector(".bonus-button");
+const gameoverModal = document.querySelector(".gameover-modal");
+const SLUG = "hangman";
+const store = GameKit.createStore(SLUG);
+
+// Tuning levers.
+const MAX_GUESSES = 5;
+const POINTS_PER_LETTER = 10;
+const HINT_COST = 15; // Points; when the score can't cover it, a hint costs one guess instead.
+const HINTS_PER_WORD = 1;
+const FETCH_TIMEOUT_MS = 6000;
+const diffValues = {
 	easy: 0.4,
 	medium: 0.7,
 	hard: 1.3,
 };
-let difficulty = "medium";
-const alphabet = [
-	"A",
-	"B",
-	"C",
-	"D",
-	"E",
-	"F",
-	"G",
-	"H",
-	"I",
-	"J",
-	"K",
-	"L",
-	"M",
-	"N",
-	"O",
-	"P",
-	"Q",
-	"R",
-	"S",
-	"T",
-	"U",
-	"V",
-	"W",
-	"X",
-	"Y",
-	"Z",
+const CATEGORIES = [
+	{ id: "food", label: "Food", api: "food" },
+	{ id: "animals", label: "Animals", api: "animals" },
+	{ id: "countries", label: "Countries", api: "countries" },
+	{ id: "sports", label: "Sports", api: "sports" },
+	{ id: "instruments", label: "Instruments", api: "instruments" },
+	{ id: "jobs", label: "Jobs" },
+	{ id: "transport", label: "Transport" },
+	{ id: "ocean", label: "Ocean" },
+	{ id: "fantasy", label: "Fantasy" },
+	{ id: "space", label: "Space", api: "planets" },
+	{ id: "science", label: "Science", api: "sciences" },
+	{ id: "software", label: "Software", api: "software" },
+	{ id: "superheroes", label: "Superheroes" },
+	{ id: "pokemon", label: "Pokemon", api: "pokemon" },
 ];
-const updateCurrent = () => {
-	current = Math.floor(Math.random() * words.length);
-};
-const getRandomWord = () => {
-	if (words.length > 0) {
-		let currentWord = words[current].toUpperCase().split("");
-		words.splice(current, 1);
-		return currentWord;
-	} else {
-		// Handle empty words
+const wordUrl = "https://api.datamuse.com/words?max=100&rel_trg=";
+const pokeUrl = "https://pokeapi.co/api/v2/pokemon/?limit=151";
+
+let wordData = null;
+let categoryWords = [];
+let words = [];
+let wordArray;
+let currentWord = "";
+let hidden = {};
+let nextButton;
+let guesses = MAX_GUESSES;
+let score = 0;
+let streak = 0;
+let hintsLeft = HINTS_PER_WORD;
+let roundOver = true;
+let mode = "classic";
+let bestScore = store.get("bestScore", 0);
+let category = CATEGORIES.some((c) => c.id === store.get("category"))
+	? store.get("category")
+	: "food";
+let difficulty = diffValues[store.get("difficulty")] ? store.get("difficulty") : "medium";
+let bonusWords = store.get("bonusWords", false);
+allowAudio = store.get("sound", true);
+bestScoreSpan.innerText = bestScore;
+
+const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+const isTouch = () => matchMedia("(pointer: coarse)").matches;
+const categoryLabel = (id) => CATEGORIES.find((c) => c.id === id).label;
+
+// Seeded randomness so the daily word (and which letters it hides) is the same for everyone.
+const hashString = (str) => {
+	let h = 1779033703 ^ str.length;
+	for (let i = 0; i < str.length; i++) {
+		h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+		h = (h << 13) | (h >>> 19);
 	}
+	return h >>> 0;
+};
+const mulberry32 = (seed) => () => {
+	seed = (seed + 0x6d2b79f5) | 0;
+	let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+	t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+	return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+const todayKey = (d = new Date()) => {
+	const pad = (n) => String(n).padStart(2, "0");
+	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+const dailyPick = (dateKey) => {
+	const rng = mulberry32(hashString(`hangman-daily-${dateKey}`));
+	const cat = CATEGORIES[Math.floor(rng() * CATEGORIES.length)];
+	const list = wordData[cat.id];
+	return { category: cat.id, word: list[Math.floor(rng() * list.length)], rng };
+};
+
+const getRandomWord = () => {
+	if (words.length === 0) {
+		// Out of words: reshuffle the whole category, avoiding an immediate repeat.
+		words = categoryWords.filter((w) => w !== currentWord);
+	}
+	const index = Math.floor(Math.random() * words.length);
+	currentWord = words.splice(index, 1)[0];
+	return currentWord.toUpperCase().split("");
 };
 const reduceGuesses = () => {
 	if (guesses > 0) guesses--;
-	guessesSpan.innerText = `${guesses}/5`;
+	guessesSpan.innerText = `${guesses}/${MAX_GUESSES}`;
 };
 const resetGuesses = () => {
-	guesses = 5;
-	guessesSpan.innerText = `${guesses}/5`;
+	guesses = MAX_GUESSES;
+	guessesSpan.innerText = `${guesses}/${MAX_GUESSES}`;
 };
 const increaseScore = (val) => {
 	score += val;
@@ -84,28 +125,23 @@ const increaseScore = (val) => {
 };
 const resetScore = () => {
 	score = 0;
+	streak = 0;
 	scoreSpan.innerText = score;
 };
 const updateBestScore = () => {
-	if (score > bestScore) {
+	if (mode === "classic" && score > bestScore) {
 		bestScore = score;
 		bestScoreSpan.innerText = bestScore;
+		store.set("bestScore", bestScore);
 	}
 };
-mobileAndTabletCheck = () => {
-	let check = false;
-	((a) => {
-		if (
-			/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino|android|ipad|playbook|silk/i.test(
-				a
-			) ||
-			/1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(
-				a.substr(0, 4)
-			)
-		)
-			check = true;
-	})(navigator.userAgent || navigator.vendor || window.opera);
-	return check;
+const recordRun = () => {
+	if (mode !== "classic") return;
+	GameKit.recordBest(SLUG, score, { label: `${score} pts` });
+	GameKit.recordBest(SLUG, streak, {
+		mode: "streak",
+		label: `${streak} word${streak === 1 ? "" : "s"} in a row`,
+	});
 };
 const disableAllButtons = () => {
 	let buttons = document.querySelectorAll("main button");
@@ -122,6 +158,7 @@ const enableAllButtons = () => {
 		)
 			button.disabled = false;
 	});
+	updateHintButton();
 };
 // Creating alphabet buttons...
 alphabet.forEach((letter) => {
@@ -130,14 +167,11 @@ alphabet.forEach((letter) => {
 	button.id = `${letter}`;
 	button.value = letter;
 	button.innerText = letter;
-	button.addEventListener("click", () => disable(button));
+	button.setAttribute("aria-label", `Guess ${letter}`);
 	button.addEventListener("click", () => {
-		if (!mobileAndTabletCheck()) {
-			if (nextButton?.disabled) checkAnswer(button.innerText);
-		} else {
-			if (!document.querySelector("body").classList.contains("swipe"))
-				checkAnswer(button.innerText);
-		}
+		if (roundOver || button.disabled) return;
+		button.disabled = true;
+		checkAnswer(letter);
 	});
 	alphaContainer.append(button);
 });
@@ -218,15 +252,12 @@ const handleTouchMove = (e) => {
 	let yUp = e.touches[0].clientY;
 	let xDiff = xDown - xUp;
 	let yDiff = yDown - yUp;
-	if (Math.abs(xDiff) > Math.abs(yDiff)) {
-		if (xDiff > 0) {
-			swipped = true;
-		}
+	if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff > 0) {
+		swipped = true;
 	}
 };
-const handleTouchEnd = () => {
-	if (!swipped) return;
-	document.querySelector("body").classList.toggle("swipe");
+const advanceTouch = () => {
+	body.classList.remove("swipe");
 	wordContainer.animate(fadeOut.keyframes, fadeOut.opts);
 	setTimeout(() => nextWord(true), 300);
 	resetGuesses();
@@ -238,9 +269,18 @@ const handleTouchEnd = () => {
 	yDown = null;
 	swipped = false;
 };
-const disable = (button) => {
-	if (!button.disabled) button.disabled = true;
+const handleTouchEnd = () => {
+	if (swipped) advanceTouch();
 };
+const canAdvance = () => roundOver && guesses > 0 && mode === "classic" && !gameoverVisible();
+const goNext = () => {
+	if (!canAdvance()) return;
+	if (body.classList.contains("swipe")) advanceTouch();
+	else if (nextButton && !nextButton.disabled) nextButton.click();
+};
+wordContainer.addEventListener("click", (e) => {
+	if (body.classList.contains("swipe") && !e.target.closest(".next-button")) goNext();
+});
 const toggleNextButton = () => {
 	if (nextButton && nextButton.disabled) {
 		nextButton.disabled = false;
@@ -266,6 +306,7 @@ const CreateNextButton = () => {
 	if (!nextButton) {
 		nextButton = document.createElement("button");
 		nextButton.className = "next-button";
+		nextButton.setAttribute("aria-label", "Next word (Enter)");
 		nextButton.append(svg);
 		nextButton.addEventListener("pointerenter", () => {
 			nextButtonTl.pause();
@@ -287,92 +328,171 @@ const CreateNextButton = () => {
 	wordContainer.append(nextButton);
 };
 
-const checkAnswer = (value) => {
-	let keys = Object.keys(hidden).filter((k) => hidden[k] === value);
-	if (keys.length !== 0) {
-		keys.forEach((k) => {
-			let span = document.querySelector(`#id-${k}`);
-			let cover = document.querySelector(`#cover-${k}`);
-			span.innerText = hidden[k];
-			delete hidden[k];
-			span.style.visibility = "visible";
-			cover.style.transform = "scaleY(0)";
-			if (allowAudio) correctAudio.play();
-			increaseScore(10);
-			updateBestScore();
-			if (Object.keys(hidden).length === 0 && hidden.constructor === Object) {
-				let boxes = document.querySelectorAll("li.letter");
-				boxes.forEach((box) => {
-					if (!box.classList.contains("hyphen"))
-						box.style.border = "2px solid #37b666";
-				});
-				wordContainer.animate(
-					[
-						{
-							transform: "scale(1)",
-						},
-						{
-							transform: "scale(1.06)",
-						},
-					],
-					{
-						duration: 250,
-						iterations: 2,
-						direction: "alternate",
-					}
-				);
-				if (allowAudio) winAudio.play();
-				updateCurrent();
-				if (mobileAndTabletCheck()) {
-					document.querySelector("body").classList.toggle("swipe");
-					document.addEventListener("touchstart", handleTouchStart, false);
-					document.addEventListener("touchmove", handleTouchMove, false);
-					document.addEventListener("touchend", handleTouchEnd, false);
-				} else {
-					toggleNextButton();
-				}
-			}
+const gameoverVisible = () => gameoverModal.style.visibility === "visible";
+const showResult = (title, delay) => {
+	document.querySelector(".gameover-box .text").innerText = title;
+	document.querySelector(".gameover-word b").innerText = currentWord.toUpperCase();
+	document.querySelector(".gameover-data .score").innerText = score;
+	document.querySelector(".gameover-data .best-score").innerText = bestScore;
+	document.querySelector(".gameover-data .streak").innerText = streak;
+	document.querySelector(".streak-label").innerText = mode === "daily" ? "Daily streak:" : "Words in a row:";
+	document.querySelector(".gameover-data .daily-note").hidden = mode !== "daily";
+	document.querySelector(".score-cont").hidden = mode === "daily";
+	document.querySelector(".best-score-cont").hidden = mode === "daily";
+	document.querySelector(".gameover-box .play-again").hidden = mode === "daily";
+	setTimeout(() => {
+		gsap.set(".gameover-box", { scale: 1.6 });
+		gsap.set(gameoverModal, { opacity: 0 });
+		gsap
+			.timeline({ defaults: { duration: 0.25, ease: "none" } })
+			.to(gameoverModal, { visibility: "visible" })
+			.to(gameoverModal, { opacity: 1 })
+			.to(".gameover-box", { scale: 1, opacity: 1 }, "<");
+		parallaxInstance.disable();
+	}, delay);
+};
+const finishDaily = (solved) => {
+	const date = todayKey();
+	store.set("daily", { date, solved, word: currentWord, wrong: MAX_GUESSES - guesses });
+	if (solved) {
+		const last = store.get("dailyStreak", { count: 0, date: "" });
+		const yesterday = new Date();
+		yesterday.setDate(yesterday.getDate() - 1);
+		const count = last.date === todayKey(yesterday) ? last.count + 1 : 1;
+		store.set("dailyStreak", { count, date });
+		streak = count;
+		GameKit.recordBest(SLUG, count, {
+			mode: "daily-streak",
+			label: `${count} day daily streak`,
 		});
 	} else {
-		let button = document.getElementById(value);
-		button.style.border = "1px solid red";
-		if (allowAudio) {
-			wrongAudio.volume = 0.2;
-			wrongAudio.play();
+		store.set("dailyStreak", { count: 0, date });
+		streak = 0;
+	}
+	updateDailyButton();
+};
+const solveWord = () => {
+	roundOver = true;
+	updateHintButton();
+	let boxes = document.querySelectorAll("li.letter");
+	boxes.forEach((box) => {
+		if (!box.classList.contains("hyphen")) box.style.border = "2px solid #37b666";
+	});
+	wordContainer.animate(
+		[
+			{
+				transform: "scale(1)",
+			},
+			{
+				transform: "scale(1.06)",
+			},
+		],
+		{
+			duration: 250,
+			iterations: 2,
+			direction: "alternate",
 		}
-		reduceGuesses();
-		pullUp();
-		if (guesses === 0) {
-			// Game over!
-			disableAllButtons();
-			loseAudio.volume = 0.2;
-			if (allowAudio) loseAudio.play();
-			setTimeout(() => {
-				let modal = document.querySelector(".gameover-modal");
-				gsap.set(".gameover-box", { scale: 1.6 });
-				gsap.set(modal, { opacity: 0 });
-				gsap
-					.timeline({ defaults: { duration: 0.25, ease: "none" } })
-					.to(modal, { visibility: "visible" })
-					.to(modal, { opacity: 1 })
-					.to(".gameover-box", { scale: 1, opacity: 1 }, "<");
-				parallaxInstance.disable();
-			}, 2000);
-			document.querySelector(".gameover-data .score").innerText = score;
-			document.querySelector(
-				".gameover-data .best-score"
-			).innerText = bestScore;
-		}
+	);
+	playSound("win");
+	if (mode === "daily") {
+		finishDaily(true);
+		showResult("SOLVED!", 1200);
+		return;
+	}
+	streak++;
+	recordRun();
+	if (isTouch()) {
+		body.classList.add("swipe");
+		document.addEventListener("touchstart", handleTouchStart, false);
+		document.addEventListener("touchmove", handleTouchMove, false);
+		document.addEventListener("touchend", handleTouchEnd, false);
+	} else {
+		toggleNextButton();
 	}
 };
-const hideLetters = (wordArray) => {
+const revealLetter = (value, points) => {
+	let keys = Object.keys(hidden).filter((k) => hidden[k] === value);
+	keys.forEach((k) => {
+		let span = document.querySelector(`#id-${k}`);
+		let cover = document.querySelector(`#cover-${k}`);
+		span.innerText = hidden[k];
+		delete hidden[k];
+		span.style.visibility = "visible";
+		cover.style.transform = "scaleY(0)";
+		if (points) increaseScore(points);
+	});
+	updateBestScore();
+	if (keys.length && Object.keys(hidden).length === 0) solveWord();
+	return keys.length > 0;
+};
+const loseRound = () => {
+	roundOver = true;
+	disableAllButtons();
+	playSound("lose", 0.2);
+	if (mode === "daily") {
+		finishDaily(false);
+		showResult("MISSED!", 2000);
+	} else {
+		recordRun();
+		showResult("GAME OVER", 2000);
+	}
+};
+const wrongGuess = () => {
+	reduceGuesses();
+	pullUp();
+	updateHintButton();
+	if (guesses === 0) loseRound();
+};
+const checkAnswer = (value) => {
+	if (revealLetter(value, mode === "classic" ? POINTS_PER_LETTER : 0)) {
+		playSound("correct");
+	} else {
+		document.getElementById(value).style.border = "1px solid red";
+		playSound("wrong", 0.2);
+		wrongGuess();
+	}
+};
+const hintPrice = () => (mode === "classic" && score >= HINT_COST ? "points" : "guess");
+const updateHintButton = () => {
+	const usable = !roundOver && hintsLeft > 0 && (hintPrice() === "points" || guesses > 1);
+	hintButton.disabled = !usable;
+	hintButton.querySelector("small").innerText =
+		hintPrice() === "points" ? `-${HINT_COST}` : "-1 guess";
+};
+const useHint = () => {
+	if (hintButton.disabled) return;
+	const letters = [...new Set(Object.values(hidden))];
+	const letter = letters[Math.floor(Math.random() * letters.length)];
+	hintsLeft--;
+	const button = document.getElementById(letter);
+	button.disabled = true;
+	button.style.border = "1px solid var(--second-button-color)";
+	playSound("correct");
+	if (hintPrice() === "points") {
+		increaseScore(-HINT_COST);
+		revealLetter(letter, 0);
+	} else {
+		revealLetter(letter, 0);
+		if (!roundOver) wrongGuess();
+	}
+	updateHintButton();
+};
+hintButton.addEventListener("click", useHint);
+const hideLetters = (wordArray, rng = Math.random) => {
 	let maxHidden = Math.floor(wordArray.length * diffValues[difficulty]);
 	for (let i = 0; i < maxHidden; i++) {
-		let ran = Math.floor(Math.random() * wordArray.length);
+		let ran = Math.floor(rng() * wordArray.length);
 		if (wordArray[ran] !== "" && wordArray[ran] !== " ") {
 			hidden[ran] = wordArray[ran];
 			wordArray[ran] = "";
 		}
+	}
+	if (Object.keys(hidden).length === 0) {
+		// Very short words can dodge every pick; always hide at least one letter.
+		const letters = wordArray.map((l, i) => (l === " " ? -1 : i)).filter((i) => i >= 0);
+		const ran = letters[Math.floor(rng() * letters.length)];
+		hidden[ran] = wordArray[ran];
+		wordArray[ran] = "";
 	}
 };
 const clearPrevWord = (all) => {
@@ -381,7 +501,6 @@ const clearPrevWord = (all) => {
 		button.style.border = "none";
 	});
 	if (all && wordContainer.firstChild) {
-		// For mobile...
 		while (wordContainer.firstChild) {
 			wordContainer.removeChild(wordContainer.lastChild);
 		}
@@ -394,6 +513,7 @@ const clearPrevWord = (all) => {
 	}
 };
 const createLetterElements = (wordArray) => {
+	wordContainer.style.setProperty("--letters", wordArray.length);
 	wordArray.forEach((letter, i) => {
 		let box = document.createElement("li");
 		let cover = document.createElement("div");
@@ -410,7 +530,6 @@ const createLetterElements = (wordArray) => {
 		if (letter === " ") {
 			span.style.borderBottom = "4px solid white";
 			box.classList.add("hyphen");
-			box.border = "none";
 			box.style.backgroundColor = "rgba(0,0,0,0)";
 			box.style.boxShadow = "none";
 		}
@@ -418,14 +537,20 @@ const createLetterElements = (wordArray) => {
 		box.append(cover);
 		wordContainer.append(box);
 	});
-	if (!mobileAndTabletCheck()) CreateNextButton();
+	if (!isTouch() && mode === "classic") CreateNextButton();
+};
+const beginRound = (rng) => {
+	hidden = {};
+	hintsLeft = HINTS_PER_WORD;
+	hideLetters(wordArray, rng);
+	roundOver = false;
+	createLetterElements(wordArray);
+	updateHintButton();
 };
 const nextWord = (all) => {
-	// wordArray = words[current].toUpperCase().split("");
 	wordArray = getRandomWord();
 	clearPrevWord(all);
-	hideLetters(wordArray);
-	createLetterElements(wordArray);
+	beginRound();
 	wordContainer.animate(fadeIn.keyframes, fadeIn.opts);
 };
 let alpha = document.querySelector(".alpha-container");
@@ -445,7 +570,7 @@ const setupScene = () => {
 	word.classList.toggle("paused");
 	gsap.set(right, { scale: 1.4, y: "5%" });
 	gsap.set(left, { scale: 1.4, y: "5%" });
-	if (mobileAndTabletCheck()) {
+	if (isTouch()) {
 		gsap.set(mid, { y: "5%" });
 	} else {
 		gsap.set(mid, { y: "-6%" });
@@ -470,6 +595,7 @@ const animateScene = () => {
 		word.classList.toggle("paused");
 	}
 };
+const menuVisible = () => modal.style.visibility !== "collapse";
 const showMenu = () => {
 	modal.style.visibility = "visible";
 	modal.style.opacity = 1;
@@ -488,51 +614,67 @@ const closeMenu = () => {
 		modal.style.visibility = "collapse";
 	}, 600);
 };
-const fetchData = (endpoint) => {
-	return fetch(endpoint)
-		.then(
-			(response) => {
-				if (response.ok) {
-					return response.json();
-				}
-				throw new Error("Request failed!");
-			},
-			(networkError) => {
-				console.log(networkError);
-			}
-		)
-		.then((jsonResponse) => {
-			return new Promise((resolve) => {
-				resolve(jsonResponse);
-			});
-		});
+const fetchJson = (url) => {
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+	return fetch(url, { signal: controller.signal })
+		.then((response) => {
+			if (!response.ok) throw new Error(`Request failed (${response.status})`);
+			return response.json();
+		})
+		.finally(() => clearTimeout(timer));
 };
-const fillData = (jsonResponse, cat) => {
-	if (cat === "pokemons") {
-		jsonResponse["results"].forEach((poke) => {
-			words.push(poke.name);
+const loadWordLists = () => {
+	if (wordData) return Promise.resolve(wordData);
+	return fetchJson("./data/words.json").then((json) => {
+		wordData = json;
+		return json;
+	});
+};
+// Optional extra words from the web. Any failure just leaves the offline list in place.
+const fetchBonusWords = (cat) => {
+	const spec = CATEGORIES.find((c) => c.id === cat);
+	if (!bonusWords || !spec.api) return Promise.resolve([]);
+	const request =
+		cat === "pokemon"
+			? fetchJson(pokeUrl).then((json) => json.results.map((poke) => poke.name))
+			: fetchJson(`${wordUrl}${encodeURIComponent(spec.api)}`).then((json) =>
+					json.map((obj) => obj.word)
+			  );
+	return request
+		.then((list) => list.filter((w) => /^[a-z]{4,12}$/.test(w)))
+		.catch(() => {
+			menuStatus.innerText = "Online words unavailable, using the built-in list.";
+			return [];
 		});
-	} else {
-		jsonResponse.forEach((obj) => {
-			words.push(obj.word);
-		});
-	}
-	sessionStorage.setItem("currentData", JSON.stringify(words));
 };
 const setupGame = () => {
 	clearPrevWord(true);
-	updateCurrent();
 	resetGuesses();
 	resetScore();
 	resetCanvas();
-	wordArray = getRandomWord();
-	hidden = {};
 	nextButton = undefined;
+	body.classList.remove("swipe");
 };
 const startGame = () => {
 	setupGame();
-	hideLetters(wordArray);
-	createLetterElements(wordArray);
+	nextWord(true);
+	closeMenu();
+	animateScene();
+	enableAllButtons();
+};
+const startDaily = () => {
+	const pick = dailyPick(todayKey());
+	mode = "daily";
+	setupGame();
+	catSpan.innerText = "DAILY WORD";
+	diffSpan.innerText = categoryLabel(pick.category);
+	currentWord = pick.word;
+	wordArray = pick.word.toUpperCase().split("");
+	const savedDifficulty = difficulty;
+	difficulty = "medium";
+	beginRound(pick.rng);
+	difficulty = savedDifficulty;
 	closeMenu();
 	animateScene();
 	enableAllButtons();
@@ -545,34 +687,66 @@ const toggleMenuList = (name) => {
 let catButton = document.querySelector(".category-button");
 let diffButton = document.querySelector(".difficulty-button");
 let playButton = document.querySelector(".start-game");
-document.querySelector(".start-game").addEventListener("click", () => {
-	catButton.disabled = true;
-	diffButton.disabled = true;
-	playButton.disabled = true;
-	playButton.classList.toggle("loading");
-	if (queryParam !== category || words.length === 0) {
-		words.length = 0;
-		queryParam = category;
-		let endpoint = `${wordUrl}${queryParam}`;
-		if (category === "pokemons") {
-			fetchData(pokeUrl).then((jsonResponse) => {
-				playButton.classList.toggle("loading");
-				fillData(jsonResponse, "pokemons");
-				startGame();
-			});
-		} else {
-			fetchData(endpoint).then((jsonResponse) => {
-				playButton.classList.toggle("loading");
-				fillData(jsonResponse);
-				startGame();
-			});
-		}
-	} else {
-		playButton.classList.toggle("loading");
-		words.length = 0;
-		words = JSON.parse(sessionStorage.getItem("currentData"));
-		startGame();
-	}
+const setMenuEnabled = (enabled) => {
+	[catButton, diffButton, playButton, dailyButton, bonusButton].forEach(
+		(b) => (b.disabled = !enabled)
+	);
+	if (enabled) updateDailyButton();
+};
+const showLoadError = (action) => {
+	playButton.classList.remove("loading");
+	setMenuEnabled(true);
+	menuStatus.innerText = "Couldn't load the word lists. Check your connection and try again.";
+	retryButton.hidden = false;
+	retryButton.onclick = () => {
+		retryButton.hidden = true;
+		action();
+	};
+};
+const play = () => {
+	setMenuEnabled(false);
+	menuStatus.innerText = "";
+	retryButton.hidden = true;
+	playButton.classList.add("loading");
+	loadWordLists()
+		.then(() => fetchBonusWords(category))
+		.then((extra) => {
+			playButton.classList.remove("loading");
+			mode = "classic";
+			catSpan.innerText = categoryLabel(category).toUpperCase();
+			diffSpan.innerText = difficulty;
+			categoryWords = [...new Set([...wordData[category], ...extra])];
+			words = [...categoryWords];
+			startGame();
+		})
+		.catch(() => showLoadError(play));
+};
+const playDaily = () => {
+	setMenuEnabled(false);
+	menuStatus.innerText = "";
+	retryButton.hidden = true;
+	loadWordLists()
+		.then(startDaily)
+		.catch(() => showLoadError(playDaily));
+};
+const updateDailyButton = () => {
+	const today = store.get("daily");
+	const done = today && today.date === todayKey();
+	dailyButton.disabled = !!done;
+	dailyButton.innerText = done
+		? `Daily ${today.solved ? "solved" : "missed"}, back tomorrow`
+		: "Daily word";
+};
+const updateBonusButton = () => {
+	bonusButton.innerText = `Online bonus words: ${bonusWords ? "on" : "off"}`;
+	bonusButton.setAttribute("aria-pressed", String(bonusWords));
+};
+playButton.addEventListener("click", play);
+dailyButton.addEventListener("click", playDaily);
+bonusButton.addEventListener("click", () => {
+	bonusWords = !bonusWords;
+	store.set("bonusWords", bonusWords);
+	updateBonusButton();
 });
 catButton.addEventListener("click", () => {
 	toggleMenuList("category");
@@ -592,75 +766,102 @@ diffButton.addEventListener("focusout", () => {
 		toggleMenuList("difficulty");
 	}
 });
-document.querySelector(".home-button").addEventListener("click", () => {
+const goHome = () => {
 	nextButtonTl.pause().progress(0);
-	catButton.disabled = false;
-	diffButton.disabled = false;
-	playButton.disabled = false;
+	if (mode === "classic" && !roundOver) recordRun();
+	roundOver = true;
+	setMenuEnabled(true);
 	showMenu();
-});
+};
+document.querySelector(".home-button").addEventListener("click", goHome);
 let soundButton = document.querySelector(".sound-button");
+const updateSoundButton = () => {
+	soundButton.classList.toggle("disabled", !allowAudio);
+	soundButton.setAttribute("aria-label", allowAudio ? "Mute sound" : "Unmute sound");
+};
 soundButton.addEventListener("click", () => {
-	soundButton.classList.toggle("disabled");
 	allowAudio = !allowAudio;
+	store.set("sound", allowAudio);
+	updateSoundButton();
 });
-let catItems = document.querySelectorAll(".category-list li");
+const catList = document.querySelector(".category-list .list");
+CATEGORIES.forEach((cat) => {
+	const li = document.createElement("li");
+	li.innerText = cat.label;
+	li.addEventListener("pointerdown", () => {
+		category = cat.id;
+		store.set("category", category);
+		catButton.innerText = cat.label;
+	});
+	catList.append(li);
+});
 let diffItems = document.querySelectorAll(".difficulty-list li");
-catItems.forEach((li) => {
-	li.addEventListener("mousedown", () => {
-		catButton.innerText = li.innerText;
-		catSpan.innerText = li.innerText.toUpperCase();
-		category = li.innerText.toLowerCase();
-	});
-});
 diffItems.forEach((li) => {
-	li.addEventListener("mousedown", () => {
+	li.addEventListener("pointerdown", () => {
 		diffButton.innerText = li.innerText;
-		diffSpan.innerText = li.innerText;
 		difficulty = li.innerText.toLowerCase();
+		store.set("difficulty", difficulty);
 	});
 });
+catButton.innerText = categoryLabel(category);
+diffButton.innerText = difficulty[0].toUpperCase() + difficulty.slice(1);
+updateSoundButton();
+updateBonusButton();
+updateDailyButton();
+const closeGameover = () =>
+	gsap.to(".gameover-box", {
+		duration: 0.25,
+		scale: 1.6,
+		opacity: 0,
+		ease: "none",
+	});
 document
 	.querySelector(".gameover-box .main-menu")
 	.addEventListener("click", () => {
-		gsap
-			.to(".gameover-box", {
-				duration: 0.25,
-				scale: 1.6,
-				opacity: 0,
-				ease: "none",
-			})
-			.then((_) => {
-				nextButtonTl.pause().progress(0);
-				catButton.disabled = false;
-				diffButton.disabled = false;
-				playButton.disabled = false;
-				showMenu();
-				setTimeout(() => {
-					document.querySelector(".gameover-modal").style.visibility =
-						"collapse";
-					parallaxInstance.enable();
-				}, 600);
-			});
+		closeGameover().then(() => {
+			nextButtonTl.pause().progress(0);
+			setMenuEnabled(true);
+			showMenu();
+			setTimeout(() => {
+				gameoverModal.style.visibility = "collapse";
+				parallaxInstance.enable();
+			}, 600);
+		});
 	});
 document
 	.querySelector(".gameover-box .play-again")
 	.addEventListener("click", () => {
-		gsap
-			.to(".gameover-box", {
-				duration: 0.25,
-				scale: 1.6,
-				opacity: 0,
-				ease: "none",
-			})
-			.then((_) => {
-				document.querySelector(".gameover-modal").style.visibility = "collapse";
-				words.length = 0;
-				words = JSON.parse(sessionStorage.getItem("currentData"));
-				setupGame();
-				hideLetters(wordArray);
-				createLetterElements(wordArray);
-				enableAllButtons();
-				parallaxInstance.enable();
-			});
+		closeGameover().then(() => {
+			gameoverModal.style.visibility = "collapse";
+			words = [...categoryWords];
+			setupGame();
+			nextWord(true);
+			enableAllButtons();
+			parallaxInstance.enable();
+		});
 	});
+document.addEventListener("keydown", (e) => {
+	if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+	if (gameoverVisible()) {
+		if (e.key === "Enter") {
+			const again = document.querySelector(".gameover-box .play-again");
+			(again.hidden ? document.querySelector(".gameover-box .main-menu") : again).click();
+			e.preventDefault();
+		}
+		return;
+	}
+	if (menuVisible()) return;
+	if (/^[a-z]$/i.test(e.key)) {
+		const button = document.getElementById(e.key.toUpperCase());
+		if (button && !button.disabled && !roundOver) button.click();
+		e.preventDefault();
+	} else if (e.key === "Enter" || e.key === "ArrowRight") {
+		goNext();
+		e.preventDefault();
+	} else if (e.key === "?" || e.key === "/") {
+		useHint();
+		e.preventDefault();
+	} else if (e.key === "Escape") {
+		goHome();
+	}
+});

@@ -6,7 +6,7 @@
  * Art Lab: 3D Mathematical Wave Surface Mesh & Topological Vector Flow
  */
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import * as THREE from '../vendor/three/three.module.min.js';
 
 class DynamicBackgroundEffect {
     constructor(container) {
@@ -16,6 +16,8 @@ class DynamicBackgroundEffect {
         this.frameInterval = 1000 / 30; // 30fps cap for energy efficiency
 
         this.mouse = { x: 0, y: 0, targetX: 0, targetY: 0 };
+        // Respect reduced motion: draw one still frame instead of animating.
+        this.stillFrame = matchMedia('(prefers-reduced-motion: reduce)').matches;
         this.isArtLab = !!document.getElementById('artlab-body') || window.location.pathname.includes('Art_Lab');
 
         this.config = {
@@ -32,7 +34,12 @@ class DynamicBackgroundEffect {
             this.createMainHubParticles();
         }
         this.bindEvents();
-        this.animate();
+        if (this.stillFrame) {
+            this.isRunning = false;
+            this.renderer.render(this.scene, this.camera);
+        } else {
+            this.animate();
+        }
     }
 
     init() {
@@ -238,6 +245,14 @@ class DynamicBackgroundEffect {
     }
 
     bindEvents() {
+        if (this.stillFrame) {
+            window.addEventListener('resize', () => {
+                this.onResize();
+                this.renderer.render(this.scene, this.camera);
+            }, { passive: true });
+            return;
+        }
+
         window.addEventListener('mousemove', (e) => {
             this.mouse.targetX = (e.clientX / window.innerWidth - 0.5) * 2;
             this.mouse.targetY = (e.clientY / window.innerHeight - 0.5) * 2;
@@ -291,14 +306,20 @@ class DynamicBackgroundEffect {
 let dropEffect = null;
 
 function initDropEffect() {
-    let container = document.getElementById('drop-effect-container') || document.body;
-    dropEffect = new DynamicBackgroundEffect(container);
+    const container = document.getElementById('drop-effect-container') || document.body;
+    try {
+        dropEffect = new DynamicBackgroundEffect(container);
+    } catch {
+        // No WebGL (old device, blocked GPU): the CSS gradient background remains.
+    }
 }
 
 export { DynamicBackgroundEffect as DropEffect, initDropEffect };
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initDropEffect);
+// Start after the page is interactive so the background never delays content.
+const start = () => ('requestIdleCallback' in window ? requestIdleCallback(initDropEffect, { timeout: 1500 }) : setTimeout(initDropEffect, 200));
+if (document.readyState === 'complete') {
+    start();
 } else {
-    initDropEffect();
+    window.addEventListener('load', start, { once: true });
 }

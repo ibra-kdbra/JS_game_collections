@@ -1,6 +1,9 @@
+import { initShell } from '../assets/kit/shell.js';
 import gameSystem from './src/game.js';
 import dataSystem from './src/data.js';
-import { initTouchControls } from './src/touch.js'; 
+import uiSystem from './src/ui.js';
+
+initShell({ slug: 'gravity-wells' });
 
 let entities;
 try {
@@ -8,35 +11,15 @@ try {
   entities = await response.json();
 } catch (error) {
   console.error('Error loading entities.json:', error);
-  entities = {}; // fallback empty object
+  entities = {};
 }
 
-let current = dataSystem.load('current');
-if (current !== undefined) {
-  entities.game.levels.current = current;
-  let sequence = dataSystem.load('payed') 
-    ? entities.game.levels.wm 
-    : entities.game.levels.sequence;
-  let puzzleId = sequence[current];
-  entities.level.state.updates = [puzzleId];
+let levels = entities.game.levels;
+let current = levels.sequence.indexOf(dataSystem.load('level'));
+if (current > -1) {
+  levels.current = current;
+  entities.level.state.updates = [levels.sequence[current]];
 }
 
 gameSystem.setup(entities);
-
-document.addEventListener('DOMContentLoaded', () => {
-  initTouchControls('game'); // Call the touch module
-});
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', async () => {
-    try {
-      const registration = await navigator.serviceWorker.register(
-        '/Gravity_Wells/src/sw.js',
-        { scope: '/Gravity_Wells/' }
-      );
-      console.log('SW registered:', registration);
-    } catch (error) {
-      console.error('SW registration failed:', error);
-    }
-  });
-}
+uiSystem.setup(entities);

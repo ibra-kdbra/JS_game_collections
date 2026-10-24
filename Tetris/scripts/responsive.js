@@ -1,328 +1,207 @@
-// Responsive Design and Gesture Controls
-// Replaces button-based controls with direct touch gestures
+// Touch play: gestures anywhere on the game and the on-screen buttons.
+//
+// Gestures (on the board and the panels beside it):
+//   tap            rotate clockwise (two-finger tap: counter-clockwise)
+//   drag sideways  move one cell for every cell dragged, as far as you like
+//   drag down      soft drop, one row for every cell dragged
+//   flick down     hard drop
+//   flick up       hold (tapping the Hold box holds too)
+//
+// Gestures queue actions that the game applies on its next logic step, so they
+// are never lost between frames and replays record them. The on-screen buttons
+// press the game's own keys (flags), so DAS/ARR and soft drop speed apply.
 
 'use strict';
 
-const Responsive = {
-  isMobile: false,
-  lastTapTime: 0,
-  touchStartX: 0,
-  touchStartY: 0,
-  isDragging: false,
-  dragThreshold: 10,
-  softDropThreshold: 30,
-  
-  // Track accumulated movement for discrete steps
-  accumulatedX: 0,
-  
+const Touch = {
+  enabled: false,
+  queue: '',
+  pointers: new Map(),
+  lastMultiTap: 0,
+
   init() {
-    this.detectDevice();
-    this.setupGestures();
-    window.addEventListener('resize', () => {
-      this.detectDevice();
-      this.resize();
+    this.enabled = typeof GameKit !== 'undefined' && GameKit.isTouchFirst();
+    document.documentElement.classList.toggle('tt-touch', this.enabled);
+    this.setupGestures(document.body);
+    this.setupPad();
+    const hold = document.getElementById('a');
+    hold.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' || !this.playing()) return;
+      e.stopPropagation();
+      this.push('O');
     });
-    this.resize();
+    document.getElementById('touchPause').addEventListener('click', () => pause());
   },
 
-  detectDevice() {
-    this.isMobile = window.innerWidth < 768 || ('ontouchstart' in window);
-    if (this.isMobile) {
-      document.body.classList.add('touch-device');
-    } else {
-      document.body.classList.remove('touch-device');
-    }
+  playing() {
+    return gameState === 0 && !paused && !watchingReplay;
   },
 
-  setupGestures() {
-    const target = document.body; // Capture all touches
+  push(action) {
+    this.queue += action;
+  },
 
-    target.addEventListener('touchstart', (e) => {
-      if (!this.isMobile) return;
-      // e.preventDefault(); // Prevent default only if necessary, might block other interactions if global
-      
-      const touch = e.changedTouches[0];
-      this.touchStartX = touch.clientX;
-      this.touchStartY = touch.clientY;
-      this.isDragging = false;
-      this.accumulatedX = 0;
-    }, { passive: false });
+  /** Cell size in CSS pixels, the distance a drag needs per move. */
+  stepPx() {
+    return Math.max(cellSize / renderScale, 14);
+  },
 
-    target.addEventListener('touchmove', (e) => {
-      if (!this.isMobile) return;
-      e.preventDefault(); // Prevent scrolling
+  setupGestures(target) {
+    const down = (e) => {
+      if (e.pointerType === 'mouse' || !this.playing()) return;
+      if (e.target.closest('button, a, .menu')) return;
+      e.preventDefault();
+      target.setPointerCapture?.(e.pointerId);
+      const now = performance.now();
+      this.pointers.set(e.pointerId, {
+        x: e.clientX, y: e.clientY, ox: e.clientX, oy: e.clientY, t: now,
+        moved: false, axis: '', samples: [[now, e.clientY]],
+      });
+      // A second finger down turns the gesture into a two-finger tap.
+      if (this.pointers.size === 2) this.lastMultiTap = now;
+    };
 
-      const touch = e.changedTouches[0];
-      const deltaX = touch.clientX - this.touchStartX;
-      const deltaY = touch.clientY - this.touchStartY;
-
-      // Vertical Swipe (Soft Drop)
-      if (deltaY > this.softDropThreshold) {
-        keysDown |= flags.moveDown;
-        this.isDragging = true;
-      } else {
-        keysDown &= ~flags.moveDown;
+    const move = (e) => {
+      const p = this.pointers.get(e.pointerId);
+      if (!p || !this.playing()) return;
+      e.preventDefault();
+      if (this.pointers.size > 1) return;
+      const step = this.stepPx();
+      const now = performance.now();
+      p.samples.push([now, e.clientY]);
+      if (p.samples.length > 8) p.samples.shift();
+      const tx = e.clientX - p.ox;
+      const ty = e.clientY - p.oy;
+      if (!p.axis && Math.hypot(tx, ty) > 10) p.axis = Math.abs(tx) >= Math.abs(ty) ? 'x' : 'y';
+      // Sideways: one cell per cell width dragged, in either axis.
+      let dx = e.clientX - p.x;
+      while (Math.abs(dx) >= step) {
+        this.push(dx > 0 ? 'R' : 'L');
+        p.x += dx > 0 ? step : -step;
+        dx = e.clientX - p.x;
+        p.moved = true;
       }
-
-      // Horizontal Drag
-      // We want to trigger moveLeft/Right based on distance moved
-      // Reset keys first
-      // keysDown &= ~(flags.moveLeft | flags.moveRight);
-      
-      // Calculate how many cells we should have moved
-      // cellSize is global from tetris.js
-      if (typeof cellSize !== 'undefined' && cellSize > 0) {
-        // Use a sensitivity factor, e.g., move 1 cell for every cellSize pixels dragged
-        const dist = deltaX - this.accumulatedX;
-        
-        if (Math.abs(dist) > cellSize) {
-          this.isDragging = true;
-          if (dist > 0) {
-             // Move Right
-             keysDown |= flags.moveRight;
-             keysDown &= ~flags.moveLeft;
-             // We need to pulse the key for the game loop to register a shift if DAS is active
-             // But tetris.js logic handles continuous hold for DAS.
-             // If we want 1-to-1 movement, we might need to manually call piece.move
-             // For now, let's emulate holding the key.
-          } else {
-             // Move Left
-             keysDown |= flags.moveLeft;
-             keysDown &= ~flags.moveRight;
-          }
-          this.accumulatedX += (dist > 0 ? cellSize : -cellSize);
-        } else if (Math.abs(dist) < cellSize * 0.5) {
-          // If stopped dragging, release keys
-           keysDown &= ~(flags.moveLeft | flags.moveRight);
+      // Down: soft drop row by row, only once the drag is mostly vertical.
+      let dy = e.clientY - p.y;
+      if (p.axis === 'y' || Math.abs(ty) > Math.abs(tx) * 1.5) {
+        while (dy >= step) {
+          this.push('D');
+          p.y += step;
+          dy = e.clientY - p.y;
+          p.moved = true;
         }
       }
+      if (dy < 0) p.y = e.clientY;
+      if (Math.hypot(tx, ty) > 12) p.moved = true;
+    };
 
-    }, { passive: false });
-
-    target.addEventListener('touchend', (e) => {
-      if (!this.isMobile) return;
-      
-      const touch = e.changedTouches[0];
-      const deltaX = touch.clientX - this.touchStartX;
-      const deltaY = touch.clientY - this.touchStartY;
-      const totalDist = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
-
-      // Release movement keys
-      keysDown &= ~(flags.moveLeft | flags.moveRight | flags.moveDown);
-
-      if (!this.isDragging && totalDist < 10) {
-        // It was a tap
-        const currentTime = new Date().getTime();
-        const tapLength = currentTime - this.lastTapTime;
-        
-        if (tapLength < 300 && tapLength > 0) {
-          // Double Tap -> Hold
-          keysDown |= flags.holdPiece;
-          setTimeout(() => keysDown &= ~flags.holdPiece, 100);
-        } else {
-          // Single Tap -> Rotate
-          keysDown |= flags.rotRight;
-          setTimeout(() => keysDown &= ~flags.rotRight, 100);
+    const up = (e) => {
+      const p = this.pointers.get(e.pointerId);
+      if (!p) return;
+      this.pointers.delete(e.pointerId);
+      if (!this.playing() || e.type === 'pointercancel') return;
+      const now = performance.now();
+      const tx = e.clientX - p.ox;
+      const ty = e.clientY - p.oy;
+      // Speed over the last ~100 ms decides flicks, so drag-then-flick works.
+      let i = p.samples.length - 1;
+      while (i > 0 && now - p.samples[i][0] < 100) i--;
+      const dt = Math.max(now - p.samples[i][0], 16);
+      const vy = (e.clientY - p.samples[i][1]) / dt;
+      const short = now - p.t < 300;
+      if (now - this.lastMultiTap < 350) {
+        // Two-finger tap: rotate counter-clockwise once, on the last finger up.
+        if (this.pointers.size === 0 && Math.hypot(tx, ty) < 24) {
+          this.push('W');
+          this.lastMultiTap = 0;
         }
-        this.lastTapTime = currentTime;
+        return;
       }
-    });
+      const quickDown = now - p.t < 250 && ty > Math.max(48, this.stepPx() * 2.5) && ty > Math.abs(tx) * 2;
+      if (quickDown || (vy > 0.9 && ty > 30 && Math.abs(ty) > Math.abs(tx))) {
+        this.push('H');
+      } else if ((vy < -0.7 || short) && ty < -40 && Math.abs(ty) > Math.abs(tx) * 1.5) {
+        this.push('O');
+      } else if (!p.moved && short && Math.hypot(tx, ty) < 12) {
+        this.push('C');
+      }
+    };
+
+    target.addEventListener('pointerdown', down);
+    target.addEventListener('pointermove', move);
+    target.addEventListener('pointerup', up);
+    target.addEventListener('pointercancel', up);
+    // Long presses must not open the context menu or select text.
+    target.addEventListener('contextmenu', (e) => e.preventDefault());
   },
 
-  resize() {
-    // Standard resize logic for PC (defer to original if not mobile)
-    // But since we are overriding, we must handle both or call original for PC.
-    // The original resize() in tetris.js is good for PC, but we want to change mobile.
-    
-    if (!this.isMobile) {
-      // Restore PC styles if needed, or just let the original resize function handle it if we can call it?
-      // tetris.js calls Responsive.resize() if it exists.
-      // So we must implement PC resize here too or copy it.
-      // Let's copy/adapt the PC logic and add Mobile logic.
-      
-      // PC Logic (Centered)
-      const content = document.getElementById('content');
-      const b = document.getElementById('b');
-      const a = document.getElementById('a');
-      const c = document.getElementById('c');
-      const stats = document.getElementById('stats');
-      
-      // Reset specific mobile styles
-      content.style.padding = '';
-      content.style.height = '';
-      content.style.width = '';
-      
-      b.style.position = '';
-      b.style.bottom = '';
-      b.style.left = '';
-      b.style.transform = '';
-      
-      a.style.position = '';
-      a.style.top = '';
-      a.style.left = '';
-      
-      c.style.position = '';
-      c.style.top = '';
-      c.style.right = '';
-      
-      stats.style.position = 'absolute';
-      stats.style.top = '';
-      stats.style.left = '';
-      stats.style.bottom = ''; // Will be set by PC logic
-      
-      // Calculate PC dimensions (Center logic is now handled by CSS Flexbox on body)
-      var screenHeight = window.innerHeight - 34;
-      var screenWidth = ~~(screenHeight * 1.024);
-      if (screenWidth > window.innerWidth)
-        screenHeight = ~~(window.innerWidth / 1.024);
-
-      if (settings.Size === 1 && screenHeight > 602) cellSize = 15;
-      else if (settings.Size === 2 && screenHeight > 602) cellSize = 30;
-      else if (settings.Size === 3 && screenHeight > 902) cellSize = 45;
-      else cellSize = Math.max(~~(screenHeight / 20), 10);
-
-      // We don't need padding for centering anymore due to flexbox, 
-      // but we need to set canvas sizes.
-      
-      // Set sizes
-      stackCanvas.width = activeCanvas.width = bgStackCanvas.width = cellSize * 10;
-      stackCanvas.height = activeCanvas.height = bgStackCanvas.height = cellSize * 20;
-      b.style.width = stackCanvas.width + 'px';
-      b.style.height = stackCanvas.height + 'px';
-
-      holdCanvas.width = cellSize * 4;
-      holdCanvas.height = cellSize * 2;
-      a.style.width = holdCanvas.width + 'px';
-      a.style.height = holdCanvas.height + 'px';
-
-      previewCanvas.width = cellSize * 4;
-      previewCanvas.height = stackCanvas.height;
-      c.style.width = previewCanvas.width + 'px';
-      c.style.height = b.style.height;
-      
-      // Font sizes
-      msg.style.lineHeight = b.style.height;
-      msg.style.fontSize = ~~(stackCanvas.width / 6) + 'px';
-      stats.style.fontSize = ~~(stackCanvas.width / 11) + 'px';
-      document.documentElement.style.fontSize = ~~(stackCanvas.width / 16) + 'px';
-      
-      stats.style.width = a.style.width;
-      // Position stats at bottom left of content if standard layout
-      // Original logic used padding to position stats. 
-      // Let's stick to standard flow: Left col, Center col, Right col.
-      // CSS floats handle this.
-      
-    } else {
-      // MOBILE LOGIC
-      const content = document.getElementById('content');
-      const b = document.getElementById('b'); // Game
-      const a = document.getElementById('a'); // Hold
-      const c = document.getElementById('c'); // Next
-      const stats = document.getElementById('stats');
-      
-      // Maximize game area at bottom
-      // Available height
-      const h = window.innerHeight;
-      const w = window.innerWidth;
-      
-      // Calculate cellSize to fit height (leaving space for top panels) or width
-      // We want panels at top. Let's say top 20% or fixed pixels.
-      // Hold panel is cellSize*4 wide, cellSize*2 high.
-      // Game is cellSize*10 wide, cellSize*20 high.
-      
-      // Try to fit game in bottom 70% of screen to ensure visibility
-      const gameHeightTarget = h * 0.70;
-      const gameWidthTarget = w * 0.95;
-      
-      cellSize = Math.min(
-        Math.floor(gameHeightTarget / 20),
-        Math.floor(gameWidthTarget / 10)
-      );
-      
-      // Update Canvases
-      stackCanvas.width = activeCanvas.width = bgStackCanvas.width = cellSize * 10;
-      stackCanvas.height = activeCanvas.height = bgStackCanvas.height = cellSize * 20;
-      
-      holdCanvas.width = cellSize * 4;
-      holdCanvas.height = cellSize * 2;
-      
-      previewCanvas.width = cellSize * 4;
-      previewCanvas.height = cellSize * 4; // Show fewer next pieces to save space? Or full? 
-      // User said "minified on the right". Let's keep width but maybe shorter height if needed?
-      // Original preview height is stackCanvas.height.
-      // Let's make it smaller for mobile top bar.
-      previewCanvas.height = cellSize * 10; // 3-4 pieces
-      
-      // Style Game Box (Bottom Center)
-      b.style.width = stackCanvas.width + 'px';
-      b.style.height = stackCanvas.height + 'px';
-      b.style.position = 'fixed';
-      b.style.bottom = '10px';
-      b.style.left = '50%';
-      b.style.transform = 'translateX(-50%)';
-      b.style.float = 'none';
-      b.style.border = '1px solid rgba(255,255,255,0.5)';
-      
-      // Minify top panels
-      const scale = 0.8;
-
-      // Style Hold Panel (Top Left)
-      a.style.width = holdCanvas.width + 'px';
-      a.style.height = holdCanvas.height + 'px';
-      a.style.position = 'fixed';
-      a.style.top = '10px';
-      a.style.left = '10px';
-      a.style.float = 'none';
-      a.style.transform = `scale(${scale})`;
-      a.style.transformOrigin = 'top left';
-      
-      // Style Next Panel (Top Right)
-      c.style.width = previewCanvas.width + 'px';
-      c.style.height = previewCanvas.height + 'px';
-      c.style.position = 'fixed';
-      c.style.top = '10px';
-      c.style.right = '10px';
-      c.style.float = 'none';
-      c.style.transform = `scale(${scale})`;
-      c.style.transformOrigin = 'top right';
-      
-      // Style Stats (Below Hold)
-      stats.style.position = 'fixed';
-      // Calculate top position based on scaled hold panel
-      stats.style.top = (10 + (holdCanvas.height * scale) + 5) + 'px'; 
-      stats.style.left = '10px';
-      stats.style.width = (holdCanvas.width * scale) + 'px';
-      stats.style.fontSize = (cellSize * 0.7) + 'px';
-      stats.style.display = 'block';
-      stats.style.transform = 'none'; // Reset any transform
-      
-      // Content container adjustment
-      content.style.width = '100%';
-      content.style.height = '100%';
-      content.style.padding = '0';
-      content.style.background = 'transparent'; // Remove background on mobile to see wallpaper
-      content.style.display = 'block';
-      
-      // Adjust font sizes
-      msg.style.lineHeight = b.style.height;
-      msg.style.fontSize = (cellSize * 2) + 'px';
+  /** Hold-to-repeat buttons that press the game's key flags directly. */
+  setupPad() {
+    const buttons = document.querySelectorAll('#pad button');
+    for (const b of buttons) {
+      const flag = flags[b.dataset.act];
+      let id = null;
+      const release = () => {
+        if (id === null) return;
+        id = null;
+        b.removeAttribute('data-pressed');
+        releaseKey(flag);
+      };
+      b.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (id !== null || !this.playing()) return;
+        id = e.pointerId;
+        b.setPointerCapture(e.pointerId);
+        b.setAttribute('data-pressed', '');
+        keysDown |= flag;
+        if (navigator.vibrate) navigator.vibrate(6);
+      });
+      b.addEventListener('pointerup', release);
+      b.addEventListener('pointercancel', release);
+      b.addEventListener('lostpointercapture', release);
+      b.addEventListener('contextmenu', (e) => e.preventDefault());
     }
-    
-    // Redraw
-    makeSprite();
-    if (settings.Grid === 1) bg(bgStackCtx);
-    if (gameState === 0) {
-      piece.drawGhost();
-      piece.draw();
-      stack.draw();
-      preview.draw();
-      if (hold.piece !== void 0) hold.draw();
+  },
+
+  /**
+   * Applies the queued gestures (or a replay's) to the active piece. Called
+   * once per logic step from update().
+   */
+  apply() {
+    let acts;
+    if (watchingReplay) {
+      acts = replayKeys.t && replayKeys.t[frame];
+    } else if (this.queue) {
+      acts = this.queue;
+      this.queue = '';
+      (replayKeys.t || (replayKeys.t = {}))[frame] = acts;
     }
-  }
+    if (!acts) return;
+    for (let i = 0; i < acts.length; i++) {
+      const a = acts[i];
+      if (a === 'L' || a === 'R') {
+        const dir = a === 'L' ? -1 : 1;
+        if (piece.moveValid(dir, 0, piece.tetro)) piece.x += dir;
+      } else if (a === 'D') {
+        if (piece.moveValid(0, 1, piece.tetro)) {
+          piece.y = Math.floor(piece.y) + 1;
+          addDropScore(1);
+        }
+      } else if (a === 'C' || a === 'W') {
+        piece.rotate(a === 'C' ? 1 : -1);
+      } else if (a === 'O') {
+        piece.hold();
+      } else if (a === 'H') {
+        piece.hardDrop();
+        return; // The piece locks this step; later moves belong to no piece.
+      }
+    }
+  },
+
+  reset() {
+    this.queue = '';
+    this.pointers.clear();
+  },
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-  Responsive.init();
-});
-
-window.Responsive = Responsive;
+window.Touch = Touch;

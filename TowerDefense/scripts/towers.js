@@ -113,13 +113,6 @@ const tower = {
         range: 1,
         type: 'slow',
         // Methods
-        drawBarrel() {
-            stroke(this.border);
-            fill(this.secondary);
-            const back = -this.length * ts / 2;
-            const side = this.width * ts / 2;
-            rect(back, -side, this.length * ts, this.width * ts);
-        },
         onAim(e) {
             this.attack(e);
         },
@@ -129,17 +122,19 @@ const tower = {
         // Target correct enemy
         target(entities) {
             if (stopFiring) return;
-            entities = this.visible(entities);
-            if (entities.length === 0) return;
+            // Everything in range is hit; checked in place to avoid a new array every tick
+            const r = (this.range + 1) * ts;
+            const r2 = r * r;
+            const px = this.pos.x;
+            const py = this.pos.y;
+            const inside = (e) => (e.pos.x - px) ** 2 + (e.pos.y - py) ** 2 < r2;
+            if (!entities.some(inside)) return;
             if (!this.canFire()) return;
             this.resetCooldown();
-            noStroke();
-            fill(this.color[0], this.color[1], this.color[2], 127);
-            const r = this.range * 2 + 1;
-            ellipse(this.pos.x, this.pos.y, r * ts, r * ts);
-            entities.forEach((entity) => {
-                this.onAim(entity);
-            });
+            FX.pulse(this);
+            for (let i = 0; i < entities.length; i++) {
+                if (inside(entities[i])) this.onAim(entities[i]);
+            }
         },
         update() {
             this.angle += PI / 60;
@@ -186,23 +181,11 @@ const tower = {
         damageMax: 100,
         damageMin: 100,
         range: 9,
+        targetMode: 'strong',
         // Methods
-        drawBarrel() {
-            stroke(0);
-            fill(this.color);
-            const height = this.radius * ts * sqrt(3) / 2;
-            const back = -height / 3;
-            const front = height * 2 / 3;
-            const side = this.radius * ts / 2;
-            triangle(back, -side, back, side, front, 0);
-        },
         target(entities) {
             if (stopFiring) return;
-            entities = this.visible(entities);
-            if (entities.length === 0) return;
-            const t = getTaunting(entities);
-            if (t.length > 0) entities = t;
-            const e = getStrongest(entities);
+            const e = this.pickInRange(entities);
             if (typeof e === 'undefined') return;
             this.onAim(e);
         },
@@ -231,28 +214,10 @@ const tower = {
                 range: 11,
                 type: 'piercing',
                 // Methods
-                drawBarrel() {
-                    stroke(this.border);
-                    fill(this.secondary);
-                    const base = -this.length * ts;
-                    const side = -this.width * ts / 2;
-                    rect(base, side, this.length * ts * 2, this.width * ts);
-                    fill(207, 0, 15);
-                    ellipse(0, 0, this.radius * ts * 2 / 3, this.radius * ts * 2 / 3);
-                },
                 onHit(e) {
                     const blastRadius = 1;
                     const inRadius = getInRange(e.pos.x, e.pos.y, blastRadius, enemies);
-                    noStroke();
-                    fill(this.color[0], this.color[1], this.color[2], 127);
-                    ellipse(e.pos.x, e.pos.y, ts * 2.5, ts * 2.5);
-                    if (showEffects) {
-                        const s = new ShrapnelExplosion(e.pos.x, e.pos.y);
-                        for (let i = 0; i < particleAmt; i++) {
-                            s.addParticle();
-                        }
-                        systems.push(s);
-                    }
+                    FX.blast(e.pos.x, e.pos.y, 'rail', blastRadius);
                     inRadius.forEach((h) => {
                         const amt = round(random(this.damageMin, this.damageMax));
                         h.dealDamage(amt, this.type);
@@ -289,39 +254,14 @@ tower.rocket = {
     type: 'explosion',
     
     // Methods
-    drawBarrel() {
-        stroke(this.border);
-        fill(this.secondary);
-        rect(0, -this.width * ts, this.length * ts, this.width * ts);
-        rect(0, 0, this.length * ts, this.width * ts);
-        fill(207, 0, 15);
-        const mid = this.width * ts / 2;
-        const base = this.length * ts;
-        const tip = this.length * ts + this.width * ts * 2;
-        const side = this.width * ts;
-        triangle(base, -side, tip, -mid, base, 0);
-        triangle(base, side, tip, mid, base, 0);
-        fill(this.color);
-        const edge = this.width * ts * 4;
-        const fEdge = this.width * ts * 1.5;
-        const back = -this.width * ts * 0.75;
-        const front = this.width * ts * 1.25;
-        quad(back, -edge, back, edge, front, fEdge, front, -fEdge);
-    },
-    drawBase() {
-        stroke(this.border);
-        fill(this.secondary);
-        ellipse(this.pos.x, this.pos.y, this.radius * ts, this.radius * ts);
-    },
     onAim(e) {
         if (this.canFire() || this.follow) this.aim(e.pos.x, e.pos.y);
         if (stopFiring) return;
         if (!this.canFire()) return;
         this.resetCooldown();
         projectiles.push(new Missile(this.pos.x, this.pos.y, e));
-        if (!muteSounds && sounds.hasOwnProperty(this.sound)) {
-            sounds[this.sound].play();
-        }
+        playSound(this.sound);
+        FX.launch(this);
     },
     
     // Upgrades
@@ -345,25 +285,6 @@ tower.rocket = {
             range: 9,
             
             // Methods
-            drawBarrel() {
-                stroke(this.border);
-                fill(this.secondary);
-                rect(0, -this.width * ts, this.length * ts, this.width * ts);
-                rect(0, 0, this.length * ts, this.width * ts);
-                fill(this.color);
-                const mid = this.width * ts / 2;
-                const base = this.length * ts;
-                const tip = this.length * ts + this.width * ts * 2;
-                const side = this.width * ts;
-                triangle(base, -side, tip, -mid, base, 0);
-                triangle(base, side, tip, mid, base, 0);
-                fill(31, 58, 147);
-                const edge = this.width * ts * 4;
-                const fEdge = this.width * ts * 1.5;
-                const back = -this.width * ts * 0.75;
-                const front = this.width * ts * 1.25;
-                quad(back, -edge, back, edge, front, fEdge, front, -fEdge);
-            },
             onAim(e) {
                 if (this.canFire() || this.follow) this.aim(e.pos.x, e.pos.y);
                 if (stopFiring) return;
@@ -376,11 +297,10 @@ tower.rocket = {
                 m.damageMax = this.damageMax;
                 m.damageMin = this.damageMin;
                 m.accAmt = 0.7;
-                m.topSpeed = (6 * 24) / ts;
+                m.topSpeed = 6 * ts / 24;
                 projectiles.push(m);
-                if (!muteSounds && sounds.hasOwnProperty(this.sound)) {
-                    sounds[this.sound].play();
-                }
+                playSound(this.sound);
+                FX.launch(this);
             }
         }
     ]
@@ -409,26 +329,10 @@ tower.bomb = {
     type: 'explosion',
     
     // Methods
-    drawBarrel() {
-        stroke(this.border);
-        fill(this.secondary);
-        rect(0, -this.width * ts / 2, this.length * ts, this.width * ts);
-        fill(191, 85, 236);
-        ellipse(0, 0, this.radius * ts * 2 / 3, this.radius * ts * 2 / 3);
-    },
     onHit(e) {
         const blastRadius = 1;
         const inRadius = getInRange(e.pos.x, e.pos.y, blastRadius, enemies);
-        noStroke();
-        fill(191, 85, 236, 127);
-        ellipse(e.pos.x, e.pos.y, ts * 2.5, ts * 2.5);
-        if (showEffects) {
-            const s = new BombExplosion(e.pos.x, e.pos.y);
-            for (let i = 0; i < particleAmt; i++) {
-                s.addParticle();
-            }
-            systems.push(s);
-        }
+        FX.blast(e.pos.x, e.pos.y, 'bomb', blastRadius);
         for (let i = 0; i < inRadius.length; i++) {
             const h = inRadius[i];
             const amt = round(random(this.damageMin, this.damageMax));
@@ -453,26 +357,10 @@ tower.bomb = {
             damageMin: 100,
             
             // Methods
-            drawBarrel() {
-                stroke(this.border);
-                fill(this.secondary);
-                rect(0, -this.width * ts / 2, this.length * ts, this.width * ts);
-                fill(249, 105, 14);
-                ellipse(0, 0, this.radius * ts * 2 / 3, this.radius * ts * 2 / 3);
-            },
             onHit(e) {
                 const blastRadius = 1;
                 const inRadius = getInRange(e.pos.x, e.pos.y, blastRadius, enemies);
-                noStroke();
-                fill(191, 85, 236, 127);
-                ellipse(e.pos.x, e.pos.y, ts * 2.5, ts * 2.5);
-                if (showEffects) {
-                    const s = new BombExplosion(e.pos.x, e.pos.y);
-                    for (let i = 0; i < particleAmt / 2; i++) {
-                        s.addParticle();
-                    }
-                    systems.push(s);
-                }
+                FX.blast(e.pos.x, e.pos.y, 'cluster', blastRadius);
                 const segs = 3;
                 const a0 = random(0, TWO_PI);
                 for (let i = 0; i < segs; i++) {
@@ -481,13 +369,7 @@ tower.bomb = {
                     const x = e.pos.x + cos(a) * d;
                     const y = e.pos.y + sin(a) * d;
                     const inRadius = getInRange(x, y, blastRadius, enemies);
-                    if (showEffects) {
-                        const s = new BombExplosion(x, y);
-                        for (let j = 0; j < particleAmt / 2; j++) {
-                            s.addParticle();
-                        }
-                        systems.push(s);
-                    }
+                    FX.blast(x, y, 'sub', 0.6);
                     for (let j = 0; j < inRadius.length; j++) {
                         const h = inRadius[j];
                         const amt = round(random(this.damageMin, this.damageMax));
@@ -502,7 +384,7 @@ tower.bomb = {
 tower.tesla = {
     // Display
     color: [255, 255, 0],
-    hasBase: false,
+    hasBarrel: false,       // drawn as a coil (drawBase); it was hidden behind a stray barrel
     radius: 1,
     secondary: [30, 139, 195],
     weight: 10,
@@ -519,21 +401,13 @@ tower.tesla = {
     damageMax: 50,
     damageMin: 30,
     range: 4,
+    type: 'energy',     // zaps (tanks and taunts resist energy as much as physical)
     
     // Methods
-    drawBase() {
-        stroke(255);
-        fill(this.secondary);
-        ellipse(this.pos.x, this.pos.y, this.radius * ts, this.radius * ts);
-        fill(60);
-        ellipse(this.pos.x, this.pos.y, this.radius * ts - 3, this.radius * ts - 3);
-    },
     onHit(e) {
         const amt = round(random(this.damageMin, this.damageMax));
         e.dealDamage(amt, this.type);
-        if (!muteSounds && sounds.hasOwnProperty(this.sound)) {
-            sounds[this.sound].play();
-        }
+        playSound(this.sound);
     },
     
     upgrades: [
@@ -556,22 +430,10 @@ tower.tesla = {
             range: 6,
             
             // Methods
-            drawBase() {
-                stroke(255);
-                fill(this.secondary);
-                ellipse(this.pos.x, this.pos.y, this.radius * ts, this.radius * ts);
-                fill(60);
-                ellipse(this.pos.x, this.pos.y, this.radius * ts - 3, this.radius * ts - 3);
-                fill(80, 235, 255);
-                const spike = this.radius * ts * 0.6;
-                triangle(this.pos.x, this.pos.y - spike, this.pos.x - spike, this.pos.y + spike, this.pos.x + spike, this.pos.y + spike);
-            },
             onHit(e) {
                 const amt = round(random(this.damageMin, this.damageMax));
                 e.dealDamage(amt, this.type);
-                if (!muteSounds && sounds.hasOwnProperty(this.sound)) {
-                    sounds[this.sound].play();
-                }
+                playSound(this.sound);
             }
         }
     ]

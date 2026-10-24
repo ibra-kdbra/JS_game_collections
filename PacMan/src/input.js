@@ -203,9 +203,18 @@ var initSwipe = function() {
 
     // minimum distance from anchor before direction is registered
     var r = 4;
-    
+
+    // touches on the Game Lab kit's own buttons (back link, D-pad) are not swipes
+    var onKitControls = false;
+    var isKitControl = function(event) {
+        return !!(event.target.closest && event.target.closest('.gk-touch'));
+    };
+
     var touchStart = function(event) {
-        event.preventDefault();
+        onKitControls = isKitControl(event);
+        if (onKitControls) {
+            return;
+        }
         var fingerCount = event.touches.length;
         if (fingerCount == 1) {
 
@@ -220,7 +229,9 @@ var initSwipe = function() {
     };
 
     var touchMove = function(event) {
-        event.preventDefault();
+        if (onKitControls) {
+            return;
+        }
         var fingerCount = event.touches.length;
         if (fingerCount == 1) {
 
@@ -250,11 +261,15 @@ var initSwipe = function() {
     };
 
     var touchEnd = function(event) {
+        if (onKitControls) {
+            return;
+        }
         event.preventDefault();
     };
 
     var touchCancel = function(event) {
-        event.preventDefault();
+        // Also called from the passive touchstart/touchmove handlers on multi-touch.
+        if (event.type === "touchcancel") event.preventDefault();
         x=y=dx=dy=0;
     };
 
@@ -265,8 +280,9 @@ var initSwipe = function() {
     
     // register touch events
     document.onclick = touchTap;
-    document.ontouchstart = touchStart;
+    // Passive (as browsers treat them anyway): `touch-action: none` stops scrolling.
+    document.addEventListener('touchstart', touchStart, { passive: true });
     document.ontouchend = touchEnd;
-    document.ontouchmove = touchMove;
+    document.addEventListener('touchmove', touchMove, { passive: true });
     document.ontouchcancel = touchCancel;
 };

@@ -22,7 +22,8 @@ class Intro {
     }
 
     render() {
-        game.ctx.font = Asset.getFontString(18);
+        const k = game.textScale;
+        game.ctx.font = Asset.getFontString(18 * k);
         game.ctx.fillStyle = 'rgba(204,255,204,0.9)';
 
         let text = this._text.substring(0, this._chars);
@@ -31,12 +32,12 @@ class Intro {
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i];
 
-            while (game.ctx.measureText(line).width > game.canvas.width - 30) {
+            while (game.ctx.measureText(line).width > game.viewW - 30) {
                 line = line.split(' ').slice(0, -1).join(' ');
             }
 
             // Trim off leading and trailing space while rendering (don't include in math)
-            game.ctx.fillText(line.trim(), 15, 30 + i * 28);
+            game.ctx.fillText(line.trim(), 15, (30 + i * 28) * k);
 
             let leftover = lines[i].slice(line.length);
             if (leftover.length > 0) {
@@ -46,7 +47,7 @@ class Intro {
 
         // Interactivity indicator
         if (this._chars === this._text.length) {
-            Util.renderTogglePrompt(game.canvas.width - 20, game.canvas.height - 20);
+            Util.renderTogglePrompt(game.viewW - 20, game.viewH - 20);
         }
     }
 

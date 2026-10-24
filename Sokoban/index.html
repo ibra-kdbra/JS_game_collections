@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Crate Lab</title>
+  <meta name="description" content="Crate Lab: a box-pushing puzzle with 40 original levels. Push every crate onto a pad in as few pushes as the solver can.">
+  <meta name="theme-color" content="#09090b">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="preload" href="fonts/big-shoulders-stencil-display-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="hud">
+      <div class="hud-id">
+        <p class="eyebrow" id="world-label">World 1 &middot; Intake</p>
+        <h1 class="level-title"><span class="level-code" id="level-code">1-1</span> <span id="level-name">First Push</span></h1>
+      </div>
+      <dl class="counters" aria-live="off">
+        <div class="counter"><dt>Moves</dt><dd id="moves">0</dd></div>
+        <div class="counter"><dt>Pushes</dt><dd id="pushes">0</dd></div>
+        <div class="counter counter--par" id="par-box"><dt>Par</dt><dd id="par">0</dd></div>
+      </dl>
+      <div class="hud-actions">
+        <button type="button" class="icon-btn desk-only" id="btn-undo" aria-label="Undo (Z)" title="Undo (Z)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+        </button>
+        <button type="button" class="icon-btn desk-only" id="btn-restart" aria-label="Restart (R)" title="Restart (R)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+        </button>
+        <button type="button" class="icon-btn" id="btn-levels" aria-label="Levels" title="Levels (L)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        </button>
+        <button type="button" class="icon-btn" id="btn-sound" aria-label="Sound" aria-pressed="true" title="Sound (M)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5L6 9H2v6h4l5 4z"/><path class="wave" d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/><path class="slash" d="M22 9l-6 6M16 9l6 6"/></svg>
+        </button>
+        <button type="button" class="icon-btn" id="btn-settings" aria-label="Settings" title="Settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+        </button>
+      </div>
+      <p class="brief" id="brief"></p>
+    </header>
+
+    <main class="stage" id="stage">
+      <canvas id="board" role="img" aria-label="Puzzle board"></canvas>
+      <div class="replay-bar" id="replay-bar" hidden>
+        <span class="replay-tag">Replay</span>
+        <span id="replay-count">0 / 0</span>
+        <button type="button" class="chip" id="replay-speed">1&times;</button>
+        <button type="button" class="chip chip--solid" id="replay-stop">Stop</button>
+      </div>
+    </main>
+
+    <footer class="keys desk-only">
+      <span><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd><kbd>&rarr;</kbd> / <kbd>WASD</kbd> move</span>
+      <span><kbd>Z</kbd> undo</span>
+      <span><kbd>R</kbd> restart</span>
+      <span>click a tile to walk</span>
+      <span>drag a crate to push it</span>
+    </footer>
+  </div>
+
+  <p class="toast" id="toast" role="status" aria-live="polite"></p>
+
+  <dialog class="panel panel--levels" id="levels-panel" aria-labelledby="levels-heading">
+    <div class="panel-head">
+      <div>
+        <p class="brand">Crate Lab</p>
+        <h2 id="levels-heading">Push every crate onto a pad.</h2>
+        <p class="panel-sub" id="levels-summary"></p>
+      </div>
+      <button type="button" class="close-btn" data-close aria-label="Close levels">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <button type="button" class="btn btn--primary continue-btn" id="continue-btn" autofocus>Continue</button>
+    <div class="worlds" id="worlds"></div>
+    <p class="footnote">Par is the fewest pushes possible, proven by a solver. Solve a level for one star; match par for two. Nobody beats par.</p>
+  </dialog>
+
+  <dialog class="panel panel--settings" id="settings-panel" aria-labelledby="settings-heading">
+    <div class="panel-head">
+      <h2 id="settings-heading">Settings</h2>
+      <button type="button" class="close-btn" data-close aria-label="Close settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <label class="toggle"><input type="checkbox" id="set-sound"><span>Sound</span></label>
+    <label class="toggle"><input type="checkbox" id="set-deadlock"><span>Warn when a crate is stuck <small>Red stripes on crates that can no longer reach a pad</small></span></label>
+    <label class="toggle"><input type="checkbox" id="set-fast"><span>Fast moves</span></label>
+    <h3>Controls</h3>
+    <ul class="help">
+      <li><b>Move</b> arrow keys, WASD, swipe, or the d-pad</li>
+      <li><b>Walk</b> tap or click any open tile</li>
+      <li><b>Push in a line</b> drag a crate along a row or column</li>
+      <li><b>Undo</b> Z or U (hold the Undo button to rewind)</li>
+      <li><b>Restart</b> R. Undo right after brings your moves back</li>
+      <li><b>Levels</b> L, previous/next level [ and ]</li>
+    </ul>
+    <button type="button" class="btn btn--ghost danger" id="reset-progress">Erase progress</button>
+  </dialog>
+
+  <dialog class="panel panel--done" id="done-panel" aria-labelledby="done-heading">
+    <p class="stamp" id="done-heading">Cleared</p>
+    <p class="done-level" id="done-level"></p>
+    <div class="stars" id="done-stars" aria-label=""></div>
+    <dl class="done-stats">
+      <div><dt>Moves</dt><dd id="done-moves">0</dd></div>
+      <div><dt>Pushes</dt><dd id="done-pushes">0</dd></div>
+      <div><dt>Par</dt><dd id="done-par">0</dd></div>
+    </dl>
+    <p class="done-note" id="done-note"></p>
+    <div class="done-actions">
+      <button type="button" class="btn btn--primary" id="done-next" autofocus>Next level</button>
+      <button type="button" class="btn btn--ghost" id="done-replay">Watch replay</button>
+      <button type="button" class="btn btn--ghost" id="done-retry">Try again</button>
+    </div>
+  </dialog>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

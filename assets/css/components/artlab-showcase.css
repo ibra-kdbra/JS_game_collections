@@ -1,244 +1,559 @@
-/* ---------- Art Lab Showcase ---------- */
+/* ---------- Art Lab teaser: the sealed booster pack and a way in ----------
+   The pack matches the Art Lab opening (Art_Lab/css/deck.css) but is drawn
+   entirely in CSS and shows only card backs, never the pieces.
+   Motion: transform and opacity only; prefers-reduced-motion turns it off. */
+
 .artlab-showcase-container {
   position: relative;
 }
 
-.artlab-creative-showcase {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
+.artlab-teaser {
+  --pw: min(240px, 30vw);
+  /* the pack below the tear line: ragged on top, crimped at the bottom */
+  --tz-body-shape: polygon(0.00% calc(17% - 1.5px), 4.55% calc(17% - 3.8px), 9.09% calc(17% - 0.6px), 13.64% calc(17% - 2.9px), 18.18% calc(17% - 4.6px), 22.73% calc(17% - 1.2px), 27.27% calc(17% - 3.3px), 31.82% calc(17% - 0.4px), 36.36% calc(17% - 2.1px), 40.91% calc(17% - 4.2px), 45.45% calc(17% - 1.8px), 50.00% calc(17% - 0.8px), 54.55% calc(17% - 3.6px), 59.09% calc(17% - 2.4px), 63.64% calc(17% - 4.8px), 68.18% calc(17% - 1px), 72.73% calc(17% - 2.7px), 77.27% calc(17% - 0.3px), 81.82% calc(17% - 3.9px), 86.36% calc(17% - 1.6px), 90.91% calc(17% - 4.4px), 95.45% calc(17% - 2.2px), 100.00% calc(17% - 0.9px), 100.00% calc(100% - 6px), 96.43% 100%, 92.86% calc(100% - 6px), 89.29% 100%, 85.71% calc(100% - 6px), 82.14% 100%, 78.57% calc(100% - 6px), 75.00% 100%, 71.43% calc(100% - 6px), 67.86% 100%, 64.29% calc(100% - 6px), 60.71% 100%, 57.14% calc(100% - 6px), 53.57% 100%, 50.00% calc(100% - 6px), 46.43% 100%, 42.86% calc(100% - 6px), 39.29% 100%, 35.71% calc(100% - 6px), 32.14% 100%, 28.57% calc(100% - 6px), 25.00% 100%, 21.43% calc(100% - 6px), 17.86% 100%, 14.29% calc(100% - 6px), 10.71% 100%, 7.14% calc(100% - 6px), 3.57% 100%, 0.00% calc(100% - 6px));
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  max-width: 980px;
+  margin: 0 auto;
+  background: var(--surface);
+  border: 2px solid var(--primary);
+  border-radius: var(--radius-lg);
+  box-shadow: 8px 8px 0 #000;
+  overflow: hidden;
 }
 
-/* Main Feature Card - Side by Side Layout - Compact & Performant */
-.artlab-main-card {
+/* ---------- Stage: a yellow panel printed with a fine ink grid ---------- */
+.tz-stage {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  background: rgba(18, 19, 26, 0.8);
-  border: 1px solid rgba(250, 204, 21, 0.2);
-  border-radius: var(--radius-xl);
-  padding: 1.25rem;
+  display: grid;
+  place-items: center;
+  padding: calc(var(--pw) * 0.42) 1.5rem calc(var(--pw) * 0.18);
+  background-color: var(--primary);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect width='2' height='2' fill='%2309090b' fill-opacity='.14'/%3E%3C/svg%3E");
+  border-right: 2px solid var(--primary);
+  cursor: pointer;
   overflow: hidden;
   text-decoration: none;
   color: inherit;
-  transition: transform var(--transition-fast), border-color var(--transition-fast);
-  cursor: pointer;
-  max-width: 800px;
-  margin: 0 auto;
 }
 
-.artlab-main-card:hover {
-  border-color: var(--primary);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 25px rgba(250, 204, 21, 0.2);
-}
-
-.artlab-card-glow {
-  position: absolute;
-  top: -50%;
-  left: -20%;
-  width: 60%;
-  height: 200%;
-  background: radial-gradient(ellipse, rgba(250, 204, 21, 0.1) 0%, transparent 60%);
-  pointer-events: none;
-}
-
-.artlab-main-card:hover .artlab-card-glow {
-  transform: scale(1.1);
-}
-
-.artlab-card-content {
+/* The pack and the cards behind it lean together. */
+.tz-tilt {
   position: relative;
-  z-index: 2;
-  flex: 0 0 240px;
+  display: block;
+  width: var(--pw);
+  height: calc(var(--pw) * 1.5);
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(var(--lift, 0px));
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.artlab-icon {
-  width: 48px;
-  height: 48px;
+/* Card backs waiting inside; they peek out when the pack is teased open. */
+.tz-cards {
+  position: absolute;
+  left: 9%;
+  right: 9%;
+  top: 5%;
+  height: calc(var(--pw) * 1.15);
+}
+
+.tz-back {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background-color: #0e0f14;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Crect width='6' height='6' fill='%23facc15' fill-opacity='.1'/%3E%3Crect x='6' y='6' width='6' height='6' fill='%23facc15' fill-opacity='.1'/%3E%3C/svg%3E");
+  border: 2px solid #000;
+  border-radius: 6px;
+  transition: transform 0.45s cubic-bezier(0.2, 1.2, 0.35, 1);
+}
+
+.tz-back::before {
+  content: '';
+  position: absolute;
+  inset: 6%;
+  border: 2px solid var(--primary);
+  border-radius: 4px;
+}
+
+/* The lab mark: a yellow diamond */
+.tz-back i {
+  width: 24%;
+  aspect-ratio: 1;
+  background: var(--primary);
+  box-shadow: 3px 3px 0 #000;
+  transform: rotate(45deg);
+}
+
+/* In the pack the mark sits high, so it shows when the cards peek out. */
+.tz-cards .tz-back {
+  place-items: start center;
+  padding-top: 16%;
+}
+
+.tz-cards .tz-back:nth-child(1) { transform: rotate(-7deg); }
+.tz-cards .tz-back:nth-child(2) { transform: rotate(5deg); }
+.tz-cards .tz-back:nth-child(3) { transform: none; }
+
+/* ---------- The pack ---------- */
+.tz-pack {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.tz-shadow {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  transform: translate(9px, 9px);
+  clip-path: polygon(0.00% 6px, 3.57% 0px, 7.14% 6px, 10.71% 0px, 14.29% 6px, 17.86% 0px, 21.43% 6px, 25.00% 0px, 28.57% 6px, 32.14% 0px, 35.71% 6px, 39.29% 0px, 42.86% 6px, 46.43% 0px, 50.00% 6px, 53.57% 0px, 57.14% 6px, 60.71% 0px, 64.29% 6px, 67.86% 0px, 71.43% 6px, 75.00% 0px, 78.57% 6px, 82.14% 0px, 85.71% 6px, 89.29% 0px, 92.86% 6px, 96.43% 0px, 100.00% 6px, 100.00% calc(100% - 6px), 96.43% 100%, 92.86% calc(100% - 6px), 89.29% 100%, 85.71% calc(100% - 6px), 82.14% 100%, 78.57% calc(100% - 6px), 75.00% 100%, 71.43% calc(100% - 6px), 67.86% 100%, 64.29% calc(100% - 6px), 60.71% 100%, 57.14% calc(100% - 6px), 53.57% 100%, 50.00% calc(100% - 6px), 46.43% 100%, 42.86% calc(100% - 6px), 39.29% 100%, 35.71% calc(100% - 6px), 32.14% 100%, 28.57% calc(100% - 6px), 25.00% 100%, 21.43% calc(100% - 6px), 17.86% 100%, 14.29% calc(100% - 6px), 10.71% 100%, 7.14% calc(100% - 6px), 3.57% 100%, 0.00% calc(100% - 6px));
+}
+
+.tz-half {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: block;
+  overflow: hidden;
+}
+
+/* The strip above the tear line: crimped on top, ragged along the tear. */
+.tz-top {
+  top: 0;
+  height: 17%;
+  z-index: 2;
+  transform-origin: 100% 100%;
+  transition: transform 0.4s cubic-bezier(0.3, 1.5, 0.5, 1), opacity 0.3s;
+  clip-path: polygon(0.00% 6px, 3.57% 0px, 7.14% 6px, 10.71% 0px, 14.29% 6px, 17.86% 0px, 21.43% 6px, 25.00% 0px, 28.57% 6px, 32.14% 0px, 35.71% 6px, 39.29% 0px, 42.86% 6px, 46.43% 0px, 50.00% 6px, 53.57% 0px, 57.14% 6px, 60.71% 0px, 64.29% 6px, 67.86% 0px, 71.43% 6px, 75.00% 0px, 78.57% 6px, 82.14% 0px, 85.71% 6px, 89.29% 0px, 92.86% 6px, 96.43% 0px, 100.00% 6px, 100.00% calc(100% - 0.9px), 95.45% calc(100% - 2.2px), 90.91% calc(100% - 4.4px), 86.36% calc(100% - 1.6px), 81.82% calc(100% - 3.9px), 77.27% calc(100% - 0.3px), 72.73% calc(100% - 2.7px), 68.18% calc(100% - 1px), 63.64% calc(100% - 4.8px), 59.09% calc(100% - 2.4px), 54.55% calc(100% - 3.6px), 50.00% calc(100% - 0.8px), 45.45% calc(100% - 1.8px), 40.91% calc(100% - 4.2px), 36.36% calc(100% - 2.1px), 31.82% calc(100% - 0.4px), 27.27% calc(100% - 3.3px), 22.73% calc(100% - 1.2px), 18.18% calc(100% - 4.6px), 13.64% calc(100% - 2.9px), 9.09% calc(100% - 0.6px), 4.55% calc(100% - 3.8px), 0.00% calc(100% - 1.5px));
+}
+
+.tz-body {
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  clip-path: var(--tz-body-shape);
+}
+
+/* Each half carries the full-size skin; the clip-path decides what it shows. */
+.tz-skin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  width: var(--pw);
+  height: calc(var(--pw) * 1.5);
+  background: #15161d;
+  overflow: hidden;
+}
+
+.tz-body .tz-skin {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--pw) * 0.035);
+  padding: calc(var(--pw) * 0.31) calc(var(--pw) * 0.08) calc(var(--pw) * 0.15);
+  border-left: 3px solid var(--primary);
+}
+
+.tz-crimp {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(var(--pw) * 0.11);
+  background: #1f2129 repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.09) 0 2px, transparent 2px 6px);
+  border-bottom: 2px solid #000;
+}
+
+.tz-crimp-bottom {
+  top: auto;
+  bottom: 0;
+  border-bottom: 0;
+  border-top: 2px solid #000;
+}
+
+.tz-head,
+.tz-foot {
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: var(--primary);
-  border-radius: var(--radius-md);
-  font-size: 1.25rem;
-  color: #09090b;
-  margin-bottom: 0.75rem;
-  box-shadow: 0 0 15px rgba(250, 204, 21, 0.35);
+  justify-content: space-between;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1.2;
 }
 
-.artlab-card-title {
+.tz-head {
+  font-size: calc(var(--pw) * 0.048);
+}
+
+.tz-series {
+  padding: 0.25em 0.6em;
+  border-radius: 3px;
+  background: var(--primary);
+  color: var(--ink);
+}
+
+.tz-count {
+  color: var(--text-secondary);
+}
+
+.tz-name {
   font-family: var(--font-display);
-  font-size: 1.5rem;
-  font-weight: 800;
-  margin-bottom: 0.25rem;
-  color: var(--text-primary);
+  font-weight: 700;
+  font-size: calc(var(--pw) * 0.25);
+  line-height: 0.84;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: var(--primary);
+  text-shadow: calc(var(--pw) * 0.018) calc(var(--pw) * 0.018) 0 #000;
+}
+
+.tz-sub {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: calc(var(--pw) * 0.046);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* The window: a yellow band of card backs, never the art itself. */
+.tz-window {
+  position: relative;
+  display: block;
+  flex: 1;
+  min-height: 0;
+  margin: calc(var(--pw) * 0.02) calc(var(--pw) * -0.08);
+  overflow: hidden;
+}
+
+.tz-strip {
+  position: absolute;
+  left: -12%;
+  top: 50%;
+  display: flex;
+  gap: 6px;
+  height: 80%;
+  padding: 4px 6px;
+  background: var(--primary);
+  transform: translateY(-50%) rotate(-9deg);
+}
+
+.tz-strip .tz-back {
+  position: relative;
+  inset: auto;
+  height: 100%;
+  width: auto;
+  aspect-ratio: 5 / 7;
+  border-radius: 3px;
+}
+
+.tz-strip .tz-back::before {
+  border-width: 1px;
+}
+
+.tz-strip .tz-back i {
+  box-shadow: 2px 2px 0 #000;
+}
+
+.tz-foot {
+  font-size: calc(var(--pw) * 0.042);
+  color: var(--primary);
+}
+
+.tz-barcode {
+  width: 34%;
+  height: calc(var(--pw) * 0.07);
+  background: repeating-linear-gradient(90deg, #e8e8e8 0 2px, transparent 2px 4px, #e8e8e8 4px 5px, transparent 5px 8px, #e8e8e8 8px 11px, transparent 11px 13px);
+}
+
+/* Foil sheen: one narrow specular band that sweeps across now and then. */
+.tz-sheen {
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.tz-sheen::before {
+  content: '';
+  position: absolute;
+  top: -5%;
+  bottom: -5%;
+  left: 0;
+  width: 16%;
+  background: rgba(255, 255, 255, 0.07);
+  border-right: 3px solid rgba(255, 255, 255, 0.2);
+  transform: translateX(-450%) skewX(-18deg);
+  animation: tz-sheen 6.5s cubic-bezier(0.45, 0, 0.35, 1) 1.2s infinite;
+}
+
+@keyframes tz-sheen {
+  0% { transform: translateX(-450%) skewX(-18deg); }
+  24%, 100% { transform: translateX(950%) skewX(-18deg); }
+}
+
+/* The dashed tear line and its tag */
+.tz-tear {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 17%;
+  z-index: 4;
+  display: block;
+  height: 0;
+  transition: opacity 0.2s;
+}
+
+.tz-tear::before {
+  content: '';
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  top: -1px;
+  border-top: 2px dashed rgba(250, 204, 21, 0.55);
+}
+
+.tz-tear-tag {
+  position: absolute;
+  right: 6px;
+  top: -12px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: var(--ink);
+  color: var(--primary);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.35);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1.2;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ---------- Teased: hover, keyboard focus on the button, or the first scroll-in ---------- */
+.artlab-teaser:is(:hover, :focus-within, .is-peek) .tz-tilt {
+  --lift: -4px;
+}
+
+.artlab-teaser[data-state="sealed"]:is(:hover, :focus-within, .is-peek) .tz-top {
+  transform: translateY(-3px) rotate(-6deg);
+}
+
+.artlab-teaser:is(:hover, :focus-within, .is-peek) .tz-tear {
+  opacity: 0;
+}
+
+.artlab-teaser:is(:hover, :focus-within, .is-peek) .tz-cards .tz-back:nth-child(1) { transform: translate(-14%, -20%) rotate(-12deg); }
+.artlab-teaser:is(:hover, :focus-within, .is-peek) .tz-cards .tz-back:nth-child(2) { transform: translate(13%, -22%) rotate(9deg); transition-delay: 0.04s; }
+.artlab-teaser:is(:hover, :focus-within, .is-peek) .tz-cards .tz-back:nth-child(3) { transform: translateY(-30%); transition-delay: 0.08s; }
+
+/* ---------- Opened before: the strip is gone and the cards stand out of the pack ---------- */
+.artlab-teaser[data-state="opened"] .tz-top,
+.artlab-teaser[data-state="opened"] .tz-tear {
+  opacity: 0;
+  transform: translate(30%, -60%) rotate(18deg);
+}
+
+.artlab-teaser[data-state="opened"] .tz-shadow,
+.artlab-teaser:is(:hover, :focus-within, .is-peek) .tz-shadow {
+  clip-path: var(--tz-body-shape);
+}
+
+.artlab-teaser[data-state="opened"] .tz-cards .tz-back:nth-child(1) { transform: translate(-12%, -18%) rotate(-10deg); }
+.artlab-teaser[data-state="opened"] .tz-cards .tz-back:nth-child(2) { transform: translate(11%, -20%) rotate(8deg); }
+.artlab-teaser[data-state="opened"] .tz-cards .tz-back:nth-child(3) { transform: translateY(-26%); }
+
+/* Sealed and opened copy are both in the markup; show the one that applies. */
+.artlab-teaser[data-state="sealed"] [data-when="opened"],
+.artlab-teaser[data-state="opened"] [data-when="sealed"] {
+  display: none;
+}
+
+/* ---------- Copy ---------- */
+.tz-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.9rem;
+  padding: 2.25rem 2.5rem;
+  min-width: 0;
+}
+
+.tz-eyebrow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.tz-badge {
+  padding: 0.2em 0.6em;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-sm);
+  color: var(--primary);
+}
+
+.artlab-teaser[data-state="opened"] .tz-badge {
+  background: var(--primary);
+  color: var(--ink);
+}
+
+.tz-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3vw, 2.25rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
   text-wrap: balance;
 }
 
-.artlab-card-desc {
+.tz-desc {
+  max-width: 44ch;
   color: var(--text-secondary);
-  font-size: 0.9rem;
-  margin-bottom: 0.75rem;
-  line-height: 1.4;
+  line-height: 1.6;
 }
 
-.artlab-stats {
+.tz-meter {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  font-size: 0.85rem;
-  color: var(--primary);
-}
-
-.artlab-stats span {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--primary);
-  font-weight: 700;
-  font-size: 0.85rem;
-}
-
-.artlab-enter-btn {
-  display: inline-flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: 0.75rem;
-  padding: 0.75rem 1.5rem;
-  background: var(--primary);
-  border-radius: var(--radius-md);
-  color: #09090b;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 0.9rem;
-  letter-spacing: 0.03em;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  text-decoration: none;
-  transition: all var(--transition-fast);
-  box-shadow: 0 0 20px rgba(250, 204, 21, 0.3);
+  color: var(--primary);
 }
 
-.artlab-enter-btn:hover {
-  gap: 1rem;
+/* One diamond per card: outlined while sealed, filled once the set is complete. */
+.tz-pips {
+  display: inline-flex;
+  gap: 7px;
+  padding-left: 2px;
+}
+
+.tz-pips i {
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--primary);
+  transform: rotate(45deg);
+}
+
+.artlab-teaser[data-state="opened"] .tz-pips i {
+  background: var(--primary);
+}
+
+.tz-cta {
+  margin-top: 0.35rem;
+}
+
+.tz-cta i {
+  transition: transform var(--transition-normal);
+}
+
+.tz-cta:hover i,
+.tz-cta:focus-visible i {
+  transform: translateX(4px);
+}
+
+.tz-cta:focus-visible {
+  outline: 3px solid var(--primary-light);
+  outline-offset: 4px;
+}
+
+.artlab-teaser:hover .tz-cta {
   background: var(--primary-light);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(250, 204, 21, 0.45);
+  border-color: var(--primary-light);
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #000;
 }
 
-/* Horizontal Preview Strip - Mosaic Tile Layout (Condensed) */
-.artlab-preview-strip {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  padding: 0.75rem 1.5rem;
-}
-
-.strip-item {
-  width: 85px;
-  height: 85px;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  border: 2px solid rgba(250, 204, 21, 0.2);
-  background: #12131a;
-  cursor: pointer;
-
-  transition: transform var(--transition-fast),
-    border-color var(--transition-fast),
-    box-shadow var(--transition-fast),
-    margin var(--transition-fast);
-
-  flex-shrink: 0;
-  margin-left: -25px;
-  box-shadow: -4px 0 15px rgba(0, 0, 0, 0.5);
-  position: relative;
-}
-
-/* Specific stacking order to ensure visibility */
-.strip-item:nth-child(1) {
-  z-index: 1;
-  margin-left: 0;
-}
-
-.strip-item:nth-child(2) {
-  z-index: 2;
-}
-
-.strip-item:nth-child(3) {
-  z-index: 3;
-}
-
-.strip-item:nth-child(4) {
-  z-index: 4;
-}
-
-.strip-item:nth-child(5) {
-  z-index: 5;
-}
-
-.strip-item:nth-child(6) {
-  z-index: 6;
-}
-
-.strip-item:nth-child(7) {
-  z-index: 7;
-}
-
-/* Scattered "Mosaic" Effect - Random-looking offsets */
-.strip-item:nth-child(1) {
-  transform: translateY(0px) rotate(-6deg);
-}
-
-.strip-item:nth-child(2) {
-  transform: translateY(10px) rotate(4deg);
-}
-
-.strip-item:nth-child(3) {
-  transform: translateY(-8px) rotate(-3deg);
-}
-
-.strip-item:nth-child(4) {
-  transform: translateY(5px) rotate(2deg);
-}
-
-.strip-item:nth-child(5) {
-  transform: translateY(-12px) rotate(-5deg);
-}
-
-.strip-item:nth-child(6) {
-  transform: translateY(8px) rotate(3deg);
-}
-
-.strip-item:nth-child(7) {
-  transform: translateY(-4px) rotate(-2deg);
-}
-
-.strip-item img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  pointer-events: none;
-}
-
-/* Hover: Pop straight up */
-.strip-item:hover {
-  transform: scale(1.15) rotate(0deg) translateY(0);
-  border-color: var(--primary);
-  box-shadow: 0 8px 25px rgba(250, 204, 21, 0.45);
-  z-index: 10;
-}
-
-/* Hide on smaller screens */
-@media (max-width: 768px) {
-  .artlab-preview-strip {
-    display: none;
+/* ---------- Narrow screens: the pack on top, the copy below ---------- */
+@media (max-width: 539px) {
+  .artlab-teaser {
+    --pw: min(150px, 40vw);
+    grid-template-columns: minmax(0, 1fr);
+    box-shadow: 5px 5px 0 #000;
   }
 
-  /* Thinner card on mobile */
-  .artlab-main-card {
-    width: 90%;
-    max-width: 320px;
-    margin: 0 auto;
+  /* Just enough room above the pack for the cards to peek out (they rise about 0.3 x --pw). */
+  .tz-stage {
+    padding: calc(var(--pw) * 0.3) 1rem calc(var(--pw) * 0.1);
+    border-right: 0;
+    border-bottom: 2px solid var(--primary);
+  }
+
+  .tz-copy {
+    align-items: stretch;
+    gap: 0.6rem;
+    padding: 1.1rem 1rem 1.2rem;
+  }
+
+  .tz-title {
+    font-size: 1.4rem;
+  }
+
+  .tz-desc {
+    max-width: none;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .tz-meter {
+    gap: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .tz-cta {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Phones held sideways: a smaller pack so the whole teaser fits on screen. */
+@media (max-height: 500px) and (min-width: 540px) {
+  .artlab-teaser {
+    --pw: min(170px, 26vw);
+  }
+
+  .tz-copy {
+    padding: 1.5rem 1.75rem;
+    gap: 0.7rem;
+  }
+
+  .tz-desc {
+    font-size: 0.9rem;
+  }
+}
+
+/* ---------- Reduced motion: no sweep, no lean, no movement ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .tz-sheen::before {
+    animation: none;
+    opacity: 0;
+  }
+
+  .tz-tilt,
+  .tz-top,
+  .tz-back,
+  .tz-tear,
+  .tz-cta i {
+    transition: none;
+  }
+
+  .tz-tilt {
+    transform: none;
   }
 }

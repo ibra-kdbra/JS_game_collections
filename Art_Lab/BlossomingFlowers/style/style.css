@@ -1209,3 +1209,10 @@ body {
 .not-loaded * {
   animation-play-state: paused !important;
 }
+
+/* Phones: the garden stands on the visible bottom edge, not behind the
+   browser bar. */
+body {
+  min-height: 100dvh;
+  overscroll-behavior: none;
+}

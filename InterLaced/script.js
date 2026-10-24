@@ -85,15 +85,12 @@ function rot13(text, decrypt) {
 const prng = new MersenneTwister();
 const rand = (min, max) => Math.floor(prng.random() * (max - min + 1)) + min;
 
-// Map that returns Infinity rather than undefined,
+// Score lookup that returns Infinity rather than undefined,
 // used for scoring paths in A* path finding
-Map.prototype.value = function(key) {
-  const value = this.get(key);
-  if (value === undefined) {
-    return Infinity;
-  }
-  return value;
-};
+function scoreOf(map, key) {
+  const value = map.get(key);
+  return value === undefined ? Infinity : value;
+}
 
 // Convenience functions
 const size = (object) => Object.keys(object || {}).length;
@@ -107,6 +104,98 @@ const hide = element => add(element, 'hide');
 const show = element => remove(element, 'hide');
 
 const scroll = element => element.scrollTop = element.scrollHeight + element.clientHeight;
+
+// Keyboard: a single listener hands keys to the most recently added handler,
+// so the terminal prompt and the mesh view never overwrite each other.
+const keyHandlers = [];
+function pushKeys(handler) {
+  keyHandlers.push(handler);
+  return function() {
+    const index = keyHandlers.lastIndexOf(handler);
+    if (index !== -1) {
+      keyHandlers.splice(index, 1);
+    }
+  };
+}
+document.addEventListener('keydown', function(event) {
+  if (event.target.closest && event.target.closest('input')) {
+    return;
+  }
+  const handler = keyHandlers[keyHandlers.length - 1];
+  if (handler) {
+    handler(event);
+  }
+});
+
+// Synthesized sound effects (Web Audio), muted with the speaker button or S
+const sfx = (function() {
+  let context = null;
+  let muted = false;
+
+  // Browsers only allow audio after a user gesture, so the context starts on the first one
+  function start() {
+    if (!context) {
+      const Context = window.AudioContext || window.webkitAudioContext;
+      if (!Context) {
+        return;
+      }
+      context = new Context();
+    }
+    if (context.state === 'suspended') {
+      context.resume();
+    }
+  }
+
+  // One short tone: frequency (Hz), length (s), waveform, volume, optional pitch slide target
+  function tone(freq, length, type, volume, slideTo, delay) {
+    const ctx = context;
+    if (muted || document.hidden || !ctx || ctx.state !== 'running') {
+      return;
+    }
+    const at = ctx.currentTime + (delay || 0);
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, at);
+    if (slideTo) {
+      osc.frequency.exponentialRampToValueAtTime(slideTo, at + length);
+    }
+    gain.gain.setValueAtTime(volume, at);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + length);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(at);
+    osc.stop(at + length + 0.02);
+  }
+
+  ['pointerdown', 'keydown'].forEach(function(type) {
+    window.addEventListener(type, start, true);
+  });
+
+  return {
+    key: () => tone(1800 + Math.random() * 400, 0.015, 'square', 0.02),
+    enter: () => tone(660, 0.05, 'square', 0.04),
+    tool: () => tone(220, 0.12, 'sawtooth', 0.05, 880),
+    connect: () => {
+      tone(523, 0.08, 'triangle', 0.08);
+      tone(784, 0.12, 'triangle', 0.08, null, 0.09);
+    },
+    alert: () => {
+      tone(880, 0.15, 'square', 0.05);
+      tone(660, 0.15, 'square', 0.05, null, 0.18);
+    },
+    offline: () => tone(440, 0.9, 'sawtooth', 0.06, 55),
+    coin: () => {
+      tone(988, 0.06, 'square', 0.04);
+      tone(1319, 0.12, 'square', 0.04, null, 0.07);
+    },
+    get muted() {
+      return muted;
+    },
+    set muted(value) {
+      muted = value;
+    }
+  };
+})();
 
 // Random, fake IP Address generator
 let IPs = {};
@@ -230,12 +319,17 @@ You have new mail.
 
 const menu = `&P&T./interlaced
 
-<div style="color:#005b96;line-height:8px;letter-spacing:-1px">  ██╗███╗   ██╗████████╗███████╗██████╗ ██╗      █████╗  ██████╗███████╗██████╗<br>  ██║████╗  ██║╚══██╔══╝██╔════╝██╔══██╗██║     ██╔══██╗██╔════╝██╔════╝██╔══██╗<br>  ██║██╔██╗ ██║   ██║   █████╗  ██████╔╝██║     ███████║██║     █████╗  ██║  ██║<br>  ██║██║╚██╗██║   ██║   ██╔══╝  ██╔══██╗██║     ██╔══██║██║     ██╔══╝  ██║  ██║<br>  ██║██║ ╚████║   ██║   ███████╗██║  ██║███████╗██║  ██║╚██████╗███████╗██████╔╝<br>  ╚═╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚═════╝<br><br>&R73&#x2500;
+<div class="logo">  ██╗███╗   ██╗████████╗███████╗██████╗ ██╗      █████╗  ██████╗███████╗██████╗<br>  ██║████╗  ██║╚══██╔══╝██╔════╝██╔══██╗██║     ██╔══██╗██╔════╝██╔════╝██╔══██╗<br>  ██║██╔██╗ ██║   ██║   █████╗  ██████╔╝██║     ███████║██║     █████╗  ██║  ██║<br>  ██║██║╚██╗██║   ██║   ██╔══╝  ██╔══██╗██║     ██╔══██║██║     ██╔══╝  ██║  ██║<br>  ██║██║ ╚████║   ██║   ███████╗██║  ██║███████╗██║  ██║╚██████╗███████╗██████╔╝<br>  ╚═╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚═════╝<br><br>&R73&#x2500;
 &$
  1) Story
 
  2) Challenge
 &O
+ 4) Stages&A
+
+ 5) Daily challenge&Q
+
+ 6) Shop&W
 &I`;
 
 const rimraf = `
@@ -338,6 +432,7 @@ function Edge(mesh, edgeId, start, end) {
       } else {
         return;
       }
+      sfx.tool();
       self.effect = mesh.tools[mesh.effect.type];
     }
   };
@@ -515,7 +610,8 @@ function Node(mesh) {
     self.element = mesh.svg.circle(self.pos.x, self.pos.y, radius);
     self.outline = mesh.svg.circle(self.pos.x, self.pos.y, radius + 2, 'node-effect');
 
-    self.element.onclick = function() {if (!self.effect) {
+    self.element.onclick = function() {
+      if (!self.effect) {
         if (mesh.effect.type === 'crash' && mesh.tools.crash.decrement()) {
           self.online = false;
           add(self.element, 'node-offline');
@@ -531,6 +627,7 @@ function Node(mesh) {
           return;
         }
 
+        sfx.tool();
         self.effect = mesh.tools[mesh.effect.type];
       }
     };
@@ -577,10 +674,8 @@ function Node(mesh) {
 
     if (self.effect) {
       if (self.effect.type === 'corrupt') {
-        console.log('corrupting packet');
         packet.corrupt = true;
       } else if (self.effect.type === 'mine') {
-        console.log('mining from a packet');
         mesh.coins++;
         packet.ticks++;
       } else if (self.effect.type === 'intercept' && packet.payload) {
@@ -654,7 +749,7 @@ function Packet(mesh, source, destination) {
       openSet.forEach(function(value, key) {
         if (!current) {
           current = key;
-        } else if (value < fScore.value(current)) {
+        } else if (value < scoreOf(fScore, current)) {
           current = key;
         }
       });
@@ -721,10 +816,10 @@ function Packet(mesh, source, destination) {
         }
 
         // score connections using simple geometric distance
-        const tgScore = gScore.value(current) + mesh.distance(current.pos, neighbor.pos);
+        const tgScore = scoreOf(gScore, current) + mesh.distance(current.pos, neighbor.pos);
         if (!openSet.has(neighbor)) {
           openSet.add(neighbor);
-        } else if (tgScore >= gScore.value(neighbor)) {
+        } else if (tgScore >= scoreOf(gScore, neighbor)) {
           continue;
         }
 
@@ -742,7 +837,6 @@ function Packet(mesh, source, destination) {
     if (self.current.object === 'edge' && self.hop) {
       if (self.count) { // Count down time remain
         if (self.ticks > self.maxTicks) { // Drop packet if max ticks (TTL) exceeded
-          console.log('dropped - TTL exceeded', self.ticks, self.maxTicks);
           self.dropped = true;
           self.current.packet.delete(self);
           self.hop.source.interfaces[self.hop.edge.id].dropped++;
@@ -763,7 +857,6 @@ function Packet(mesh, source, destination) {
 
     // Drop packet it the current path length is greater than maximum
     if (self.path.length > self.maxHops) {
-      console.log('dropped - max hops exceeded', self.path.length, self.maxHops);
       self.dropped = true;
       self.current.packet.delete(self);
       if (self.cameFrom) {
@@ -775,7 +868,6 @@ function Packet(mesh, source, destination) {
     // Packet arrived at destination
     if (self.current === self.destination) {
       if (self.corrupt) { // Drop corrupted packets
-        console.log('dropped - corrupt packet');
         self.dropped = true;
         self.current.packet.delete(self);
         if (self.cameFrom) {
@@ -809,7 +901,6 @@ function Packet(mesh, source, destination) {
       }
       if (routes.length) {
         self.hop = routes[mesh.rand(0, routes.length)];
-        console.log('rerouted');
       }
     } else if (self.idealPath) { // Ideal path cached, use it
       const index = self.idealPath.indexOf(self.current);
@@ -846,7 +937,6 @@ function Packet(mesh, source, destination) {
     } else { // No way to get to destination, drop packet
       self.dropped = true;
       self.current.packet.delete(self);
-      console.log('dropped - no route to host');
       if (self.cameFrom) {
         self.current.interfaces[self.cameFrom.edge.id].dropped++;
       }
@@ -1002,7 +1092,10 @@ function Mesh({
     };
 
     // Handle key down for arrow key panning
-    window.onkeydown = function(event) {
+    if (self.releaseKeys) {
+      self.releaseKeys();
+    }
+    self.releaseKeys = pushKeys(function(event) {
       const key = event.keyCode;
       if (key === 37) { // Left Arrow
         viewbox[0] += 10;
@@ -1013,12 +1106,91 @@ function Mesh({
       } else if (key === 40) { // Down Arrow
         viewbox[1] -= 10;
       } else if (event.key === '0' && event.ctrlKey) { // CTRL-0 reset
+        zoom = 1;
         viewbox = [ 0, 0, svgWidth, svgHeight ];
       } else {
         return;
       }
+      event.preventDefault();
       setViewBox(viewbox);
+    });
+
+    // Touch: drag with one finger to pan, pinch with two to zoom. A drag
+    // swallows the click that follows it, so panning never applies a tool.
+    const pointers = new Map();
+    let pinch = null;
+    let dragged = false;
+
+    // Client position to SVG user units (handles the page scaling and rotation)
+    const toSvg = function(x, y) {
+      const point = svg.createSVGPoint();
+      point.x = x;
+      point.y = y;
+      return point.matrixTransform(svg.getScreenCTM().inverse());
     };
+
+    svg.onpointerdown = function(event) {
+      if (event.pointerType === 'mouse') {
+        return;
+      }
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pointers.size === 1) {
+        dragged = false;
+      }
+      if (pointers.size === 2) {
+        const [ a, b ] = [ ...pointers.values() ];
+        pinch = { distance: Math.hypot(a.x - b.x, a.y - b.y), zoom };
+      }
+    };
+
+    svg.onpointermove = function(event) {
+      const last = pointers.get(event.pointerId);
+      if (!last) {
+        return;
+      }
+      const current = { x: event.clientX, y: event.clientY };
+      if (pointers.size === 1) {
+        if (!dragged && Math.hypot(current.x - last.x, current.y - last.y) < 8) {
+          return;
+        }
+        dragged = true;
+        const from = toSvg(last.x, last.y);
+        const to = toSvg(current.x, current.y);
+        setViewBox([ viewbox[0] + from.x - to.x, viewbox[1] + from.y - to.y, viewbox[2], viewbox[3] ]);
+      } else if (pointers.size === 2 && pinch) {
+        dragged = true;
+        pointers.set(event.pointerId, current);
+        const [ a, b ] = [ ...pointers.values() ];
+        const center = toSvg((a.x + b.x) / 2, (a.y + b.y) / 2);
+        zoom = Math.min(Math.max(pinch.zoom * Math.hypot(a.x - b.x, a.y - b.y) / pinch.distance, 1), 5);
+        const width = svgWidth / zoom;
+        const height = svgHeight / zoom;
+        // Keep the point between the fingers in place
+        const fx = (center.x - viewbox[0]) / viewbox[2];
+        const fy = (center.y - viewbox[1]) / viewbox[3];
+        setViewBox([ center.x - fx * width, center.y - fy * height, width, height ]);
+        return;
+      }
+      pointers.set(event.pointerId, current);
+    };
+
+    svg.onpointerup = svg.onpointercancel = function(event) {
+      pointers.delete(event.pointerId);
+      if (pointers.size < 2) {
+        pinch = null;
+      }
+    };
+
+    if (svg.swallowClick) {
+      svg.removeEventListener('click', svg.swallowClick, true);
+    }
+    svg.swallowClick = function(event) {
+      if (dragged) {
+        event.stopPropagation();
+        dragged = false;
+      }
+    };
+    svg.addEventListener('click', svg.swallowClick, true);
 
     return svg;
   }
@@ -1153,8 +1325,18 @@ function Mesh({
 
   //////////
   // Reset and initialize all elements and state
+  // Leave the mesh view and hand control back to the terminal
+  const finish = function() {
+    if (self.releaseKeys) {
+      self.releaseKeys();
+      self.releaseKeys = null;
+    }
+    return callback(self);
+  };
+
   self.init = function() {
     self.connected = false;
+    self.ticks = 0;
 
     self.coins = 0;
     self.clear(self.elements.coins);
@@ -1332,9 +1514,11 @@ function Mesh({
 
     // Looping router, routes traffic, determines state
     self.router = setInterval(function() {
-      if (self.crashed) {
+      // Nothing moves while the tab is hidden
+      if (self.crashed || document.hidden) {
         return;
       }
+      self.ticks++;
 
       // Route individual packets
       for (let i = 0; i < self.packets.length; i++) {
@@ -1369,6 +1553,7 @@ function Mesh({
       // Initial state after creation, ready to start routing
       if (!self.connected) {
         self.connected = true;
+        sfx.connect();
         self.console.clear().log('&#x21B9; Connected!');
         self.console.log('\nObjective: ' +
                          (objective.length > 80 ? objective.replace(/^(.*), (.*?)$/, '$1,\n           $2') :
@@ -1402,14 +1587,16 @@ function Mesh({
             if (self.router) {
               clearInterval(self.router);
             }
-            return callback(self);
+            return finish();
           } else {
             quitState = 1;
             self.elements.quitText.innerHTML = sure;
           }
-        };let retryState = 0;
+        };
+
+        let retryState = 0;
         self.elements.retry.onmouseover = function() {
-          if (quitState) {
+          if (retryState) {
             self.elements.retryText.innerHTML = sure;
           } else {
             self.elements.retryText.innerHTML = retry;
@@ -1470,7 +1657,9 @@ function Mesh({
       self.elements.cont.innerHTML = 'Retry &#x21BB';
       banner.innerHTML = 'FAILED!';
       self.failed = true;
+      sfx.alert();
     } else {
+      sfx.offline();
       remove(banner, 'failed');
       remove(self.elements.cont, 'failed');
       self.elements.cont.innerHTML = 'Disconnect &#x21CE';
@@ -1550,7 +1739,7 @@ function Mesh({
             hide(self.elements.crash);
             hide(self.elements.offline);
             remove(self.svg, 'blink');
-            return callback(self);
+            return finish();
           };
         } else {
           hide(self.elements.cont);
@@ -1626,7 +1815,6 @@ function Interlaced() {
     meshId: 'a72e::ee13::bc05',
     width: 15,
     seed: 12,
-    minumum: 2,
     objective: 'Cause some trouble, offline one of the beta meshes.',
     uses: {
       crash: 5,
@@ -1704,7 +1892,7 @@ function Interlaced() {
     width: 25,
     seed: 6,
     objective: 'Exploit the compute mesh to mine 1.000 MeshCoin before offlining it.',
-    mine: 1000,
+    coins: 1000,
     uses: {
       crash: 5,
       cut: 5,
@@ -1750,10 +1938,66 @@ function Interlaced() {
       corrupt: 5,
       reroute: 5
     }
-  } ];// Local storage for stage Continue and earned meshcoins
-  const storage = window.localStorage;
-  let resume = parseInt(storage.getItem('stage') || 0);
-  let coins = parseInt(storage.getItem('coins') || 0);
+  } ];
+
+  // Saved progress: next story stage, MeshCoins (in thousandths), cleared stages,
+  // shop boosts waiting for the next mesh, and today's daily challenge result.
+  const store = GameKit.createStore('interlaced');
+  GameKit.migrateKey(store, 'stage', 'stage', { parse: Number });
+  GameKit.migrateKey(store, 'coins', 'coins', { parse: Number });
+  let resume = parseInt(store.get('stage', 0)) || 0;
+  let coins = parseInt(store.get('coins', 0)) || 0;
+  const cleared = new Set(store.get('cleared', []).map(Number));
+  const boosts = store.get('boosts', {});
+
+  // Tuning: MeshCoins (thousandths) paid for the first clear of story stage i,
+  // for each day's first daily win, and shop prices for one extra tool use.
+  const stageReward = (i) => 40 + i * 20;
+  const dailyReward = 250;
+  const shop = [
+    { tool: 'crash', name: 'Crash (MemCorrupt)', price: 300 },
+    { tool: 'cut', name: 'Cut (DoS.RST)', price: 200 },
+    { tool: 'slow', name: 'Slow (Rate.Limit)', price: 150 },
+    { tool: 'corrupt', name: 'Corrupt (Buf.Overflow)', price: 400 },
+    { tool: 'reroute', name: 'Reroute (Conf.Rewrite)', price: 300 }
+  ];
+
+  const money = (amount) => '$ ' + (amount / 1000).toFixed(3);
+
+  function saveProgress() {
+    store.set('stage', resume);
+    store.set('coins', coins);
+    store.set('cleared', [ ...cleared ]);
+    store.set('boosts', boosts);
+  }
+
+  // Add any bought boosts to the tools a mesh offers; boosts for tools it lacks wait
+  function withBoosts(config) {
+    const uses = Object.assign({}, config.uses);
+    const applied = [];
+    shop.forEach(function(item) {
+      if (boosts[item.tool] && uses[item.tool] > 0) {
+        uses[item.tool] += boosts[item.tool];
+        applied.push('+' + boosts[item.tool] + ' ' + item.tool);
+        boosts[item.tool] = 0;
+      }
+    });
+    if (applied.length) {
+      saveProgress();
+      print(span('7fDB6A') + 'Boosts loaded: ' + applied.join(', ') + '</span>');
+    }
+    return Object.assign({}, config, { uses });
+  }
+
+  // Daily challenge seed from the local date, e.g. 20261022
+  const today = () => {
+    const d = new Date();
+    return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  };
+  const formatTime = (ms) => {
+    const s = Math.floor(ms / 1000);
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + '.' + Math.floor(ms % 1000 / 100);
+  };
 
   // Convenience coloring functions
   const span = (hex) => '<span style="color:#' + hex + '">';
@@ -1807,23 +2051,44 @@ function Interlaced() {
     lines.unshift( ...menu.split('\n'));
   }
 
-  // Play a story stage
-  function play(i, next) {
-    const stage = stages[i];
-    hide(terminal);
-    show(screen);
-    const mesh = new Mesh(stage, function() {
+  // Switch between the terminal and the mesh visualizer
+  function showMesh(visible) {
+    if (visible) {
+      hide(terminal);
+      show(screen);
+    } else {
       show(terminal);
       hide(screen);
+    }
+    document.body.classList.toggle('mode-mesh', visible);
+    resizeDisplay();
+  }
+
+  // Play a story stage
+  function play(i, next) {
+    i = parseInt(i, 10);
+    const stage = stages[i];
+    const config = withBoosts(stage);
+    showMesh(true);
+    const mesh = new Mesh(config, function() {
+      showMesh(false);
       if (mesh.quit) { // Quit, show the mennu
         showMenu();
       } else { // Finished
         if (!mesh.failed) { // Won
           coins += mesh.coins;
+          if (!cleared.has(i)) {
+            cleared.add(i);
+            coins += stageReward(i);
+            lines.unshift(span('7fDB6A') + 'First clear bonus: ' + money(stageReward(i)) + ' meshcoins</span>');
+            sfx.coin();
+          }
+          GameKit.recordBest('interlaced', cleared.size, {
+            label: cleared.size + ' of ' + stages.length + ' meshes offline'
+          });
           i++;
-          storage.setItem('stage', i);
-          storage.setItem('coins', coins);
-          resume = i;
+          resume = Math.max(resume, i);
+          saveProgress();
           if (i < stages.length) { // Invoke the next stage
             lines.unshift('&G' + i);
           }
@@ -1835,29 +2100,33 @@ function Interlaced() {
         }
       }
       next();
-    });}
+    });
+  }
 
-  // Generate a random Challenge mesh
+  // Generate a Challenge mesh; a given seed (the daily challenge) always gives the same mesh
   let challengeMesh;
-  function generateChallenge() {
-    const seed = rand(234, 35746);
+  function generateChallenge(daySeed) {
+    const seeded = daySeed ? new MersenneTwister(daySeed) : null;
+    const pick = seeded ? (min, max) => Math.floor(seeded.random() * (max - min + 1)) + min : rand;
+    const seed = pick(234, 35746);
     challengeMesh = { // Randomly set all options
-      meshId: '[::1]/challenge/' + seed.toString(16),
-      width: rand(10, 60),
-      height: rand(10, 35),
+      meshId: (daySeed ? '[::1]/daily/' + daySeed : '[::1]/challenge/' + seed.toString(16)),
+      width: pick(10, 60),
+      height: pick(10, 35),
       seed: seed,
+      daily: daySeed || 0,
       uses: {
-        crash: rand(4, 10),
-        cut: rand(4, 10),
-        slow: rand(4, 10),
-        corrupt: rand(4, 10),
-        reroute: rand(4, 10),
-        intercept: rand(0, 1),
-        mine: rand(0, 1)
+        crash: pick(4, 10),
+        cut: pick(4, 10),
+        slow: pick(4, 10),
+        corrupt: pick(4, 10),
+        reroute: pick(4, 10),
+        intercept: pick(0, 1),
+        mine: pick(0, 1)
       }
     };
     challengeMesh.data = !!challengeMesh.uses.intercept;
-    challengeMesh.coins = challengeMesh.uses.mine ? rand(25, 250) : 0;
+    challengeMesh.coins = challengeMesh.uses.mine ? pick(25, 250) : 0;
 
     // Create objective string
     const tasks = [ 'Offline the mesh' ];
@@ -1874,40 +2143,180 @@ function Interlaced() {
 
   // Play a challenge
   function challenge(next) {
-    hide(terminal);
-    show(screen);
-    const mesh = new Mesh(challengeMesh, function() {
-      show(terminal);
-      hide(screen);
+    // Boosts stay out of the daily challenge so daily times are comparable
+    const config = challengeMesh.daily ? challengeMesh : withBoosts(challengeMesh);
+    showMesh(true);
+    const mesh = new Mesh(config, function() {
+      showMesh(false);
       if (!mesh.quit && !mesh.failed) { // Won
         coins += mesh.coins; // Save coins earned
-        storage.setItem('coins', coins);
+        if (challengeMesh.daily) {
+          const ms = mesh.ticks * mesh.interval;
+          const daily = store.get('daily', {});
+          const firstWin = daily.day !== challengeMesh.daily;
+          const result = GameKit.recordBest('interlaced', ms, {
+            lowerIsBetter: true,
+            mode: 'daily-' + challengeMesh.daily,
+            label: 'Daily ' + challengeMesh.daily + ' in ' + formatTime(ms)
+          });
+          store.set('daily', { day: challengeMesh.daily, best: result.best });
+          lines.unshift(span('7fDB6A') + 'Daily mesh offline in ' + formatTime(ms) +
+            (result.isNew ? ' - new best!' : ' (best ' + formatTime(result.best) + ')') + '</span>');
+          if (firstWin) {
+            coins += dailyReward;
+            lines.unshift(span('7fDB6A') + 'Daily reward: ' + money(dailyReward) + ' meshcoins</span>');
+            sfx.coin();
+          }
+        }
+        saveProgress();
       }
 
       if (mesh.failed) { // Failed, automatically retry
-        lines.unshift('&H --retry');} else { // Show the menu on win and quit
+        lines.unshift('&H --retry');
+      } else { // Show the menu on win and quit
         showMenu();
       }
 
       next();
-    });}
+    });
+  }
+
+  // Stage list (command 4): cleared stages are ticked, locked ones cannot be picked yet
+  function listStages() {
+    const list = stages.map(function(stage, i) {
+      const state = cleared.has(i) ? green + '&#x2714;</span>' : i <= resume ? cyan + '&#x25CB;</span>' : grey + '&#x2022;</span>';
+      const name = i <= resume ? 'mesh://' + stage.meshId : grey + 'locked</span>';
+      return '  ' + String(i + 1).padStart(2, ' ') + ' ' + state + ' ' + name;
+    });
+    lines.unshift('', ...list, '', '  Type a stage number to connect, or &BQ&b to go back.', '&I');
+    prompt = 'stage';
+  }
+
+  // Shop (command 6): spend MeshCoins on extra tool uses for your next mesh
+  function listShop(note) {
+    const items = shop.map(function(item, i) {
+      const owned = boosts[item.tool] ? grey + '  (+' + boosts[item.tool] + ' ready)</span>' : '';
+      return '  ' + (i + 1) + ') ' + item.name.padEnd(24, ' ') + money(item.price) + owned;
+    });
+    lines.unshift('', '  Balance: ' + money(coins) + ' meshcoins', ...(note ? [ note ] : []), '', ...items, '',
+      '  Extra uses load into the next mesh that offers the tool.',
+      '  Type an item number to buy, or &BQ&b to go back.', '&I');
+    prompt = 'shop';
+  }
+
+  // Prompt context for the command line: 'menu', 'stage' or 'shop'
+  let prompt = 'menu';
 
   // Parse simple commands to launch the story or challenges
   function parse(cmd, next) {
-    const lower = cmd.toLowerCase();
-    if (cmd === '1' || lower === 'story') {
+    const lower = cmd.toLowerCase().trim();
+    const back = lower === 'q' || lower === 'quit' || lower === 'back' || lower === 'menu';
+    if (prompt === 'stage') {
+      const n = parseInt(lower, 10);
+      if (back) {
+        prompt = 'menu';
+        showMenu();
+      } else if (n >= 1 && n <= stages.length && n - 1 <= resume) {
+        prompt = 'menu';
+        lines.unshift('&G' + (n - 1));
+      } else {
+        return false;
+      }
+    } else if (prompt === 'shop') {
+      const n = parseInt(lower, 10);
+      const item = shop[n - 1];
+      if (back) {
+        prompt = 'menu';
+        showMenu();
+      } else if (item) {
+        if (coins >= item.price) {
+          coins -= item.price;
+          boosts[item.tool] = (boosts[item.tool] || 0) + 1;
+          saveProgress();
+          sfx.coin();
+          listShop(span('7fDB6A') + '  Bought one ' + item.name + '.</span>');
+        } else {
+          listShop(span('F47E1B') + '  Not enough meshcoins for ' + item.name + '.</span>');
+        }
+      } else {
+        return false;
+      }
+    } else if (cmd === '1' || lower === 'story') {
       const msg = email.split('\n');
       lines.unshift(...msg);
     } else if (cmd === '2' || lower === 'challenge') {
       generateChallenge();
       lines.unshift('&H');
-    } else if ((cmd === '3' || lower === 'continue') && resume) {
-      lines.unshift('&G' + resume);} else {
+    } else if ((cmd === '3' || lower === 'continue') && resume && resume < stages.length) {
+      lines.unshift('&G' + resume);
+    } else if (cmd === '4' || lower === 'stages') {
+      listStages();
+    } else if (cmd === '5' || lower === 'daily') {
+      generateChallenge(today());
+      lines.unshift('&H --daily');
+    } else if (cmd === '6' || lower === 'shop') {
+      listShop();
+    } else {
       return false;
     }
     next();
     return true;
   }
+
+  // Touch controls under the terminal: quick answers, a command field and Continue
+  const touchbar = {
+    bar: $('touchbar'),
+    quick: $('quick'),
+    form: $('cmd-form'),
+    input: $('cmd-input'),
+    cont: $('continue-btn'),
+    // Show the command field with quick answers for the current prompt
+    ask(onSubmit) {
+      const options = prompt === 'stage' ? stages.map((s, i) => i <= resume ? [ String(i + 1), String(i + 1) ] : null).filter(Boolean).concat([ [ 'Back', 'q' ] ]) :
+        prompt === 'shop' ? shop.map((item, i) => [ item.tool, String(i + 1) ]).concat([ [ 'Back', 'q' ] ]) :
+          [ [ 'Story', '1' ], [ 'Challenge', '2' ] ].concat(resume && resume < stages.length ? [ [ 'Continue', '3' ] ] : [])
+            .concat([ [ 'Stages', '4' ], [ 'Daily', '5' ], [ 'Shop', '6' ] ]);
+      this.quick.innerHTML = '';
+      options.forEach(([ label, value ]) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = label;
+        button.onclick = () => onSubmit(value);
+        this.quick.appendChild(button);
+      });
+      this.input.value = '';
+      this.form.onsubmit = (event) => {
+        event.preventDefault();
+        onSubmit(this.input.value);
+        this.input.value = '';
+      };
+      show(this.form);
+      show(this.quick);
+      hide(this.cont);
+      this.layout(false);
+    },
+    // Show a Continue button in place of "press ENTER"
+    wait(onContinue) {
+      this.cont.onclick = onContinue;
+      hide(this.form);
+      hide(this.quick);
+      show(this.cont);
+      this.layout(false);
+    },
+    idle() {
+      if (document.activeElement === this.input) {
+        this.input.blur();
+      }
+      this.layout(true);
+    },
+    // Keep the terminal above the bar (phones) and scrolled to its last line
+    layout(idle) {
+      this.bar.classList.toggle('idle', idle);
+      const visible = !idle && !this.bar.classList.contains('hide');
+      document.body.style.setProperty('--touchbar', (visible ? this.bar.offsetHeight : 0) + 'px');
+      scroll(terminal);
+    }
+  };
 
   // Main game sequence
   sequence(function(next) {
@@ -1926,7 +2335,7 @@ function Interlaced() {
       let cmd;
 
       if (coins) {
-        balance = ('$ ' + (coins / 1000).toFixed(3) + ' meshcoins').padStart(60, ' ');
+        balance = (money(coins) + ' meshcoins').padStart(60, ' ');
       }
 
       nocursor();
@@ -1938,6 +2347,16 @@ function Interlaced() {
         replace(/&DE/, new Date(Date.now() - 6120000).toUTCString()).
         replace(/&IP/, generateIP).
         replace(/&\$/, balance).
+        replace(/&A/, function() {
+          return grey + '  (' + cleared.size + '/' + stages.length + ' offline)</span>';
+        }).
+        replace(/&Q/, function() {
+          const daily = store.get('daily', {});
+          return daily.day === today() ? grey + '  (best today ' + formatTime(daily.best) + ')</span>' : '';
+        }).
+        replace(/&W/, function() {
+          return coins ? grey + '  (' + money(coins) + ')</span>' : '';
+        }).
         replace(/&R(\d+)(.*?)$/, function(match, count, string) {
           return string.repeat(parseInt(count));
         }).
@@ -1966,7 +2385,7 @@ function Interlaced() {
         }).
         replace(/&H(.*)/, function(match, extra) {
           print(ps1, true);
-          typing = 'goliath --challenge' + (extra || '');
+          typing = 'goliath --challenge' + (extra || '') + (challengeMesh.daily && !/daily/.test(extra) ? ' --daily' : '');
           lines.unshift('&h');
           return '';
         }).
@@ -2001,8 +2420,11 @@ function Interlaced() {
           remove(decryptElement, 'spinner');
           decryptElement.innerHTML = 'done.';
 
+          // Keep the email's line layout; on phones only the indentation is
+          // fixed, so long lines wrap at word boundaries.
+          const keep = document.body.classList.contains('phone') ? / {2,}/g : /\s/g;
           emailElement.innerHTML = rot13(emailElement.textContent, true).
-            replace(/&/g, '<br>').replace(/\s/g, '&nbsp;');
+            replace(/&/g, '<br>').replace(keep, (spaces) => '&nbsp;'.repeat(spaces.length));
           add(emailElement, 'decrypt');
 
           attachmentElement.innerHTML = 'interlaced.zip (13 KB)';
@@ -2043,6 +2465,7 @@ function Interlaced() {
       print(line, inputMode || typing || pause);
 
       if (typing) { // Typing sequencer
+        touchbar.idle();
         print(cursor, true);
         typing = typing.split('');
         sequence(function(tick, i) {
@@ -2054,6 +2477,7 @@ function Interlaced() {
             const letter = typing.shift();
             const delay = Math.max(letter.charCodeAt(0) - 20, 35);
             print(letter + cursor, true);
+            sfx.key();
             tick(delay);
           } else {
             tick(false);
@@ -2067,37 +2491,57 @@ function Interlaced() {
 
         print(ps2 + input + cursor, true);
 
-        window.onkeydown = function(event) {
-          if (event.keyCode === 13) { // Enter$('input').innerHTML = '';
-            nocursor();
-            print(cmd);
-            if (parse(cmd, next)) { // Command exists
-              window.onkeydown = null;
-            } else { // Command not found
-              if (cmd.length) {
-                print(cmd + ': command not found');
-                cmd = '';
-              }
-              print(ps2 + input + cursor, true);
-            }} else if (event.keyCode === 8 || event.keyCode === 127) { // Backspace / Delete
+        let releaseInput;
+        // Run a typed or tapped command
+        const submit = function(text) {
+          cmd = text;
+          sfx.enter();
+          nocursor();
+          print(cmd);
+          if (parse(cmd, next)) { // Command exists
+            releaseInput();
+            touchbar.idle();
+          } else { // Command not found
+            if (cmd.length) {
+              print(cmd + ': command not found');
+              cmd = '';
+            }
+            print(ps2 + input + cursor, true);
+          }
+        };
+
+        touchbar.ask(submit);
+        releaseInput = pushKeys(function(event) {
+          if (event.keyCode === 13) { // Enter
+            submit(cmd);
+          } else if (event.keyCode === 8 || event.keyCode === 127) { // Backspace / Delete
             if (cmd.length) {
               cmd = cmd.substring(0, cmd.length - 1);
               $('input').innerHTML = cmd;
-            }} else if (!event.ctrlKey && !event.altKey) { // Any plain key
-            if (event.key.length === 1) { // Simple character
-              cmd += event.key;
-              $('input').innerHTML = cmd;
             }
+          } else if (!event.ctrlKey && !event.altKey && !event.metaKey && event.key.length === 1) { // Simple character
+            cmd += event.key;
+            $('input').innerHTML = cmd;
+            sfx.key();
           }
-        };
+        });
       } else if (pause) { // Press ENTER pause
         print(cursor, true);
-        window.onkeydown = function(event) {
-          if (event.keyCode === 13) { // Enter pressed
-            window.onkeydown = null;
-            next();
-          }
+        let releasePause;
+        const proceed = function() {
+          releasePause();
+          terminal.onclick = null;
+          touchbar.idle();
+          sfx.enter();
+          next();
         };
+        releasePause = pushKeys(function(event) {
+          if (event.keyCode === 13) { // Enter pressed
+            proceed();
+          }
+        });
+        terminal.onclick = proceed;
+        touchbar.wait(proceed);
       } else if (!playing) {
         next(timeout);
       }
@@ -2108,32 +2552,71 @@ function Interlaced() {
     }
   }, function() {
     print(); // Sequence terminator
-    console.log('done!');
   });
 }
 
 //////////
 // Start the game on load
 window.addEventListener('load', function() {
+  GameKit.initShell({ slug: 'interlaced' });
+
+  // Sound toggle, remembered between visits
+  const soundStore = GameKit.createStore('interlaced');
+  const soundButton = $('sound');
+  const setMuted = function(muted) {
+    sfx.muted = muted;
+    soundButton.classList.toggle('muted', muted);
+    soundButton.setAttribute('aria-pressed', String(muted));
+    soundStore.set('muted', muted);
+  };
+  setMuted(soundStore.get('muted', false));
+  soundButton.onclick = function() {
+    setMuted(!sfx.muted);
+    soundButton.blur();
+  };
+
+  // Touch screens get on-screen answers and a command field under the terminal
+  if (matchMedia('(pointer: coarse)').matches) {
+    show($('touchbar'));
+  }
+
+  resizeDisplay();
   window.interlaced = new Interlaced();
 }, false);
 
-// Responsive full-screen scale-to-fit helper
+// Fit the fixed 980x620 display to the window. On phones the terminal uses the
+// whole screen with its own font size, and the mesh view is laid out at the
+// phone's real size (style.css, body.phone.mode-mesh) instead of being scaled
+// down, so its tools and text stay a usable size. Held upright, the mesh view
+// is turned sideways to use the long side of the screen.
 function resizeDisplay() {
-  const container = document.getElementById('game-container');
-  if (!container) return;
-  
-  const baseWidth = 980;
-  const baseHeight = 620;
-  const windowWidth = window.innerWidth;
-  const windowHeight = window.innerHeight;
-  
-  // Calculate scale factor to cover maximum viewport space while keeping aspect ratio
-  const scale = Math.min(windowWidth / baseWidth, windowHeight / baseHeight);
-  
-  // Apply standard layout scaling centered
-  container.style.transform = `scale(${scale})`;
+  const container = $('game-container');
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const phone = Math.min(width, height) < 600;
+  document.body.classList.toggle('phone', phone);
+
+  if (phone && !document.body.classList.contains('mode-mesh')) {
+    container.style.transform = '';
+    return;
+  }
+
+  const rotate = phone && height > width;
+  if (phone) {
+    container.style.setProperty('--mesh-w', (rotate ? height : width) + 'px');
+    container.style.setProperty('--mesh-h', (rotate ? width : height) + 'px');
+    container.style.transform = rotate ? 'rotate(90deg)' : '';
+    return;
+  }
+
+  // A small margin above and below on larger screens
+  const scale = Math.min(width / 980, (height - 24) / 620);
+  container.style.transform = 'scale(' + scale + ')';
 }
 
-window.addEventListener('resize', resizeDisplay);
-window.addEventListener('load', resizeDisplay);
+// Resizing re-lays out the display once per frame at most
+let resizeFrame = 0;
+window.addEventListener('resize', function() {
+  cancelAnimationFrame(resizeFrame);
+  resizeFrame = requestAnimationFrame(resizeDisplay);
+});

@@ -16,12 +16,14 @@ class Enemy {
         this.weak = [];
         this.speed = 1;
         this.taunt = false;
+        this.hit = 0;           // ticks left of the hit flash
     }
 
     applyEffect(name, duration) {
         if (this.immune.includes(name)) return;
-        if (getByName(this.effects, name).length > 0) return;
+        for (let i = 0; i < this.effects.length; i++) if (this.effects[i].name === name) return;
         var e = createEffect(duration, effects[name]);
+        e.source = dmgSource;   // the tower that applied it gets the credit for its damage
         e.onStart(this);
         this.effects.push(e);
     }
@@ -44,23 +46,46 @@ class Enemy {
             mult = 1;
         }
 
-        if (this.health > 0) this.health -= amt * mult;
-        if (this.health <= 0) this.onKilled();
+        const before = this.health;
+        const dealt = before > 0 ? amt * mult : 0;
+        if (before > 0) this.health -= dealt;
+        if (dealt >= 2) this.hit = 6;
+        if (dealt > 0) onEnemyHit(this, dealt, type);
+        // Credit the tower that is firing (sketch.js sets dmgSource around each attack)
+        const src = dmgSource;
+        if (src && dealt > 0) src.dealt = (src.dealt || 0) + Math.min(dealt, before);
+        if (this.health <= 0) {
+            if (src && this.alive) src.kills = (src.kills || 0) + 1;
+            this.onKilled();
+        }
     }
 
+    // Short white ring after a hit
+    drawHit() {
+        if (this.hit <= 0) return;
+        noFill();
+        stroke(255, 255, 255, 40 * this.hit);
+        strokeWeight(Math.max(1.5, ts / 12));
+        const d = (this.radius + 0.25) * ts;
+        ellipse(this.pos.x, this.pos.y, d, d);
+        strokeWeight(1);
+    }
+
+    // Health bar above the enemy once it has taken damage
     drawHealth() {
-        var percent = 1 - this.health / this.maxHealth;
-        if (percent === 0) return;
-        push();
-        translate(this.pos.x, this.pos.y);
-        stroke(255);
-        fill(207, 0, 15);
-        var edge = 0.7 * ts / 2;
-        var width = floor(edge * percent * 2);
-        var top = 0.2 * ts;
-        var height = 0.15 * ts;
-        rect(-edge, top, edge * percent * 2, height);
-        pop();
+        const left = Math.max(0, this.health / this.maxHealth);
+        if (left >= 1) return;
+        const w = Math.max(10, 0.8 * ts);
+        const h = Math.max(3, 0.14 * ts);
+        const x = this.pos.x - w / 2;
+        const y = this.pos.y - Math.max(this.radius, 0.6) * ts / 2 - h - 2;
+        noStroke();
+        fill(9, 9, 11, 220);
+        rect(x - 1, y - 1, w + 2, h + 2);
+        if (left > 0.6) fill(74, 222, 128);
+        else if (left > 0.3) fill(250, 204, 21);
+        else fill(248, 113, 113);
+        rect(x, y, w * left, h);
     }
 
     getColor() {
@@ -84,15 +109,15 @@ class Enemy {
     onExit() {
         if (!godMode) health -= this.damage;
         this.kill();
+        onEnemyLeaked(this);
     }
 
     onKilled() {
         if (this.alive) {
             cash += this.cash;
             this.kill();
-            if (!muteSounds && sounds.hasOwnProperty(this.sound)) {
-                sounds[this.sound].play();
-            }
+            playSound(this.sound);
+            onEnemyKilled(this);
         }
     }
 
@@ -103,28 +128,47 @@ class Enemy {
     }
 
     steer() {
-        var t = gridPos(this.pos.x, this.pos.y);
-        if (outsideRect(t.x, t.y, 0, 0, cols, rows)) return;
-        var dir = paths[t.x][t.y];
-        if (atTileCenter(this.pos.x, this.pos.y, t.x, t.y)) {
+        const tx = Math.floor(this.pos.x / ts);
+        const ty = Math.floor(this.pos.y / ts);
+        if (outsideRect(tx, ty, 0, 0, cols, rows)) return;
+        let dir = paths[tx][ty];
+        // A crossing (no direction) keeps an enemy going straight; one standing still
+        // there (it can't happen on a portal's way, see the Hive) takes the shortest way
+        if (!dir && this.vel.x === 0 && this.vel.y === 0 && flowPaths) dir = flowPaths[tx][ty];
+        if (atTileCenter(this.pos.x, this.pos.y, tx, ty)) {
             if (dir === null) return;
-            var speed = this.pxSpeed();
-            if (dir === 1) this.vel = createVector(-speed, 0);
-            if (dir === 2) this.vel = createVector(0, -speed);
-            if (dir === 3) this.vel = createVector(speed, 0);
-            if (dir === 4) this.vel = createVector(0, speed);
+            const speed = this.pxSpeed();
+            if (dir === 1) this.vel.set(-speed, 0);
+            if (dir === 2) this.vel.set(0, -speed);
+            if (dir === 3) this.vel.set(speed, 0);
+            if (dir === 4) this.vel.set(0, speed);
         }
     }
 
     update() {
+        if (this.hit > 0) this.hit--;
         for (let i = this.effects.length - 1; i >= 0; i--) {
             let e = this.effects[i];
+            dmgSource = e.source || null;
             e.update(this);
             if (e.isDead()) this.effects.splice(i, 1);
         }
+        dmgSource = null;
         this.vel.limit(96 / ts);
         this.vel.limit(this.pxSpeed());
-        this.pos.add(this.vel);
+
+        // Stop exactly on the tile center instead of stepping past it, so
+        // steering never misses a turn whatever the tile size or speed.
+        const cx = Math.floor(this.pos.x / ts) * ts + ts / 2;
+        const cy = Math.floor(this.pos.y / ts) * ts + ts / 2;
+        const dx = cx - this.pos.x;
+        const dy = cy - this.pos.y;
+        const ahead = dx * this.vel.x + dy * this.vel.y > 0;
+        if (ahead && dx * dx + dy * dy <= this.vel.magSq()) {
+            this.pos.set(cx, cy);
+        } else {
+            this.pos.add(this.vel);
+        }
     }
 }
 

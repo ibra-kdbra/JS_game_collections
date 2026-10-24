@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>2048 with mind</title>
+    <title>2048 mind</title>
 
     <link href="style/main.css" rel="stylesheet" type="text/css">
     <link rel="shortcut icon" href="favicon.ico">
@@ -11,9 +11,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
 
 
-    <meta name="viewport" content="width=425, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="description" content="The 2048 game with AI players">
 
+    <script type="module" src="../assets/kit/index.js"></script>
     <script type="text/javascript" defer src="js/keyboard_input_manager.js"></script>
     <script type="text/javascript" defer src="js/html_actuator.js"></script>
     <script type="text/javascript" defer src="js/grid.js"></script>
@@ -23,7 +24,7 @@
     <script type="text/javascript" defer src="js/main.js"></script>
     <script type="text/javascript" defer src="js/index.js"></script>
 </head>
-<body>
+<body class="play-page">
 <div class="container">
     <div class="heading">
         <h1 class="title">2048 mind</h1>
@@ -33,45 +34,65 @@
         </div>
     </div>
 
-    <div class="above-game">
-        <p class="game-intro">Join the numbers and get to the <strong>2048 tile!</strong></p>
-        <a class="restart-button">New Game</a>
+    <p class="game-intro">Join the numbers and get to the <strong><span id="goalTile">2048</span> tile!</strong></p>
+
+    <div class="toolbar">
+        <fieldset class="segmented">
+            <legend class="visually-hidden">Mode</legend>
+            <input type="radio" id="aiOff" name="ai_player" checked>
+            <label for="aiOff">Play</label>
+            <input type="radio" id="aiOn" name="ai_player">
+            <label for="aiOn">Watch AI</label>
+        </fieldset>
+        <fieldset class="segmented">
+            <legend class="visually-hidden">Board size</legend>
+            <input type="radio" id="size3" name="board_size" value="3">
+            <label for="size3">3&times;3</label>
+            <input type="radio" id="size4" name="board_size" value="4" checked>
+            <label for="size4">4&times;4</label>
+            <input type="radio" id="size5" name="board_size" value="5">
+            <label for="size5">5&times;5</label>
+            <input type="radio" id="size6" name="board_size" value="6">
+            <label for="size6">6&times;6</label>
+        </fieldset>
     </div>
+
+    <div class="actions">
+        <button type="button" class="restart-button">New Game</button>
+        <button type="button" class="action-button" data-undo title="Undo the last move (U)">Undo <span class="badge" data-undo-count>3</span></button>
+        <button type="button" class="action-button" id="hintButton" disabled>Hint</button>
+    </div>
+
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+    <p id="modelStatus" class="note model-status" hidden><span></span> <progress id="modelProgress" hidden></progress></p>
 
     <div class="game-container">
         <div class="game-message">
             <p></p>
             <div class="lower">
                 <a class="keep-playing-button">Keep going</a>
+                <button type="button" class="undo-last-button" data-undo>Undo</button>
                 <a class="retry-button">Try again</a>
             </div>
         </div>
 
         <div class="grid-container">
-            <div class="grid-row">
-                <div class="grid-cell"></div>
-                <div class="grid-cell"></div>
-                <div class="grid-cell"></div>
-                <div class="grid-cell"></div>
-            </div>
-            <div class="grid-row">
-                <div class="grid-cell"></div>
-                <div class="grid-cell"></div>
-                <div class="grid-cell"></div>
-                <div class="grid-cell"></div>
-            </div>
-            <div class="grid-row">
-                <div class="grid-cell"></div>
-                <div class="grid-cell"></div>
-                <div class="grid-cell"></div>
-                <div class="grid-cell"></div>
-            </div>
-            <div class="grid-row">
-                <div class="grid-cell"></div>
-                <div class="grid-cell"></div>
-                <div class="grid-cell"></div>
-                <div class="grid-cell"></div>
-            </div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
         </div>
 
         <div class="tile-container">
@@ -79,130 +100,127 @@
         </div>
     </div>
 
-    <div id="controlsContainer">
-        <div>
-            <h2>AI Player</h2>
-            <input type="radio" id="aiOn" name="ai_player" checked>
-            <label for="aiOn">On</label>
-            <input type="radio" id="aiOff" name="ai_player">
-            <label for="aiOff">Off</label>
-            <br>
-            <br>
-            <label for="pauseTime">Pause time between moves (in milliseconds): </label>
-            <input type="number" id="pauseTime" min="0" max="10000" value="50" required>
-            <br>
-            <small>This is a <i>minimum</i> pause time, and the AI might spend more time thinking than this value.</small>
-            <br>
-            <h3>AI Strength</h3>
-            <input type="radio" id="aiStrengthFast" name="ai_strength" value="0">
-            <label for="aiStrengthFast">Fast</label>
-            <br>
-            <input type="radio" id="aiStrengthNormal" name="ai_strength" value="1" checked>
-            <label for="aiStrengthNormal">Normal</label>
-            <br>
-            <input type="radio" id="aiStrengthStrong" name="ai_strength" value="2">
-            <label for="aiStrengthStrong">Strong</label>
-        </div>
-        <div>
-            <h3>AI Strategy</h3>
-            <input type="radio" id="expectimaxDepthStrategy" name="ai_strategy" value="6" data-heuristic="true" checked>
-            <label for="expectimaxDepthStrategy">Expectimax (search by depth)</label>
-            <small class="description"><br>The <a href="https://en.wikipedia.org/wiki/Expectiminimax" target="_blank">expectimax</a> search algorithm, searching to a certain depth</small>
-            <br>
-            <input type="radio" id="expectimaxProbabilityStrategy" name="ai_strategy" value="7" data-heuristic="true">
-            <label for="expectimaxProbabilityStrategy">Expectimax (search by probability)</label>
-            <small class="description"><br>The <a href="https://en.wikipedia.org/wiki/Expectiminimax" target="_blank">expectimax</a> search algorithm, searching all options with a probability above a cutoff</small>
-            <br>
-            <input type="radio" id="minimaxStrategy" name="ai_strategy" value="5" data-heuristic="true">
-            <label for="minimaxStrategy">Minimax</label>
-            <small class="description"><br>The <a href="https://en.wikipedia.org/wiki/Minimax" target="_blank">minimax</a> search algorithm, which assumes that tiles are placed adversarially</small>
-            <br>
-            <input type="radio" id="randTrialsStrategy" name="ai_strategy" value="4" data-heuristic="true">
-            <label for="randTrialsStrategy">Random Trials</label>
-            <small class="description"><br>Weak search algorithm that uses random trials to simulate tile placements</small>
-            <br>
-            <input type="radio" id="monteCarloStrategy" name="ai_strategy" value="8" data-heuristic="false">
-            <label for="monteCarloStrategy">Monte Carlo Tree Search</label>
-            <small class="description"><br>Good strategy that tests the next move by simulating many games from the following position</small>
-            <br>
-            <input type="radio" id="spamCornerStrategy" name="ai_strategy" value="1" data-heuristic="false">
-            <label for="spamCornerStrategy">Corner Spam</label>
-            <small class="description"><br>Weak strategy which always moves up or left</small>
-            <br>
-            <input type="radio" id="orderedStrategy" name="ai_strategy" value="2" data-heuristic="false">
-            <label for="orderedStrategy">Ordered Moves</label>
-            <small class="description"><br>Weak strategy that tries to move left, otherwise up, then right, then left</small>
-            <br>
-            <input type="radio" id="randomStrategy" name="ai_strategy" value="0" data-heuristic="false">
-            <label for="randomStrategy">Random Moves</label>
-            <small class="description"><br>Very weak strategy that picks random moves</small>
-            <br>
-            <input type="radio" id="rotatingStrategy" name="ai_strategy" value="3" data-heuristic="false">
-            <label for="rotatingStrategy">Rotating Moves</label>
-            <small class="description"><br>Very weak strategy that moves left, then up, then right, then left</small>
-            <br>
-            <input type="radio" id="nTupleStrategy" name="ai_strategy" value="9" data-heuristic="false">
-            <label for="nTupleStrategy">Machine Learning</label>
-            <small class="description">
+    <p class="game-explanation">
+        <strong class="important">How to play:</strong> Swipe, or use the <strong>arrow keys</strong>
+        (or WASD), to slide the tiles. Two equal tiles merge into one.
+        <strong>U</strong> undoes a move (3 per game), <strong>?</strong> asks the AI for a hint,
+        <strong>R</strong> restarts. Switch to <strong>Watch AI</strong> to see the AI play;
+        games the AI moves in don't count towards your best score.
+    </p>
+
+    <details class="ai-drawer">
+        <summary>AI settings</summary>
+        <div id="controlsContainer">
+            <div>
+                <label for="pauseTime">Pause between AI moves (ms): </label>
+                <input type="number" id="pauseTime" min="0" max="10000" value="50" required>
                 <br>
-                Temporal difference learning with n-tuple network based on this <a href="https://www.cs.put.poznan.pl/wjaskowski/pub/papers/Szubert2014_2048.pdf" target="_blank">paper</a>.
+                <small>This is a <i>minimum</i> pause time, and the AI might spend more time thinking than this value.</small>
+                <h3>AI Strength</h3>
+                <input type="radio" id="aiStrengthFast" name="ai_strength" value="0">
+                <label for="aiStrengthFast">Fast</label>
                 <br>
-                Note that this requires downloading and unzipping a 28MB model file. Random moves will be played while waiting for the download.
-            </small>
-            <br>
-            <div id="heuristicContainer">
-                <h3>Heuristic</h3>
-                <input type="radio" id="cornerHeuristic" name="ai_heuristic" value="2" checked>
-                <label for="cornerHeuristic">Corner Building</label>
-                <small class="description"><br>Strong heuristic based on tile values, with higher weights for tiles in the corner</small>
+                <input type="radio" id="aiStrengthNormal" name="ai_strength" value="1" checked>
+                <label for="aiStrengthNormal">Normal</label>
                 <br>
-                <input type="radio" id="monotonicityHeuristic" name="ai_heuristic" value="7">
-                <label for="monotonicityHeuristic">Monotonicity</label>
-                <small class="description"><br>Strong heuristic that penalizes rows/columns that aren't in sorted order</small>
+                <input type="radio" id="aiStrengthStrong" name="ai_strength" value="2">
+                <label for="aiStrengthStrong">Strong</label>
+            </div>
+            <div>
+                <h3>AI Strategy</h3>
+                <input type="radio" id="expectimaxDepthStrategy" name="ai_strategy" value="6" data-heuristic="true" checked>
+                <label for="expectimaxDepthStrategy">Expectimax (search by depth)</label>
+                <small class="description"><br>The <a href="https://en.wikipedia.org/wiki/Expectiminimax" target="_blank" rel="noopener">expectimax</a> search algorithm, searching to a certain depth</small>
                 <br>
-                <input type="radio" id="strictWallHeuristic" name="ai_heuristic" value="5">
-                <label for="strictWallHeuristic">Strict Wall Building</label>
-                <small class="description"><br>Decent heuristic which compares boards in lexicographical order, going along a wall with penalties for inversions</small>
+                <input type="radio" id="expectimaxProbabilityStrategy" name="ai_strategy" value="7" data-heuristic="true">
+                <label for="expectimaxProbabilityStrategy">Expectimax (search by probability)</label>
+                <small class="description"><br>The <a href="https://en.wikipedia.org/wiki/Expectiminimax" target="_blank" rel="noopener">expectimax</a> search algorithm, searching all options with a probability above a cutoff</small>
                 <br>
-                <input type="radio" id="fullWallHeuristic" name="ai_heuristic" value="4">
-                <label for="fullWallHeuristic">Full Wall Building</label>
-                <small class="description"><br>Decent heuristic which compares boards in lexicographical order, going along a wall</small>
+                <input type="radio" id="minimaxStrategy" name="ai_strategy" value="5" data-heuristic="true">
+                <label for="minimaxStrategy">Minimax</label>
+                <small class="description"><br>The <a href="https://en.wikipedia.org/wiki/Minimax" target="_blank" rel="noopener">minimax</a> search algorithm, which assumes that tiles are placed adversarially</small>
                 <br>
-                <input type="radio" id="wallGapHeuristic" name="ai_heuristic" value="3">
-                <label for="wallGapHeuristic">Wall Building With Gap</label>
-                <small class="description"><br>Decent heuristic that compares boards in lexicographical order, going along a wall with a gap</small>
+                <input type="radio" id="randTrialsStrategy" name="ai_strategy" value="4" data-heuristic="true">
+                <label for="randTrialsStrategy">Random Trials</label>
+                <small class="description"><br>Weak search algorithm that uses random trials to simulate tile placements</small>
                 <br>
-                <input type="radio" id="skewedCornerHeuristic" name="ai_heuristic" value="6">
-                <label for="skewedCornerHeuristic">Skewed Corner Building</label>
-                <small class="description"><br>Decent heuristic, similar to Corner Building but with different weights</small>
+                <input type="radio" id="monteCarloStrategy" name="ai_strategy" value="8" data-heuristic="false">
+                <label for="monteCarloStrategy">Monte Carlo Tree Search</label>
+                <small class="description"><br>Good strategy that tests the next move by simulating many games from the following position</small>
                 <br>
-                <input type="radio" id="scoreHeuristic" name="ai_heuristic" value="0">
-                <label for="scoreHeuristic">Score</label>
-                <small class="description"><br>Weak heuristic which uses an approximation of the in-game score</small>
+                <input type="radio" id="spamCornerStrategy" name="ai_strategy" value="1" data-heuristic="false">
+                <label for="spamCornerStrategy">Corner Spam</label>
+                <small class="description"><br>Weak strategy which always moves up or left</small>
                 <br>
-                <input type="radio" id="mergeHeuristic" name="ai_heuristic" value="1">
-                <label for="mergeHeuristic">Empty Tiles</label>
-                <small class="description"><br>Weak heuristic which counts number of empty tiles on board</small>
+                <input type="radio" id="orderedStrategy" name="ai_strategy" value="2" data-heuristic="false">
+                <label for="orderedStrategy">Ordered Moves</label>
+                <small class="description"><br>Weak strategy that tries to move left, otherwise up, then right, then left</small>
                 <br>
+                <input type="radio" id="randomStrategy" name="ai_strategy" value="0" data-heuristic="false">
+                <label for="randomStrategy">Random Moves</label>
+                <small class="description"><br>Very weak strategy that picks random moves</small>
+                <br>
+                <input type="radio" id="rotatingStrategy" name="ai_strategy" value="3" data-heuristic="false">
+                <label for="rotatingStrategy">Rotating Moves</label>
+                <small class="description"><br>Very weak strategy that moves left, then up, then right, then left</small>
+                <br>
+                <input type="radio" id="nTupleStrategy" name="ai_strategy" value="9" data-heuristic="false">
+                <label for="nTupleStrategy">Machine Learning</label>
+                <small class="description">
+                    <br>
+                    Temporal difference learning with n-tuple network based on this <a href="https://www.cs.put.poznan.pl/wjaskowski/pub/papers/Szubert2014_2048.pdf" target="_blank" rel="noopener">paper</a>.
+                    <br>
+                    Note that this downloads a 46&nbsp;MB model file (less over the wire when the server compresses it). Random moves are played until it arrives; progress shows above the board.
+                </small>
+                <br>
+                <div id="heuristicContainer">
+                    <h3>Heuristic</h3>
+                    <input type="radio" id="cornerHeuristic" name="ai_heuristic" value="2" checked>
+                    <label for="cornerHeuristic">Corner Building</label>
+                    <small class="description"><br>Strong heuristic based on tile values, with higher weights for tiles in the corner</small>
+                    <br>
+                    <input type="radio" id="monotonicityHeuristic" name="ai_heuristic" value="7">
+                    <label for="monotonicityHeuristic">Monotonicity</label>
+                    <small class="description"><br>Strong heuristic that penalizes rows/columns that aren't in sorted order</small>
+                    <br>
+                    <input type="radio" id="strictWallHeuristic" name="ai_heuristic" value="5">
+                    <label for="strictWallHeuristic">Strict Wall Building</label>
+                    <small class="description"><br>Decent heuristic which compares boards in lexicographical order, going along a wall with penalties for inversions</small>
+                    <br>
+                    <input type="radio" id="fullWallHeuristic" name="ai_heuristic" value="4">
+                    <label for="fullWallHeuristic">Full Wall Building</label>
+                    <small class="description"><br>Decent heuristic which compares boards in lexicographical order, going along a wall</small>
+                    <br>
+                    <input type="radio" id="wallGapHeuristic" name="ai_heuristic" value="3">
+                    <label for="wallGapHeuristic">Wall Building With Gap</label>
+                    <small class="description"><br>Decent heuristic that compares boards in lexicographical order, going along a wall with a gap</small>
+                    <br>
+                    <input type="radio" id="skewedCornerHeuristic" name="ai_heuristic" value="6">
+                    <label for="skewedCornerHeuristic">Skewed Corner Building</label>
+                    <small class="description"><br>Decent heuristic, similar to Corner Building but with different weights</small>
+                    <br>
+                    <input type="radio" id="scoreHeuristic" name="ai_heuristic" value="0">
+                    <label for="scoreHeuristic">Score</label>
+                    <small class="description"><br>Weak heuristic which uses an approximation of the in-game score</small>
+                    <br>
+                    <input type="radio" id="mergeHeuristic" name="ai_heuristic" value="1">
+                    <label for="mergeHeuristic">Empty Tiles</label>
+                    <small class="description"><br>Weak heuristic which counts number of empty tiles on board</small>
+                    <br>
+                </div>
             </div>
         </div>
-    </div>
+    </details>
 
-    <hr>
-    <p class="game-explanation">
-        <strong class="important">How to play:</strong> Pick a strategy for the AI to use.
-        You can also turn off the AI and use your <strong>arrow keys</strong> to move the tiles.
-        Press <strong>R</strong> to restart.
-    </p>
     <hr>
     <p>
         Click <a href="./editor.html">here</a> for page where you can edit the board to test the AI.
     </p>
     <hr>
     <p>
-        AI players written by ibra-kdbra. (Source code for <a href="https://github.com/ibra-kdbra/Cpp_Projects/tree/main/Atari-Games/2048_AI" target="_blank">AIs</a> and <a href="https://github.com/ibra-kdbra/JS_game_collections/tree/main/2048" target="_blank">website</a>)
+        AI players written by ibra-kdbra. (Source code for <a href="https://github.com/ibra-kdbra/Cpp_Projects/tree/main/Atari-Games/2048_AI" target="_blank" rel="noopener">AIs</a> and <a href="https://github.com/ibra-kdbra/JS_game_collections/tree/main/2048" target="_blank" rel="noopener">website</a>)
         <br>
-        Game mechanics from the <a href="https://play2048.co/" target="_blank">original 2048 game</a>.
+        Game mechanics from the <a href="https://play2048.co/" target="_blank" rel="noopener">original 2048 game</a>.
     </p>
 </div>
 </body>

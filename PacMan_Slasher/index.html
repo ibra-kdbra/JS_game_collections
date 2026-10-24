@@ -1,8 +1,17 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>PacMan Slicer</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>PacMan Slasher</title>
     <link rel="stylesheet" type="text/css" href="./css/index.css">
+
+    <script type="module" src="../assets/kit/index.js"></script>
+    <script defer src="./js/vendor/howler-2.2.4.core.min.js"></script>
+    <script defer src="./js/preloader.js"></script>
+    <script defer src="./js/gesture.js"></script>
+    <script defer src="./js/sprites.js"></script>
+    <script defer src="./js/game.js"></script>
 </head>
 <body>
 
@@ -10,24 +19,36 @@
   <canvas id="act" class="noselect"></canvas>
   <canvas id="txt" class="noselect"></canvas>
 
-  <div id='scoreBlock' class="scores hidden">
-    <span class="noselect">Score : </span>
-    <span id='score'>0</span>
+  <div id="hud" class="hud noselect hidden" aria-live="polite">
+    <p class="hud-line"><span id="wave">Wave 1</span> <span class="hud-score">Score <span id="score">0</span></span></p>
+    <div class="combo" aria-label="Combo">
+      <span class="combo-label">Combo</span>
+      <span class="combo-bar"><span id="comboFill" class="combo-fill"></span></span>
+      <span id="combo" class="combo-value">x1</span>
+    </div>
   </div>
 
-  <div id='text' class="textBlock noselect"></div>
-
-  <div id='start' class="startButton noselect hidden" tabindex="0">
-    Start
+  <div class="corner-buttons">
+    <button type="button" id="pause" class="icon-button hidden" aria-label="Pause" title="Pause (P)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3v14H7zM14 5h3v14h-3z"/></svg>
+    </button>
+    <button type="button" id="mute" class="icon-button hidden" aria-label="Mute" aria-pressed="false" title="Sound (M)">
+      <svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3zM15 8h2v8h-2zM19 5h2v14h-2z"/></svg>
+      <svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3zM15 9l1.5-1.5L19 10l2.5-2.5L23 9l-2.5 2.5L23 14l-1.5 1.5L19 13l-2.5 2.5L15 14l2.5-2.5z"/></svg>
+    </button>
   </div>
 
-  <div id='credits' class="textBlock">by <a href="https://github/ibra-kdbra">ibra-kdbra</a></div>
+  <div id="banner" class="banner noselect hidden" role="status"></div>
 
-<script type="text/javascript" src="./js/vendor/howler.min.js"></script>
+  <div id="text" class="textBlock noselect"></div>
 
-<script type="text/javascript" src="./js/preloader.js"></script>
-<script type="text/javascript" src="./js/gesture.js"></script>
-<script type="text/javascript" src="./js/sprites.js"></script>
-<script type="text/javascript" src="./js/game.js"></script>
+  <button type="button" id="start" class="startButton noselect hidden">Start</button>
+
+  <div id="pauseScreen" class="overlay hidden">
+    <p class="big">Paused</p>
+    <button type="button" class="startButton">Resume</button>
+  </div>
+
+  <div id="credits" class="textBlock">by <a href="https://github.com/ibra-kdbra">ibra-kdbra</a></div>
 </body>
 </html>

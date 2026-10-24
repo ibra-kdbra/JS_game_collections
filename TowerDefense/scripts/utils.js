@@ -1,10 +1,9 @@
-new p5(); // p5.js global mode
-
 // Check if approximately at tile center
 const atTileCenter = (x, y, col, row) => {
-    const c = center(col, row);
+    const cx = col * ts + ts / 2;
+    const cy = row * ts + ts / 2;
     const t = ts / 24;
-    return between(x, c.x - t, c.x + t) && between(y, c.y - t, c.y + t);
+    return between(x, cx - t, cx + t) && between(y, cy - t, cy + t);
 };
 
 // Check if number falls within range (exclusive)
@@ -19,39 +18,6 @@ const center = (col, row) => createVector(col * ts + ts / 2, row * ts + ts / 2);
 
 // Copy 2D array
 const copyArray = (arr) => arr.map(row => [...row]);
-
-// Copy text to clipboard
-const copyToClipboard = (str) => {
-    const textArea = document.createElement('textarea');
-
-    // Ensure element is as invisible as possible
-    Object.assign(textArea.style, {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '2em',
-        height: '2em',
-        padding: 0,
-        border: 'none',
-        outline: 'none',
-        boxShadow: 'none',
-        background: 'transparent',
-    });
-
-    textArea.value = str;
-    document.body.appendChild(textArea);
-    textArea.select();
-
-    try {
-        const successful = document.execCommand('copy');
-        console.log(`Copying text was ${successful ? 'successful' : 'unsuccessful'}`);
-    } catch (err) {
-        console.log('Unable to copy to clipboard');
-        prompt('Map string:', str);
-    }
-
-    document.body.removeChild(textArea);
-};
 
 // Convert grid coordinates to string
 const cts = (col, row) => `${col},${row}`;
@@ -75,6 +41,36 @@ const getFirst = (entities) => {
         }
     });
     return chosen;
+};
+
+// Get last enemy (i.e., furthest from exit)
+const getLast = (entities) => {
+    let mostDist = -1;
+    let chosen = entities[0];
+    entities.forEach(e => {
+        const t = gridPos(e.pos.x, e.pos.y);
+        const dist = dists[t.x]?.[t.y] ?? 0;
+        if (dist > mostDist) {
+            mostDist = dist;
+            chosen = e;
+        }
+    });
+    return chosen;
+};
+
+// Targeting modes a tower can use
+const targetModes = {
+    first: 'First',
+    last: 'Last',
+    strong: 'Strongest',
+    close: 'Closest'
+};
+
+const pickTarget = (entities, mode, pos) => {
+    if (mode === 'last') return getLast(entities);
+    if (mode === 'strong') return getStrongest(entities);
+    if (mode === 'close') return getNearest(entities, pos);
+    return getFirst(entities);
 };
 
 // Get entities within a range (radius in tiles)
@@ -111,8 +107,6 @@ const getTaunting = (entities) => entities.filter(e => e.taunt);
 const gridPos = (x, y) => createVector(Math.floor(x / ts), Math.floor(y / ts));
 
 const insideCircle = (x, y, cx, cy, r) => (x - cx) ** 2 + (y - cy) ** 2 < r ** 2;
-
-const mouseInMap = () => between(mouseX, 0, width) && between(mouseY, 0, height);
 
 // Return orthogonal neighbors of a certain value
 const neighbors = (grid, col, row, val) => {

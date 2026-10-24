@@ -5,9 +5,8 @@ const calculateTangents = function (attachments) {
         const tangents = getTangents(a.entity.pos, a.entity.spool.size, b.entity.pos, b.entity.spool.size);
         const idx = a.side == Side.left ? b.side == Side.left ? 1 : 3 : b.side == Side.left ? 2 : 0;
 
-        if (!tangents[idx]) {
-
-        }
+        // No tangent when one circle sits inside the other: keep the last segment
+        if (!tangents[idx]) continue;
         a.outPos = tangents[idx][0];
         b.inPos = tangents[idx][1];
     }

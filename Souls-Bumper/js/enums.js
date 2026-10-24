@@ -1,3 +1,5 @@
+'use strict';
+
 const types = {
   AIR:0,
   BLOCK:1,
@@ -19,9 +21,4 @@ const types = {
   FALL:17,
   BRICK:18,
   CHK:19
-}
-
-const mobtype = {
-  FOLLOW:0,
-  SIMPLE:1
 }

@@ -1,3 +1,36 @@
+/* Outfit 5.2.5 from @fontsource/outfit, SIL Open Font License (vendor/outfit-5.2.5/OFL.txt) */
+@font-face {
+    font-family: 'Outfit';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 300;
+    src: url(../vendor/outfit-5.2.5/outfit-latin-300-normal.woff2) format('woff2');
+}
+
+@font-face {
+    font-family: 'Outfit';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 400;
+    src: url(../vendor/outfit-5.2.5/outfit-latin-400-normal.woff2) format('woff2');
+}
+
+@font-face {
+    font-family: 'Outfit';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 600;
+    src: url(../vendor/outfit-5.2.5/outfit-latin-600-normal.woff2) format('woff2');
+}
+
+@font-face {
+    font-family: 'Outfit';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 700;
+    src: url(../vendor/outfit-5.2.5/outfit-latin-700-normal.woff2) format('woff2');
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -5,11 +38,17 @@
     box-sizing: border-box;
 }
 
+html, body {
+    height: 100%;
+}
+
 body {
     background: #020406;
     overflow: hidden;
     width: 100vw;
-    height: 100vh;
+    height: 100dvh;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -83,9 +122,12 @@ body::after {
     width: 1280px;
     height: 720px;
     border: 1px solid rgba(62, 127, 249, 0.2);
-    position: relative;
+    /* Fixed so the unscaled 1280px box never widens the page on phones */
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    margin: -360px 0 0 -640px;
     transform-origin: center center;
-    flex-shrink: 0;
     border-radius: 4px;
     overflow: hidden;
 }
@@ -267,6 +309,19 @@ body::after {
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
+#description .status-line {
+    font-size: 12px;
+    color: #3e7ff9;
+    letter-spacing: 4px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+}
+
+#description .status-line span {
+    color: #ff4444;
+    animation: flicker 0.5s infinite;
+}
+
 #description h2 {
     font-size: 24px;
     font-weight: 400;
@@ -363,58 +418,46 @@ body::after {
     right: 20px;
     bottom: 20px;
     display: flex;
-    flex-direction: column;
-    align-items: center;
     gap: 12px;
     z-index: 200;
     opacity: 0;
     animation: fadeIn 1s ease-out 1.5s forwards;
 }
 
-.settings-menu {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    height: 0;
-    overflow: hidden;
-    transition: height 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    padding-bottom: 0;
-}
-
-#settings-container:hover .settings-menu {
-    height: 104px; /* (44px + 12px gap) * 2 - gap = 100ish, let's use 104 */
-    padding-bottom: 8px;
-}
-
 .settings-btn {
     background: rgba(62, 127, 249, 0.1);
     border: 1px solid rgba(62, 127, 249, 0.3);
-    color: rgba(255, 255, 255, 0.6);
-    width: 44px;
-    height: 44px;
+    color: rgba(255, 255, 255, 0.7);
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
     transition: all 0.3s ease;
     backdrop-filter: blur(5px);
-    text-decoration: none;
-    box-sizing: border-box;
 }
 
-.settings-btn:hover {
+.settings-btn svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.settings-btn .slash {
+    display: none;
+}
+
+.settings-btn:hover, .settings-btn:focus-visible {
     background: rgba(62, 127, 249, 0.2);
     border-color: #3e7ff9;
     color: #fff;
     box-shadow: 0 0 15px rgba(62, 127, 249, 0.4);
-    transform: scale(1.05);
-}
-
-.settings-btn.main {
-    font-size: 24px;
-    background: rgba(62, 127, 249, 0.15);
 }
 
 .settings-btn.muted {
@@ -422,10 +465,362 @@ body::after {
     border-color: rgba(255, 68, 68, 0.3);
 }
 
-#settings-trigger i {
-    transition: transform 0.4s ease;
+.settings-btn.muted .slash {
+    display: inline;
 }
 
-#settings-container:hover #settings-trigger i {
-    transform: rotate(360deg);
+.settings-btn.muted .wave {
+    display: none;
+}
+
+/* Level select */
+#levelSelect {
+    width: 900px;
+    padding: 40px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.75);
+    border: 1px solid rgba(62, 127, 249, 0.3);
+    border-radius: 4px;
+    backdrop-filter: blur(15px);
+    z-index: 150;
+}
+
+#levelSelect h2 {
+    font-size: 36px;
+    font-weight: 300;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    margin-bottom: 30px;
+}
+
+#levelGrid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 14px;
+    margin-bottom: 30px;
+}
+
+#levelGrid button {
+    font-family: 'Outfit', sans-serif;
+    font-size: 26px;
+    font-weight: 600;
+    height: 76px;
+    color: #fff;
+    background: rgba(62, 127, 249, 0.08);
+    border: 1px solid rgba(62, 127, 249, 0.35);
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+}
+
+#levelGrid button:hover:not(:disabled), #levelGrid button:focus-visible {
+    background: rgba(62, 127, 249, 0.3);
+    border-color: #3e7ff9;
+}
+
+#levelGrid button.solved {
+    border-color: rgba(80, 220, 120, 0.7);
+    box-shadow: inset 0 0 18px rgba(80, 220, 120, 0.25);
+}
+
+#levelGrid button.solved::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #50dc78;
+    box-shadow: 0 0 8px #50dc78;
+}
+
+#levelGrid button.current {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+#levelGrid button:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+#closeLevelsBtn {
+    display: inline-block;
+    width: 240px;
+}
+
+/* ---------- Compact layout (phones) ----------
+   html.js sets data-layout="below" or "side" on #game when the stage is too
+   small for its own buttons. Elements below use zoom: var(--inv) (1 / stage
+   scale), so their sizes are real CSS pixels: 44px touch targets, 12px+ text. */
+
+#game[data-layout="below"],
+#game[data-layout="side"] {
+    overflow: visible;
+}
+
+[data-layout="below"] #reset,
+[data-layout="side"] #reset,
+[data-layout="below"] #settings-container,
+[data-layout="side"] #settings-container,
+[data-layout="below"] #levelInfo,
+[data-layout="side"] #levelInfo,
+[data-layout="below"] #nodeInfo,
+[data-layout="side"] #nodeInfo,
+[data-layout="below"] #main-menu,
+[data-layout="side"] #main-menu,
+[data-layout="below"] #levelSelect,
+[data-layout="side"] #levelSelect,
+[data-layout="below"] #levelDone,
+[data-layout="side"] #levelDone,
+[data-layout="below"] #loading,
+[data-layout="side"] #loading {
+    zoom: var(--inv);
+}
+
+[data-layout="below"] #reset,
+[data-layout="side"] #reset {
+    gap: 6px;
+}
+
+[data-layout="below"] #reset .btn,
+[data-layout="side"] #reset .btn {
+    min-width: 0;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 12px;
+    font-size: 13px;
+    letter-spacing: 1px;
+    line-height: 42px;
+    backdrop-filter: none;
+}
+
+[data-layout="below"] .settings-btn,
+[data-layout="side"] .settings-btn {
+    width: 44px;
+    height: 44px;
+    backdrop-filter: none;
+}
+
+[data-layout="below"] .settings-btn svg,
+[data-layout="side"] .settings-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+[data-layout="below"] #settings-container,
+[data-layout="side"] #settings-container {
+    gap: 6px;
+}
+
+/* Bar under the stage */
+[data-layout="below"] #reset {
+    top: 100%;
+    bottom: auto;
+    left: 0;
+    margin-top: 4px;
+}
+
+[data-layout="below"] #settings-container {
+    top: 100%;
+    bottom: auto;
+    right: 0;
+    margin-top: 4px;
+}
+
+/* Column beside the stage */
+[data-layout="side"] #reset {
+    top: 0;
+    bottom: auto;
+    left: 100%;
+    margin-left: 8px;
+    width: 108px;
+    flex-direction: column;
+}
+
+[data-layout="side"] #settings-container {
+    top: auto;
+    bottom: 0;
+    right: auto;
+    left: 100%;
+    margin-left: 8px;
+}
+
+[data-layout="below"] #levelInfo,
+[data-layout="side"] #levelInfo,
+[data-layout="below"] #nodeInfo,
+[data-layout="side"] #nodeInfo {
+    top: 6px;
+    font-size: 13px;
+    letter-spacing: 1px;
+    opacity: 1;
+}
+
+[data-layout="below"] #levelInfo,
+[data-layout="side"] #levelInfo {
+    left: 8px;
+}
+
+[data-layout="below"] #nodeInfo,
+[data-layout="side"] #nodeInfo {
+    right: 8px;
+}
+
+/* Menus, in CSS pixels; the stage is at least 476 x 268 px here */
+[data-layout="below"] #main-menu,
+[data-layout="side"] #main-menu {
+    width: calc(1280px * var(--s) - 24px);
+    max-width: 640px;
+    gap: 10px;
+}
+
+[data-layout="below"] #title,
+[data-layout="side"] #title {
+    flex-direction: row;
+    gap: 14px;
+}
+
+[data-layout="below"] .circuit-logo,
+[data-layout="side"] .circuit-logo {
+    zoom: 0.24;
+}
+
+[data-layout="below"] .logo-text,
+[data-layout="side"] .logo-text {
+    font-size: 34px;
+    letter-spacing: 9px;
+    margin-right: -9px;
+}
+
+[data-layout="below"] #description,
+[data-layout="side"] #description {
+    width: 100%;
+    padding: 10px 14px;
+    backdrop-filter: none;
+}
+
+[data-layout="below"] #description .status-line,
+[data-layout="side"] #description .status-line {
+    font-size: 12px;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+}
+
+[data-layout="below"] #description h2,
+[data-layout="side"] #description h2 {
+    font-size: 15px;
+    margin-bottom: 4px;
+}
+
+[data-layout="below"] #description h3,
+[data-layout="side"] #description h3 {
+    font-size: 12px;
+    line-height: 1.4;
+    opacity: 0.75;
+}
+
+[data-layout="below"] #menu,
+[data-layout="side"] #menu {
+    gap: 8px;
+    width: 100%;
+}
+
+[data-layout="below"] #menu .btn,
+[data-layout="side"] #menu .btn {
+    flex: 1 1 0;
+    width: auto;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 8px;
+    font-size: 13px;
+    letter-spacing: 1px;
+    line-height: 42px;
+    white-space: nowrap;
+    backdrop-filter: none;
+}
+
+[data-layout="below"] #levelSelect,
+[data-layout="side"] #levelSelect {
+    width: calc(1280px * var(--s) - 16px);
+    max-width: 560px;
+    padding: 10px 12px;
+    backdrop-filter: none;
+}
+
+[data-layout="below"] #levelSelect h2,
+[data-layout="side"] #levelSelect h2 {
+    font-size: 18px;
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+}
+
+[data-layout="below"] #levelGrid,
+[data-layout="side"] #levelGrid {
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+[data-layout="below"] #levelGrid button,
+[data-layout="side"] #levelGrid button {
+    height: 44px;
+    font-size: 18px;
+}
+
+[data-layout="below"] #levelGrid button.solved::after,
+[data-layout="side"] #levelGrid button.solved::after {
+    top: 4px;
+    right: 4px;
+    width: 7px;
+    height: 7px;
+}
+
+[data-layout="below"] #closeLevelsBtn,
+[data-layout="side"] #closeLevelsBtn {
+    width: 160px;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 12px;
+    font-size: 13px;
+    line-height: 42px;
+    backdrop-filter: none;
+}
+
+[data-layout="below"] #levelDone,
+[data-layout="side"] #levelDone {
+    width: calc(1280px * var(--s));
+    padding: 16px 0;
+}
+
+[data-layout="below"] #levelDone h1,
+[data-layout="side"] #levelDone h1 {
+    font-size: 34px;
+    letter-spacing: -1px;
+    margin-bottom: 10px;
+}
+
+[data-layout="below"] #nextBtn,
+[data-layout="side"] #nextBtn {
+    display: inline-block;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 24px;
+    font-size: 14px;
+    line-height: 42px;
+    backdrop-filter: none;
+}
+
+/* The tutorial cards are canvases with 20px text. Draw them at 0.6 CSS px per
+   pixel (12px text) in the gap between the coils and the socket that levels
+   1 and 3 (the ones with tutorials) keep clear, stage x 545-1190; smaller
+   stages shrink them to fit that gap. Offsets are divided by the zoom, which scales them. */
+[data-layout="below"] .tutorial,
+[data-layout="side"] .tutorial {
+    --tz: min(0.6 * var(--inv), 1.43);
+    zoom: var(--tz);
+    top: calc(max(36px, 30px * var(--inv)) / var(--tz)); /* below the node counter */
+    left: calc(545px / var(--tz));
+    right: auto;
+    box-shadow: none;
+    pointer-events: none;
 }

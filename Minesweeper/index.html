@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Minesweeper · Game Lab</title>
+    <meta name="description" content="No-guess Minesweeper: every board can be solved by logic from the first click. Daily board, puzzle ladder, hints and stats." />
+    <meta name="theme-color" content="#09090b" />
+    <link rel="preload" href="fonts/martian-mono-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="fonts/martian-mono-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="app" id="app">
+      <header class="top">
+        <h1 class="brand">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 1.5l9 5.2v10.6l-9 5.2-9-5.2V6.7z" fill="none" stroke="#facc15" stroke-width="1.6" />
+            <circle cx="12" cy="12" r="3.6" fill="#facc15" />
+          </svg>
+          <span>Mine<b>sweeper</b></span>
+        </h1>
+        <button class="icon-btn" id="btn-sound" type="button" aria-label="Mute sound" aria-pressed="false"></button>
+        <button class="icon-btn" id="btn-stats" type="button" aria-label="Statistics">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 20V11M12 20V4M19 20v-6" /></svg>
+        </button>
+        <button class="icon-btn" id="btn-settings" type="button" aria-label="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="17" r="2" /></svg>
+        </button>
+      </header>
+
+      <nav class="modes" id="modes" aria-label="Board"></nav>
+
+      <section class="hud" aria-label="Game status">
+        <div class="readout">
+          <span class="lbl">MINES</span><span class="val" id="mines-left">000</span>
+        </div>
+        <button class="face" id="btn-new" type="button" aria-label="New game"></button>
+        <div class="readout">
+          <span class="pen" id="penalty"></span><span class="lbl">TIME</span><span class="val" id="clock">0.0</span>
+        </div>
+      </section>
+
+      <div class="field" id="field">
+        <div class="board" id="board" role="application" aria-roledescription="minefield" tabindex="0" aria-label="Minefield. Arrow keys move, Space reveals, F flags, C chords, H hint." aria-describedby="sr"></div>
+        <p class="sr-only" id="sr" aria-live="polite"></p>
+      </div>
+
+      <div class="bar" id="bar">
+        <div class="toolset" id="toolset">
+          <button class="switch" id="btn-mode" type="button" aria-pressed="false" aria-label="Tap action: reveal. Press to switch to flag.">
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12l4 4 10-10" /></svg>Reveal</span>
+            <span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 3h2v18H7z" /><path d="M9 4l10 4.5L9 13z" /></svg>Flag</span>
+          </button>
+          <button class="tool" id="btn-hint" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z" /></svg>
+            Hint <small id="hint-cost">+10s</small>
+          </button>
+          <label class="zoom" title="Zoom">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="M20 20l-4.5-4.5M8.5 11h5M11 8.5v5" /></svg>
+            <span class="sr-only">Zoom</span>
+            <input type="range" id="zoom" min="18" max="56" step="1" />
+          </label>
+          <p class="status" id="status" aria-live="polite"></p>
+        </div>
+        <div class="result" id="result" hidden>
+          <div class="msg" id="result-msg" aria-live="assertive"></div>
+          <button class="tool" id="btn-undo" type="button">Undo <small id="undo-cost">+15s</small></button>
+          <button class="tool primary" id="btn-again" type="button">Play again</button>
+        </div>
+      </div>
+
+      <aside class="notes" aria-label="Field notes">
+        <section class="card">
+          <h2 id="notes-title">Beginner</h2>
+          <dl class="kv" id="notes-stats"></dl>
+        </section>
+        <section class="card">
+          <h2>Controls</h2>
+          <dl class="keys">
+            <dt>Left click</dt><dd>Reveal</dd>
+            <dt>Right click</dt><dd>Flag</dd>
+            <dt>Both / middle</dt><dd>Chord a number</dd>
+            <dt><kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd></dt><dd>Move cursor</dd>
+            <dt><kbd>Space</kbd></dt><dd>Reveal or chord</dd>
+            <dt><kbd>F</kbd> <kbd>C</kbd></dt><dd>Flag, chord</dd>
+            <dt><kbd>H</kbd> <kbd>U</kbd></dt><dd>Hint, undo</dd>
+            <dt><kbd>N</kbd></dt><dd>New game</dd>
+          </dl>
+        </section>
+        <section class="card">
+          <h2>Numbers</h2>
+          <div class="legend" aria-hidden="true">
+            <span class="c o n1">1</span><span class="c o n2">2</span><span class="c o n3">3</span><span class="c o n4">4</span>
+            <span class="c o n5">5</span><span class="c o n6">6</span><span class="c o n7">7</span><span class="c o n8">8</span>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <dialog id="dlg-settings" aria-labelledby="settings-title">
+      <form method="dialog" class="dlg">
+        <header>
+          <h2 id="settings-title">Settings</h2>
+          <button class="icon-btn" value="close" aria-label="Close">✕</button>
+        </header>
+        <div>
+          <div class="row">
+            <input type="checkbox" id="set-noguess" />
+            <div><label for="set-noguess">No-guess boards</label><small>Every board can be cleared by logic from the first click. Applies to the next game; daily and puzzle boards are always no-guess.</small></div>
+          </div>
+          <div class="row">
+            <input type="checkbox" id="set-questions" />
+            <div><label for="set-questions">Question marks</label><small>Flagging a flagged cell marks it with ?.</small></div>
+          </div>
+          <div class="row">
+            <input type="checkbox" id="set-rotate" />
+            <div><label for="set-rotate">Turn wide boards on tall screens</label><small>Expert stands upright on a phone held in portrait.</small></div>
+          </div>
+          <div class="row">
+            <input type="checkbox" id="set-sound" />
+            <div><label for="set-sound">Sound</label><small>Synthesized clicks and chimes.</small></div>
+          </div>
+        </div>
+        <p>Touch: tap reveals, hold about a third of a second to flag, tap a finished number to chord. Pinch or use the zoom slider to resize the board.</p>
+      </form>
+    </dialog>
+
+    <dialog id="dlg-stats" aria-labelledby="stats-title">
+      <form method="dialog" class="dlg">
+        <header>
+          <h2 id="stats-title">Statistics</h2>
+          <button class="icon-btn" value="close" aria-label="Close">✕</button>
+        </header>
+        <table class="stats">
+          <thead><tr><th scope="col">Board</th><th scope="col">Played</th><th scope="col">Won</th><th scope="col">Win %</th><th scope="col">Best</th><th scope="col">Streak</th></tr></thead>
+          <tbody id="stats-body"></tbody>
+        </table>
+        <p>Streak shows current / longest run of wins. Hints and undo add their penalty to the time.</p>
+        <div class="actions"><button class="tool" type="button" id="btn-reset-stats">Reset statistics</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="dlg-custom" aria-labelledby="custom-title">
+      <form class="dlg" id="custom-form" novalidate>
+        <header>
+          <h2 id="custom-title">Custom board</h2>
+          <button class="icon-btn" type="button" data-close aria-label="Close">✕</button>
+        </header>
+        <div class="fields">
+          <label>Width <input type="number" id="cw" inputmode="numeric" required /></label>
+          <label>Height <input type="number" id="ch" inputmode="numeric" required /></label>
+          <label>Mines <input type="number" id="cm" inputmode="numeric" required /></label>
+        </div>
+        <p id="custom-info"></p>
+        <p class="err" id="custom-err" role="alert"></p>
+        <div class="actions">
+          <button class="tool" type="button" data-close>Cancel</button>
+          <button class="tool primary" type="submit" id="custom-go">Start</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dlg-puzzles" aria-labelledby="puzzles-title">
+      <form method="dialog" class="dlg">
+        <header>
+          <h2 id="puzzles-title">Puzzle ladder</h2>
+          <button class="icon-btn" value="close" aria-label="Close">✕</button>
+        </header>
+        <p>Twelve fixed boards, the same for everyone. Each one is bigger, denser or needs more pair logic than the last. Clear a level to unlock the next.</p>
+        <div class="levels" id="levels"></div>
+      </form>
+    </dialog>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

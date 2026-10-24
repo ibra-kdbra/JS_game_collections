@@ -12,6 +12,7 @@ class Missile {
         // Misc
         this.alive = true;
         this.target = e;
+        this.source = dmgSource;    // the tower that launched it
         // Stats
         this.accAmt = 0.6;
         this.blastRadius = 1;
@@ -19,46 +20,17 @@ class Missile {
         this.damageMin = 40;
         this.lifetime = 60;
         this.range = 7;
-        this.topSpeed = (4 * 24) / ts;
-    }
-
-    draw() {
-        push();
-        translate(this.pos.x, this.pos.y);
-        rotate(this.vel.heading());
-
-        stroke(0);
-        fill(this.secondary);
-        const base = this.length / 2;
-        const side = this.width / 2;
-        const tip = base + this.width * 2;
-        const back = -base - (base * 2) / 3;
-        const fin = side * 4;
-        rect(-base, -side, base * 2, side * 2);
-        fill(this.color);
-        triangle(base, -side, tip, 0, base, side);
-        triangle(-base, side, back, fin, 0, side);
-        triangle(-base, -side, back, -fin, 0, -side);
-
-        pop();
+        // Speeds are scaled to the tile size (they were tuned for 24 px tiles)
+        this.topSpeed = 4 * ts / 24;
     }
 
     explode() {
-        if (!muteSounds) sounds.boom.play();
+        dmgSource = this.source;
+        playSound('boom');
         this.kill();
         const { x, y } = this.pos;
         const inRadius = getInRange(x, y, this.blastRadius, enemies);
-        noStroke();
-        fill(...this.color, 127);
-        const r = (this.blastRadius + 0.5) * ts * 2;
-        if (showEffects) {
-            const s = new RocketExplosion(x, y);
-            for (let i = 0; i < particleAmt; i++) {
-                s.addParticle();
-            }
-            systems.push(s);
-        }
-        ellipse(x, y, r, r);
+        FX.blast(x, y, this.blastRadius > 1 ? 'silo' : 'rocket', this.blastRadius);
         inRadius.forEach((e) => {
             const damage = Math.round(random(this.damageMax, this.damageMin));
             e.dealDamage(damage, 'explosion');
@@ -90,17 +62,17 @@ class Missile {
         this.alive = false;
     }
 
+    // Explode on contact with the target (or when the fuse runs out, see update)
     reachedTarget() {
-        const { x: pX, y: pY } = this.pos;
-        const { x: tX, y: tY, radius } = this.target;
-        return insideCircle(pX, pY, tX, tY, radius * ts);
+        const t = this.target;
+        return insideCircle(this.pos.x, this.pos.y, t.pos.x, t.pos.y, t.radius * ts);
     }
 
     steer() {
         if (!this.target.alive) return;
         const dist = this.pos.dist(this.target.pos);
         const unit = p5.Vector.sub(this.target.pos, this.pos).normalize();
-        this.acc.add(unit.mult(this.accAmt));
+        this.acc.add(unit.mult(this.accAmt * ts / 24));
     }
 
     update() {
@@ -108,6 +80,7 @@ class Missile {
         this.vel.limit(this.topSpeed);
         this.pos.add(this.vel);
         this.acc.mult(0);
+        FX.trail(this);
         if (!this.target.alive) this.findTarget();
         if (this.lifetime > 0) {
             this.lifetime--;

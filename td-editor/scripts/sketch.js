@@ -22,41 +22,41 @@ let autogen = true;     // automatically generate display layer
 let deco = 'empty';     // decoration to draw
 let dispMode = false;   // whether or not to show display tiles
 let tile = 'empty';     // tile to draw
+let theme = 'auto';     // terrain look saved with the map ('auto' picks one from the tiles)
+
+let terrainCanvas = null;   // map picture from ../TowerDefense/scripts/terrain.js
+let terrainKey = '';
+let terrainAt = 0;
 
 
 // Misc functions
 
-// Draw an arrow
+// Draw an arrow (white with a dark edge so it reads on any terrain)
 const arrow = () => {
-    stroke(0);
-    const length = 0.7 * ts;
+    const length = 0.6 * ts;
     const back = 0.1 * ts;
-    const width = 0.5 * ts;
-    line(-length / 2, 0, length / 2, 0);
-    line(-length / 2, 0, -back, -width / 2);
-    line(-length / 2, 0, -back, width / 2);
+    const width = 0.42 * ts;
+    [[9, Math.max(3, ts / 7)], [255, Math.max(1.5, ts / 14)]].forEach(([c, w]) => {
+        stroke(c);
+        strokeWeight(w);
+        line(-length / 2, 0, length / 2, 0);
+        line(-length / 2, 0, -back, -width / 2);
+        line(-length / 2, 0, -back, width / 2);
+    });
+    strokeWeight(1);
 };
 
+// Return map string, or null (with a message) if the map is not playable yet
 const exportMap = () => {
     if (!spawnpoints || spawnpoints.length === 0) {
-        Toastify({
-            text: "Warning: No spawnpoints defined!",
-            backgroundColor: "red",
-            duration: 3000
-        }).showToast();
-        return;
+        toast('Add at least one spawnpoint first', 'error');
+        return null;
     }
-    if (!exit || !exit.x || !exit.y) {
-        Toastify({
-            text: "Warning: No exit defined!",
-            backgroundColor: "red",
-            duration: 3000
-        }).showToast();
-        return;
+    if (!exit) {
+        toast('Add an exit point first', 'error');
+        return null;
     }
 
-    // Convert spawnpoints into a JSON-friendly format
-    const spawns = spawnpoints.map(s => [s.x, s.y]);
     const mapData = {
         // Grids
         display,
@@ -66,7 +66,7 @@ const exportMap = () => {
         paths,
         // Important tiles
         exit: [exit.x, exit.y],
-        spawnpoints: spawns,
+        spawnpoints: spawnpoints.map(s => [s.x, s.y]),
         // Colors
         bg,
         border,
@@ -75,17 +75,9 @@ const exportMap = () => {
         cols,
         rows
     };
+    if (theme !== 'auto') mapData.theme = theme;
 
-    const compressedMap = LZString.compressToBase64(JSON.stringify(mapData));
-
-    // Display success notification
-    Toastify({
-        text: "Map exported successfully!",
-        backgroundColor: "green",
-        duration: 3000
-    }).showToast();
-
-    return compressedMap;
+    return LZString.compressToBase64(JSON.stringify(mapData));
 };
 
 // Generate display layer
@@ -117,86 +109,104 @@ const getWalkMap = () => {
 // Load a map from a map string
 const importMap = (str) => {
     try {
-        const m = JSON.parse(LZString.decompressFromBase64(str));
-
-        // Grids
-        display = m.display;
-        displayDir = m.displayDir;
-        grid = m.grid;
-        metadata = m.metadata;
-        paths = m.paths;
-        // Important tiles
-        exit = createVector(m.exit[0], m.exit[1]);
-        spawnpoints = m.spawnpoints.map(s => createVector(s[0], s[1]));
-        // Colors
-        bg = m.bg;
-        border = m.border;
-        borderAlpha = m.borderAlpha;
-        // Misc
-        cols = m.cols;
-        rows = m.rows;
-
-        resizeFit();
-
-        // Display success notification
-        Toastify({
-            text: "Map imported successfully!",
-            backgroundColor: "green",
-            duration: 3000
-        }).showToast();
+        loadMapData(JSON.parse(LZString.decompressFromBase64(str)));
+        toast('Map imported', 'ok');
     } catch (err) {
-        console.error('Error importing map:', err);
-
-        // Display error notification
-        Toastify({
-            text: "Failed to import map. Please check the input.",
-            backgroundColor: "red",
-            duration: 3000
-        }).showToast();
+        toast('That is not a valid map string', 'error');
     }
 };
 
-function showImportMapPrompt() {
-    Swal.fire({
-        title: 'Input map string:',
-        input: 'textarea',
-        inputPlaceholder: 'Paste your map string here...',
-        showCancelButton: true,
-        confirmButtonText: 'Import',
-        cancelButtonText: 'Cancel',
-        inputValidator: (value) => {
-            if (!value) {
-                return 'Please enter a map string!';
-            }
-        },
-        customClass: {
-            popup: 'custom-swal-popup',
-            header: 'custom-swal-header',
-            title: 'custom-swal-title',
-            input: 'custom-swal-input',
-            cancelButton: 'custom-swal-cancel-btn',
-            confirmButton: 'custom-swal-confirm-btn',
-            actions: 'custom-swal-actions'
-        },
-        background: '#013243',
-        color: '#fff',
-        buttonsStyling: false,
-        width: '400px'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const mapString = result.value;
-            importMap(mapString);
-        }
+// Put a map (the game's map object) into the editor
+function loadMapData(source) {
+    const m = JSON.parse(JSON.stringify(source));
+
+    // Grids
+    display = m.display;
+    displayDir = m.displayDir;
+    grid = m.grid;
+    metadata = m.metadata;
+    paths = m.paths;
+    // Important tiles
+    exit = createVector(m.exit[0], m.exit[1]);
+    spawnpoints = m.spawnpoints.map(s => createVector(s[0], s[1]));
+    // Colors
+    bg = m.bg;
+    border = m.border;
+    borderAlpha = m.borderAlpha;
+    // Misc
+    cols = m.cols;
+    rows = m.rows;
+    theme = m.theme && Terrain.THEMES[m.theme] ? m.theme : 'auto';
+    document.getElementById('theme').value = theme;
+
+    resizeFit();
+}
+
+// Campaign maps from the game (TowerDefense/scripts/maps.js), to look at, change or play
+function listCampaignMaps() {
+    const select = document.getElementById('campaign-map');
+    CAMPAIGN.forEach((c, i) => {
+        const o = document.createElement('option');
+        o.value = c.id;
+        o.textContent = `${i + 1}. ${c.title}`;
+        select.append(o);
+    });
+    select.addEventListener('change', () => {
+        const m = maps[select.value];
+        if (!m) return;
+        loadMapData(m);
+        toast(`${CAMPAIGN.find(c => c.id === select.value).title} loaded`, 'ok');
+        select.value = '';
+        select.blur();
     });
 }
 
+function showImportMapPrompt() {
+    textDialog({
+        title: 'Paste a map string',
+        placeholder: 'Map string from the game or this editor',
+        confirmLabel: 'Import'
+    }).then(str => {
+        if (str) importMap(str);
+    });
+}
 
+function showExportMap() {
+    const str = exportMap();
+    if (str) textDialog({ title: 'Map string', value: str, readOnly: true });
+}
+
+// Check that every spawnpoint can reach the exit, then open the map in the game
+function playMap() {
+    if (!exit || spawnpoints.length === 0) {
+        exportMap();
+        return;
+    }
+    const walk = getWalkMap();
+    const seen = new Set([vts(exit)]);
+    const frontier = [vts(exit)];
+    while (frontier.length) {
+        const t = stv(frontier.shift());
+        neighbors(walk, t.x, t.y, true).forEach(n => {
+            if (!seen.has(n)) {
+                seen.add(n);
+                frontier.push(n);
+            }
+        });
+    }
+    if (spawnpoints.some(s => !seen.has(vts(s)))) {
+        toast('A spawnpoint cannot reach the exit', 'error');
+        return;
+    }
+    GameKit.createStore('tower-defense').set('customMap', exportMap());
+    location.href = '../TowerDefense/index.html?map=custom';
+}
 
 // Recalculate pathfinding maps
 // Algorithm from https://www.redblobgames.com/pathfinding/tower-defense/
 function recalculate() {
     if (!exit) return;
-    walkMap = getWalkMap();
+    const walkMap = getWalkMap();
     const frontier = [];
     const target = vts(exit);
     frontier.push(target);
@@ -264,9 +274,10 @@ function resetMap(t) {
 // Changes tile size to fit everything onscreen
 function resizeFit() {
     const div = document.getElementById('sketch-holder');
-    const ts1 = Math.floor(div.offsetWidth / cols);
-    const ts2 = Math.floor(div.offsetHeight / rows);
-    ts = Math.min(ts1, ts2);
+    if (!div.clientWidth || !div.clientHeight) return;
+    const ts1 = Math.floor(div.clientWidth / cols);
+    const ts2 = Math.floor(div.clientHeight / rows);
+    ts = Math.max(2, Math.min(ts1, ts2));
     resizeCanvas(cols * ts, rows * ts, true);
     updateStatus();
 }
@@ -274,10 +285,34 @@ function resizeFit() {
 // Resizes cols, rows, and canvas based on tile size
 function resizeMax() {
     const div = document.getElementById('sketch-holder');
-    cols = Math.floor(div.offsetWidth / ts);
-    rows = Math.floor(div.offsetHeight / ts);
+    cols = Math.max(4, Math.floor(div.clientWidth / ts));
+    rows = Math.max(4, Math.floor(div.clientHeight / ts));
     resizeCanvas(cols * ts, rows * ts, true);
     updateStatus();
+}
+
+// Add or remove columns and rows (resets the map)
+function changeSize(dc, dr) {
+    cols = constrain(cols + dc, 4, 60);
+    rows = constrain(rows + dr, 4, 60);
+    resizeFit();
+    resetMap(0);
+}
+
+function resetZoom() {
+    ts = zoomDefault;
+    resizeMax();
+    resetMap(0);
+}
+
+function toggleDispMode() {
+    dispMode = !dispMode;
+    updateDivs();
+}
+
+function toggleAutogen() {
+    autogen = !autogen;
+    document.getElementById('autogen').textContent = `Turn Autogen ${autogen ? 'Off' : 'On'} (D)`;
 }
 
 // Store selected tile in appropriate location
@@ -287,6 +322,13 @@ function selectTile(t, d) {
     } else {
         dispMode ? deco = d : tile = t;
     }
+    markSelected();
+}
+
+// Highlight the buttons of the current tile and decoration
+function markSelected() {
+    document.querySelectorAll('[data-tile]').forEach(b => b.classList.toggle('active', b.dataset.tile === tile));
+    document.querySelectorAll('[data-deco]').forEach(b => b.classList.toggle('active', b.dataset.deco === deco));
 }
 
 // Update tile- and decoration-selection divs
@@ -300,17 +342,20 @@ function updateDivs() {
         t.display = 'block';
         d.display = 'none';
     }
+    document.querySelectorAll('[data-layer]').forEach(b => {
+        b.setAttribute('aria-pressed', String((b.dataset.layer === 'deco') === dispMode));
+    });
 }
 
 // Update map status display
 function updateStatus() {
-    document.getElementById('dim').innerHTML = `Dim: ${cols}x${rows}`;
+    document.getElementById('dim').textContent = `Size: ${cols} x ${rows}`;
 }
 
-// User drawing on map
-function userDraw() {
-    if (!mouseInMap()) return;
-    const p = gridPos(mouseX, mouseY);
+// User drawing on map at a canvas pixel position
+function userDraw(x, y) {
+    const p = gridPos(x, y);
+    if (p.x < 0 || p.y < 0 || p.x >= cols || p.y >= rows) return;
     const g = grid[p.x][p.y];
 
     if (dispMode) {
@@ -377,62 +422,124 @@ const walkable = (col, row) => grid[col][row] !== 1 && grid[col][row] !== 3;
 // Main p5 functions
 function setup() {
     const div = document.getElementById('sketch-holder');
-    const canvas = createCanvas(div.offsetWidth, div.offsetHeight);
+    const canvas = createCanvas(div.clientWidth || 300, div.clientHeight || 300);
     canvas.parent('sketch-holder');
     resizeMax();
     resetMap(0);
+    markSelected();
+    listCampaignMaps();
+
+    // Paint with mouse, pen or finger
+    const el = canvas.elt;
+    const toCanvas = (e) => {
+        const r = el.getBoundingClientRect();
+        return [(e.clientX - r.left) * width / r.width, (e.clientY - r.top) * height / r.height];
+    };
+    let painting = false;
+    let last = null;
+    // Paint every tile between two pointer positions so fast strokes leave no gaps
+    const paintTo = (x, y) => {
+        const steps = last ? Math.ceil(Math.max(Math.abs(x - last[0]), Math.abs(y - last[1])) / (ts / 2)) : 0;
+        for (let i = 1; i <= steps; i++) {
+            userDraw(lerp(last[0], x, i / steps), lerp(last[1], y, i / steps));
+        }
+        if (!steps) userDraw(x, y);
+        last = [x, y];
+    };
+    el.addEventListener('pointerdown', e => {
+        if (e.button !== 0) return;
+        painting = true;
+        last = null;
+        el.setPointerCapture(e.pointerId);
+        paintTo(...toCanvas(e));
+    });
+    el.addEventListener('pointermove', e => {
+        const [x, y] = toCanvas(e);
+        const t = gridPos(x, y);
+        if (t.x >= 0 && t.y >= 0 && t.x < cols && t.y < rows) {
+            document.getElementById('coord').textContent = `Tile: (${t.x}, ${t.y})`;
+        }
+        if (painting) paintTo(x, y);
+    });
+    ['pointerup', 'pointercancel'].forEach(type => el.addEventListener(type, () => { painting = false; }));
+
+    new ResizeObserver(() => resizeFit()).observe(div);
+}
+
+// The map in the shape the terrain renderer expects
+function mapView() {
+    return {
+        cols, rows, grid, display,
+        spawnpoints: spawnpoints.map(s => [s.x, s.y]),
+        exit: exit ? [exit.x, exit.y] : null,
+        theme: theme === 'auto' ? undefined : theme
+    };
 }
 
 function draw() {
-    background(dispMode ? bg : 255);
-
-    // Update mouse coordinates
-    if (mouseInMap()) {
-        const t = gridPos(mouseX, mouseY);
-        const coordText = `Mouse: (${t.x}, ${t.y})`;
-        document.getElementById('coord').innerHTML = coordText;
+    // Redraw the terrain when the tiles change (at most about ten times a second while painting)
+    const now = performance.now();
+    const key = `${cols}x${rows}|${ts}|${theme}|${grid.map(c => c.join('')).join('/')}|${display.map(c => c.join(',')).join('/')}|` +
+        `${spawnpoints.map(s => s.x + ',' + s.y).join(';')}|${exit ? exit.x + ',' + exit.y : ''}`;
+    if (!terrainCanvas || key !== terrainKey && now - terrainAt > 90) {
+        terrainKey = key;
+        terrainAt = now;
+        const view = mapView();
+        terrainCanvas = Terrain.render({
+            m: view, px: ts * pixelDensity(), theme: Terrain.themeFor(view, null), canvas: terrainCanvas || undefined
+        });
     }
+    background(9);
+    const g = drawingContext;
+    g.drawImage(terrainCanvas, 0, 0, width, height);
 
-    // Draw basic tiles
-    for (let x = 0; x < cols; x++) {
-        for (let y = 0; y < rows; y++) {
-            if (dispMode) {
+    if (dispMode) {
+        // Colour decoration tiles show through so they stay editable
+        noStroke();
+        for (let x = 0; x < cols; x++) {
+            for (let y = 0; y < rows; y++) {
                 const t = tiles[display[x][y]];
-                if (typeof t === 'function') {
-                    t(x, y, displayDir[x][y]);
-                } else {
-                    stroke(border, borderAlpha);
-                    t ? fill(t) : noFill();
-                    rect(x * ts, y * ts, ts, ts);
-                }
-            } else {
-                stroke(0, 63);
-                const t = grid[x][y];
-                if (t === 0) {
-                    noFill();
-                } else {
-                    fill([[108, 122, 137], [191, 85, 236], [25, 181, 254], [233, 212, 96]][t - 1]);
-                }
+                if (!Array.isArray(t)) continue;
+                fill(t[0], t[1], t[2], 90);
                 rect(x * ts, y * ts, ts, ts);
+            }
+        }
+    } else {
+        // Enemy-only tiles get a light tint so they differ from path tiles
+        noStroke();
+        fill(250, 204, 21, 40);
+        for (let x = 0; x < cols; x++) {
+            for (let y = 0; y < rows; y++) {
+                if (grid[x][y] === 4) rect(x * ts, y * ts, ts, ts);
             }
         }
     }
 
-    // Draw spawnpoints
+    // Portals and the gate
     spawnpoints.forEach(s => {
-        stroke(dispMode ? 255 : 0);
-        fill(0, 230, 64);
-        rect(s.x * ts, s.y * ts, ts, ts);
+        const c = center(s.x, s.y);
+        g.fillStyle = '#3b1d7a';
+        g.beginPath();
+        g.arc(c.x, c.y, ts * 0.4, 0, Math.PI * 2);
+        g.fill();
+        g.strokeStyle = '#c38bff';
+        g.lineWidth = Math.max(1.5, ts * 0.08);
+        for (let i = 0; i < 3; i++) {
+            g.beginPath();
+            g.arc(c.x, c.y, ts * 0.3, i * 2.1 + frameCount * 0.03, i * 2.1 + 1.4 + frameCount * 0.03);
+            g.stroke();
+        }
     });
-
-    // Draw exit
     if (exit) {
-        stroke(dispMode ? 255 : 0);
-        fill(207, 0, 15);
-        rect(exit.x * ts, exit.y * ts, ts, ts);
+        const c = center(exit.x, exit.y);
+        g.save();
+        g.translate(c.x, c.y);
+        g.scale(ts, ts);
+        Art.drawGate(g);
+        g.restore();
     }
 
-    // Draw paths
+    // Path arrows
     if (!dispMode) {
         for (let x = 0; x < cols; x++) {
             for (let y = 0; y < rows; y++) {
@@ -451,16 +558,46 @@ function draw() {
             }
         }
     }
+
+    // Outline the tile under the mouse
+    if (hoverOutline && mouseInMap()) {
+        const p = gridPos(mouseX, mouseY);
+        noFill();
+        stroke(250, 204, 21);
+        strokeWeight(2);
+        rect(p.x * ts + 1, p.y * ts + 1, ts - 2, ts - 2);
+        strokeWeight(1);
+    }
 }
+
+const hoverOutline = matchMedia('(hover: hover)').matches;
 
 // User input
 
-function keyPressed() {
-    switch (keyCode) {
+document.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (document.querySelector('dialog[open]')) return;
+    if (e.target.closest && e.target.closest('input, textarea, select')) return;
+    if (e.key === ' ') e.preventDefault();
+    onKey(e.keyCode, e.shiftKey);
+});
+
+document.getElementById('theme').addEventListener('change', e => {
+    theme = e.target.value;
+});
+
+document.querySelectorAll('[data-tile]').forEach(b => {
+    b.addEventListener('click', () => { tile = b.dataset.tile; markSelected(); });
+});
+document.querySelectorAll('[data-deco]').forEach(b => {
+    b.addEventListener('click', () => { deco = b.dataset.deco; markSelected(); });
+});
+
+function onKey(code, shift) {
+    switch (code) {
         case 32:
             // Spacebar
-            dispMode = !dispMode;
-            updateDivs();
+            toggleDispMode();
             break;
         case 37:
             // Left arrow
@@ -512,7 +649,10 @@ function keyPressed() {
             break;
         case 56:
             // 8
-            if (dispMode) deco = 'sidewalk';
+            if (dispMode) {
+                deco = 'sidewalk';
+                markSelected();
+            }
             break;
         case 67:
             // C
@@ -521,10 +661,7 @@ function keyPressed() {
             break;
         case 68:
             // D
-            autogen = !autogen;
-            var state = autogen ? 'Off' : 'On';
-            var a = document.getElementById('autogen');
-            a.innerHTML = 'Turn Autogen ' + state + ' (D)';
+            toggleAutogen();
             break;
         case 70:
             // F
@@ -536,7 +673,7 @@ function keyPressed() {
             break;
         case 77:
             // M
-            importMap(prompt('Input map string:'));
+            showImportMapPrompt();
             break;
         case 80:
             // P
@@ -560,47 +697,21 @@ function keyPressed() {
             break;
         case 88:
             // X
-            copyToClipboard(exportMap());
+            showExportMap();
             break;
         case 90:
             // Z
-            ts = zoomDefault;
-            resizeMax();
-            resetMap(0);
+            resetZoom();
             break;
         case 219:
             // Left bracket
-            if (keyIsDown(SHIFT)) {
-                if (rows > 1) {
-                    rows--;
-                    resizeFit();
-                    resetMap(0);
-                }
-            } else {
-                if (cols > 1) {
-                    cols--;
-                    resizeFit();
-                    resetMap(0);
-                }
-            }
+            shift ? changeSize(0, -1) : changeSize(-1, 0);
             break;
         case 221:
             // Right bracket
-            if (keyIsDown(SHIFT)) {
-                rows++;
-            } else {
-                cols++;
-            }
-            resizeFit();
-            resetMap(0);
+            shift ? changeSize(0, 1) : changeSize(1, 0);
             break;
     }
 }
 
-function mouseDragged() {
-    userDraw();
-}
-
-function mousePressed() {
-    userDraw();
-}
+GameKit.initShell();

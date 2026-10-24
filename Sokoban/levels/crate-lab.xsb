@@ -1,0 +1,506 @@
+; Crate Lab - 40 original levels for Game Lab
+; Authored by ibra-kdbra with the help of Sokoban/tools/design.mjs (reverse search
+; from the solved position) and checked by Sokoban/tools/verify-levels.mjs.
+; Licensed with the rest of the repository.
+;
+; Standard XSB: # wall, @ player, + player on goal, $ crate, * crate on goal, . goal.
+; Each map is followed by Title, World, Par (optimal pushes) and Idea.
+
+; ---------------------------------------------------------------- World 1: Intake
+
+#######
+#@ $ .#
+#######
+Title: First Push
+World: 1
+Par: 2
+Idea: Walk into a crate to push it onto the pad.
+
+########
+#   @  #
+# #### #
+#.  $  #
+########
+Title: Around the Back
+World: 1
+Par: 3
+Idea: You can only push, so walk round to the far side first.
+
+ #####
+##@  #
+# $# #
+#    #
+#. ###
+####
+Title: Corner Turn
+World: 1
+Par: 3
+Idea: Push, step round, push again to turn a corner.
+
+#######
+#     #
+# $#. #
+#     #
+#  @  #
+#######
+Title: Detour
+World: 1
+Par: 4
+Idea: Route a crate round a pillar instead of through it.
+
+#######
+#.  $ #
+#  @  #
+#  $ .#
+#######
+Title: Pairs
+World: 1
+Par: 5
+Idea: Any crate fits any pad; pick the short pairing.
+
+#########
+#.    $ #
+#  ##   #
+#@      #
+#########
+Title: Wall Slide
+World: 1
+Par: 5
+Idea: A crate against a wall can only slide along it.
+
+#######
+#     #
+# $@$ #
+#     #
+#.###.#
+#######
+Title: Mind the Corners
+World: 1
+Par: 6
+Idea: A crate pushed into a corner never comes out.
+
+ ######
+##  . #
+#  $# #
+# @$  #
+##  . #
+ ######
+Title: Make Room
+World: 1
+Par: 6
+Idea: Nudge one crate aside to get behind the other.
+
+#########
+#..   $ #
+### #$  #
+  #  @  #
+  #######
+Title: Back of the Shelf
+World: 1
+Par: 9
+Idea: In a dead end, fill the deepest pad first.
+
+ #######
+##  #  #
+#  $@$ #
+# #.#  #
+#  . $ #
+## .  ##
+ #   #
+ #####
+Title: Triad
+World: 1
+Par: 12
+Idea: Three crates: corners, order and making room together.
+
+; ---------------------------------------------------------------- World 2: Storage
+
+  ######
+  #    #
+### ## #
+#  @.  #
+# $$ . #
+###  ###
+  #  #
+  ####
+Title: Parking Bay
+World: 2
+Par: 7
+Idea: Park a crate in the bay while you line up the other.
+
+  ######
+  #    #
+###$#$ #
+#  .#. #
+#   $+ #
+#  #   #
+########
+Title: Side Door
+World: 2
+Par: 7
+Idea: Two rooms share one door; decide what goes through it.
+
+ #######
+ #     #
+## #$# #
+#  . . #
+#  #$# #
+#   @ ##
+#######
+Title: Pillar Hall
+World: 2
+Par: 8
+Idea: Circle the pillars to reach the side you need.
+
+########
+#  #   #
+#@$  $ #
+##  #  #
+ #  .  #
+ ##.   #
+  ######
+Title: Pocket
+World: 2
+Par: 11
+Idea: A pad that can be entered from one direction only.
+
+########
+#      #
+# $..  #
+##$.. ##
+ # $$  #
+ # @#  #
+ #######
+Title: Block Party
+World: 2
+Par: 12
+Idea: Fill a 2x2 block of pads without sealing a gap.
+
+ ########
+ #   #  #
+##$     #
+#@$ ##..#
+#       #
+#####   #
+    #####
+Title: Bottleneck
+World: 2
+Par: 14
+Idea: Two crates, one narrow gap: the order matters.
+
+#########
+#...  $ #
+### ##  #
+  #  $$ #
+  #   @ #
+  #######
+Title: Loading Dock
+World: 2
+Par: 15
+Idea: Load a dead-end shelf from the back, one crate at a time.
+
+ ######
+ #    ###
+##.## $ #
+#  . $  #
+#  ##+$ #
+#    #  #
+#########
+Title: Two Lanes
+World: 2
+Par: 15
+Idea: Use the second lane to turn a crate round.
+
+ #######
+ #@    #
+##$    #
+# .$## #
+#.  #  #
+#  #####
+####
+Title: Stairwell
+World: 2
+Par: 16
+Idea: Walk crates down the left-hand stairs to the pads.
+
+  #####
+###   #
+#  $#.##
+#    $@#
+#  ##  #
+#  #.  #
+########
+Title: Dogleg
+World: 2
+Par: 17
+Idea: Both pads sit behind bends; plan each crate's turns.
+
+; ---------------------------------------------------------------- World 3: Sorting
+
+  #######
+###@    #
+# $$$ ###
+#     ##
+#  ##  #
+#.     #
+#   #..#
+########
+Title: Row of Three
+World: 3
+Par: 18
+Idea: Three crates in a row: break the line from the middle.
+
+#####
+#   #####
+# $ $ # #
+#  $ .  #
+# #@  $ #
+### .   #
+#. . ####
+######
+Title: Scatter
+World: 3
+Par: 19
+Idea: Four crates, four pads: pair them up before you push.
+
+   #####
+####   #
+#  #$  #
+#    $$#
+#     @#
+# ###  #
+#..   .#
+########
+Title: Long Corridor
+World: 3
+Par: 20
+Idea: Feed crates down the long bottom corridor in turn.
+
+  #######
+  #  #  #
+  #  .  #
+  #$    #
+###     #
+#. $  ###
+#  $+ #
+#######
+Title: Crow's Nest
+World: 3
+Par: 20
+Idea: One pad hides in the upper room; send a crate up first.
+
+    #####
+#####   #
+#@$  $ $#
+## #  # #
+# .   #.#
+# ##    #
+#   .  ##
+########
+Title: Gantry
+World: 3
+Par: 21
+Idea: Three crates on the top rail drop through different gaps.
+
+ ########
+##  ##  #
+# $ # $ #
+#   $@$ #
+#.   #. #
+###  # ##
+ #  . .#
+ #######
+Title: Twin Bays
+World: 3
+Par: 21
+Idea: Two bays, four crates: balance the work between them.
+
+ #####
+ #  @###
+ ###*  #
+##    .#
+# # .$ #
+#  $ ###
+#    #
+######
+Title: Keystone
+World: 3
+Par: 22
+Idea: The crate already home is in the way; move it and bring it back.
+
+ ######
+##    ##
+# ##   ##
+# # . ..#
+#@$ ##  #
+# $$    #
+#       #
+#########
+Title: Ground Floor
+World: 3
+Par: 23
+Idea: Lift crates from the ground floor up to the pads above.
+
+#########
+#  @    #
+# $$##. #
+#   #  ##
+##  ##. #
+# $    ##
+##  .   #
+ ########
+Title: Switchback
+World: 3
+Par: 24
+Idea: The right-hand pads are stacked up a narrow stair.
+
+  #######
+  #     #
+### $   #
+#  #  # #
+#..#$ #.#
+#   @$###
+#     #
+#######
+Title: Cold Storage
+World: 3
+Par: 26
+Idea: The left pads are reached by going the long way round.
+
+; ---------------------------------------------------------------- World 4: Night Shift
+
+#########
+#    .$@#
+# .   # #
+## # $$ #
+#  #  ###
+#    $##
+#..    #
+########
+Title: Night Shift
+World: 4
+Par: 27
+Idea: Start at the top right and unpack a tight cluster.
+
+  #######
+### #  .#
+#   #  .#
+#  ##   #
+#$$  .  #
+#+$  $ ##
+##  # ##
+ ######
+Title: Crate Jam
+World: 4
+Par: 28
+Idea: You start boxed in; free yourself without trapping a crate.
+
+  #######
+ ##@##. #
+## $#  .#
+# $ ##  #
+#   #   #
+#   $$. #
+#    . ##
+########
+Title: Mezzanine
+World: 4
+Par: 29
+Idea: Upper and lower rooms: plan which crate crosses first.
+
+##########
+#   @# # #
+# $$$# # #
+##$     .#
+ #      ##
+####    ##
+#   .   .#
+#      . #
+##########
+Title: Freight
+World: 4
+Par: 31
+Idea: Four crates start packed in a corner; spread them out.
+
+  #######
+###  .  ##
+# $$#    #
+#   ##   #
+#        #
+##$$#..  #
+## @# .###
+#    ###
+######
+Title: Cross Traffic
+World: 4
+Par: 33
+Idea: Two pairs of crates, top and bottom, share the middle.
+
+#########
+#  @## .#
+# $$$ $ #
+###    $#
+ ##.  . #
+##  #   #
+#   . ###
+#.    #
+#######
+Title: Overflow
+World: 4
+Par: 34
+Idea: Five crates and little floor: every parking spot counts.
+
+    #####
+#####   #
+#. ##   #
+#  #  $##
+# . $  ##
+#  . $$ #
+#.   @ ##
+########
+Title: Pantry
+World: 4
+Par: 34
+Idea: Pads stagger down the left side; keep a lane open.
+
+ ######
+##   @##
+#    $ ##
+##### $.#
+## #    #
+#   $$$ #
+###.    #
+#.  . . #
+#########
+Title: Graveyard Shift
+World: 4
+Par: 35
+Idea: Five crates, two floors and a narrow passage between them.
+
+#########
+#    ##.#
+## $$ $ #
+##.$    #
+#  #### #
+#    ..$#
+#    ##@#
+#.   ####
+######
+Title: Last Orders
+World: 4
+Par: 37
+Idea: The halves join at both ends; use the loop.
+
+    ######
+#####    #
+#  $@$ $ #
+#   ## $ #
+#   ###  #
+#     .  #
+#   .    #
+#. . ##  #
+##########
+Title: Lights Out
+World: 4
+Par: 42
+Idea: The finale: four crates, every idea from the lab at once.

@@ -1,6 +1,5 @@
 let enemies = [];
 let projectiles = [];
-let systems = [];
 let towers = [];
 let newEnemies = [];
 let newProjectiles = [];
@@ -8,15 +7,14 @@ let newTowers = [];
 
 let cols;
 let rows;
+let ts = 24;            // tile size in pixels, fitted to the screen
 let tileZoom = 2;
-let ts = 24;            // tile size
-let zoomDefault = ts;
-
-let particleAmt = 32;   // number of particles to draw per explosion
+let zoomDefault = 24;
+let randomTs = zoomDefault; // preferred tile size when generating random maps
 
 let tempSpawnCount = 40;
 
-let custom;             // custom map JSON
+let custom = null;      // custom map JSON (imported or from the editor)
 let display;            // graphical display tiles
 let displayDir;         // direction display tiles are facing
                         // (0 = none, 1 = left, 2 = up, 3 = right, 4 = down)
@@ -26,6 +24,7 @@ let grid;               // tile type
                         //  4 = enemy-only pathing)
 let metadata;           // tile metadata
 let paths;              // direction to reach exit
+let flowPaths;          // shortest-way direction on every tile (ignores the roads' own directions)
 let visitMap;           // whether exit can be reached
 let walkMap;            // walkability map
 
@@ -40,25 +39,44 @@ let wave;
 
 let spawnCool;          // number of ticks between spawning enemies
 
-let bg;                 // background color
-let border;             // color to draw on tile borders
-let borderAlpha;        // alpha of tile borders
+let bg;                 // background color (kept in map strings)
+let border;             // color to draw on tile borders (kept in map strings)
+let borderAlpha;        // alpha of tile borders (kept in map strings)
+let mapTheme = 'meadow';// terrain look (terrain.js)
+let mapStamp = 0;       // bumped when the map's tiles change, to redraw the terrain
+let pathVersion = 0;    // bumped when enemy paths change, to redraw the route hints
 
 let selected;
 let towerType;
+let ghost = null;       // tile chosen by a first tap on touch screens
+let lastPointer = matchMedia('(pointer: coarse)').matches ? 'touch' : 'mouse';
 
-let sounds;             // dict of all sounds
-let boomSound;          // explosion sound effect
+let difficulty;         // entry of difficulties (waves.js)
+let gameMode;           // 'campaign' or 'endless'
+let gameOver = false;
+let speed = 1;          // logic steps per tick: 1x, 2x or 3x
+let mapId = 'sparse2';  // chosen map (MAP_LIST in hud.js)
+let modeId = 'campaign';
+let diffId = 'normal';
+let upcoming = null;    // pattern of the wave after the current one, for the preview
+let started = false;    // whether the first wave has been released
+let earlyBonus = 0;     // bonus paid for the wave that was just called early
+let clearBonus = 0;     // gold paid for the wave that was just cleared
+let mapHp = 1;          // enemy health tuning of the campaign map (CAMPAIGN in maps.js)
+let floaters = [];      // floating numbers: { x, y, text, color, life, size }
+let hurt = 0;           // ticks left of the red edge flash after losing lives
+let damageNumbers = true;
+let shakeLevel = 1;     // screen shake: 0 off, 1 subtle (big hits only), 2 full
+let haptics = true;     // vibrate on phones for key events
+let stats;              // per-game totals for the end screen
+let dmgSource = null;   // tower whose shot is being resolved, credited with damage and kills
 
-// TODO add more functionality to god mode
 let godMode = false;    // make player immortal for test purposes
 let healthBar = true;   // display enemy health bar
 let muteSounds = false; // whether to mute sounds
 let paused;             // whether to update or not
-let randomWaves = true; // whether to do random or custom waves
 let scd;                // number of ticks until next spawn cycle
 let showEffects = true; // whether or not to display particle effects
-let showFPS = false;    // whether or not to display FPS
 let skipToNext = false; // whether or not to immediately start next wave
 let stopFiring = false; // whether or not to pause towers firing
 let toCooldown;         // flag to reset spawning cooldown
@@ -67,15 +85,19 @@ let toPlace;            // flag to place a tower
 let toWait;             // flag to wait before next wave
 let wcd;                // number of ticks until next wave
 
-let avgFPS = 0;         // current average of all FPS values
-let numFPS = 0;         // number of FPS values calculated so far
-
 let minDist = 15;       // minimum distance between spawnpoint and exit
 let resistance = 0.5;   // percentage of damage blocked by resistance
 let sellConst = 0.8;    // ratio of tower cost to sell price
 let wallCover = 0.1;    // percentage of map covered by walls
-let waveCool = 120;     // number of ticks between waves
 let weakness = 0.5;     // damage increase from weakness
+
+const SLUG = 'tower-defense';
+const store = GameKit.createStore(SLUG);
+const stepper = GameKit.createStepper(60);
+const holder = document.getElementById('sketch-holder');
+const $ = (id) => document.getElementById(id);
+
+GameKit.initShell({ slug: SLUG });
 
 
 // Misc functions
@@ -90,52 +112,104 @@ const addGroup = (group) => {
     }
 }
 
-// Prepare a wave
+// Prepare a wave (patterns are copied so the templates stay intact)
 const addWave = (pattern) => {
-    spawnCool = pattern.shift();
-    for (let i = 0; i < pattern.length; i++) {
-        addGroup(pattern[i]);
+    const copy = JSON.parse(JSON.stringify(pattern));
+    spawnCool = copy.shift();
+    for (let i = 0; i < copy.length; i++) {
+        addGroup(copy[i]);
     }
 }
 
 // Buy and place a tower if player has enough money
 const buy = (t) => {
     if (godMode || cash >= t.cost) {
-        if (!godMode) {
-            cash -= t.cost;
-            toPlace = false;
-        }
-        selected = t;
+        if (!godMode) cash -= t.cost;
         if (grid[t.gridPos.x][t.gridPos.y] === 0) toPathfind = true;
-        updateInfo(t);
         newTowers.push(t);
+        stats.built++;
+        sfx('build');
+        FX.buzz(12);
+        addFloater(t.pos.x, t.pos.y - ts * 0.3, `-$${t.cost}`, [250, 204, 21]);
+        ghost = null;
+        // Keep building the same tower while another one is affordable
+        if (!godMode && cash < t.cost) {
+            toPlace = false;
+            selected = t;
+        }
+        updateInfo();
+    } else {
+        sfx('error');
+        toast(`Not enough gold: ${t.title} costs $${t.cost}`, 'error');
     }
 }
 
-// Calculate and display current and average FPS
-const calcFPS = () => {
-    const fps = frameRate();
-    avgFPS += (fps - avgFPS) / ++numFPS;
+// Floating text on the map (damage, gold, lives)
+function addFloater(x, y, text, color, size = 1) {
+    if (floaters.length > 120) floaters.shift();
+    floaters.push({ x, y, text, color, size, life: 45 });
+}
 
-    // Draw black rect under text
-    noStroke();
-    fill(0);
-    rect(0, height - 40, 70, 40);
+// Hooks called by enemies (enemy.js)
+const typeColors = {
+    physical: [244, 244, 245],
+    energy: [0, 240, 255],
+    explosion: [255, 153, 0],
+    piercing: [216, 180, 254],
+    poison: [132, 204, 22]
+};
 
-    // Update FPS meter
-    fill(255);
-    const fpsText = `FPS: ${fps.toFixed(2)}\nAvg: ${avgFPS.toFixed(2)}`;
-    text(fpsText, 5, height - 25);
+function onEnemyHit(e, dealt, type) {
+    if (!damageNumbers || dealt < 25) return;
+    addFloater(e.pos.x + (Math.random() - 0.5) * ts * 0.4, e.pos.y - ts * 0.35,
+        String(Math.round(dealt)), typeColors[type] || typeColors.physical, 0.9);
+}
+
+function onEnemyKilled(e) {
+    FX.death(e);
+    stats.kills++;
+    stats.earned += e.cash;
+    if (e.cash > 0) addFloater(e.pos.x, e.pos.y, `+$${e.cash}`, [250, 204, 21], 0.8);
+}
+
+function onEnemyLeaked(e) {
+    if (godMode) return;
+    stats.leaked += e.damage;
+    hurt = 24;
+    sfx('leak');
+    FX.leak();
+    const c = center(exit.x, exit.y);
+    addFloater(c.x, c.y - ts * 0.4, `-${e.damage}`, [248, 113, 113], 1.2);
+    flashLives();
+}
+
+// Why a tower cannot go on a tile, or null if it can
+const placeReason = (col, row) => {
+    const g = grid[col][row];
+    if (getTower(col, row)) return 'A tower is already here';
+    if (g === 3) return null;
+    if (g === 1) return 'Cannot build on walls';
+    if (g === 2 || g === 4) return 'Enemy road: no building';
+    if (!empty(col, row)) return 'Spawn and exit tiles stay clear';
+    if (!placeable(col, row)) return 'That would block the only path';
+    return null;
 }
 
 // Check if all conditions for placing a tower are true
-const canPlace = (col, row) => {
-    if (!toPlace) return false;
-    const g = grid[col][row];
-    if (g === 3) return true;
-    if (g === 1 || g === 2 || g === 4) return false;
-    if (!empty(col, row) || !placeable(col, row)) return false;
-    return true;
+const canPlace = (col, row) => toPlace && placeReason(col, row) === null;
+
+// placeReason for the preview, recomputed at most every few frames per tile
+// (it runs a path search, too slow to repeat every frame)
+const placeCache = { key: '', at: -99, value: null };
+function placeReasonCached(col, row) {
+    const key = `${col},${row},${towers.length},${newTowers.length},${pathVersion}`;
+    const now = frameCount;
+    if (placeCache.key !== key || now - placeCache.at > 12) {
+        placeCache.key = key;
+        placeCache.at = now;
+        placeCache.value = placeReason(col, row);
+    }
+    return placeCache.value;
 }
 
 // Check if spawn cooldown is done and enemies are available to spawn
@@ -143,18 +217,8 @@ const canSpawn = () => {
     return newEnemies.length > 0 && scd === 0;
 }
 
-// Clear tower information
-const clearInfo = () => {
-    document.getElementById('info-div').style.display = 'none';
-}
-
-// TODO implement
-const customWave = () => {}
-
-// Check if all conditions for showing a range are true
-const doRange = () => {
-    return mouseInMap() && toPlace && typeof towerType !== 'undefined';
-}
+// Pattern for the wave after the current one
+const rollWave = () => gameMode === 'campaign' ? (campaignWaves[wave] || null) : randomWave();
 
 // Check if tile is empty
 const empty = (col, row) => {
@@ -171,30 +235,12 @@ const empty = (col, row) => {
     if (exit !== undefined) {
         if (exit.x === col && exit.y === row) return false;
     }
-    
+
     return true;
 }
 
 // Return map string
 const exportMap = () => {
-    if (!spawnpoints || spawnpoints.length === 0) {
-        Toastify({
-            text: "Warning: No spawnpoints defined!",
-            backgroundColor: "red",
-            duration: 3000
-        }).showToast();
-        return;
-    }
-    if (!exit || !exit.x || !exit.y) {
-        Toastify({
-            text: "Warning: No exit defined!",
-            backgroundColor: "red",
-            duration: 3000
-        }).showToast();
-        return;
-    }
-    // Convert spawnpoints into a JSON-friendly format
-    const spawns = spawnpoints.map(s => [s.x, s.y]);
     const mapData = {
         // Grids
         display,
@@ -204,26 +250,17 @@ const exportMap = () => {
         paths,
         // Important tiles
         exit: [exit.x, exit.y],
-        spawnpoints: spawns,
+        spawnpoints: spawnpoints.map(s => [s.x, s.y]),
         // Colors
         bg,
         border,
         borderAlpha,
         // Misc
         cols,
-        rows
+        rows,
+        theme: mapTheme
     };
-
-    const compressedMap = LZString.compressToBase64(JSON.stringify(mapData));
-
-    // Display success notification
-    Toastify({
-        text: "Map exported successfully!",
-        backgroundColor: "green",
-        duration: 3000
-    }).showToast();
-
-    return compressedMap;
+    return LZString.compressToBase64(JSON.stringify(mapData));
 };
 
 // Get an empty tile
@@ -236,7 +273,15 @@ const getEmpty = () => {
 
 // Find tower at specific tile, otherwise return null
 const getTower = (col, row) => {
-    return towers.find(t => t.gridPos.x === col && t.gridPos.y === row) || null;
+    for (let i = 0; i < towers.length; i++) {
+        const t = towers[i];
+        if (t.alive && t.gridPos.x === col && t.gridPos.y === row) return t;
+    }
+    for (let i = 0; i < newTowers.length; i++) {
+        const t = newTowers[i];
+        if (t.alive && t.gridPos.x === col && t.gridPos.y === row) return t;
+    }
+    return null;
 }
 
 // Return map of visitability
@@ -276,80 +321,46 @@ const getWalkMap = () => {
     return walkMap;
 }
 
-// Load a map from a map string
-const importMap = (str) => {
+// Decode a map string; returns null if it is not a valid map
+const parseMap = (str) => {
     try {
-        const m = JSON.parse(LZString.decompressFromBase64(str));
-
-        // Grids
-        display = m.display;
-        displayDir = m.displayDir;
-        grid = m.grid;
-        metadata = m.metadata;
-        paths = m.paths;
-        // Important tiles
-        exit = createVector(m.exit[0], m.exit[1]);
-        spawnpoints = m.spawnpoints.map(s => createVector(s[0], s[1]));
-        // Colors
-        bg = m.bg;
-        border = m.border;
-        borderAlpha = m.borderAlpha;
-        // Misc
-        cols = m.cols;
-        rows = m.rows;
-
-        resizeFit();
-
-        // Display success notification
-        Toastify({
-            text: "Map imported successfully!",
-            backgroundColor: "green",
-            duration: 3000
-        }).showToast();
+        const m = JSON.parse(LZString.decompressFromBase64(str.trim()));
+        const ok = m && Array.isArray(m.grid) && Array.isArray(m.spawnpoints) && m.spawnpoints.length > 0 &&
+            Array.isArray(m.exit) && m.cols === m.grid.length && m.rows === m.grid[0].length;
+        return ok ? m : null;
     } catch (err) {
-        console.error('Error importing map:', err);
-
-        // Display error notification
-        Toastify({
-            text: "Failed to import map. Please check the input.",
-            backgroundColor: "red",
-            duration: 3000
-        }).showToast();
+        return null;
     }
 };
 
+// Make a map string the Custom map and start playing it
+const importMap = (str) => {
+    const m = parseMap(str);
+    if (!m) {
+        toast('That is not a valid map string', 'error');
+        return false;
+    }
+    custom = m;
+    store.set('customMap', str.trim());
+    mapId = 'custom';
+    savePrefs();
+    resetGame();
+    toast('Map imported', 'ok');
+    return true;
+};
+
 function showImportMapPrompt() {
-    Swal.fire({
-        title: 'Input map string:',
-        input: 'textarea',
-        inputPlaceholder: 'Paste your map string here...',
-        showCancelButton: true,
-        confirmButtonText: 'Import',
-        cancelButtonText: 'Cancel',
-        inputValidator: (value) => {
-            if (!value) {
-                return 'Please enter a map string!';
-            }
-        },
-        customClass: {
-            popup: 'custom-swal-popup',
-            header: 'custom-swal-header',
-            title: 'custom-swal-title',
-            input: 'custom-swal-input',
-            cancelButton: 'custom-swal-cancel-btn',
-            confirmButton: 'custom-swal-confirm-btn',
-            actions: 'custom-swal-actions'
-        },
-        background: '#013243',
-        color: '#fff',
-        buttonsStyling: false,
-        width: '400px'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const mapString = result.value;
-            importMap(mapString);
-        }
+    textDialog({
+        title: 'Paste a map string',
+        placeholder: 'Map string from Export or the map editor',
+        confirmLabel: 'Import and play'
+    }).then(str => {
+        if (str) importMap(str);
     });
+}
+
+function showExportMap() {
+    textDialog({ title: 'Map string', value: exportMap(), readOnly: true });
 }
 
 // Check if wave is at least min and less than max
@@ -359,74 +370,53 @@ const isWave = (min, max) => {
 }
 
 
+// Copy a map template into the game state
+function applyMap(m) {
+    // Grids
+    display = copyArray(m.display);
+    displayDir = copyArray(m.displayDir);
+    grid = copyArray(m.grid);
+    metadata = copyArray(m.metadata);
+    paths = copyArray(m.paths);
+    // Important tiles
+    exit = createVector(m.exit[0], m.exit[1]);
+    spawnpoints = m.spawnpoints.map(s => createVector(s[0], s[1]));
+    // Colors
+    bg = m.bg;
+    border = m.border;
+    borderAlpha = m.borderAlpha;
+    // Misc
+    cols = m.cols;
+    rows = m.rows;
+}
+
 // Load map from template
 // Always have an exit and spawnpoints if you do not have a premade grid
-// TODO health and money by map
 function loadMap() {
-    const name = document.getElementById('map').value;
+    let name = mapId;
+    if (name === 'custom' && !custom) name = mapId = 'sparse2';
 
-    health = 40;
-    cash = 55;
-    
-    if (name === 'custom' && custom) {
-        // Grids
-        display = copyArray(custom.display);
-        displayDir = copyArray(custom.displayDir);
-        grid = copyArray(custom.grid);
-        metadata = copyArray(custom.metadata);
-        paths = copyArray(custom.paths);
-        // Important tiles
-        exit = createVector(custom.exit[0], custom.exit[1]);
-        spawnpoints = custom.spawnpoints.map(s => createVector(s[0], s[1]));
-        // Colors
-        bg = custom.bg;
-        border = custom.border;
-        borderAlpha = custom.borderAlpha;
-        // Misc
-        cols = custom.cols;
-        rows = custom.rows;
-
-        resizeFit();
+    if (name === 'custom') {
+        applyMap(custom);
     } else if (name in maps) {
-        const m = maps[name];
-
-        // Grids
-        display = copyArray(m.display);
-        displayDir = copyArray(m.displayDir);
-        grid = copyArray(m.grid);
-        metadata = copyArray(m.metadata);
-        paths = copyArray(m.paths);
-        // Important tiles
-        exit = createVector(m.exit[0], m.exit[1]);
-        spawnpoints = m.spawnpoints.map(s => createVector(s[0], s[1]));
-        // Colors
-        bg = m.bg;
-        border = m.border;
-        borderAlpha = m.borderAlpha;
-        // Misc
-        cols = m.cols;
-        rows = m.rows;
-
-        resizeFit();
+        applyMap(maps[name]);
     } else {
-        resizeMax();
-        let numSpawns;
-        wallCover = 0.1;
-        if (name[name.length - 1] === '3') {
-            cash = 65;
-            numSpawns = 3;
-        } else {
-            numSpawns = 2;
-        }
-        if (['empty2', 'empty3'].includes(name)) wallCover = 0;
-        if (['sparse2', 'sparse3'].includes(name)) wallCover = 0.1;
-        if (['dense2', 'dense3'].includes(name)) wallCover = 0.2;
-        if (['solid2', 'solid3'].includes(name)) wallCover = 0.3;
+        const w = holder.clientWidth || 600;
+        const h = holder.clientHeight || 400;
+        cols = Math.max(8, Math.floor(w / randomTs));
+        rows = Math.max(8, Math.floor(h / randomTs));
+        const numSpawns = name.endsWith('3') ? 3 : 2;
+        if (name.startsWith('empty')) wallCover = 0;
+        if (name.startsWith('sparse')) wallCover = 0.1;
+        if (name.startsWith('dense')) wallCover = 0.2;
+        if (name.startsWith('solid')) wallCover = 0.3;
+        minDist = Math.min(15, Math.floor(Math.max(cols, rows) * 0.6));
         randomMap(numSpawns);
         display = replaceArray(
             grid, [0, 1, 2, 3, 4], ['empty', 'wall', 'empty', 'tower', 'empty']
         );
         displayDir = buildArray(cols, rows, 0);
+        paths = buildArray(cols, rows, 0);
         // Colors
         bg = [0, 0, 0];
         border = 255;
@@ -436,47 +426,25 @@ function loadMap() {
     }
 
     tempSpawns = [];
-
+    const tuning = CAMPAIGN.find(m => m.id === name);
+    mapHp = tuning && tuning.hp ? tuning.hp : 1;
+    mapTheme = Terrain.themeFor(name === 'custom' ? custom : maps[name] || null, name === 'custom' ? null : name);
+    mapStamp++;
+    fitCanvas();
     recalculate();
-}
+    Renderer.mapChanged(mapTheme);
 
-// Load all sounds
-function loadSounds() {
-    sounds = {};
-    
-    // Missile explosion
-    sounds.boom = loadSound('sounds/boom.wav');
-    sounds.boom.setVolume(0.3);
-
-    // Missile launch
-    sounds.missile = loadSound('sounds/missile.wav');
-    sounds.missile.setVolume(0.3);
-
-    // Enemy death
-    sounds.pop = loadSound('sounds/pop.wav');
-    sounds.pop.setVolume(0.4);
-
-    // Railgun
-    sounds.railgun = loadSound('sounds/railgun.wav');
-    sounds.railgun.setVolume(0.3);
-
-    // Sniper rifle shot
-    sounds.sniper = loadSound('sounds/sniper.wav');
-    sounds.sniper.setVolume(0.2);
-
-    // Tesla coil
-    sounds.spark = loadSound('sounds/spark.wav');
-    sounds.spark.setVolume(0.3);
-
-    // Taunt enemy death
-    sounds.taunt = loadSound('sounds/taunt.wav');
-    sounds.taunt.setVolume(0.3);
+    if (spawnpoints.some(s => dists[s.x][s.y] === null)) {
+        toast('Warning: a spawnpoint cannot reach the exit on this map', 'error');
+    }
 }
 
 // Increment wave counter and prepare wave
 function nextWave() {
-    addWave(randomWaves ? randomWave() : customWave());
+    if (gameMode === 'campaign' && wave >= campaignWaves.length) return;
+    addWave(upcoming || rollWave());
     wave++;
+    upcoming = rollWave();
 }
 
 // Check if no more enemies
@@ -485,12 +453,19 @@ function noMoreEnemies() {
 }
 
 function outsideMap(e) {
-    return outsideRect(e.pos.x, e.pos.y, 0, 0, width, height);
+    return outsideRect(e.pos.x, e.pos.y, 0, 0, cols * ts, rows * ts);
 }
 
 // Toggle pause state
 function pause() {
+    if (gameOver) return;
     paused = !paused;
+    if (!paused && !started) {
+        started = true;
+        announceWave();
+    }
+    stepper.reset();
+    updateControls();
 }
 
 // Return false if blocking a tile would invalidate paths to exit
@@ -514,7 +489,7 @@ function placeable(col, row) {
 // Generate random map
 function randomMap(numSpawns) {
     // Generate empty tiles and walls
-    grid = Array.from({ length: cols }, () => 
+    grid = Array.from({ length: cols }, () =>
         Array.from({ length: rows }, () => random() < wallCover ? 1 : 0)
     );
     walkMap = getWalkMap();
@@ -529,7 +504,7 @@ function randomMap(numSpawns) {
 
     // Generate enemy spawnpoints and ensure exit is possible
     spawnpoints = [];
-    const visitMap = getVisitMap(walkMap);
+    const visitMap = getVisitMap(getWalkMap());
     for (let i = 0; i < numSpawns; i++) {
         let s;
         // Try to place spawnpoint
@@ -682,6 +657,10 @@ function recalculate() {
         }
     }
 
+    // Shortest way from every tile, also kept for road tiles without a direction
+    // (crossings), where an enemy that starts there (a Hive portal) has no way to go
+    flowPaths = newPaths.map(col => col.slice());
+
     // Preserve old paths on path tiles
     for (let x = 0; x < cols; x++) {
         for (let y = 0; y < rows; y++) {
@@ -690,103 +669,124 @@ function recalculate() {
     }
 
     paths = newPaths;
+    pathVersion++;
 }
 
-// TODO vary health based on map
 function resetGame() {
-    loadMap();
+    closeOverlay('end');
+    difficulty = difficulties[diffId] || difficulties.normal;
+    gameMode = modeId;
     // Clear all entities
     enemies = [];
     projectiles = [];
-    systems = [];
     towers = [];
     newEnemies = [];
+    FX.clear();
     newProjectiles = [];
     newTowers = [];
+    selected = null;
+    ghost = null;
+    floaters = [];
+    hurt = 0;
+    upcoming = null;
+    started = false;
+    earlyBonus = 0;
+    stats = { kills: 0, leaked: 0, built: 0, earned: 0, upgrades: 0 };
+    loadMap();
     // Reset all stats
-    health = 40;
+    health = difficulty.health;
     maxHealth = health;
+    cash = difficulty.cash + portalCash * Math.max(0, spawnpoints.length - 1);
     wave = 0;
     // Reset all flags
+    gameOver = false;
     paused = true;
     scd = 0;
+    wcd = 0;
     toCooldown = false;
     toPathfind = false;
     toPlace = false;
+    toWait = false;
+    stepper.reset();
     // Start game
     nextWave();
+    updateInfo();
+    updateControls();
+    updateBest();
 }
 
-// Changes tile size to fit everything onscreen
-function resizeFit() {
-    const div = document.getElementById('sketch-holder');
-    const ts1 = Math.floor(div.offsetWidth / cols);
-    const ts2 = Math.floor(div.offsetHeight / rows);
-    ts = Math.min(ts1, ts2);
-    resizeCanvas(cols * ts, rows * ts, true);
+// Change the tile size, keeping every entity on the same tile
+function rescale(newTs) {
+    const k = newTs / ts;
+    ts = newTs;
+    enemies.forEach(e => {
+        e.pos.mult(k);
+        e.vel.mult(k);
+    });
+    towers.concat(newTowers).forEach(t => {
+        t.pos = center(t.gridPos.x, t.gridPos.y);
+    });
+    projectiles.concat(newProjectiles).forEach(p => {
+        p.pos.mult(k);
+        p.vel.mult(k);
+        p.topSpeed *= k;
+    });
+    floaters.forEach(f => {
+        f.x *= k;
+        f.y *= k;
+    });
+    FX.clear();
 }
 
-// Resizes cols, rows, and canvas based on tile size
-function resizeMax() {
-    const div = document.getElementById('sketch-holder');
-    cols = Math.floor(div.offsetWidth / ts);
-    rows = Math.floor(div.offsetHeight / ts);
-    resizeCanvas(cols * ts, rows * ts, true);
+// Size the tiles so the whole map fits the space available
+function fitCanvas() {
+    if (!cols || !rows) return;
+    const w = holder.clientWidth;
+    const h = holder.clientHeight;
+    if (!w || !h) return;
+    const newTs = Math.max(4, Math.floor(Math.min(w / cols, h / rows)));
+    if (newTs !== ts) {
+        rescale(newTs);
+        Renderer.mapChanged();
+    }
+    Renderer.resize();
+    coveredFrameDrawn = false;
 }
 
 // Sell a tower
 function sell(t) {
     selected = null;
     if (grid[t.gridPos.x][t.gridPos.y] === 0) toPathfind = true;
-    clearInfo();
-    cash += t.sellPrice();
+    const price = t.sellPrice();
+    cash += price;
     t.kill();
+    sfx('sell');
+    addFloater(t.pos.x, t.pos.y, `+$${price}`, [250, 204, 21]);
+    updateInfo();
 }
 
 // Set a tower to place
 function setPlace(t) {
+    // Picking the same tower again puts it away
+    if (toPlace && towerType === t) {
+        cancelPlace();
+        return;
+    }
     towerType = t;
     toPlace = true;
-    updateInfo(createTower(0, 0, tower[towerType]));
+    selected = null;
+    ghost = null;
+    sfx('click');
+    updateInfo();
+    tipEvent('placing');
 }
 
-// Visualize range of tower
-function showRange(t, cx, cy) {
-    stroke(255);
-    fill(t.color[0], t.color[1], t.color[2], 63);
-    var r = (t.range + 0.5) * ts * 2;  // Increased range visualization
-    ellipse(cx, cy, r, r);
-}
-
-// Display tower information
-// TODO: maybe display average DPS
-function updateInfo(t) {
-    const name = document.getElementById('name');
-    name.innerHTML = `<span style="color:rgb(${t.color})">${t.title}</span>`;
-    
-    document.getElementById('cost').innerHTML = `Cost: $${t.totalCost}`;
-    document.getElementById('sellPrice').innerHTML = `Sell price: $${t.sellPrice()}`;
-    document.getElementById('upPrice').innerHTML = `Upgrade price: ${t.upgrades.length > 0 ? '$' + t.upgrades[0].cost : 'N/A'}`;
-    document.getElementById('damage').innerHTML = `Damage: ${t.getDamage()}`;
-    document.getElementById('type').innerHTML = `Type: ${t.type.toUpperCase()}`;
-    document.getElementById('range').innerHTML = `Range: ${t.range}`;
-    document.getElementById('cooldown').innerHTML = `Avg. Cooldown: ${t.getCooldown().toFixed(2)}s`;
-
-    const buttons = document.getElementById('info-buttons');
-    buttons.style.display = toPlace ? 'none' : 'flex';
-    document.getElementById('info-div').style.display = 'block';
-}
-
-// Update pause button
-function updatePause() {
-    document.getElementById('pause').innerHTML = paused ? 'Start' : 'Pause';
-}
-
-// Update game status display with wave, health, and cash
-function updateStatus() {
-    document.getElementById('wave').innerHTML = `Wave ${wave}`;
-    document.getElementById('health').innerHTML = `Health: ${health}/${maxHealth}`;
-    document.getElementById('cash').innerHTML = `$${cash}`;
+// Leave placement mode and deselect
+function cancelPlace() {
+    toPlace = false;
+    selected = null;
+    ghost = null;
+    updateInfo();
 }
 
 // Upgrade tower
@@ -795,7 +795,13 @@ function upgrade(t) {
         if (!godMode) cash -= t.cost;
         selected.upgrade(t);
         selected.upgrades = t.upgrades ? t.upgrades : [];
-        updateInfo(selected);
+        stats.upgrades++;
+        sfx('upgrade');
+        addFloater(selected.pos.x, selected.pos.y - ts * 0.3, 'UP!', [250, 204, 21], 0.9);
+        updateInfo();
+    } else {
+        sfx('error');
+        toast(`Not enough gold: the upgrade costs $${t.cost}`, 'error');
     }
 }
 
@@ -808,77 +814,55 @@ function walkable(col, row) {
     return true;
 }
 
-
-// Main p5 functions
-
-function preload() {
-    loadSounds();
+// Give an enemy its difficulty and endless-mode health
+function scaleEnemy(e) {
+    let mult = difficulty.hp * mapHp;
+    if (gameMode === 'endless' && wave > campaignWaves.length) {
+        mult *= 1 + endlessHpGrowth * (wave - campaignWaves.length);
+    }
+    e.health *= mult;
+    e.maxHealth = e.health;
+    return e;
 }
 
-function setup() {
-    const div = document.getElementById('sketch-holder');
-    const canvas = createCanvas(div.offsetWidth, div.offsetHeight);
-    canvas.parent('sketch-holder');
-    resetGame();
+// Call the next wave now for a little bonus cash
+function callNextWave() {
+    if (!toWait || gameOver) return;
+    const bonus = Math.ceil(wcd / earlyCallTicks);
+    cash += bonus;
+    earlyBonus = bonus;
+    wcd = 0;
+    if (paused) pause();
 }
 
-// TODO show range of selected tower
-function draw() {
-    background(bg);
+// Gold for calling the next wave right now
+const earlyCallBonus = () => toWait && !gameOver ? Math.ceil(wcd / earlyCallTicks) : 0;
 
-    // Update game status
-    updatePause();
-    updateStatus();
+function setSpeed(n) {
+    speed = n;
+    updateControls();
+}
 
-    // Update spawn and wave cooldown
-    if (!paused) {
-        if (scd > 0) scd--;
-        if (wcd > 0 && toWait) wcd--;
-    }
+function cycleSpeed() {
+    setSpeed(speed % 3 + 1);
+}
 
-    // Draw basic tiles
-    for (let x = 0; x < cols; x++) {
-        for (let y = 0; y < rows; y++) {
-            const t = tiles[display[x][y]];
-            if (typeof t === 'function') {
-                t(x, y, displayDir[x][y]);
-            } else {
-                stroke(border, borderAlpha);
-                t ? fill(t) : noFill();
-                rect(x * ts, y * ts, ts, ts);
-            }
-        }
-    }
 
-    // Draw spawnpoints
-    for (let i = 0; i < spawnpoints.length; i++) {
-        stroke(255);
-        fill(0, 230, 64);
-        const s = spawnpoints[i];
-        rect(s.x * ts, s.y * ts, ts, ts);
-    }
+// Game logic: one fixed step (1/60 s)
 
-    // Draw exit
-    stroke(255);
-    fill(207, 0, 15);
-    rect(exit.x * ts, exit.y * ts, ts, ts);
-
-    // Draw temporary spawnpoints
-    for (let i = 0; i < tempSpawns.length; i++) {
-        stroke(255);
-        fill(155, 32, 141);
-        const s = tempSpawns[i][0];
-        rect(s.x * ts, s.y * ts, ts, ts);
-    }
+function tick() {
+    if (scd > 0) scd--;
+    if (wcd > 0 && toWait) wcd--;
+    if (hurt > 0) hurt--;
 
     // Spawn enemies
-    if (canSpawn() && !paused) {
+    if (canSpawn()) {
         // Spawn same enemy for each spawnpoint
         const name = newEnemies.shift();
         for (let i = 0; i < spawnpoints.length; i++) {
             const s = spawnpoints[i];
             const c = center(s.x, s.y);
-            enemies.push(createEnemy(c.x, c.y, enemy[name]));
+            enemies.push(scaleEnemy(createEnemy(c.x, c.y, enemy[name])));
         }
 
         // Temporary spawnpoints
@@ -887,23 +871,21 @@ function draw() {
             if (s[1] === 0) continue;
             s[1]--;
             const c = center(s[0].x, s[0].y);
-            enemies.push(createEnemy(c.x, c.y, enemy[name]));
+            const e = scaleEnemy(createEnemy(c.x, c.y, enemy[name]));
+            if (s[2] && s[2].magSq() > 0) e.vel.set(s[2].x, s[2].y).normalize().mult(e.pxSpeed());
+            enemies.push(e);
         }
 
         // Reset cooldown
         toCooldown = true;
     }
 
-    // Update and draw enemies
+    // Update enemies
     for (let i = enemies.length - 1; i >= 0; i--) {
-        let e = enemies[i];
-
-        // Update direction and position
-        if (!paused) {
-            e.steer();
-            e.update();
-            e.onTick();
-        }
+        const e = enemies[i];
+        e.steer();
+        e.update();
+        e.onTick();
 
         // Kill if outside map
         if (outsideMap(e)) e.kill();
@@ -911,137 +893,75 @@ function draw() {
         // If at exit tile, kill and reduce player health
         if (atTileCenter(e.pos.x, e.pos.y, exit.x, exit.y)) e.onExit();
 
-        // Draw
-        e.draw();
-
         if (e.isDead()) enemies.splice(i, 1);
     }
 
-    // Draw health bars
-    if (healthBar) {
-        for (let i = 0; i < enemies.length; i++) {
-            enemies[i].drawHealth();
-        }
-    }
-
-    // Update and draw towers
+    // Towers target enemies and update cooldowns
     for (let i = towers.length - 1; i >= 0; i--) {
-        let t = towers[i];
-
-        // Target enemies and update cooldowns
-        if (!paused) {
-            t.target(enemies);
-            t.update();
+        const t = towers[i];
+        if (t.isDead()) {
+            towers.splice(i, 1);
+            continue;
         }
-
-        // Kill if outside map
-        if (outsideMap(t)) t.kill();
-
-        // Draw
-        t.draw();
-
-        if (t.isDead()) towers.splice(i, 1);
+        dmgSource = t;
+        t.target(enemies);
+        t.update();
     }
+    dmgSource = null;
 
-    // Update and draw particle systems
-    for (let i = systems.length - 1; i >= 0; i--) {
-        let ps = systems[i];
-        ps.run();
-        if (ps.isDead()) systems.splice(i, 1);
-    }
+    // Visual effects advance with the game
+    FX.tick();
 
-    // Update and draw projectiles
+    // Projectiles
     for (let i = projectiles.length - 1; i >= 0; i--) {
-        let p = projectiles[i];
-
-        if (!paused) {
-            p.steer();
-            p.update();
-        }
+        const p = projectiles[i];
+        dmgSource = p.source;
+        p.steer();
+        p.update();
 
         // Attack target
-        if (p.reachedTarget()) p.explode()
+        if (p.alive && p.reachedTarget()) p.explode();
+        dmgSource = null;
 
         // Kill if outside map
         if (outsideMap(p)) p.kill();
 
-        p.draw();
-
         if (p.isDead()) projectiles.splice(i, 1);
     }
 
-    // Draw range of tower being placed
-    if (doRange()) {
-        const p = gridPos(mouseX, mouseY);
-        const c = center(p.x, p.y);
-        const t = createTower(0, 0, tower[towerType]);
-        showRange(t, c.x, c.y);
-
-        // Draw a red X if tower cannot be placed
-        if (!canPlace(p.x, p.y)) {
-            push();
-            translate(c.x, c.y);
-            rotate(PI / 4);
-
-            // Draw a red X
-            noStroke();
-            fill(207, 0, 15);
-            const edge = 0.1 * ts;
-            const len = 0.9 * ts / 2;
-            rect(-edge, len, edge * 2, -len * 2);
-            rotate(PI / 2);
-            rect(-edge, len, edge * 2, -len * 2);
-
-            pop();
-        }
-    }
-
-    // Update FPS meter
-    if (showFPS) calcFPS();
-
-    // Show if god mode active
-    if (godMode) {
-        // Draw black rect under text
-        noStroke();
-        fill(0);
-        rect(0, 0, 102, 22);
-
-        fill(255);
-        text('God Mode Active', 5, 15);
-    }
-
-    // Show if towers are disabled
-    if (stopFiring) {
-        // Draw black rect under text
-        noStroke();
-        fill(0);
-        rect(width - 60, 0, 60, 22);
-        
-        fill(255);
-        text('Firing off', width - 55, 15);
-    }
-
     removeTempSpawns();
+    applyPending();
 
-    projectiles = projectiles.concat(newProjectiles);
-    towers = towers.concat(newTowers);
-    newProjectiles = [];
-    newTowers = [];
-
-    // If player is dead, reset game
-    if (health <= 0) resetGame();
+    if (health <= 0) {
+        health = 0;
+        endGame(false);
+        return;
+    }
 
     // Start next wave
     if (toWait && wcd === 0 || skipToNext && newEnemies.length === 0) {
         toWait = false;
         wcd = 0;
         nextWave();
+        announceWave();
     }
 
-    // Wait for next wave
+    // Wave cleared: wait for the next one
     if (noMoreEnemies() && !toWait) {
-        wcd = waveCool;
+        recordWave(wave);
+        // Portals opened by Hives close with the wave
+        tempSpawns = [];
+        if (gameMode === 'campaign' && wave >= campaignWaves.length) {
+            endGame(true);
+            return;
+        }
+        clearBonus = waveBonus(wave, spawnpoints.length);
+        cash += clearBonus;
+        stats.earned += clearBonus;
+        wcd = difficulty.waveCool;
         toWait = true;
+        waveCleared();
+        updateControls();
     }
 
     // Reset spawn cooldown
@@ -1049,6 +969,15 @@ function draw() {
         scd = spawnCool;
         toCooldown = false;
     }
+}
+
+// Changes that must apply even while paused (building, selling)
+function applyPending() {
+    if (newProjectiles.length) projectiles = projectiles.concat(newProjectiles);
+    if (newTowers.length) towers = towers.concat(newTowers);
+    newProjectiles = [];
+    newTowers = [];
+    if (towers.some(t => t.isDead())) towers = towers.filter(t => !t.isDead());
 
     // Recalculate pathfinding
     if (toPathfind) {
@@ -1058,139 +987,303 @@ function draw() {
 }
 
 
+// Main p5 functions (p5 runs the loop; drawing is done by render.js)
+
+function setup() {
+    noCanvas();
+    Renderer.init(holder);
+    buildStore();
+
+    const fromLink = loadPrefs();
+    resetGame();
+    if (!fromLink) openLevels();
+    else maybeStartTips();
+
+    new ResizeObserver(() => fitCanvas()).observe(holder);
+}
+
+// While a menu covers the map and nothing is running, draw one frame and idle
+// (saves the phone's battery and GPU; the map behind the menu doesn't move).
+let coveredFrameDrawn = false;
+
+function draw() {
+    const covered = (paused || gameOver) && openOverlayId() !== null;
+    if (covered && coveredFrameDrawn) return;
+    coveredFrameDrawn = covered;
+    let steps = 0;
+    const t0 = performance.now();
+    if (!paused && !gameOver) {
+        steps = stepper.advance(t0, () => {
+            for (let i = 0; i < speed && !gameOver; i++) tick();
+        }) * speed;
+    } else {
+        stepper.reset();
+        applyPending();
+    }
+    Renderer.logicTime(performance.now() - t0);
+    Renderer.frame(steps);
+    updateStatus();
+    // Floating text drifts in real time, so it also clears while paused
+    for (let i = floaters.length - 1; i >= 0; i--) {
+        const f = floaters[i];
+        f.y -= ts / 48;
+        if (--f.life <= 0) floaters.splice(i, 1);
+    }
+}
+
+// Tile where the tower being placed would go: mouse hover or the first tap
+function placementTile() {
+    if (!toPlace || typeof towerType === 'undefined') return null;
+    if (ghost) return ghost;
+    const h = Renderer.hover;
+    if (lastPointer === 'mouse' && h) {
+        const x = Math.floor(h.x / ts);
+        const y = Math.floor(h.y / ts);
+        if (x >= 0 && y >= 0 && x < cols && y < rows) return createVector(x, y);
+    }
+    return null;
+}
+
+// Build on the tile chosen by a first tap (the inspector's Build button)
+function confirmGhost() {
+    if (!ghost) return;
+    const p = ghost;
+    ghost = null;
+    tryBuild(p);
+}
+
+function tryBuild(p) {
+    const reason = placeReason(p.x, p.y);
+    if (reason) {
+        sfx('error');
+        toast(reason, 'error');
+        FX.buzz([20, 40, 20]);
+        updateInfo();
+        return;
+    }
+    buy(createTower(p.x, p.y, tower[towerType]));
+    tipEvent('built');
+}
+
+
 // User input
 
-function keyPressed() {
-    switch (keyCode) {
-        case 27:
-            // Esc
-            toPlace = false;
-            clearInfo();
+// A tap or click on the map (w in world pixels; null for a right click)
+function onMapTap(w, e) {
+    lastPointer = e.pointerType;
+    // Right click cancels building and deselects
+    if (!w || e.button === 2) {
+        cancelPlace();
+        return;
+    }
+    const p = createVector(Math.floor(w.x / ts), Math.floor(w.y / ts));
+    if (p.x < 0 || p.y < 0 || p.x >= cols || p.y >= rows) return;
+
+    const t = getTower(p.x, p.y);
+    if (t) {
+        // Clicked on tower
+        selected = t;
+        toPlace = false;
+        ghost = null;
+        sfx('click');
+        updateInfo();
+        tipEvent('selected');
+        return;
+    }
+
+    if (!toPlace) {
+        if (selected) cancelPlace();
+        return;
+    }
+
+    // Mouse builds on click; touch shows the range first and builds on a second tap
+    if (e.pointerType !== 'mouse' && !(ghost && ghost.equals(p.x, p.y))) {
+        ghost = p;
+        updateInfo();
+        return;
+    }
+    ghost = null;
+    tryBuild(p);
+}
+
+const towerKeys = { 1: 'gun', 2: 'laser', 3: 'slow', 4: 'sniper', 5: 'rocket', 6: 'bomb', 7: 'tesla' };
+
+function onKey(e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (document.querySelector('dialog[open]')) return;
+    if (e.target.closest && e.target.closest('input, textarea, select')) {
+        if (e.key !== 'Escape') return;
+    }
+    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+
+    // Menus take Escape (and Space to resume from the pause menu)
+    if (openOverlayId()) {
+        if (key === 'Escape') {
+            e.preventDefault();
+            closeTopOverlay();
+        }
+        return;
+    }
+
+    if (towerKeys[key]) {
+        setPlace(towerKeys[key]);
+        return;
+    }
+    switch (key) {
+        case 'Escape':
+            if (toPlace || selected) cancelPlace();
+            else openMenu();
             break;
-        case 32:
-            // Space
+        case ' ':
+            // Drop focus from any clicked button so it isn't also activated
+            e.preventDefault();
+            if (document.activeElement instanceof HTMLButtonElement) document.activeElement.blur();
             pause();
             break;
-        case 49:
-            // 1
-            setPlace('gun');
+        case 'c':
+            cycleTarget();
             break;
-        case 50:
-            // 2
-            setPlace('laser');
+        case 'f':
+            Renderer.togglePerf();
             break;
-        case 51:
-            // 3
-            setPlace('slow');
-            break;
-        case 52:
-            // 4
-            setPlace('sniper');
-            break;
-        case 53:
-            // 5
-            setPlace('rocket');
-            break;
-        case 54:
-            // 6
-            setPlace('bomb');
-            break;
-        case 55:
-            // 7
-            setPlace('tesla');
-            break;
-        case 70:
-            // F
-            showFPS = !showFPS;
-            break;
-        case 71:
-            // G
+        case 'g':
             godMode = !godMode;
             break;
-        case 72:
-            // H
+        case 'h':
             healthBar = !healthBar;
+            savePrefs();
             break;
-        case 77:
-            // M
-            importMap(prompt('Input map string:'));
+        case 'm':
+            showImportMapPrompt();
             break;
-        case 80:
-            // P
+        case 'n':
+            callNextWave();
+            break;
+        case 'p':
             showEffects = !showEffects;
-            if (!showEffects) systems = [];
+            FX.enabled = showEffects;
+            savePrefs();
             break;
-        case 81:
-            // Q
+        case 'q':
             stopFiring = !stopFiring;
             break;
-        case 82:
-            // R
+        case 'r':
             resetGame();
             break;
-        case 83:
-            // S
+        case 's':
             if (selected) sell(selected);
             break;
-        case 85:
-            // U
-            if (selected && selected.upgrades.length > 0) {
-                upgrade(selected.upgrades[0]);
-            }
+        case 't':
+            cycleSpeed();
             break;
-        case 86:
-            // V
-            muteSounds = !muteSounds;
+        case 'u':
+            if (selected && selected.upgrades.length > 0) upgrade(selected.upgrades[0]);
             break;
-        case 87:
-            // W
+        case 'v':
+            toggleMute();
+            break;
+        case 'w':
             skipToNext = !skipToNext;
+            savePrefs();
+            toast(skipToNext ? 'Waves start back to back' : 'Pause between waves', 'info');
             break;
-        case 88:
-            // X
-            copyToClipboard(exportMap());
+        case 'x':
+            showExportMap();
             break;
-        case 90:
-            // Z
-            ts = zoomDefault;
-            resizeMax();
+        case 'z':
+            randomTs = zoomDefault;
             resetGame();
             break;
-        case 219:
-            // Left bracket
-            if (ts > 16) {
-                ts -= tileZoom;
-                resizeMax();
+        case '[':
+            if (randomTs > 16) {
+                randomTs -= tileZoom;
                 resetGame();
             }
             break;
-        case 221:
-            // Right bracket
-            if (ts < 40) {
-                ts += tileZoom;
-                resizeMax();
+        case ']':
+            if (randomTs < 40) {
+                randomTs += tileZoom;
                 resetGame();
             }
             break;
     }
 }
 
-function mousePressed() {
-    if (!mouseInMap()) return;
-    let p = gridPos(mouseX, mouseY);
-    let t = getTower(p.x, p.y);
-    
-    if (t) {
-        // Clicked on tower
-        selected = t;
-        toPlace = false;
-        updateInfo(selected);
-    } else if (canPlace(p.x, p.y)) {
-        buy(createTower(p.x, p.y, tower[towerType]));
-    }
+// Selected tower's targeting: First, Last, Strongest, Closest
+function cycleTarget() {
+    if (!selected || !hasTargeting(selected)) return;
+    const modes = Object.keys(targetModes);
+    setTarget(modes[(modes.indexOf(selected.targetMode) + 1) % modes.length]);
+}
+
+function setTarget(mode) {
+    if (!selected || !hasTargeting(selected)) return;
+    selected.targetMode = mode;
+    sfx('click');
+    updateInfo();
+}
+
+// The slow and poison towers hit everything in range, so they have no target choice
+const hasTargeting = (t) => t.name !== 'slow' && t.name !== 'poison';
+
+
+// Preferences
+
+// Returns true when the page was opened with a map to play (from the editor)
+function loadPrefs() {
+    const prefs = store.get('prefs', {});
+    const saved = store.get('customMap');
+    if (saved) custom = parseMap(saved);
+
+    const params = new URLSearchParams(location.search);
+    const linked = params.get('map');
+    const map = linked || prefs.map;
+    if (map && MAP_LIST.some(m => m.id === map) && (map !== 'custom' || custom)) mapId = map;
+    if (prefs.mode in { campaign: 1, endless: 1 }) modeId = prefs.mode;
+    if (prefs.difficulty in difficulties) diffId = prefs.difficulty;
+    muteSounds = !!prefs.muted;
+    if (typeof prefs.numbers === 'boolean') damageNumbers = prefs.numbers;
+    if (typeof prefs.bars === 'boolean') healthBar = prefs.bars;
+    if (typeof prefs.effects === 'boolean') showEffects = prefs.effects;
+    skipToNext = !!prefs.autosend;
+    if (typeof prefs.shake === 'boolean') shakeLevel = prefs.shake ? 1 : 0;
+    if (typeof prefs.shake === 'number') shakeLevel = Math.max(0, Math.min(2, prefs.shake | 0));
+    if (typeof prefs.haptics === 'boolean') haptics = prefs.haptics;
+    FX.enabled = showEffects;
+    FX.shakeLevel = shakeLevel;
+    return !!linked && mapId === linked;
+}
+
+function savePrefs() {
+    store.set('prefs', {
+        map: mapId,
+        mode: modeId,
+        difficulty: diffId,
+        muted: muteSounds,
+        numbers: damageNumbers,
+        bars: healthBar,
+        effects: showEffects,
+        autosend: skipToNext,
+        shake: shakeLevel,
+        haptics
+    });
+    syncSettings();
 }
 
 
 // Events
 
-document.getElementById('map').addEventListener('change', resetGame);
+document.addEventListener('keydown', onKey);
+// Switching between mouse and touch: restyle at once, but leave the side panel's
+// buttons alone until this press is over (rebuilding them now would eat the click)
+document.addEventListener('pointerdown', e => {
+    if (e.pointerType !== lastPointer) {
+        lastPointer = e.pointerType;
+        document.body.classList.toggle('touch', isTouch());
+        updatePlaceStatus();
+        document.addEventListener('click', () => setTimeout(updateInfo, 0), { once: true });
+    }
+}, { capture: true });
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && !paused) pause();
+});

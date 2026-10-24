@@ -1,35 +1,55 @@
-let canvasW = window.innerWidth;
-let canvasH = window.innerHeight;
+'use strict';
+
+const SLUG = "souls-bumper";
+const STEP_MS = 20; // Movement was tuned for 50 logic steps a second.
+const ESC = 27;
+const COL1 = "990099";
+
+let ctx = null;
 let gameStarted = false;
-let delta = 0.0;
-let prevDelta = Date.now();
-let currentDelta = Date.now();
 let TIME = 0;
-let introT = 0;
-let mousePos = new vec2(0,0);
-let clickedAt = new vec2(0,0);
-let clickRow;
-let clickCol;
-let processClick = false;
-let holdClick = false;
-let holdClickT = 0;
-let GAMEOVER=false;
-let RELOAD=false;
-let COL1 = "990099";
-let COL2 = "05f2db";
-let WIN = false;
-let STAGE=1;
+let RELOAD = false;
+let musicOff = false;
+let isPaused = false;
+let menuBlocks = [];
 let atlas = new Image();
 atlas.src = "assets/atlas.png";
-let shaky = true;
 let cart = new Cart();
-let talk = true;
-let start=false;
-let menuBlocks=[];
-let music=true;
-let pause=false;
-let isPaused=false;
-const ESC=27;
+
+// Letterbox: the 800x600 world is scaled uniformly and centred in the free space.
+const view = { scale: 1, x: 0, y: 0, dpr: 1 };
+
+// Safe-area insets (notch, rounded corners, home indicator), read from CSS.
+let safeProbe = null;
+function safeArea() {
+  if (typeof getComputedStyle != "function") return { top: 0, right: 0, bottom: 0, left: 0 }; // headless tools
+  if (!safeProbe) {
+    safeProbe = document.createElement("div");
+    safeProbe.style.cssText = "position:fixed;left:0;top:0;visibility:hidden;pointer-events:none;" +
+      "padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)";
+    document.body.append(safeProbe);
+  }
+  const cs = getComputedStyle(safeProbe);
+  return {
+    top: parseFloat(cs.paddingTop) || 0,
+    right: parseFloat(cs.paddingRight) || 0,
+    bottom: parseFloat(cs.paddingBottom) || 0,
+    left: parseFloat(cs.paddingLeft) || 0,
+  };
+}
+
+// Progress and per-level stats.
+let store = null;
+let controls = null;
+let progress = { unlocked: 0, levels: {} };
+let selected = 0;
+let levelTime = 0;
+let deathsAtStart = 0;
+let runTime = 0;
+let runFromStart = false;
+let banner = null;
+
+const lastLevel = () => LEVELS.length - 1; // The "thank you" room.
 
 // Load the music player
 genAudio();
@@ -41,243 +61,424 @@ function startGame() {
 
 let mg = {
   canvas: document.createElement("canvas"),
+  keys: [],
   start: function() {
-    this.canvas.width = canvasW;
-    this.canvas.height = canvasH;
+    store = GameKit.createStore(SLUG);
+    progress = store.get("progress", progress);
+    musicOff = store.get("musicOff", false);
+    selected = Math.min(progress.unlocked, lastLevel() - 1);
+    GameKit.initShell({ slug: SLUG });
+    controls = GameKit.createTouchControls({
+      dpad: { left: "ArrowLeft", right: "ArrowRight" },
+      buttons: [
+        { label: "Jump", key: " " },
+        { label: "Soul", key: "e" },
+        { label: "Reset", key: "r", small: true },
+        { label: "Pause", key: "Escape", small: true },
+      ],
+    });
+    controls.hide();
+
     this.context = this.canvas.getContext("2d");
-    this.context.scale(1, 1);
-
-    // PixelArt Sharp
-    ctx=this.context;
-    ctx.mozImageSmoothingEnabled = false;
-    ctx.webkitImageSmoothingEnabled = false;
-    ctx.imageSmoothingEnabled = false;
+    ctx = this.context;
     this.canvas.classList.add("screen");
-    document.body.insertBefore(this.canvas, document.body.childNodes[6]);
-    this.frameNo = 0;
-    this.interval = setInterval(updateGameArea, 20);
-
-    // Generate intro screen
-    cart.genLevel(0);
-    cart.levels[0].tiles.forEach((t) => {
-      if(t.entity.type>0) menuBlocks.push(t);
+    document.body.prepend(this.canvas);
+    this.resize();
+    // At most one relayout per frame while the window is resized or rotated.
+    let resizeFrame = 0;
+    window.addEventListener("resize", () => {
+      if (resizeFrame) return;
+      resizeFrame = requestAnimationFrame(() => {
+        resizeFrame = 0;
+        this.resize();
+      });
     });
 
-    // Mouse
-    window.addEventListener('mousemove', function(e) {
-      let rect = mg.canvas.getBoundingClientRect();
-      let scaleX = mg.canvas.width / rect.width;
-      let scaleY = mg.canvas.height / rect.height;
-      mousePos.x = (e.clientX - rect.left) * scaleX;
-      mousePos.y = (e.clientY - rect.top) * scaleY;
-    });
-    window.addEventListener('mousedown', function(e) {
-      processClick = true;
-    });
-    window.addEventListener('mouseup', function(e) {
-      processClick = false;
-    });
+    showIntro();
+    buildLevelSelect();
+
+    this.loop = GameKit.createLoop({ update: updateGameArea, stepsPerSecond: 1000 / STEP_MS });
+    this.loop.start();
 
     // Keyboard
-    window.addEventListener('keydown', function(e) {
-      if(e.keyCode==ESC && gameStarted) {
-        isPaused = !isPaused;
+    window.addEventListener("keydown", function(e) {
+      if ([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) e.preventDefault();
+      if (e.keyCode == ESC) {
+        if (gameStarted) setPaused(!isPaused);
         return;
       }
-      start=true;
-      if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) e.preventDefault();
-      mg.keys = (mg.keys || []);
-      mg.keys[e.keyCode] = (e.type == "keydown");
-    })
-    window.addEventListener('keyup', function(e) {
-      mg.keys[e.keyCode] = (e.type == "keydown");
-      if(e.keyCode==R) RELOAD=true;
-      if(e.keyCode==M) pause=!pause;
-      if(e.keyCode==T) cart.tips=!cart.tips;
-    })
+      mg.keys[e.keyCode] = true;
+      if (!gameStarted) introKey(e);
+    });
+    window.addEventListener("keyup", function(e) {
+      mg.keys[e.keyCode] = false;
+      if (e.keyCode == R && gameStarted && !isPaused) RELOAD = true;
+      if (e.keyCode == M) toggleMusic();
+      if (e.keyCode == T) cart.tips = !cart.tips;
+    });
+    window.addEventListener("blur", () => { mg.keys = []; });
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden && gameStarted) setPaused(true);
+      syncMusic();
+    });
+    this.canvas.addEventListener("pointerdown", (e) => {
+      if (!gameStarted && e.pointerType != "mouse") startLevel(selected);
+    });
     // Disable right click context menu
     this.canvas.oncontextmenu = function(e) {
       e.preventDefault();
     };
   },
-  stop: function() {
-    clearInterval(this.interval);
+  resize: function() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    // Backing store capped at 2x: the whole window is redrawn every step.
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const cw = Math.round(w * dpr);
+    const ch = Math.round(h * dpr);
+    if (this.canvas.width !== cw || this.canvas.height !== ch) {
+      this.canvas.width = cw;
+      this.canvas.height = ch;
+    }
+
+    // Use the whole window inside the safe areas, except, while playing on a touch
+    // screen, the room the on-screen controls take (below in portrait, beside in
+    // landscape), measured from the controls themselves.
+    const safe = safeArea();
+    const touch = gameStarted && !controls.el.hidden;
+    const portrait = h >= w;
+    let left = safe.left + 8;
+    let right = safe.right + 8;
+    const top = safe.top + 8;
+    let bottom = safe.bottom + 8;
+    if (touch) {
+      const pad = controls.el.querySelector(".gk-dpad").getBoundingClientRect();
+      const buttons = controls.el.querySelector(".gk-buttons").getBoundingClientRect();
+      if (portrait) {
+        bottom = Math.max(bottom, h - Math.min(pad.top, buttons.top) + 8);
+      } else {
+        left = Math.max(left, pad.right + 8);
+        right = Math.max(right, w - buttons.left + 8);
+      }
+    }
+    const availW = w - left - right;
+    const availH = h - top - bottom;
+    view.scale = Math.min(availW / WORLD_W, availH / WORLD_H);
+    view.dpr = dpr;
+    view.fullClear = true;
+    view.x = left + (availW - WORLD_W * view.scale) / 2;
+    // On a portrait phone's menu the world sits at the top, leaving the bottom for the level list.
+    view.y = portrait && w < 700 && !gameStarted ? top : top + (availH - WORLD_H * view.scale) / 2;
+    ctx.imageSmoothingEnabled = false;
   },
-  clear: function() {
-    this.context.clearRect(0, 0, 4*this.canvas.width, 4*this.canvas.height);
+  // Clear the whole screen and set the world transform, clipped to the 800x600 box.
+  begin: function() {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1;
+    // Only the world box (and its border) is ever drawn: clear just that, and the
+    // whole canvas once after a resize.
+    if (view.fullClear) {
+      ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      view.fullClear = false;
+    } else {
+      const d = view.dpr;
+      ctx.clearRect(Math.floor(view.x * d) - 4, Math.floor(view.y * d) - 4,
+        Math.ceil(WORLD_W * view.scale * d) + 8, Math.ceil(WORLD_H * view.scale * d) + 8);
+    }
+    const s = view.scale * view.dpr;
+    ctx.setTransform(s, 0, 0, s, view.x * view.dpr, view.y * view.dpr);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, WORLD_W, WORLD_H);
+    ctx.clip();
+  },
+  end: function() {
+    ctx.restore();
+    ctx.globalAlpha = .6;
+    ctx.strokeStyle = "#" + COL1;
+    ctx.lineWidth = 2 / view.scale;
+    ctx.strokeRect(0, 0, WORLD_W, WORLD_H);
+    ctx.globalAlpha = 1;
+  }
+};
+
+// ---------- Intro and level select ----------
+
+function showIntro() {
+  gameStarted = false;
+  setPaused(false);
+  controls.hide();
+  mg.resize();
+  mg.canvas.style.cursor = "";
+  cart.genLevel(0);
+  cart.cam.x = 0;
+  cart.cam.y = 0;
+  menuBlocks = cart.levels[0].tiles.filter((t) => t.entity.type > 0);
+  document.getElementById("ui-menu").classList.toggle("hidden", false);
+  document.getElementById("intro").classList.toggle("hidden", false);
+  renderLevelSelect();
+  syncMusic();
+}
+
+function buildLevelSelect() {
+  const grid = document.getElementById("level-grid");
+  for (let i = 0; i < lastLevel(); i++) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = String(i + 1);
+    b.addEventListener("click", () => {
+      if (i <= progress.unlocked) startLevel(i);
+    });
+    b.addEventListener("pointerenter", () => {
+      if (i <= progress.unlocked) {
+        selected = i;
+        renderLevelSelect();
+      }
+    });
+    grid.append(b);
   }
 }
 
+function renderLevelSelect() {
+  const buttons = document.querySelectorAll("#level-grid button");
+  buttons.forEach((b, i) => {
+    const locked = i > progress.unlocked;
+    b.disabled = locked;
+    b.classList.toggle("selected", i == selected);
+    b.classList.toggle("cleared", !!progress.levels[i]);
+    b.setAttribute("aria-label", locked ? "Level " + (i + 1) + " (locked)" : "Level " + (i + 1) + ": " + LEVELS[i].name);
+  });
+  const best = progress.levels[selected];
+  document.getElementById("level-info").textContent =
+    "Level " + (selected + 1) + ": " + LEVELS[selected].name +
+    (best ? "  ·  best " + formatTime(best.time) + ", " + best.deaths + (best.deaths == 1 ? " death" : " deaths") : "");
+  const touch = !!controls && !controls.el.hidden;
+  document.getElementById("intro-prompt").innerText = !songLoaded
+    ? "LOADING SOULS..."
+    : GameKit.isTouchFirst() || touch ? "TAP A LEVEL TO BEGIN" : "PRESS ANY KEY TO BEGIN";
+}
+
+function introKey(e) {
+  if ([LEFT, A].includes(e.keyCode)) {
+    selected = Math.max(0, selected - 1);
+    renderLevelSelect();
+  } else if ([RIGHT, D].includes(e.keyCode)) {
+    selected = Math.min(progress.unlocked, lastLevel() - 1, selected + 1);
+    renderLevelSelect();
+  } else if (![M, T, R, 16, 17, 18, 91, 9].includes(e.keyCode)) {
+    startLevel(selected);
+  }
+}
+
+function startLevel(num) {
+  if (audioCtx == null) audioCtx = new AudioContext();
+  if (audioCtx.state == "suspended") audioCtx.resume();
+  selected = num;
+  runFromStart = num == 0;
+  runTime = 0;
+  banner = null;
+  cart.genLevel(num);
+  gameStarted = true;
+  mg.keys = [];
+  levelTime = 0;
+  deathsAtStart = cart.hero.deaths;
+  document.getElementById("ui-menu").classList.toggle("hidden", true);
+  document.getElementById("intro").classList.toggle("hidden", true);
+  if (GameKit.isTouchFirst()) controls.show();
+  mg.resize();
+  mg.canvas.style.cursor = "none";
+  syncMusic();
+}
+
+// ---------- Progress ----------
+
+function formatTime(sec) {
+  return sec.toFixed(2) + "s";
+}
+
+// Called by the cart when the hero leaves a level through its portal.
+function onLevelComplete(idx) {
+  const deaths = cart.hero.deaths - deathsAtStart;
+  const time = levelTime;
+  const prev = progress.levels[idx];
+  const n = idx + 1;
+  const newBest = !prev || time < prev.time;
+  progress.levels[idx] = {
+    time: prev ? Math.min(prev.time, time) : time,
+    deaths: prev ? Math.min(prev.deaths, deaths) : deaths,
+  };
+  progress.unlocked = Math.max(progress.unlocked, Math.min(n, lastLevel() - 1));
+  store.set("progress", progress);
+  GameKit.recordBest(SLUG, time, { lowerIsBetter: true, mode: "level-" + n + "-time", label: "Level " + n + ": " + formatTime(time) });
+  GameKit.recordBest(SLUG, deaths, { lowerIsBetter: true, mode: "level-" + n + "-deaths", label: "Level " + n + ": " + deaths + " deaths" });
+
+  let sub = formatTime(time) + "  ·  " + deaths + (deaths == 1 ? " death" : " deaths") + (newBest ? "  ·  NEW BEST" : "");
+  if (n == lastLevel() && runFromStart) {
+    const run = GameKit.recordBest(SLUG, runTime, { lowerIsBetter: true, mode: "full-run", label: "Full run: " + formatTime(runTime) });
+    sub = "Full run " + formatTime(runTime) + (run.isNew ? "  ·  NEW BEST" : "");
+  }
+  banner = { text: "LEVEL " + n + " CLEARED", sub: sub, t: 2.5 };
+  levelTime = 0;
+  deathsAtStart = cart.hero.deaths;
+  selected = Math.min(n, lastLevel() - 1);
+}
+
+// Called by the cart when the player resets the level with [R].
+function onLevelRestart() {
+  levelTime = 0;
+  deathsAtStart = cart.hero.deaths;
+}
+
+// ---------- Pause and music ----------
+
+function setPaused(value) {
+  isPaused = value;
+  document.getElementById("pause-menu").classList.toggle("hidden", !isPaused);
+  if (isPaused) mg.keys = [];
+  syncMusic();
+}
+
+function toggleMusic() {
+  musicOff = !musicOff;
+  if (store) store.set("musicOff", musicOff);
+  syncMusic();
+}
+
+function syncMusic() {
+  if (!audio) return;
+  const play = gameStarted && !musicOff && !isPaused && !document.hidden;
+  if (play && audio.paused) audio.play().catch(() => {});
+  else if (!play && !audio.paused) audio.pause();
+}
+
+// ---------- Main step ----------
+
 function updateGameArea() {
-  if(isPaused) {
-    document.getElementById("pause-menu").classList.toggle("hidden", false);
-    return;
-  } else {
-    document.getElementById("pause-menu").classList.toggle("hidden", true);
-  }
-  if(GAMEOVER){
-    TIME=0;
-    GAMEOVER=false;
-    WIN=false;
-    STAGE=0;
-    start=false;
-    gameStarted=false;
-    cart.genLevel(STAGE);
-  }
-
-  if(start){
-    if(cart.hero != null)cart.hero.e.active=true;
-    gameStarted=true;
-    document.getElementById("ui-menu").classList.toggle("hidden", true);
-    document.getElementById("intro-prompt").classList.toggle("hidden", true);
-    if(audioCtx == null) audioCtx = new AudioContext();
-  }
-
-  // Delta
-  prevDelta = currentDelta;
-  currentDelta = Date.now();
-  delta = currentDelta - prevDelta;
+  if (isPaused) return;
+  const delta = STEP_MS;
   TIME += delta;
+  mg.begin();
 
   if (!gameStarted) {
     // intro Screen
-    mg.clear();
-    ctx = mg.context;
     cart.update(delta, TIME, true);
-    ctx.save();
-    drawBox(ctx,0.1,"#"+COL1,0,0,800,600)
+    drawBox(ctx, 0.1, "#" + COL1, 0, 0, WORLD_W, WORLD_H);
+    writeTxt(ctx, 1, "80px 'VT323'", "WHITE", "SOULS BUMPER", 400, 150, "center");
 
-    z=TIME/1600;
-    writeTxt(ctx, 1, "80px 'VT323'","WHITE","SOULS BUMPER", 400, 150, "center");
-    
-    document.getElementById("ui-menu").classList.toggle("hidden", false);
-    document.getElementById("pause-menu").classList.toggle("hidden", true);
-    
-    let introElem = document.getElementById("intro-prompt");
-    introElem.classList.toggle("hidden", false);
-    introElem.firstElementChild.innerText = songLoaded ? "PRESS ANY KEY TO BEGIN" : "LOADING SOULS...";
+    // The hero bobs on the first platform.
+    ctx.save();
+    ctx.translate(100, 225);
+    ctx.drawImage(atlas, 0, 0, 16, 16, 32, 8 + Math.sin(TIME / 300) * 3, 32, 32);
     ctx.restore();
 
-    ctx.save();
-    ctx.translate(100,225);
-    ctx.drawImage(atlas, 0, 0, 16, 16, 32, hh+f, 32, 32);
-    ctx.restore();
-
-    cart.hero.time+=delta;
-    if(rndNo(1,100)>97){
-      cart.hero.bloodSplatter(false,rndNo(20,700),rndNo(20,500));
-      let rt = menuBlocks[rndNo(0,menuBlocks.length-1)];
-      for(let i=1;i<5;i++){
-        cart.hero.particles.push(new particle(rndNo(1,2), 0,rt.entity.x+18+rndNo(0,20), 15+rt.entity.y, 0, "bld", false));
+    if (rndNo(1, 100) > 97) {
+      cart.hero.bloodSplatter(false, rndNo(20, 700), rndNo(20, 500));
+      let rt = menuBlocks[rndNo(0, menuBlocks.length - 1)];
+      for (let i = 1; i < 5; i++) {
+        cart.hero.particles.push(new particle(rndNo(1, 2), 0, rt.entity.x + 18 + rndNo(0, 20), 15 + rt.entity.y, 0, "bld", false));
       }
     }
-    for (let i = 0; i <= cart.hero.particles.length-1; i++){
-      cart.hero.particles[i].update(ctx,delta/1000);
+    for (let i = 0; i <= cart.hero.particles.length - 1; i++) {
+      cart.hero.particles[i].update(ctx, delta / 1000);
     }
-    cart.hero.particles = cart.hero.particles.filter(function (p) {
-      return p.remove == false;
-    });
+    cart.hero.particles = cart.hero.particles.filter((p) => p.remove == false);
+    if (TIME % 1000 < STEP_MS) renderLevelSelect();
   } else {
-    mg.clear();
+    const lvl = cart.hero.e.curLevel;
+    const playing = lvl < lastLevel() && !cart.hero.done;
+    if (playing) {
+      levelTime += delta / 1e3;
+      runTime += delta / 1e3;
+    }
     cart.update(delta / 1e3, TIME);
-    drawBox(ctx,0.1,"#"+COL1,0,0,800,600)
-    let font = "32px 'VT323'";
-    writeTxt(ctx, 1, font,"WHITE","[M] Music: " + !pause, 650, 20);
-    writeTxt(ctx, 1, font,"WHITE","[T] Tips: " + (cart.tips), 650, 45);
-    writeTxt(ctx, 1, font,"WHITE","[R] Reset Level", 650, 70);
-    writeTxt(ctx, 1, font,"WHITE","Lives: " + cart.hero.hp, 10, 45);
-    writeTxt(ctx, 1, font,"RED","Deaths: " + cart.hero.deaths, 10, 70);
-    writeTxt(ctx, 1, font,"WHITE","Level: " + (cart.hero.e.curLevel+1), 10, 20);
+    drawBox(ctx, 0.1, "#" + COL1, 0, 0, WORLD_W, WORLD_H);
+    drawHud(lvl);
+  }
+  mg.end();
+  // The song is rendered in the background; start it once it's ready.
+  if (TIME % 1000 < STEP_MS) syncMusic();
+}
 
-    let lvl=cart.hero.e.curLevel;
-    if(cart.tips){
-      if(lvl==0){
-        writeTxt(ctx, 1, font,"WHITE","Jump the gap and run over the button to reach the portal!", 400, 120, "center");
-      } else if(lvl==1){
-        writeTxt(ctx, 1, font,"WHITE","Dont fear the reaper! Dying creates a soul platform!", 400, 80, "center");
-        writeTxt(ctx, 1, font,"WHITE","Rewind your soul to previous positions with [E]", 400, 100, "center");
-      } else if(lvl==2){
-        writeTxt(ctx, 1, font,"WHITE","You can wall jump off your soul!", 400, 80, "center");
-        writeTxt(ctx, 1, font,"WHITE","Avoid spikes and clear high ledges", 400, 100, "center");
-      } else if(lvl==3){
-        writeTxt(ctx, 1, font,"WHITE","Hit the button then reclaim your soul, Hold [E]", 400, 80, "center");
-        writeTxt(ctx, 1, font,"WHITE","Re-use your soul on the second set of spikes!", 400, 100, "center");
-      } else if(lvl==4){
-        writeTxt(ctx, 1, font,"WHITE","Run!!", 400, 120, "center");
-      } else if(lvl==5){
-        writeTxt(ctx, 1, font,"WHITE","Check points allow you to reclaim your soul and move on!", 400, 100, "center");
-      } else if(lvl==10){
-        font = "80px 'VT323'";
-        writeTxt(ctx, 1, font,"WHITE","SOULS BUMPER COMPLETED!", 400, 100, "center");
-      }
-    }
+function drawHud(lvl) {
+  // World text is 32px on the 800x600 screen; when the world is shrunk onto a phone,
+  // grow it so it stays at least 13 CSS pixels.
+  const size = Math.max(32, Math.ceil(13 / view.scale));
+  const k = size / 32;
+  let font = size + "px 'VT323'";
+  const touch = !controls.el.hidden;
+  if (!touch && lvl < lastLevel()) {
+    writeTxt(ctx, 1, font, "WHITE", "[M] Music: " + (musicOff ? "off" : "on"), 790, 20, "right");
+    writeTxt(ctx, 1, font, "WHITE", "[T] Tips: " + (cart.tips ? "on" : "off"), 790, 45, "right");
+    writeTxt(ctx, 1, font, "WHITE", "[R] Reset Level", 790, 70, "right");
+  }
+  if (lvl < lastLevel()) {
+    writeTxt(ctx, 1, font, "WHITE", "Level " + (lvl + 1) + ": " + LEVELS[lvl].name, 10, 20 * k);
+    writeTxt(ctx, 1, font, "WHITE", "Lives: " + cart.hero.hp + "   Time: " + levelTime.toFixed(1), 10, 45 * k);
+    writeTxt(ctx, 1, font, "RED", "Deaths: " + (cart.hero.deaths - deathsAtStart), 10, 70 * k);
+  }
 
-    // Music
-    if(pause){
-      audio.pause();
-      music=true;
-    }
+  const tips = LEVELS[lvl].tips;
+  if (cart.tips || lvl == lastLevel()) {
+    const finale = lvl == lastLevel();
+    tips.forEach((tip, i) => {
+      const big = finale && i == 0;
+      writeTxt(ctx, 1, big ? "80px 'VT323'" : font, "WHITE", tip, 400, finale ? 100 + i * 50 * k : 80 + 30 * k + i * 22 * k, "center", 780);
+    });
+  }
 
-    if(music && songLoaded && !pause){
-      audio.play();
-      audio.loop=true;
-      music=false;
-    }
+  if (banner) {
+    banner.t -= STEP_MS / 1000;
+    const a = Math.min(1, banner.t);
+    drawBox(ctx, .55 * a, "#000", 0, 470, WORLD_W, 90);
+    writeTxt(ctx, a, "56px 'VT323'", "#05f2db", banner.text, 400, 512, "center");
+    writeTxt(ctx, a, font, "WHITE", banner.sub, 400, 545, "center", 780);
+    ctx.globalAlpha = 1;
+    if (banner.t <= 0) banner = null;
   }
 }
 
-function drawBox(ctx,a,colour,x,y,w,h) {
+function drawBox(ctx, a, colour, x, y, w, h) {
   ctx.globalAlpha = a;
   ctx.fillStyle = colour;
   ctx.fillRect(x, y, w, h);
 }
 
-function writeSum(ctx,a,font,colour,num,x,y){
-  var hex = eval('"\\u' + num+'"');
-  ctx.globalAlpha = a;
-  ctx.font = font;
-  ctx.fillStyle = colour;
-  ctx.fillText(hex, x, y);
-}
-function writeTxt(ctx,a,font,colour,txt,x,y,align) {
+function writeTxt(ctx, a, font, colour, txt, x, y, align, maxWidth) {
   ctx.globalAlpha = a;
   ctx.font = font;
   ctx.fillStyle = colour;
   ctx.textAlign = align || "left";
-  ctx.fillText(txt, x, y);
+  // fillText squeezes the text to maxWidth when it would be wider.
+  if (maxWidth) ctx.fillText(txt, x, y, maxWidth);
+  else ctx.fillText(txt, x, y);
 }
 
 // Initialize DOM listeners
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('continue-btn').onclick = () => {
-    isPaused = false;
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("continue-btn").onclick = () => setPaused(false);
+  document.getElementById("restart-btn").onclick = () => {
+    RELOAD = true;
+    setPaused(false);
   };
+  document.getElementById("select-btn").onclick = () => showIntro();
 });
 
 function left() {
-  return mg.keys && (mg.keys[LEFT] || mg.keys[A]);
+  return mg.keys[LEFT] || mg.keys[A];
 }
 
 function right() {
-  return mg.keys && (mg.keys[RIGHT] || mg.keys[D]);
+  return mg.keys[RIGHT] || mg.keys[D];
 }
 
 function up() {
-  return mg.keys && (mg.keys[UP] || mg.keys[W]);
-}
-
-function down() {
-  return mg.keys && (mg.keys[DOWN] || mg.keys[S]);
+  return mg.keys[UP] || mg.keys[W];
 }
 
 function space() {
-  return mg.keys && mg.keys[SPACE];
-}
-
-function map() {
-  return mg.keys && mg.keys[M];
+  return mg.keys[SPACE];
 }
 
 function one() {
-  return mg.keys && (mg.keys[ONE]||mg.keys[E]);
+  return mg.keys[ONE] || mg.keys[E];
 }

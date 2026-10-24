@@ -218,13 +218,10 @@ class Enemy {
         for (let i = 0; i < this._eyeQueue.length; i++) {
             let ec = this._eyeQueue[i];
             if (ec) {
-                //game.ctx.globalAlpha = 0.05 * i;
                 game.ctx.fillStyle = 'rgba(165, 10, 16, ' + (0.05 * i) + ')';
-                //game.ctx.fillStyle = 'rgba(165, 10, 16, ' + (0.05 * i1)';
                 game.ctx.fillRect(game.offset.x + ec.x - 5 - 1, game.offset.y + ec.y - 1, 3, 3);
                 game.ctx.fillRect(game.offset.x + ec.x + 5 - 1, game.offset.y + ec.y - 1, 3, 3);
                 game.ctx.fillStyle = 'rgba(254, 20, 32, ' + (0.05*i) + ')';
-                //game.ctx.fillStyle = 'rgba(254, 20, 32, 1)';
                 game.ctx.fillRect(game.offset.x + ec.x - 5, game.offset.y + ec.y, 2, 2);
                 game.ctx.fillRect(game.offset.x + ec.x + 5 - 1, game.offset.y + ec.y, 2, 2);
             }
@@ -357,8 +354,8 @@ class Enemy {
 
             let alpha = ((game.framems - Enemy.attackWarningMs) % 500) / 1800 + 0.1;
 
-            let w = game.canvas.width;
-            let h = game.canvas.height;
+            let w = game.viewW;
+            let h = game.viewH;
 
             game.ctx.save();
             game.ctx.fillStyle = 'rgba(255, 0, 0, ' + alpha + ')';

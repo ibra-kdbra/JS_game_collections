@@ -1,10 +1,11 @@
+import { createStepper } from '../../assets/kit/loop.js';
 import updateSystem from './update.js';
 import drawSystem from './draw.js';
 import resizeSystem from './resize.js';
 import pointerSystem from './pointer.js';
-import dataSystem from './data.js';
 
-dataSystem.save('payed', true);
+const STEPS_PER_SECOND = 60;
+const STEP_MS = 1000 / STEPS_PER_SECOND;
 
 let setup = (entities) => {
     let game = entities.game;
@@ -17,20 +18,20 @@ let setup = (entities) => {
     resizeSystem.resize(game, canvas);
     parent.appendChild(canvas);
     pointerSystem.add(game, canvas);
-    let timer = 0;
-    let delta = 0;
-    let onF = time => {
-        delta = time - timer;
-        timer = time;
-        //console.log(delta);
 
-        resizeSystem.resize(game, canvas);
+    // Logic advances in constant steps; a hidden tab or a slow frame never
+    // fast-forwards the puzzle animations.
+    let stepper = createStepper(STEPS_PER_SECOND);
+    let simTime = 0;
+    document.addEventListener('visibilitychange', () => stepper.reset());
+
+    let step = () => {
+        simTime = simTime + STEP_MS;
 
         let wasPointing = game.pointer.pointing;
         game.pointer.pointing = false;
 
         let updates = [];
-        let draws = [];
 
         game.statemachine.active.forEach(id => {
             let entity = entities[id];
@@ -38,12 +39,10 @@ let setup = (entities) => {
                 return;
             }
             updates = [...updates, ...entity.state.updates];
-            draws = [...draws, ...entity.state.draws];
         });
 
-        updateSystem.process(entities, updates, time, delta);
+        updateSystem.process(entities, updates, simTime, STEP_MS);
 
-        // reset pointer
         game.pointer.justDown = false;
         game.pointer.justUp = false;
 
@@ -52,18 +51,27 @@ let setup = (entities) => {
         } else if (!wasPointing && game.pointer.pointing) {
             canvas.style.cursor = 'pointer';
         }
+    };
 
-        // clear canvas
+    let onF = time => {
+        resizeSystem.resize(game, canvas);
+
+        let steps = stepper.advance(time, step);
+
+        let draws = [];
+        game.statemachine.active.forEach(id => {
+            let entity = entities[id];
+            if (entity.state !== undefined) {
+                draws = [...draws, ...entity.state.draws];
+            }
+        });
+
         ctx.clearRect(0, 0, game.canvas.w, game.canvas.h);
+        drawSystem.process(entities, draws, ctx, simTime, steps * STEP_MS);
 
-        // draw stuff
-        drawSystem.process(entities, draws, ctx, time, delta);
-
-        // request next frame
         requestAnimationFrame(onF);
     };
-    onF(0);
-    return;
+    requestAnimationFrame(onF);
 };
 
 export default Object.freeze({

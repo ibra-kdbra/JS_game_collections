@@ -1,6 +1,12 @@
 /* IMPORT */
 
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@100&display=swap');
+/* Montserrat (variable), SIL Open Font License 1.1 (fonts/OFL.txt) */
+@font-face {
+    font-family: 'Montserrat';
+    src: url('fonts/Montserrat-wght.ttf') format('truetype');
+    font-weight: 100 900;
+    font-display: swap;
+}
 
 @font-face {
     font-family: "NeutralFace";
@@ -242,4 +248,159 @@ img {
     .imageFooter {
         margin: 0.3rem 1rem 0.3rem 1rem;
     }
+}
+/* ---------- Phones (also held sideways) ----------
+   The canvas spans the width (script.js sizes it from the screen) and the
+   controls follow below it, with 44px touch targets. */
+@media screen and (max-width: 700px), screen and (max-height: 500px) {
+    body {
+        overscroll-behavior-y: none;
+    }
+
+    /* Two lines reserved so the title font arriving doesn't move the page */
+    .titre {
+        margin: 1.25rem auto 1rem auto;
+        font-size: 1.2rem;
+        line-height: 1.25;
+        min-height: 2.5em;
+        letter-spacing: 0.1rem;
+    }
+
+    .contenu {
+        width: auto;
+        margin: 0 max(12px, env(safe-area-inset-right)) 1rem max(12px, env(safe-area-inset-left));
+    }
+
+    .contenu > div {
+        flex-direction: column;
+    }
+
+    .visu {
+        position: relative;
+        width: 100%;
+        margin: 0 0 1rem 0;
+    }
+
+    .visu canvas {
+        display: block;
+    }
+
+    .sideBar {
+        width: 100%;
+    }
+
+    h3 {
+        font-size: 1rem;
+        margin: 1rem 0 0.4rem;
+    }
+
+    .bouton,
+    .valueName {
+        font-size: 0.9rem;
+    }
+
+    .bouton {
+        display: inline-flex;
+        align-items: center;
+        box-sizing: border-box;
+        min-height: 44px;
+        min-width: 44px;
+        padding: 0 0.8rem;
+        margin: 0.25rem;
+    }
+
+    .bouton:hover {
+        transform: none;
+    }
+
+    .boutonAbsolu {
+        top: 6px;
+        left: 6px;
+        margin: 0;
+    }
+
+    /* Save sits in the canvas' corner instead of floating over the page */
+    .boutonFixed {
+        position: absolute;
+        bottom: 6px;
+        right: 6px;
+        margin: 0;
+    }
+
+    .valueWithName {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #222;
+    }
+
+    .value {
+        margin: 0;
+        min-height: 40px;
+        max-width: 90px;
+        font-size: 16px;
+        text-align: right;
+    }
+
+    .presets {
+        flex-wrap: wrap;
+    }
+
+    .footer {
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+
+    .imageFooter {
+        width: 2rem;
+        padding: 6px;
+    }
+}
+
+/* Reserve the canvas' height (script.js compactHeight) before p5 creates it,
+   so the controls below don't jump down when it appears. */
+@media screen and (max-width: 700px) and (orientation: portrait), screen and (max-height: 500px) and (orientation: portrait) {
+    .visu {
+        min-height: calc(min(68dvh, (100vw - 26px) * 1.3) + 2px);
+    }
+}
+
+@media screen and (max-width: 700px) and (orientation: landscape), screen and (max-height: 500px) and (orientation: landscape) {
+    .visu {
+        min-height: calc(82dvh + 2px);
+    }
+}
+
+/* Fixed-width cells, so the web font arriving can't re-wrap the buttons */
+@media screen and (max-width: 700px), screen and (max-height: 500px) {
+    .liste,
+    .presets {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+        gap: 6px;
+    }
+
+    .liste .bouton,
+    .presets .bouton {
+        width: auto;
+        margin: 0;
+        justify-content: center;
+        text-align: center;
+    }
+}
+
+/* ---------- Art Lab live preview (?embed=1, see ../js/embed.js) ----------
+   Only the canvas shows, filling the frame; the panels, presets and footer
+   stay hidden and out of reach. */
+html.is-embed body {
+    visibility: hidden;
+}
+
+html.is-embed canvas {
+    visibility: visible;
+    position: fixed;
+    inset: 0;
+    width: 100vw !important;
+    height: 100vh !important;
+    border: 0;
+    z-index: 1;
 }

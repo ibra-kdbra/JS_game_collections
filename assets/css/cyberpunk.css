@@ -1,15 +1,16 @@
 /**
  * Cyberpunk Theme - Main Entry Point
- * 
- * This file imports all modular CSS files.
+ *
  * Structure:
+ *   - fonts.css: self-hosted Albert Sans + Chakra Petch
  *   - variables.css: CSS custom properties
- *   - base.css: Reset, body styles, utilities
+ *   - base.css: Reset, body styles, utilities, accessibility
  *   - components/: Individual component styles
  *   - responsive.css: Media queries
  */
 
 /* Core */
+@import url('./fonts.css');
 @import url('./variables.css');
 @import url('./base.css');
 
@@ -19,10 +20,9 @@
 @import url('./components/cards.css');
 @import url('./components/artlab-showcase.css');
 @import url('./components/search-filter.css');
+@import url('./components/recent.css');
 @import url('./components/footer.css');
 @import url('./components/music-player.css');
-@import url('./components/search-filter.css');
-@import url('./components/footer.css');
 
 /* Responsive */
 @import url('./responsive.css');

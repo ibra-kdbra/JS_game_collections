@@ -51,6 +51,9 @@ function audioTrack(url, volume) {
         looping = true;
     };
     this.stopLoop = function(noResetTime) {
+        // Ghost sounds are stopped every frame; skip the media calls (a pause and a
+        // seek) when the track is already stopped and rewound.
+        if (!looping && audio.paused && (noResetTime || audio.currentTime === 0)) return;
         try{ audio.removeEventListener('ended', audioLoop) } catch (e) {};
         audio.pause();
         if (!noResetTime) audio.currentTime = 0;
@@ -384,25 +387,40 @@ var getHighScore = function() {
 var setHighScore = function(highScore) {
     highScores[getScoreIndex()] = highScore;
     saveHighScores();
+    recordHighScore(getScoreIndex());
 };
-// High Score Persistence
+// High Score Persistence (Game Lab kit storage: "pacman.highScores")
+
+var HIGH_SCORE_MODES = [
+    ['pacman', 'Pac-Man'], ['pacman-turbo', 'Pac-Man turbo'],
+    ['mspacman', 'Ms. Pac-Man'], ['mspacman-turbo', 'Ms. Pac-Man turbo'],
+    ['cookie', 'Cookie-Man'], ['cookie-turbo', 'Cookie-Man turbo'],
+    ['otto', 'Crazy Otto'], ['otto-turbo', 'Crazy Otto turbo'],
+];
+var DEFAULT_HIGH_SCORE = 10000;
+var scoreStore;
+
+// Mirror a personal high score (one that beat the arcade default) to the hub.
+var recordHighScore = function(i) {
+    var mode = HIGH_SCORE_MODES[i];
+    if (mode && highScores[i] > DEFAULT_HIGH_SCORE) {
+        GameKit.recordBest('pacman', highScores[i], { mode: mode[0], label: highScores[i] + ' in ' + mode[1] });
+    }
+};
 
 var loadHighScores = function() {
     var hs;
-    var hslen;
     var i;
-    if (localStorage && localStorage.highScores) {
-        hs = JSON.parse(localStorage.highScores);
-        hslen = hs.length;
-        for (i=0; i<hslen; i++) {
-            highScores[i] = Math.max(highScores[i],hs[i]);
-        }
+    scoreStore = GameKit.createStore('pacman');
+    GameKit.migrateKey(scoreStore, 'highScores', 'highScores', { parse: JSON.parse });
+    hs = scoreStore.get('highScores', []);
+    for (i=0; i<hs.length; i++) {
+        highScores[i] = Math.max(highScores[i],hs[i]);
+        recordHighScore(i);
     }
 };
 var saveHighScores = function() {
-    if (localStorage) {
-        localStorage.highScores = JSON.stringify(highScores);
-    }
+    scoreStore.set('highScores', highScores);
 };
 //@line 1 "src/direction.js"
 //////////////////////////////////////////////////////////////////////////////////////
@@ -3052,13 +3070,9 @@ var switchRenderer = function(i) {
 };
 
 var getDevicePixelRatio = function() {
-    // Only consider the device pixel ratio for devices that are <= 320 pixels in width.
-    // This is necessary for the iPhone4's retina display; otherwise the game would be blurry.
-    // The iPad3's retina display @ 2048x1536 starts slowing the game down.
-    return 1;
-    if (window.innerWidth <= 320) {
-        return window.devicePixelRatio || 1;
-    }
+    // Draw at one canvas pixel per CSS pixel. Matching high-density screens looks a
+    // little sharper but quadruples the fill cost (measured: main-thread time per
+    // frame nearly doubles on a throttled phone), so the browser scales it instead.
     return 1;
 };
 
@@ -3084,8 +3098,8 @@ var initRenderer = function(){
 
         // set the size of the canvas in browser pixels
         var ratio = getDevicePixelRatio();
-        canvas.style.width = canvas.width / ratio;
-        canvas.style.height = canvas.height / ratio;
+        canvas.style.width = canvas.width / ratio + "px";
+        canvas.style.height = canvas.height / ratio + "px";
 
         if (resets > 0) {
             ctx.restore();
@@ -3104,13 +3118,76 @@ var initRenderer = function(){
         resets++;
     };
 
-    // get the target scale that will cause the canvas to fit the window
+    // Space taken on touch screens by the on-screen D-pad (bottom-left):
+    // its right edge and its top edge, with a little clearance.
+    var getTouchPad = function() {
+        var pad = document.querySelector('.gk-touch:not([hidden]) .gk-dpad');
+        if (!pad) {
+            return null;
+        }
+        var rect = pad.getBoundingClientRect();
+        return { right: rect.right + 8, top: rect.top - 8 };
+    };
+
+    // Safe-area insets (notch, rounded corners, home indicator), read from CSS.
+    var safeProbe;
+    var getSafeArea = function() {
+        if (!safeProbe) {
+            safeProbe = document.createElement('div');
+            safeProbe.style.cssText = 'position:fixed;left:0;top:0;visibility:hidden;pointer-events:none;' +
+                'padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+            document.body.appendChild(safeProbe);
+        }
+        var cs = getComputedStyle(safeProbe);
+        return {
+            top: parseFloat(cs.paddingTop) || 0,
+            right: parseFloat(cs.paddingRight) || 0,
+            bottom: parseFloat(cs.paddingBottom) || 0,
+            left: parseFloat(cs.paddingLeft) || 0
+        };
+    };
+
+    // get the scale and position that fit the canvas in the window,
+    // clear of the safe areas and the on-screen D-pad
+    var getLayout = function() {
+        var safe = getSafeArea();
+        var margin = 4;
+        var x0 = safe.left + margin;
+        var y0 = safe.top + margin;
+        var w = window.innerWidth - safe.left - safe.right - 2*margin;
+        var h = window.innerHeight - safe.top - safe.bottom - 2*margin;
+        var fit = function(w, h) { return Math.max(0.1, Math.min(w / screenWidth, h / screenHeight)); };
+        var s = fit(w, h);
+        var box = { x: x0, y: y0, w: w, h: h };
+        var pad = getTouchPad();
+        if (pad) {
+            // the maze goes beside the D-pad or above it, whichever is bigger
+            var besideW = x0 + w - Math.max(x0, pad.right);
+            var aboveH = Math.min(y0 + h, pad.top) - y0;
+            var beside = fit(besideW, h);
+            var above = fit(w, aboveH);
+            if (beside > above) {
+                s = beside;
+                box = { x: x0 + w - besideW, y: y0, w: besideW, h: h };
+            }
+            else {
+                s = above;
+                box = { x: x0, y: y0, w: w, h: aboveH };
+            }
+        }
+        var cw = screenWidth * s;
+        var ch = screenHeight * s;
+        var left = box.x + (box.w - cw) / 2;
+        var top = box.y + (box.h - ch) / 2;
+        // beside the D-pad, stay centred on the screen when that still clears it
+        var centred = x0 + (w - cw) / 2;
+        if (box.x > x0 && centred >= box.x) {
+            left = centred;
+        }
+        return { scale: s * getDevicePixelRatio(), left: Math.floor(left), top: Math.floor(top) };
+    };
     var getTargetScale = function() {
-        var sx = (window.innerWidth - 10) / screenWidth;
-        var sy = (window.innerHeight - 10) / screenHeight;
-        var s = Math.min(sx,sy);
-        s *= getDevicePixelRatio();
-        return s;
+        return getLayout().scale;
     };
 
     // maximize the scale to fit the window
@@ -3125,19 +3202,11 @@ var initRenderer = function(){
         center();
     };
 
-    // center the canvas in the window
+    // place the canvas in the window
     var center = function() {
-        var s = getTargetScale()/getDevicePixelRatio();
-        var w = screenWidth*s;
-        var x = Math.max(0,(window.innerWidth-10)/2 - w/2);
-        var y = 0;
-        /*
-        canvas.style.position = "absolute";
-        canvas.style.left = x;
-        canvas.style.top = y;
-        console.log(canvas.style.left);
-        */
-        document.body.style.marginLeft = (window.innerWidth - w)/2 + "px";
+        var layout = getLayout();
+        document.body.style.marginLeft = layout.left + "px";
+        document.body.style.paddingTop = layout.top + "px";
     };
 
     // create foreground and background canvases
@@ -4263,7 +4332,7 @@ var Button = function(x,y,w,h,onclick) {
         var fingerCount = evt.touches.length;
         if (fingerCount == 1) {
             var pos = getPointerPos(evt.touches[0]);
-            (that.startedInside=that.contains(pos.x,pos.y)) ? that.focus() : that.blur();
+            (that.startedInside=that.containsTouch(pos.x,pos.y)) ? that.focus() : that.blur();
         }
         else {
             touchcancel(evt);
@@ -4275,7 +4344,7 @@ var Button = function(x,y,w,h,onclick) {
         if (fingerCount == 1) {
             if (that.startedInside) {
                 var pos = getPointerPos(evt.touches[0]);
-                that.contains(pos.x, pos.y) ? that.focus() : that.blur();
+                that.containsTouch(pos.x, pos.y) ? that.focus() : that.blur();
             }
         }
         else {
@@ -4346,6 +4415,16 @@ Button.prototype = {
     contains: function(x,y) {
         return x >= this.x && x <= this.x+this.w &&
                y >= this.y && y <= this.y+this.h;
+    },
+
+    // Fingers get a slightly larger target: grow the button towards 44 CSS pixels,
+    // but by at most half a tile so neighbouring menu buttons never overlap.
+    containsTouch: function(x,y) {
+        var s = renderScale / getDevicePixelRatio();
+        var padX = Math.min(tileSize/2, Math.max(0, (44/s - this.w)/2));
+        var padY = Math.min(tileSize/2, Math.max(0, (44/s - this.h)/2));
+        return x >= this.x-padX && x <= this.x+this.w+padX &&
+               y >= this.y-padY && y <= this.y+this.h+padY;
     },
 
     click: function() {
@@ -9449,6 +9528,19 @@ var executive = (function(){
             var that = this;
             window.addEventListener('focus', function() {that.start();});
             window.addEventListener('blur', function() {that.stop();});
+            // A hidden tab pauses too: mid-game it opens the pause menu, so
+            // coming back never drops the player straight into danger.
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    if (hud.isValidState() && !inGameMenu.isOpen()) {
+                        inGameMenu.getMenuButton().onclick();
+                    }
+                    that.stop();
+                }
+                else {
+                    that.start();
+                }
+            });
             this.start();
         },
         start: function() {
@@ -11316,9 +11408,18 @@ var initSwipe = function() {
 
     // minimum distance from anchor before direction is registered
     var r = 4;
-    
+
+    // touches on the Game Lab kit's own buttons (back link, D-pad) are not swipes
+    var onKitControls = false;
+    var isKitControl = function(event) {
+        return !!(event.target.closest && event.target.closest('.gk-touch'));
+    };
+
     var touchStart = function(event) {
-        event.preventDefault();
+        onKitControls = isKitControl(event);
+        if (onKitControls) {
+            return;
+        }
         var fingerCount = event.touches.length;
         if (fingerCount == 1) {
 
@@ -11333,7 +11434,9 @@ var initSwipe = function() {
     };
 
     var touchMove = function(event) {
-        event.preventDefault();
+        if (onKitControls) {
+            return;
+        }
         var fingerCount = event.touches.length;
         if (fingerCount == 1) {
 
@@ -11363,11 +11466,15 @@ var initSwipe = function() {
     };
 
     var touchEnd = function(event) {
+        if (onKitControls) {
+            return;
+        }
         event.preventDefault();
     };
 
     var touchCancel = function(event) {
-        event.preventDefault();
+        // Also called from the passive touchstart/touchmove handlers on multi-touch.
+        if (event.type === "touchcancel") event.preventDefault();
         x=y=dx=dy=0;
     };
 
@@ -11378,9 +11485,10 @@ var initSwipe = function() {
     
     // register touch events
     document.onclick = touchTap;
-    document.ontouchstart = touchStart;
+    // Passive (as browsers treat them anyway): `touch-action: none` stops scrolling.
+    document.addEventListener('touchstart', touchStart, { passive: true });
     document.ontouchend = touchEnd;
-    document.ontouchmove = touchMove;
+    document.addEventListener('touchmove', touchMove, { passive: true });
     document.ontouchcancel = touchCancel;
 };
 //@line 1 "src/cutscenes.js"

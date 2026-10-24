@@ -1,78 +1,56 @@
-import { games } from './data.js';
+import { games, thumbSet, GENRES } from './data.js';
+
+const RECENT_KEY = 'gamelab.recent';
+const RECENT_MAX = 4;
+const bySlug = new Map(games.map(game => [game.slug, game]));
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
 // DOM Elements
 const elements = {
     gameCardsContainer: null,
-    artlabPreview: null,
+    cards: [],
     searchInput: null,
-    filterBtns: null,
-    navbar: null,
-    particles: null,
+    platformBtns: null,
+    genreBtns: null,
+    empty: null,
 };
 
 // State
 let currentFilter = 'all';
-let searchQuery = '';
+let currentGenre = null;
+let searchTerms = [];
 
 /**
  * Initialize the application
  */
 document.addEventListener('DOMContentLoaded', () => {
+    initArtlabTeaser();
     initElements();
-    initParticles();
-    initNavScroll();
+    restoreFiltersFromUrl();
     initSearch();
     initFilters();
-    renderArtLabPreview();
-    renderGameCards();
+    initBests();
+    initRecent();
+    applyFilters({ animate: false });
     initScrollAnimations();
+    registerServiceWorker();
 });
 
 /**
- * Cache DOM elements
+ * Cache DOM elements. The cards are rendered into the HTML by tools/render-pages.mjs.
  */
 function initElements() {
     elements.gameCardsContainer = document.getElementById('game-cards-container');
-    elements.artlabPreview = document.getElementById('artlab-preview');
+    elements.cards = [...elements.gameCardsContainer.querySelectorAll('.game-card')];
     elements.searchInput = document.getElementById('search-input');
-    elements.filterBtns = document.querySelectorAll('.filter-btn');
-    elements.navbar = document.getElementById('navbar');
-    elements.particles = document.getElementById('particles');
-}
+    elements.platformBtns = document.querySelectorAll('.filter-btn[data-filter]');
+    elements.genreBtns = document.querySelectorAll('.filter-btn[data-genre]');
+    elements.empty = document.getElementById('games-empty');
 
-/**
- * Generate floating particles for background
- */
-function initParticles() {
-    const container = elements.particles;
-    if (!container) return;
-
-    const particleCount = 20;
-
-    for (let i = 0; i < particleCount; i++) {
-        const particle = document.createElement('div');
-        particle.className = 'cyber-particle';
-        particle.style.left = `${Math.random() * 100}%`;
-        particle.style.animationDelay = `${Math.random() * 15}s`;
-        particle.style.animationDuration = `${15 + Math.random() * 10}s`;
-        container.appendChild(particle);
+    // Word lists for prefix search: "pac" finds PacMan but not "compact".
+    for (const card of elements.cards) {
+        card.words = card.dataset.search.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
     }
-}
-
-/**
- * Handle navbar scroll effect
- */
-function initNavScroll() {
-    const navbar = elements.navbar;
-    if (!navbar) return;
-
-    window.addEventListener('scroll', () => {
-        if (window.scrollY > 50) {
-            navbar.classList.add('scrolled');
-        } else {
-            navbar.classList.remove('scrolled');
-        }
-    });
 }
 
 /**
@@ -80,256 +58,316 @@ function initNavScroll() {
  */
 function initSearch() {
     const searchInput = elements.searchInput;
-    if (!searchInput) return;
 
-    let debounceTimer;
+    searchInput.addEventListener('input', () => {
+        searchTerms = toTerms(searchInput.value);
+        applyFilters();
+    });
 
-    searchInput.addEventListener('input', (e) => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            searchQuery = e.target.value.toLowerCase().trim();
-            renderGameCards();
-        }, 200);
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && searchInput.value) {
+            searchInput.value = '';
+            searchTerms = [];
+            applyFilters();
+        }
+    });
+
+    // "/" jumps to search from anywhere on the page.
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+        if (e.target.closest('input, textarea, [contenteditable="true"]')) return;
+        e.preventDefault();
+        searchInput.focus();
     });
 }
 
+function toTerms(value) {
+    return value.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+}
+
 /**
- * Initialize filter buttons
+ * Initialize filter buttons: one platform filter and an optional genre filter.
  */
 function initFilters() {
-    const filterBtns = elements.filterBtns;
-    if (!filterBtns) return;
-
-    filterBtns.forEach(btn => {
+    elements.platformBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            // Update active state
-            filterBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-
-            // Update filter and re-render
             currentFilter = btn.dataset.filter;
-            renderGameCards();
+            applyFilters();
         });
+    });
+
+    elements.genreBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Clicking the active genre again turns the genre filter off.
+            currentGenre = currentGenre === btn.dataset.genre ? null : btn.dataset.genre;
+            applyFilters();
+        });
+    });
+
+    document.getElementById('clear-filters')?.addEventListener('click', () => {
+        currentFilter = 'all';
+        currentGenre = null;
+        searchTerms = [];
+        elements.searchInput.value = '';
+        applyFilters();
+        elements.searchInput.focus();
     });
 }
 
-/**
- * Render Art Lab showcase section using data from games array
- */
-function renderArtLabPreview() {
-    const container = document.getElementById('artlab-showcase');
-    if (!container) return;
+function restoreFiltersFromUrl() {
+    const params = new URLSearchParams(location.search);
+    if (['pc', 'mobile'].includes(params.get('platform'))) currentFilter = params.get('platform');
+    if (document.querySelector(`.filter-btn[data-genre="${CSS.escape(params.get('genre') ?? '')}"]`)) {
+        currentGenre = params.get('genre');
+    }
+    if (params.has('q')) {
+        elements.searchInput.value = params.get('q');
+        searchTerms = toTerms(params.get('q'));
+    }
+}
 
-    // Get Art Lab experiments (items 0-6 from games array - all 7 experiments)
-    const artLabExperiments = games.slice(0, 7).map(item => ({
-        ...item,
-        // Fix paths for loading from root (prepend Art_Lab/)
-        link: `./Art_Lab/${item.link.replace('./', '')}`,
-        imgSrc: `./Art_Lab/${item.imgSrc.replace('./', '')}`
+function syncButtons() {
+    elements.platformBtns.forEach(btn => {
+        const active = btn.dataset.filter === currentFilter;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-pressed', String(active));
+    });
+    elements.genreBtns.forEach(btn => {
+        const active = btn.dataset.genre === currentGenre;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-pressed', String(active));
+    });
+}
+
+function syncUrl() {
+    const params = new URLSearchParams();
+    if (searchTerms.length) params.set('q', elements.searchInput.value.trim());
+    if (currentFilter !== 'all') params.set('platform', currentFilter);
+    if (currentGenre) params.set('genre', currentGenre);
+    const query = params.toString();
+    history.replaceState(null, '', query ? `?${query}${location.hash}` : location.pathname + location.hash);
+}
+
+/**
+ * Show the cards that match the platform, genre and search, and fade newly shown ones in.
+ */
+function applyFilters({ animate = true } = {}) {
+    syncButtons();
+    syncUrl();
+
+    const appearing = [];
+    let shown = 0;
+
+    for (const card of elements.cards) {
+        const match =
+            (currentFilter === 'all' || card.dataset.platforms.split(' ').includes(currentFilter)) &&
+            (!currentGenre || card.dataset.genre === currentGenre) &&
+            searchTerms.every(term => card.words.some(word => word.startsWith(term)));
+
+        if (match && card.hidden) appearing.push(card);
+        card.hidden = !match;
+        if (match) shown++;
+    }
+
+    elements.empty.hidden = shown > 0;
+
+    if (animate && appearing.length && typeof gsap !== 'undefined' && !reduceMotion.matches) {
+        gsap.fromTo(appearing,
+            { opacity: 0, y: 20 },
+            { opacity: 1, y: 0, duration: 0.4, stagger: 0.05, ease: 'power2.out', clearProps: 'opacity,transform' }
+        );
+    }
+}
+
+/**
+ * Personal bests saved by the games (assets/kit/storage.js, `gamelab.best.<slug>`):
+ * `{ <mode>: { value, label, at } }`. The hub shows the overall best when the game
+ * has one, otherwise the most recently set.
+ */
+function readBest(slug) {
+    try {
+        const all = JSON.parse(localStorage.getItem(`gamelab.best.${slug}`) ?? 'null');
+        if (!all || typeof all !== 'object') return null;
+        if (all.default?.label) return String(all.default.label);
+        const latest = Object.values(all)
+            .filter(entry => entry && entry.label)
+            .sort((a, b) => (b.at ?? 0) - (a.at ?? 0))[0];
+        return latest ? String(latest.label) : null;
+    } catch {
+        return null;
+    }
+}
+
+function initBests() {
+    for (const card of elements.cards) {
+        const best = readBest(card.dataset.slug);
+        const badge = card.querySelector('.game-card-best');
+        if (!best || !badge) continue;
+        badge.textContent = `Best: ${best}`;
+        badge.hidden = false;
+    }
+}
+
+/**
+ * "Continue playing": games opened from this browser, newest first.
+ */
+function readRecent() {
+    try {
+        const list = JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]');
+        return Array.isArray(list) ? list.filter(slug => bySlug.has(slug)) : [];
+    } catch {
+        return [];
+    }
+}
+
+function rememberGame(slug) {
+    const recent = [slug, ...readRecent().filter(s => s !== slug)].slice(0, RECENT_MAX);
+    try {
+        localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
+    } catch {
+        // Storage blocked; the row just won't persist.
+    }
+    renderRecent();
+}
+
+function renderRecent() {
+    const wrapper = document.getElementById('recent-games');
+    const list = document.getElementById('recent-list');
+    const recent = readRecent();
+
+    list.replaceChildren(...recent.map(slug => {
+        const game = bySlug.get(slug);
+        const li = document.createElement('li');
+        const link = document.createElement('a');
+        const img = document.createElement('img');
+        const text = document.createElement('span');
+        const title = document.createElement('span');
+        link.className = 'recent-chip';
+        link.href = `./${game.href}`;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.dataset.slug = slug;
+        img.src = thumbSet(slug, './').src;
+        img.alt = '';
+        img.width = 88;
+        img.height = 55;
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        text.className = 'recent-text';
+        title.className = 'recent-title';
+        title.textContent = game.title;
+        text.append(title);
+        const best = readBest(slug);
+        const sub = document.createElement('span');
+        sub.className = 'recent-best';
+        if (best) {
+            const strong = document.createElement('strong');
+            strong.textContent = best;
+            sub.append('Best: ', strong);
+        } else {
+            sub.textContent = GENRES[game.genre] ?? '';
+        }
+        text.append(sub);
+        link.append(img, text);
+        li.append(link);
+        return li;
     }));
 
-    // Get the Art Lab main entry (find it in the games array)
-    const artLabEntry = games.find(g => g.link === './Art_Lab/index.html');
+    wrapper.hidden = recent.length === 0;
+}
 
-    // Create showcase HTML with clickable card and all 7 preview images
-    container.innerHTML = `
-        <a href="./Art_Lab/index.html" class="artlab-main-card">
-            <div class="artlab-card-glow"></div>
-            
-            <!-- Left side: Info -->
-            <div class="artlab-card-content">
-                <div class="artlab-icon">
-                    <i class="fas fa-flask"></i>
-                </div>
-                <h3 class="artlab-card-title">Art Lab</h3>
-                <p class="artlab-card-desc">${artLabEntry?.description || 'Math with Art create wonders'}</p>
-                <div class="artlab-stats">
-                    <span><i class="fas fa-layer-group"></i> ${artLabExperiments.length} Experiments</span>
-                </div>
-                <div class="artlab-enter-btn">
-                    <span>Explore Collection</span>
-                    <i class="fas fa-arrow-right"></i>
-                </div>
-            </div>
-            
-            <!-- Right side: Horizontal Preview Strip -->
-            <div class="artlab-preview-strip">
-                ${artLabExperiments.map((exp) => `
-                    <div class="strip-item" data-link="${exp.link}" title="${exp.title}">
-                        <img class="lazy" data-src="${exp.imgSrc}" alt="${exp.title}" loading="lazy">
-                    </div>
-                `).join('')}
-            </div>
-        </a>
-    `;
+function initRecent() {
+    // Covers left click, keyboard Enter and middle click on cards and chips.
+    const onOpen = (e) => {
+        const link = e.target.closest('a[data-slug]');
+        if (link) rememberGame(link.dataset.slug);
+    };
+    document.addEventListener('click', onOpen);
+    document.addEventListener('auxclick', onOpen);
+    renderRecent();
 
-    // Add click handlers for individual preview items
-    container.querySelectorAll('.strip-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            window.open(item.dataset.link, '_blank');
-        });
+    // Games run in their own tabs; pick up new bests and plays when they save.
+    window.addEventListener('storage', (e) => {
+        if (e.key !== null && !e.key.startsWith('gamelab.')) return;
+        initBests();
+        renderRecent();
+    });
+}
+
+/**
+ * Art Lab teaser: a sealed pack (rendered by tools/render-pages.mjs). Shows the
+ * "opened" copy once this browser has opened the pack in the Art Lab
+ * (`artlab.opened`, written by Art_Lab/js/deck.js), leans toward a mouse, and
+ * teases the tear once when it first scrolls into view.
+ */
+function readArtlabOpened() {
+    try {
+        return JSON.parse(localStorage.getItem('artlab.opened') ?? 'false') === true;
+    } catch {
+        return false;
+    }
+}
+
+function initArtlabTeaser() {
+    const teaser = document.getElementById('artlab-teaser');
+    if (!teaser) return;
+    const tilt = teaser.querySelector('.tz-tilt');
+    const sync = () => {
+        teaser.dataset.state = readArtlabOpened() ? 'opened' : 'sealed';
+    };
+    sync();
+    window.addEventListener('storage', (e) => {
+        if (e.key === null || e.key === 'artlab.opened') sync();
     });
 
-}
-
-/**
- * Filter games based on current filter and search
- */
-function getFilteredGames() {
-    // Get main games (excluding Art Lab experiments which are items 0-6)
-    let filteredGames = games.slice(7);
-
-    // Also exclude the Art Lab main entry (it appears elsewhere in the array)
-    filteredGames = filteredGames.filter(game => !game.link.includes('Art_Lab'));
-
-    // Apply platform filter
-    if (currentFilter !== 'all') {
-        const filterTag = currentFilter === 'pc' ? '#PC' : '#Mobile';
-        filteredGames = filteredGames.filter(game =>
-            game.tags?.includes(filterTag)
-        );
-    }
-
-    // Apply search filter
-    if (searchQuery) {
-        filteredGames = filteredGames.filter(game =>
-            game.title.toLowerCase().includes(searchQuery) ||
-            game.description.toLowerCase().includes(searchQuery)
-        );
-    }
-
-    return filteredGames;
-}
-
-/**
- * Create a single game card element
- */
-function createGameCard(game) {
-    const card = document.createElement('a');
-    card.href = game.link;
-    card.className = 'game-card';
-    card.target = '_blank';
-    card.rel = 'noopener noreferrer';
-
-    // Generate tags HTML from the game.tags array
-    const tagsHtml = (game.tags || []).map(tag => {
-        const tagText = tag.replace('#', '');
-        const isPC = tagText.toLowerCase() === 'pc';
-        const tagClass = isPC ? 'tag-pc' : 'tag-mobile';
-        const tagIcon = isPC ? 'fa-desktop' : 'fa-mobile-alt';
-        return `<span class="tag ${tagClass}"><i class="fas ${tagIcon}"></i> ${tagText}</span>`;
-    }).join('');
-
-    // The structure: Card > Inner > [Preview, Content]
-    card.innerHTML = `
-      <div class="game-card-inner">
-          <div class="game-card-preview">
-            <div class="game-card-tags">${tagsHtml}</div>
-            <img class="lazy" data-src="${game.imgSrc}" alt="${game.title}" loading="lazy">
-          </div>
-          
-          <div class="game-card-content">
-            <h3 class="game-card-title">${game.title}</h3>
-            <p class="game-card-description">${game.description}</p>
-            <div class="game-card-action">
-                <span class="play-btn">
-                  Play Now <i class="fas fa-arrow-right"></i>
-                </span>
-            </div>
-          </div>
-      </div>
-    `;
-
-    return card;
-}
-
-/**
- * Render game cards with animation
- */
-function renderGameCards() {
-    const container = elements.gameCardsContainer;
-    if (!container) return;
-
-    const filteredGames = getFilteredGames();
-
-    // Fade out existing cards
-    const existingCards = container.querySelectorAll('.game-card');
-
-    if (existingCards.length > 0 && typeof gsap !== 'undefined') {
-        gsap.to(existingCards, {
-            opacity: 0,
-            y: 20,
-            duration: 0.2,
-            stagger: 0.02,
-            onComplete: () => {
-                renderCards(filteredGames);
-            }
+    // Lean toward a mouse pointer (not touch: a finger is scrolling the page).
+    let frame = 0;
+    teaser.addEventListener('pointermove', (e) => {
+        if (e.pointerType !== 'mouse' || reduceMotion.matches) return;
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(() => {
+            const r = teaser.getBoundingClientRect();
+            const x = (e.clientX - r.left) / r.width - 0.5;
+            const y = (e.clientY - r.top) / r.height - 0.5;
+            tilt.style.setProperty('--ry', `${(x * 16).toFixed(2)}deg`);
+            tilt.style.setProperty('--rx', `${(-y * 12).toFixed(2)}deg`);
         });
-    } else {
-        renderCards(filteredGames);
-    }
-}
-
-/**
- * Actually render the cards (after fade out)
- */
-function renderCards(games) {
-    const container = elements.gameCardsContainer;
-    container.innerHTML = '';
-
-    if (games.length === 0) {
-        container.innerHTML = `
-      <div class="text-center" style="grid-column: 1 / -1; padding: 4rem 2rem;">
-        <i class="fas fa-search" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
-        <p style="color: var(--text-secondary); font-size: 1.1rem;">No games found matching your search.</p>
-      </div>
-    `;
-        return;
-    }
-
-    games.forEach((game, index) => {
-        const card = createGameCard(game);
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        container.appendChild(card);
+    });
+    teaser.addEventListener('pointerleave', () => {
+        cancelAnimationFrame(frame);
+        tilt.style.removeProperty('--rx');
+        tilt.style.removeProperty('--ry');
     });
 
-    // Animate cards in
-    if (typeof gsap !== 'undefined') {
-        const cards = container.querySelectorAll('.game-card');
-        gsap.to(cards, {
-            opacity: 1,
-            y: 0,
-            duration: 0.4,
-            stagger: 0.05,
-            ease: 'power2.out'
-        });
-    } else {
-        const cards = container.querySelectorAll('.game-card');
-        cards.forEach(card => {
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        });
-    }
+    // The first time the pack scrolls into view, lift the strip and let the cards peek.
+    if (!('IntersectionObserver' in window)) return;
+    const seen = new IntersectionObserver((entries) => {
+        if (!entries.some(entry => entry.isIntersecting)) return;
+        seen.disconnect();
+        if (reduceMotion.matches || teaser.dataset.state !== 'sealed') return;
+        setTimeout(() => {
+            teaser.classList.add('is-peek');
+            setTimeout(() => teaser.classList.remove('is-peek'), 1500);
+        }, 600);
+    }, { threshold: 0.6 });
+    seen.observe(teaser.querySelector('.tz-stage'));
 }
 
 /**
  * Initialize scroll-triggered animations
  */
 function initScrollAnimations() {
-    if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
+    if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined' || reduceMotion.matches) return;
 
     gsap.registerPlugin(ScrollTrigger);
 
-    // Animate sections on scroll
+    // Animate sections on scroll, once each.
     gsap.utils.toArray('.section').forEach(section => {
         gsap.from(section, {
             scrollTrigger: {
                 trigger: section,
-                start: 'top 80%',
-                toggleActions: 'play none none reverse'
+                start: 'top 85%',
+                once: true
             },
             opacity: 0,
             y: 50,
@@ -337,40 +375,16 @@ function initScrollAnimations() {
             ease: 'power2.out'
         });
     });
-
-    // Art Lab feature animation
-    const artlabFeature = document.querySelector('.artlab-feature');
-    if (artlabFeature) {
-        gsap.from('.artlab-content', {
-            scrollTrigger: {
-                trigger: artlabFeature,
-                start: 'top 70%'
-            },
-            x: -50,
-            opacity: 0,
-            duration: 0.8,
-            ease: 'power2.out'
-        });
-
-        gsap.from('.artlab-preview-item', {
-            scrollTrigger: {
-                trigger: artlabFeature,
-                start: 'top 70%'
-            },
-            x: 50,
-            opacity: 0,
-            duration: 0.8,
-            stagger: 0.1,
-            ease: 'power2.out'
-        });
-    }
 }
 
-// Update game count stat
-document.addEventListener('DOMContentLoaded', () => {
-    const gameCount = document.getElementById('game-count');
-    if (gameCount) {
-        const mainGamesCount = games.slice(7).length;
-        gameCount.textContent = `${mainGamesCount}+`;
-    }
-});
+/**
+ * Offline support: cache the hub shell and recently played games.
+ */
+function registerServiceWorker() {
+    if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {
+            // Offline support is optional; the site works without it.
+        });
+    });
+}

@@ -6,8 +6,8 @@ Create psychedelic animations in real-time in the browser.
 
 Webgl shader animation created using liquid motion, distorted shapes, shadows, and light.
 
-![Liquid Shape Distortions Example](assets/siteOGImage2.png)
-![Liquid Shape Distortions GIF Example](assets/LSD.gif)
+![Liquid Shape Distortions Example](../../docs/media/lsd/preview.webp)
+![Liquid Shape Distortions GIF Example](../../docs/media/lsd/lsd.webp)
 
 ## Overview
 

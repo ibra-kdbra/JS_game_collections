@@ -19,13 +19,18 @@
       background-color: #181818;
       width: 100vw;
       height: 100vh;
+      height: 100dvh;
       overflow: hidden;
       display: flex;
       justify-content: center;
       align-items: center;
     }
     #game-container {
-      position: relative;
+      /* Fixed and centered so the unscaled 980px box never widens the page on phones */
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      margin: -310px 0 0 -490px;
       width: 980px;
       height: 620px;
       transform-origin: center center;
@@ -488,4 +493,339 @@
     }
     .github-link:hover .github-icon {
       filter: invert(1);
+    }
+
+    .logo {
+      color: #005b96;
+      line-height: 8px;
+      letter-spacing: -1px;
+    }
+
+    /* Sound toggle */
+    #sound {
+      position: fixed;
+      top: max(8px, env(safe-area-inset-top));
+      right: max(8px, env(safe-area-inset-right));
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      background-color: rgba(24, 24, 24, 0.8);
+      color: #4f9ED8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 9999;
+    }
+    #sound svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    #sound .slash,
+    #sound.muted .wave {
+      display: none;
+    }
+    #sound.muted .slash {
+      display: inline;
+    }
+    #sound.muted {
+      color: #D34E53;
+    }
+    #sound:focus-visible, #touchbar button:focus-visible, #cmd-input:focus-visible {
+      outline: 2px solid #4f9ED8;
+      outline-offset: 2px;
+    }
+
+    /* Touch controls under the terminal */
+    #touchbar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 9000;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 8px max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+      background-color: #101010;
+      border-top: 1px solid #333;
+    }
+    #touchbar.idle,
+    body.mode-mesh #touchbar {
+      display: none;
+    }
+    #quick {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    #touchbar button {
+      min-height: 44px;
+      min-width: 44px;
+      padding: 0 14px;
+      border-radius: 6px;
+      border: 1px solid #4B86B4;
+      background-color: #0b2740;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    #cmd-form {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    #cmd-form .prompt {
+      color: #4B86B4;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    #cmd-input {
+      flex: 1;
+      min-width: 0;
+      min-height: 44px;
+      padding: 0 10px;
+      border-radius: 6px;
+      border: 1px solid #333;
+      background-color: #181818;
+      color: white;
+      font-size: 16px;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+    #continue-btn {
+      width: 100%;
+    }
+
+    /* Mesh view on touch screens: bigger hit areas for nodes and connections */
+    @media (pointer: coarse) {
+      #mesh {
+        touch-action: none;
+      }
+      #mesh .node {
+        stroke: transparent;
+        stroke-width: 14px;
+      }
+      #mesh .edge-interact {
+        stroke-width: 14px;
+      }
+    }
+
+    /* Phones: the terminal fills the screen above the touch controls */
+    body.phone:not(.mode-mesh) #game-container {
+      margin: 0;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: var(--touchbar, 0px);
+      width: auto;
+      height: auto;
+    }
+    body.phone:not(.mode-mesh) #terminal {
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      padding: max(60px, env(safe-area-inset-top)) 10px 10px;
+      font-size: 12px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-y: auto;
+    }
+    body.phone:not(.mode-mesh) .logo {
+      font-size: min(11px, 1.9vw);
+      line-height: 0.75em;
+      white-space: pre;
+    }
+    body.phone .github-link {
+      display: none;
+    }
+
+    /* Phones: the email wraps to the screen */
+    body.phone:not(.mode-mesh) #email {
+      width: auto;
+      max-width: 100%;
+      padding-left: 6px;
+    }
+
+    /* ---------- Phones: mesh view at real size ----------
+       script.js sets --mesh-w / --mesh-h (the screen in the view's orientation)
+       and only rotates the box when the phone is upright. Layout:
+       top bar (mesh, health, coins), tool grid on the left, console and
+       restart / quit along the bottom, the mesh in the rest. The corner under
+       the sound button (top-right of the screen) is kept clear. */
+    body.phone.mode-mesh {
+      overscroll-behavior: none;
+    }
+    body.phone.mode-mesh #game-container {
+      width: var(--mesh-w);
+      height: var(--mesh-h);
+      margin: calc(var(--mesh-h) / -2) 0 0 calc(var(--mesh-w) / -2);
+    }
+    body.phone.mode-mesh #screen {
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      font-size: 12px;
+    }
+    body.phone.mode-mesh .title {
+      display: none;
+    }
+    body.phone.mode-mesh .mesh-id {
+      top: 6px;
+      left: 56px;
+      width: auto;
+      text-align: left;
+      white-space: nowrap;
+    }
+    body.phone.mode-mesh .health {
+      top: 6px;
+      right: 56px;
+    }
+    body.phone.mode-mesh #coins {
+      top: 22px;
+      right: 56px;
+    }
+    body.phone.mode-mesh #data {
+      top: 22px;
+      left: 56px;
+      right: auto;
+    }
+    body.phone.mode-mesh #toolbar {
+      top: 52px;
+      left: max(4px, env(safe-area-inset-left));
+      width: 96px;
+      height: auto;
+      display: grid;
+      grid-template-columns: repeat(2, 46px);
+      grid-auto-rows: 50px;
+      gap: 2px;
+      font-size: 24px;
+      line-height: 30px;
+    }
+    body.phone.mode-mesh [data-tool] {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border-left: 0;
+      border: 2px solid transparent;
+      border-radius: 6px;
+      background-color: rgba(255, 255, 255, 0.04);
+    }
+    body.phone.mode-mesh [data-tool="info"],
+    body.phone.mode-mesh [data-tool="corrupt"] {
+      font-size: 20px;
+    }
+    body.phone.mode-mesh [data-tool] > div {
+      font-size: 12px;
+      line-height: 14px;
+      padding: 0;
+    }
+    body.phone.mode-mesh [data-tool="info"].selected { border-color: #FFF; }
+    body.phone.mode-mesh [data-tool="crash"].selected { border-color: #D34E53; }
+    body.phone.mode-mesh [data-tool="cut"].selected { border-color: #F89100; }
+    body.phone.mode-mesh [data-tool="slow"].selected { border-color: #FCC700; }
+    body.phone.mode-mesh [data-tool="corrupt"].selected { border-color: #535C8E; }
+    body.phone.mode-mesh [data-tool="reroute"].selected { border-color: #9E379F; }
+    body.phone.mode-mesh [data-tool="intercept"].selected { border-color: #1375F7; }
+    body.phone.mode-mesh [data-tool="mine"].selected { border-color: #080; }
+    body.phone.mode-mesh #mesh {
+      top: 40px;
+      left: 104px;
+      width: calc(100% - 112px);
+      height: calc(100% - 40px - 52px);
+    }
+    body.phone.mode-mesh #info {
+      top: 52px;
+      right: 8px;
+      width: 160px;
+      font-size: 12px;
+      white-space: pre-wrap;
+      pointer-events: none; /* never blocks a tap on the node under it */
+    }
+    body.phone.mode-mesh #console {
+      top: auto;
+      bottom: max(4px, env(safe-area-inset-bottom));
+      left: 104px;
+      width: auto;
+      right: 108px;
+      height: 44px;
+      font-size: 12px;
+      line-height: 14px;
+      white-space: pre-wrap;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+    body.phone.mode-mesh #retry,
+    body.phone.mode-mesh #quit {
+      top: auto;
+      bottom: max(4px, env(safe-area-inset-bottom));
+      min-width: 48px;
+      min-height: 44px;
+      justify-content: center;
+      font-size: 22px;
+      border: 1px solid #333;
+      border-radius: 6px;
+      background-color: rgba(24, 24, 24, 0.9);
+    }
+    body.phone.mode-mesh #retry {
+      right: 56px;
+    }
+    body.phone.mode-mesh #quit {
+      right: 4px;
+    }
+    body.phone.mode-mesh #retry-text:not(:empty),
+    body.phone.mode-mesh #quit-text:not(:empty) {
+      padding: 0 6px;
+    }
+    /* The "You sure?" label sits above its button instead of pushing it */
+    body.phone.mode-mesh #retry-text,
+    body.phone.mode-mesh #quit-text {
+      position: absolute;
+      right: 0;
+      bottom: 100%;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      background-color: #181818;
+      border-radius: 4px;
+    }
+    body.phone.mode-mesh #crash,
+    body.phone.mode-mesh #offline {
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    body.phone.mode-mesh #offline-banner {
+      font-size: 34px;
+      letter-spacing: 14px;
+      padding: 12px 6px 12px 20px;
+      border-width: 5px;
+    }
+    body.phone.mode-mesh #offline-banner::before {
+      top: 10px;
+      left: 10px;
+      width: calc(100% - 20px);
+      height: calc(100% - 20px);
+    }
+    body.phone.mode-mesh #continue {
+      top: auto;
+      left: auto;
+      right: 12px;
+      bottom: max(12px, env(safe-area-inset-bottom));
+      min-height: 44px;
+      display: flex;
+      align-items: center;
     }

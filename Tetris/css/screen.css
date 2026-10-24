@@ -46,49 +46,6 @@
   }
 }
 
-/* Theme switcher */
-.theme-switcher {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 1000;
-  background: rgba(0, 0, 0, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  padding: 8px;
-  backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
-}
-
-.theme-switcher:hover {
-  background: rgba(0, 0, 0, 0.9);
-  border-color: rgba(255, 255, 255, 0.4);
-}
-
-.theme-btn {
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-  font-family: "Source Sans Pro", sans-serif;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.theme-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateY(-1px);
-}
-
-.theme-btn:active {
-  transform: translateY(0);
-}
-
 /* Performance indicator */
 .perf-indicator {
   position: fixed;

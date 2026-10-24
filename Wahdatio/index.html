@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <title>Wahdatio</title>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="./style.css" type="text/css" />
     <link href="./img/logo.png" rel="icon" type="image/png" />
   </head>
@@ -12,6 +13,11 @@
       <div class="menul"></div>
       <div class="menur"></div>
     </div>
-    <script src="./script.js"></script>
+    <script type="module">
+      import { initShell } from "../assets/kit/shell.js";
+      initShell({ slug: "wahdatio" });
+    </script>
+    <script type="module" src="../assets/kit/index.js"></script>
+    <script defer src="./script.js"></script>
   </body>
 </html>

@@ -1,36 +1,63 @@
 window.onload = function() {
-	init();
-    animate();
+    init();
 
-    window.addEventListener('resize', onWindowResize);
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
-
+    window.addEventListener('blur', releaseControls);
     document.addEventListener('visibilitychange', onLoseFocus);
 }
 
 function onLoseFocus() {
     if(document.hidden) {
-        lastTime = -1;
-        accelerating = false;
-        rotatingLeft = false;
-        rotatingRight = false;
+        releaseControls();
+        if(!isGameOver && !isBetweenRounds) isPaused = true;
         rocketSound.stop();
     }
 }
 
+function releaseControls() {
+    accelerating = false;
+    rotatingLeft = false;
+    rotatingRight = false;
+}
+
 function init() {
+    store = GameKit.createStore("moonldr");
+    settings = Object.assign(settings, store.get("settings", {}));
+    GameKit.initShell({slug: "moonldr"});
+    controls = GameKit.createTouchControls({
+        dpad: {left: "ArrowLeft", right: "ArrowRight"},
+        buttons: [
+            {label: "Thrust", key: "ArrowUp"},
+            {label: "Pause", key: "p", small: true},
+        ],
+    });
+    controls.hide();
+
     initTHREE();
 
     initColliders();
-    loadTerrain();
+    terrainMaterial = new THREE.MeshBasicMaterial({color: 0xffffff});
+    loadTerrain(classicTerrain);
     createBorders();
     createStars();
     initSound();
     initHud();
     initParticles();
+    initMenu();
 
-    playComms();
+    new ResizeObserver(onWindowResize).observe(stage);
+    onWindowResize();
+
+    // Physics runs in fixed 60 Hz steps whatever the display refresh rate.
+    loop = GameKit.createLoop({
+        update: (dt) => {
+            deltaTime = dt;
+            update();
+        },
+        render: render,
+    });
+    loop.start();
 }
 
 function initTHREE() {
@@ -46,10 +73,11 @@ function initTHREE() {
     scene.add(camera);
     cameraPositionReset();
 
+    stage = document.getElementById("stage");
     renderer = new THREE.WebGLRenderer({antialias: true});
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.autoClear = false;
-    document.body.appendChild(renderer.domElement);
+    stage.appendChild(renderer.domElement);
 
     const geometry = new THREE.PlaneGeometry(landerScale, landerScale);
     const texture = new THREE.TextureLoader().load('textures/lander.png');
@@ -112,15 +140,22 @@ function createBorders() {
     botBorder.position.y = -horizontalOffset;
 }
 
-function loadTerrain() {
+function loadTerrain(points) {
+    if(terrainMeshGroup) {
+        terrainMeshGroup.children.forEach((mesh) => mesh.geometry.dispose());
+        scene.remove(terrainMeshGroup);
+    }
     terrainMeshGroup = new THREE.Group();
     scene.add(terrainMeshGroup);
+    lineSegments = [];
+    heightDifferences = [];
 
     let i;
     for(i=0; i<points.length-1; i++) {
         placeTerrainSegment(points[i], points[i+1]);
         heightDifferences.push(Math.abs(points[i][1]-points[i+1][1]));
     }
+    hideStarsBelowTerrain();
 }
 
 function placeTerrainSegment(leftPoint, rightPoint) {
@@ -133,8 +168,7 @@ function placeTerrainSegment(leftPoint, rightPoint) {
     let distance = leftVector.distanceTo(rightVector);
 
     const geometry = new THREE.PlaneGeometry(distance*2 + lineWidth/2, lineWidth);
-    const material = new THREE.MeshBasicMaterial({color: 0xffffff});
-    let terrainMesh = new THREE.Mesh(geometry, material);
+    let terrainMesh = new THREE.Mesh(geometry, terrainMaterial);
     terrainMesh.position.x = center.x;
     terrainMesh.position.y = center.y;
 
@@ -150,66 +184,76 @@ function createStars() {
     let stars = new THREE.Group();
     scene.add(stars);
 
-    let i,j;
+    const geometry = new THREE.PlaneGeometry(landerScale/10, landerScale/5);
+    const material = new THREE.MeshBasicMaterial({color: 0xffffff});
+    let i;
     for(i = 0; i < numOfStars; i++) {
-        let randomX, randomY;
-        randomX = (Math.random() - 0.5) * gameWidth;
-        randomY = (Math.random() - 0.5) * gameHeight;
-
-        const geometry = new THREE.PlaneGeometry(landerScale/10, landerScale/5);
-        const material = new THREE.MeshBasicMaterial({color: 0xffffff});
         let mesh = new THREE.Mesh(geometry, material);
         stars.add(mesh);
+        starMeshes.push(mesh);
 
-        mesh.position.x = randomX;
-        mesh.position.y = randomY;
+        mesh.position.x = (Math.random() - 0.5) * gameWidth;
+        mesh.position.y = (Math.random() - 0.5) * gameHeight;
         mesh.position.z = -5;
+    }
+    hideStarsBelowTerrain();
+}
 
-        for(j = 0; j < lineSegments.length; j++) {
+function hideStarsBelowTerrain() {
+    starMeshes.forEach((mesh) => {
+        mesh.visible = true;
+        for(let j = 0; j < lineSegments.length; j++) {
             let leftVector = lineSegments[j][0];
             let rightVector = lineSegments[j][1];
 
-            if(randomX > leftVector.x && randomX < rightVector.x) {
-                if(randomY < Math.max(leftVector.y, rightVector.y)) {
+            if(mesh.position.x > leftVector.x && mesh.position.x < rightVector.x) {
+                if(mesh.position.y < Math.max(leftVector.y, rightVector.y)) {
                     mesh.visible = false;
                 }
                 break;
             }
         }
-    }
+    });
 }
 
+// Keep the world undistorted at any aspect ratio. Big screens show the whole
+// 800x450 world, letterboxed; small ones show its full height at a readable
+// size and follow the lander sideways.
 function onWindowResize() {
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    const w = stage.clientWidth;
+    const h = stage.clientHeight;
+    if(!w || !h) return;
+    renderer.setSize(w, h);
 
-    initHud();
-}
+    const wholeWorldScale = Math.min(w / gameWidth, h / gameHeight);
+    viewScale = wholeWorldScale >= minWholeWorldScale ? wholeWorldScale : h / gameHeight;
+    viewHalfWidth = w / viewScale / 2;
+    followCamera = viewHalfWidth < halfWidth;
 
-function animate() {
-    requestAnimationFrame(animate);
+    camera.left = -viewHalfWidth;
+    camera.right = viewHalfWidth;
+    camera.top = h / viewScale / 2;
+    camera.bottom = -h / viewScale / 2;
+    camera.updateProjectionMatrix();
+    if(!isZoomed) cameraPositionReset();
 
-    if (lastTime == -1) lastTime = performance.now();
-    let t1 = performance.now();
-
-    deltaTime = (t1-lastTime)/1000;
-    lastTime = t1;
-
-    update();
-    render();
+    resizeHud();
 }
 
 function render() {
     let trajectory;
     if (isDebugOn) {
         trajectory = generateTrajectoryMesh(calculateTrajectory());
-        scene.add(trajectory)
+        scene.add(trajectory);
     }
 
+    renderer.clear();
     renderer.render(scene, camera);
     renderHud();
 
     if (isDebugOn) {
         scene.remove(trajectory);
+        trajectory.children.forEach((mesh) => mesh.geometry.dispose());
     }
 }
 
@@ -279,6 +323,10 @@ function update() {
     if(isGameOver || isBetweenRounds) {
         updateParticles();
         rocketSound.stop();
+        if(isBetweenRounds) {
+            betweenRoundTimer -= deltaTime;
+            if(betweenRoundTimer <= 0) continueRound();
+        }
         return;
     }
     if(isPaused) {
@@ -291,6 +339,7 @@ function update() {
     checkCollision();
     checkZoom();
     updateParticles();
+    updateAmbientSounds(deltaTime);
 }
 
 function updateTimer() {
@@ -412,11 +461,12 @@ function terrainCheck() {
                     crashInfo = "CRASHED ON UNEVEN TERRAIN";
                     hasLanded = false;
                 }
-                if(Math.abs(lander.rotation.z) > landingAngleTolerance) {
+                if(Math.abs(lander.rotation.z) > difficulty.landingAngleTolerance) {
                     crashInfo = "LANDING ANGLE WAS TOO HIGH";
                     hasLanded = false;
                 }
-                if(velocityX*velocityX + velocityY*velocityY > landingVelocityTolerance*landingVelocityTolerance) {
+                const tolerance = difficulty.landingVelocityTolerance;
+                if(velocityX*velocityX + velocityY*velocityY > tolerance*tolerance) {
                     crashInfo = "LANDING VELOCITY WAS TOO HIGH";
                     hasLanded = false;
                 }
@@ -445,13 +495,13 @@ function fuelCheck() {
 
 function landed(segmentIndex) {
     let mul = scoreMultipliers[segmentIndex];
-    scoreChange = scorePerLanding * mul
+    scoreChange = scorePerLanding * mul;
     currentScore += scoreChange;
 
     fuelChange = Math.random() * (fuelGainMax - fuelGainMin) + fuelGainMin;
     fuelChange += fuelGainExtra * mul;
 
-    let fuelCap = startingFuel - currentFuel;
+    let fuelCap = difficulty.startingFuel - currentFuel;
     fuelChange = Math.min(fuelChange, fuelCap);
     currentFuel += fuelChange;
 
@@ -462,7 +512,7 @@ function crashed() {
     crashSound.play();
     explosionPS.emit();
     
-    fuelChange = Math.random() * (fuelPenaltyMax - fuelPenaltyMin) + fuelPenaltyMin;
+    fuelChange = (Math.random() * (fuelPenaltyMax - fuelPenaltyMin) + fuelPenaltyMin) * difficulty.fuelPenaltyScale;
     fuelChange = Math.min(fuelChange, currentFuel);
     currentFuel -= fuelChange;
 
@@ -475,16 +525,26 @@ function endGame() {
     isGameOver = true;
     isPaused = true;
     lander.visible = false;
+    controls.hide();
+    zoomOut();
+
+    const best = GameKit.recordBest("moonldr", currentScore, {
+        mode: settings.difficulty,
+        label: currentScore + " pts (" + difficulty.name + ")",
+    });
+    lastResult = {score: currentScore, isNew: best.isNew && currentScore > 0, time: currentTime};
+    showMenu();
 }
 
 function nextRound() {
     isBetweenRounds = true;
     lander.visible = hasLanded;
+    releaseControls();
 
     fuelCheck();
-    fuelAlertCheck();    
+    fuelAlertCheck();
 
-    setTimeout(continueRound, betweenRoundPause * 1000);
+    betweenRoundTimer = betweenRoundPause;
 }
 
 function continueRound() {
@@ -500,14 +560,24 @@ function continueRound() {
 }
 
 function resetGame() {
-    currentFuel = startingFuel;
+    difficulty = difficulties[settings.difficulty];
+    gravity = difficulty.gravity;
+    thrusterPS.gravity = gravity;
+    explosionPS.gravity = gravity;
+
+    currentFuel = difficulty.startingFuel;
     hasFuel = true;
     lander.visible = true;
     isAlerted = false;
+    resetCommsTimer();
 
     currentScore = 0;
     currentTime = 0;
+    roundNumber = 0;
+    runSeed = (Math.random() * 1e9) >>> 0;
 
+    hideMenu();
+    if(GameKit.isTouchFirst()) controls.show();
     respawn();
 }
 
@@ -516,12 +586,14 @@ function respawn() {
     velocityY = 0;
     currentAcceleration = 0;
 
-    rotatingLeft = false;
-    rotatingRight = false;
-    accelerating = false;
+    releaseControls();
 
     isGameOver = false;
     isPaused = false;
+
+    // Random terrain changes every round; the run's seed makes it repeatable.
+    if(settings.terrain == "random") loadTerrain(generateTerrain(runSeed + roundNumber));
+    roundNumber++;
 
     randomSpawn();
     randomizeScoreMultipliers();
@@ -567,6 +639,7 @@ function randomSpawn() {
 
 function randomizeScoreMultipliers() {
     let i,j;
+    scoreMultipliers = [];
     for(i=0; i < heightDifferences.length; i++) {
         if(heightDifferences[i] > 0.0001) {
             scoreMultipliers[i] = 0;
@@ -586,8 +659,14 @@ function randomizeScoreMultipliers() {
 }
 
 function onKeyDown(event) {
-    if(isGameOver && isPaused) {
-        resetGame();
+    if(isGameOver) {
+        // Enter always launches; Space does too unless a menu button has focus.
+        const onBody = document.activeElement == document.body;
+        if(!event.repeat && (event.key == "Enter" || (event.key == " " && onBody))) {
+            event.preventDefault();
+            resetGame();
+        }
+        return;
     }
 
     if(event.key=="ArrowUp"){
@@ -599,12 +678,16 @@ function onKeyDown(event) {
     if(event.key=="ArrowRight"){
         rotatingRight = true;
     }
+    if(event.key.startsWith("Arrow") || event.key == " ") event.preventDefault();
 
-    if(event.key=="p"){
-        if(!isGameOver) isPaused = !isPaused;
+    if(event.key=="p" || event.key=="P" || event.key=="Escape"){
+        if(!isBetweenRounds) {
+            isPaused = !isPaused;
+            if(isPaused) releaseControls();
+        }
     }
 
-    if(event.key=="d"){
+    if(event.key=="d" && isDebugAllowed){
         toggleDebug();
     }
 }
@@ -627,7 +710,12 @@ function toggleDebug() {
 }
 
 function cameraPositionReset() {
-    camera.position.set(cameraPositionDefault.x, cameraPositionDefault.y, cameraPositionDefault.z);
+    let x = cameraPositionDefault.x;
+    if(followCamera && lander) {
+        const limit = halfWidth - viewHalfWidth;
+        x = Math.max(-limit, Math.min(limit, lander.position.x));
+    }
+    camera.position.set(x, cameraPositionDefault.y, cameraPositionDefault.z);
 }
 
 function checkZoom() {
@@ -636,6 +724,9 @@ function checkZoom() {
     }
     else if(isZoomed && altitude >= cameraZoomOutAltitude) {
         zoomOut();
+    }
+    else if(followCamera) {
+        cameraPositionReset();
     }
 }
 
@@ -689,7 +780,7 @@ function initParticles() {
         explosionPSParticlesMax,
         explosionPSLifetimeMin,
         explosionPSLifetimeMax,
-        gravity,
+        difficulty.gravity,
         explosionPSDragCoefMin,
         explosionPSDragCoefMax,
         explosionPSSize,
@@ -714,4 +805,46 @@ function updateParticles() {
     explosionPS.initialVelocityX = velocityX;
     explosionPS.initialVelocityY = velocityY;
     explosionPS.update(deltaTime);
+}
+
+// ---------- Start screen ----------
+
+function initMenu() {
+    document.querySelectorAll("[data-opt]").forEach((button) => {
+        button.addEventListener("click", () => {
+            settings[button.dataset.opt] = button.dataset.value;
+            store.set("settings", settings);
+            renderMenu();
+        });
+    });
+    document.getElementById("start").addEventListener("click", resetGame);
+    renderMenu();
+}
+
+function renderMenu() {
+    document.querySelectorAll("[data-opt]").forEach((button) => {
+        button.setAttribute("aria-pressed", String(settings[button.dataset.opt] == button.dataset.value));
+    });
+    const best = GameKit.readBests("moonldr")[settings.difficulty];
+    document.getElementById("best").textContent =
+        "BEST " + difficulties[settings.difficulty].name + "  " + (best ? String(best.value).padStart(4, "0") : "----");
+
+    const result = document.getElementById("result");
+    if(lastResult) {
+        result.hidden = false;
+        result.textContent = "GAME OVER  ·  SCORE " + String(lastResult.score).padStart(4, "0") +
+            "  ·  TIME " + formatClock(lastResult.time) + (lastResult.isNew ? "  ·  NEW BEST" : "");
+    }
+    else {
+        result.hidden = true;
+    }
+}
+
+function showMenu() {
+    renderMenu();
+    document.getElementById("menu").hidden = false;
+}
+
+function hideMenu() {
+    document.getElementById("menu").hidden = true;
 }

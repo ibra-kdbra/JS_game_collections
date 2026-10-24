@@ -1,18 +1,5 @@
 /* ---------- Responsive Design ---------- */
 @media (max-width: 1024px) {
-  .artlab-main-card {
-    flex-direction: column;
-  }
-  
-  .artlab-card-content {
-    max-width: 100%;
-    flex: none;
-  }
-  
-  .artlab-floating-previews {
-    display: none;
-  }
-  
   .corner-nav {
     padding: 0.6rem 1rem;
   }
@@ -44,25 +31,19 @@
   }
   
   .hero {
-    padding-top: 4rem;
-    min-height: auto;
+    padding: 4.5rem 1rem 1.5rem;
   }
-  
-  .hero-stats {
-    gap: 1.5rem;
+
+  .stat-item {
+    padding: 0.6rem 1rem;
   }
-  
+
   .stat-value {
     font-size: 1.5rem;
   }
-  
-  .artlab-main-card {
-    padding: 1.5rem;
-    min-height: auto;
-  }
-  
-  .artlab-card-title {
-    font-size: 1.35rem;
+
+  .section-header {
+    margin-bottom: 2rem;
   }
   
   .section {
@@ -88,9 +69,9 @@
   }
   
   .corner-link {
-    width: 28px;
-    height: 28px;
-    font-size: 0.8rem;
+    width: 36px;
+    height: 36px;
+    font-size: 0.85rem;
   }
   
   .hero-title {
@@ -113,5 +94,45 @@
   
   .section {
     padding: 2rem 0.75rem;
+  }
+}
+
+/* ---------- Touch screens: 44px targets ---------- */
+@media (pointer: coarse) {
+  .corner-link,
+  .corner-back {
+    width: 44px;
+    height: 44px;
+  }
+
+  .filter-btn {
+    min-height: 44px;
+  }
+}
+
+/* ---------- Phones (also held sideways): 12px minimum text ---------- */
+@media (max-width: 768px), (max-height: 500px) {
+  .tag,
+  .meta-chip {
+    font-size: 0.75rem;
+  }
+}
+
+/* Extra-small phones: the three stats stay on one row */
+@media (max-width: 400px) {
+  .hero-stats {
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+
+  .stat-item {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.6rem 0.4rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
   }
 }

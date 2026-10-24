@@ -1,91 +1,616 @@
-export const TILE_TYPES = {
-    WATER: 0,
-    FLOOR: 1,
-    WALL: 2,
-    FENCE: 3,
-    START: 4
-};
+// Level maps, drawn as text, one character per tile:
+//   ~ sea   . grass   # rock wall   P warrior   E enemy
+//   W wizard (where it starts)   w another spot the wizard can be sent to
+// Wizard spots are visited in reading order (left to right, top to bottom),
+// wrapping around. Anything outside a map is sea.
+//
+// `par` is the optimal move count from the solver; tools/verify-levels.mjs
+// fails if it is wrong. Levels are ordered by measured difficulty.
+import { SEA, LAND, WALL } from './rules.js';
 
-export const ENTITY_TYPES = {
-    ENEMY: 'enemy',
-    STRONG_ENEMY: 'strong_enemy',
-    SWORD: 'sword'
-};
-
-export const LEVELS = [
+export const MAPS = [
     {
-        name: "Level 1: The Slide",
-        grid: [
-            [0, 0, 0, 0, 0, 0],
-            [0, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 0],
-            [0, 0, 0, 0, 0, 0]
+        id: 'cpp-01',
+        name: 'First Strike',
+        par: 1,
+        tip: 'Slide into an enemy to defeat it. You stop where it stood.',
+        source: 'C++ level 1',
+        map: [
+            '~~###~~~',
+            '~#...##~',
+            '#..E...~',
+            '~.....#~',
+            '~#.P..~~',
+            '~~####~~',
+            '~~~~~~~~',
         ],
-        spawn: { x: 1, z: 1 },
-        entities: [
-            { type: ENTITY_TYPES.ENEMY, x: 4, z: 1 },
-            { type: ENTITY_TYPES.ENEMY, x: 4, z: 3 }
-        ],
-        wizard: null
     },
     {
-        name: "Level 2: The Blockers",
-        grid: [
-            [2, 2, 2, 2, 2, 2],
-            [2, 1, 1, 1, 1, 2],
-            [2, 1, 0, 0, 1, 2],
-            [2, 1, 1, 1, 3, 2],
-            [2, 2, 2, 2, 2, 2]
+        id: 'cpp-02',
+        name: 'Two Guards',
+        par: 2,
+        tip: 'Plan where each slide will stop before you move.',
+        source: 'C++ level 2',
+        map: [
+            '~######',
+            '~.E..E~',
+            '#.....~',
+            '#....~~',
+            '##....#',
+            '~#P.##~',
+            '~~##~~~',
         ],
-        spawn: { x: 1, z: 1 },
-        entities: [
-            { type: ENTITY_TYPES.ENEMY, x: 4, z: 1 },
-            { type: ENTITY_TYPES.ENEMY, x: 1, z: 3 }
-        ],
-        wizard: null
     },
     {
-        name: "Level 5: Wizard's Help",
-        grid: [
-            [0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 0, 0, 0, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1, 1, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0]
+        id: 'cpp-04',
+        name: 'Shoreline',
+        par: 3,
+        tip: 'No wall, no enemy, no stop: you end up in the sea.',
+        source: 'C++ level 4',
+        map: [
+            '~~~~~~~',
+            'P...E#~',
+            '~#....#',
+            '......#',
+            'E...E.#',
+            '~.#.~~.',
+            '~~~~~~~',
         ],
-        spawn: { x: 1, z: 1 },
-        wizard: {
-            positions: [
-                { x: 4, z: 1 },
-                { x: 4, z: 3 }
-            ]
-        },
-        entities: [
-            { type: ENTITY_TYPES.ENEMY, x: 6, z: 1 },
-            { type: ENTITY_TYPES.ENEMY, x: 6, z: 3 }
-        ]
     },
     {
-        name: "Level 10: The Stronghold",
-        grid: [
-            [2, 2, 2, 2, 2, 2, 2],
-            [2, 1, 1, 1, 1, 1, 2],
-            [2, 1, 3, 1, 3, 1, 2],
-            [2, 1, 1, 1, 1, 1, 2],
-            [2, 2, 2, 2, 2, 2, 2]
+        id: 'cpp-03',
+        name: 'Watchtower',
+        par: 3,
+        tip: 'Walls stop you on the tile in front of them.',
+        source: 'C++ level 3',
+        map: [
+            '~######~',
+            '~##....#',
+            '~#.E.E.#',
+            '~#.....#',
+            '#....E.#',
+            '~#.P..##',
+            '~##..#~~',
+            '~~###~~~',
         ],
-        spawn: { x: 1, z: 1 },
-        entities: [
-            { type: ENTITY_TYPES.SWORD, x: 5, z: 2 },
-            { type: ENTITY_TYPES.STRONG_ENEMY, x: 3, z: 3 },
-            { type: ENTITY_TYPES.ENEMY, x: 1, z: 3 }
+    },
+    {
+        id: 'cpp-05',
+        name: 'Long Beach',
+        par: 4,
+        tip: 'A long island leaves lots of ways to swim.',
+        source: 'C++ level 5',
+        map: [
+            '~######~~~',
+            '~#...####~',
+            '#E......#~',
+            '#......E.~',
+            '#........~',
+            '~##..P.E~~',
+            '~~#......~',
+            '~~~...~.~~',
+            '~~~~~~~~~~',
         ],
-        wizard: {
-            positions: [
-                { x: 3, z: 1 },
-                { x: 5, z: 3 }
-            ]
-        }
-    }
+    },
+    {
+        id: 'rock-walls',
+        name: 'Rock Walls',
+        par: 4,
+        tip: 'Rocks stop you safely. Use them to line up a hit.',
+        source: 'Brainy Warrior 3D v1',
+        map: [
+            '#######',
+            '#P.#..#',
+            '#....E#',
+            '#.#...#',
+            '#E..#.#',
+            '#######',
+        ],
+    },
+    {
+        id: 'corners',
+        name: 'Corners',
+        par: 5,
+        tip: 'Sometimes the long way round is the only way.',
+        source: 'Brainy Warrior 3D v1',
+        map: [
+            '#######',
+            '#P..#E#',
+            '#.....#',
+            '#E...##',
+            '#######',
+        ],
+    },
+    {
+        id: 'the-wizard',
+        name: 'The Wizard',
+        par: 5,
+        tip: 'Press Magic (Space) to send the wizard to his next spot. He stops you like a wall.',
+        source: 'Brainy Warrior 3D v1',
+        map: [
+            '~~~~~~',
+            '~.EPw~',
+            '~E..W~',
+            '~..#.~',
+            '~~~~~~',
+        ],
+    },
+    {
+        id: 'cpp-06',
+        name: 'The Narrows',
+        par: 3,
+        tip: 'Only one order works here.',
+        source: 'C++ level 6',
+        map: [
+            '~~~~~~~',
+            '~#####~',
+            '~E...#~',
+            '~~~..~~',
+            '#.....#',
+            '#.P.E.#',
+            '~#....~',
+            '~~##~~~',
+        ],
+    },
+    {
+        id: 'cpp-08',
+        name: 'Garrison',
+        par: 5,
+        tip: 'Defeated enemies stop blocking you, so order matters.',
+        source: 'C++ level 8',
+        map: [
+            '~~####~',
+            '#.....#',
+            '#.E.E.#',
+            '#P....#',
+            '#...E.#',
+            '#.E...#',
+            '~#####~',
+        ],
+    },
+    {
+        id: 'cpp-10',
+        name: 'Crossroads',
+        par: 5,
+        tip: 'You start surrounded. Who goes first?',
+        source: 'C++ level 10',
+        map: [
+            '~~~~~~~',
+            '~#.E.#~',
+            '#.....#',
+            '#.EPE.#',
+            '#.....#',
+            '~#.E.#~',
+            '~~~~~~~',
+        ],
+    },
+    {
+        id: 'rock-maze',
+        name: 'Rock Maze',
+        par: 7,
+        tip: 'Every stop has to be on purpose.',
+        source: 'Brainy Warrior 3D v1',
+        map: [
+            '~~~~~~~',
+            '~...#E~',
+            '~.E..P~',
+            '~E.#..~',
+            '~~##.#~',
+            '~~~~~~~',
+        ],
+    },
+    {
+        id: 'wizards-wall',
+        name: "Wizard's Wall",
+        par: 7,
+        tip: 'Park the wizard where you need to stop, then cast again when he is in the way.',
+        source: 'new in v3 (solver-driven search, hand-picked)',
+        map: [
+            '~~~~~~~',
+            '~E#wE#~',
+            '~.W..#~',
+            '~E....~',
+            '~.P.##~',
+            '~~.~~.~',
+            '~~~~~~~',
+        ],
+    },
+    {
+        id: 'cpp-13',
+        name: 'Arena',
+        par: 8,
+        tip: 'Every enemy you defeat changes the paths that remain.',
+        source: 'C++ level 13',
+        map: [
+            '~~~#####~~~',
+            '~###...###~',
+            '~#...E...#~',
+            '#...E..E..#',
+            '#....P....#',
+            '#.E.....E.#',
+            '~#.......#~',
+            '~####..###~',
+            '~~~#####~~~',
+        ],
+    },
+    {
+        id: 'cpp-12',
+        name: 'Parade Ground',
+        par: 8,
+        tip: 'A walled field full of enemies.',
+        source: 'C++ level 12',
+        map: [
+            '###########',
+            '#.........#',
+            '#.E.E.E.E.#',
+            '#.........#',
+            '#E..P...E.#',
+            '#.........#',
+            '#.E....E..#',
+            '###########',
+        ],
+    },
+    {
+        id: 'cpp-07',
+        name: 'Cliffside',
+        par: 8,
+        tip: 'Use the cliffs to line up your attacks.',
+        source: 'C++ level 7',
+        map: [
+            '~#####~',
+            '~...E#~',
+            '#.E...~',
+            '#....E#',
+            '#P....#',
+            '~#.E##~',
+            '~###~~~',
+        ],
+    },
+    {
+        id: 'cpp-16',
+        name: 'Walled Garden',
+        par: 10,
+        tip: 'The garden wall is your friend.',
+        source: 'C++ level 16 (walled: the C++ map has no border and relies on stopping at the map edge)',
+        map: [
+            '########',
+            '##..E.P#',
+            '#....#.#',
+            '#E#....#',
+            '#.....##',
+            '##..E..#',
+            '#E....##',
+            '########',
+        ],
+    },
+    {
+        id: 'cpp-14',
+        name: 'Hold the Line',
+        par: 7,
+        tip: 'Look for the enemy that has to be last.',
+        source: 'C++ level 14',
+        map: [
+            '~~#####~~',
+            '~#..E..#~',
+            '#.....E.#',
+            '#..EPE..#',
+            '#.......#',
+            '~#.E..E.#',
+            '~~#####~~',
+        ],
+    },
+    {
+        id: 'cpp-09',
+        name: 'Outpost',
+        par: 10,
+        tip: 'Five enemies: think a few moves ahead.',
+        source: 'C++ level 9',
+        map: [
+            '~~~####~~',
+            '~#..E..#~',
+            '#....E..#',
+            '#.P...E.#',
+            '#..E....#',
+            '~#....E.#',
+            '~~######~',
+        ],
+    },
+    {
+        id: 'courtyard',
+        name: 'Courtyard',
+        par: 11,
+        tip: 'Four enemies, one safe order.',
+        source: 'Brainy Warrior 3D v1',
+        map: [
+            '########',
+            '#......#',
+            '#...E..#',
+            '#....E.#',
+            '#..#EP.#',
+            '##.E#..#',
+            '########',
+        ],
+    },
+    {
+        id: 'the-gauntlet',
+        name: 'The Gauntlet',
+        par: 15,
+        tip: 'A wall now, a doorway later.',
+        source: 'new in v2 (found by a solver-driven search, hand-picked)',
+        map: [
+            '~~~~~~~~~',
+            '~~~#E#~~~',
+            '~#....~~~',
+            '~~...~#~~',
+            '~EPE.W#~~',
+            '~~#....E~',
+            '~~#w.#.E~',
+            '~~~~~~~~~',
+        ],
+    },
+    {
+        id: 'cpp-11',
+        name: 'Barracks',
+        par: 11,
+        tip: 'Some enemies can only be reached from one side.',
+        source: 'C++ level 11',
+        map: [
+            '~~######~~',
+            '~#...E..#~',
+            '~#E.E...#~',
+            '#.....E..#',
+            '#P.......#',
+            '#..E.....#',
+            '~#...E..#~',
+            '~~######~~',
+        ],
+    },
+    {
+        id: 'stepping-stones',
+        name: 'Stepping Stones',
+        par: 14,
+        tip: 'You need the wizard in two places. Choose the order.',
+        source: 'new in v2 (found by a solver-driven search, hand-picked)',
+        map: [
+            '~~~~~~~~',
+            '~~.#E#~~',
+            '~~EP.E~~',
+            '~~#....~',
+            '~~E...#~',
+            '~~wW..E~',
+            '~~~w###~',
+            '~~~~~~~~',
+        ],
+    },
+    {
+        id: 'the-long-way',
+        name: 'The Long Way',
+        par: 15,
+        tip: 'Every stop matters.',
+        source: 'Brainy Warrior 3D v1',
+        map: [
+            '########',
+            '#...#.E#',
+            '#..E~.##',
+            '##...EE#',
+            '#......#',
+            '#...P#.#',
+            '########',
+        ],
+    },
+    {
+        id: 'blink',
+        name: 'Blink',
+        par: 9,
+        tip: 'Magic counts as a move too.',
+        source: 'Brainy Warrior 3D v1',
+        map: [
+            '~~~~~~~',
+            '~#.E.W~',
+            '~....E~',
+            '~E.Pw.~',
+            '~.....~',
+            '~~~~~~~',
+        ],
+    },
+    {
+        id: 'cpp-15',
+        name: 'The Horde',
+        par: 13,
+        tip: 'Nine enemies. Count your moves.',
+        source: 'C++ level 15',
+        map: [
+            '~~#######~~',
+            '~#......##~',
+            '#.E.E.E...#',
+            '#......E..#',
+            '#..EP.....#',
+            '#.E...E...#',
+            '#.......E.#',
+            '~#.E.....#~',
+            '~~#######~~',
+        ],
+    },
+    {
+        id: 'spellbound',
+        name: 'Spellbound',
+        par: 12,
+        tip: 'The wizard has three spots. Pick the right one each time.',
+        source: 'Brainy Warrior 3D v1 (redrawn without swords)',
+        map: [
+            '~~~~~~~~',
+            '~..EwE.~',
+            '~##....~',
+            '~~...#.~',
+            '~.P..E.~',
+            '~..W...~',
+            '~~~~~~~~',
+        ],
+    },
+    {
+        id: 'cpp-17',
+        name: "The Wizard's Isle",
+        par: 14,
+        tip: 'Send the wizard where you need a wall.',
+        source: 'C++ level 17 (one rock added at row 4, column 4: the C++ map cannot be won)',
+        map: [
+            '~~~###E#',
+            '~~#....#',
+            '~#Ew..w#',
+            '~..#~~..',
+            '~...~~.#',
+            '~#.~~~.#',
+            '~...E..w',
+            '~..W..P.',
+            '~~~~~~~~',
+        ],
+    },
+    {
+        id: 'tower-of-tricks',
+        name: 'Tower of Tricks',
+        par: 17,
+        tip: 'Think about where the wizard must be three moves from now.',
+        source: 'new in v2 (found by a solver-driven search, hand-picked)',
+        map: [
+            '~~~~~~~~~',
+            '~#E#..E#~',
+            '~#.w.#.#~',
+            '~#EPW..#~',
+            '~~..#...~',
+            '~~..E..E~',
+            '~~...w~~~',
+            '~~~~~.~~~',
+            '~~~~~~~~~',
+        ],
+    },
+    {
+        id: 'labyrinth',
+        name: 'The Labyrinth',
+        par: 24,
+        tip: 'Only one route clears it in 24. Find the enemy that has to be last.',
+        source: 'new in v3 (solver-driven search, hand-picked)',
+        map: [
+            '~~~~~~~~~',
+            '~###E.#.~',
+            '~.E#...#~',
+            '~E#..#..~',
+            '~...#..E~',
+            '~E.E###.~',
+            '~#.E#.##~',
+            '~#P.##~~~',
+            '~~~~~~~~~',
+        ],
+    },
+    {
+        id: 'long-march',
+        name: 'The Long March',
+        par: 27,
+        tip: 'Two enemies wait side by side at the bottom. Who takes them, and when?',
+        source: 'new in v3 (solver-driven search, hand-picked)',
+        map: [
+            '~~~~~~~~~',
+            '~##E.##~~',
+            '~#..#..~~',
+            '~..##..E~',
+            '~E...#.#~',
+            '~##...E.~',
+            '~#...E#.~',
+            '~EE##P#~~',
+            '~~~~~~~~~',
+        ],
+    },
+    {
+        id: 'spell-lattice',
+        name: 'Spell Lattice',
+        par: 23,
+        tip: 'One solution, five spells. The wizard must be in the right place every time.',
+        source: 'new in v3 (solver-driven search, hand-picked)',
+        map: [
+            '~~~~~~~~~',
+            '~#.~~~#~~',
+            '~~###..~~',
+            '~Pw....#~',
+            '~..Ew#.E~',
+            '~..~..#.~',
+            '~#....E#~',
+            '~~E#WE~~~',
+            '~~~~~~~~~',
+        ],
+    },
+    {
+        id: 'archmage',
+        name: "The Archmage's Trial",
+        par: 28,
+        tip: 'Three circles in a column. Count the spells before you cast.',
+        source: 'new in v3 (solver-driven search, hand-picked)',
+        map: [
+            '~~~~~~~~~',
+            '~EE###.~~',
+            '~#..#..E~',
+            '~##..W.~~',
+            '~.##w.~#~',
+            '~#..w.PE~',
+            '~~..#..#~',
+            '~.#~##E#~',
+            '~~~~~~~~~',
+        ],
+    },
+    {
+        id: 'last-stand',
+        name: 'The Last Stand',
+        par: 30,
+        tip: 'The finale: thirty moves, one solution. Good luck.',
+        source: 'new in v3 (solver-driven search, hand-picked)',
+        map: [
+            '~~~~~~~~~~',
+            '~...E.#.P~',
+            '~#.E.#w.#~',
+            '~...#..#.~',
+            '~.#..w..E~',
+            '~.E.E..~.~',
+            '~.#E.#..#~',
+            '~~..#W##~~',
+            '~~~~~~~~~~',
+        ],
+    },
 ];
+
+/** Turn a text map into the level object rules.js works on. */
+export function parseLevel({ id, name, tip, par, source, map }) {
+    const height = map.length;
+    const width = Math.max(...map.map((row) => row.length));
+    const cells = new Uint8Array(width * height);
+    const enemyIndex = new Int8Array(width * height).fill(-1);
+    const enemies = [];
+    const wizardSpots = [];
+    let start = null;
+    let wizardStart = 0;
+    map.forEach((row, z) => {
+        [...row.padEnd(width, '~')].forEach((ch, x) => {
+            const i = z * width + x;
+            cells[i] = ch === '~' ? SEA : ch === '#' ? WALL : LAND;
+            if (ch === 'P') start = { x, z };
+            if (ch === 'E') {
+                enemyIndex[i] = enemies.length;
+                enemies.push({ x, z });
+            }
+            if (ch === 'W') {
+                wizardStart = wizardSpots.length;
+                wizardSpots.push({ x, z });
+            }
+            if (ch === 'w') wizardSpots.push({ x, z });
+            if (!'~.#PEWw'.includes(ch)) throw new Error(`Level ${name}: unknown tile "${ch}"`);
+        });
+    });
+    if (!start) throw new Error(`Level ${name}: no warrior`);
+    return { id, name, tip, par, source, map, width, height, cells, enemyIndex, enemies, wizardSpots, wizardStart, start };
+}
+
+export const LEVELS = MAPS.map(parseLevel);
+
+// Where each difficulty band starts in LEVELS (0-based). The music follows the
+// band; tools/verify-levels.mjs checks these against the measured scores.
+export const BAND_STARTS = { medium: 3, hard: 14, expert: 28 };
+export const BAND_NAMES = ['easy', 'medium', 'hard', 'expert'];
+/** 0 easy, 1 medium, 2 hard, 3 expert. */
+export const bandOf = (i) => (i >= BAND_STARTS.expert ? 3 : i >= BAND_STARTS.hard ? 2 : i >= BAND_STARTS.medium ? 1 : 0);

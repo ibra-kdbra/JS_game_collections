@@ -5,19 +5,63 @@ function GameManager(size, InputManager, Actuator, StorageManager) {
   this.actuator       = new Actuator;
 
   this.startTiles     = 2;
+  this.changeListeners = [];
 
   this.inputManager.on("move", this.move.bind(this));
   this.inputManager.on("restart", this.restart.bind(this));
   this.inputManager.on("keepPlaying", this.keepPlaying.bind(this));
+  this.inputManager.on("undo", this.undo.bind(this));
 
   this.setup();
 }
 
+// Undos available per game; each one steps back a single move.
+GameManager.UNDO_LIMIT = 3;
+
+// The tile that counts as a win on each board size.
+GameManager.WIN_TILE = { 3: 256, 4: 2048, 5: 4096, 6: 8192 };
+
+GameManager.prototype.winTile = function () {
+  return GameManager.WIN_TILE[this.size] || 2048;
+};
+
+// Called after every change to the board with the game manager.
+GameManager.prototype.onChange = function (callback) {
+  this.changeListeners.push(callback);
+};
+
 // Restart the game
 GameManager.prototype.restart = function () {
-  this.storageManager.clearGameState();
+  this.storageManager.clearGameState(this.size);
   this.actuator.continueGame(); // Clear the game won/lost message
   this.setup();
+};
+
+// Switch board size; each size keeps its own saved game and best score.
+GameManager.prototype.setSize = function (size) {
+  if (size === this.size) return;
+  this.size = size;
+  this.actuator.continueGame();
+  this.setup();
+};
+
+GameManager.prototype.canUndo = function () {
+  return this.history.length > 0 && this.undosLeft > 0;
+};
+
+// Step back one move
+GameManager.prototype.undo = function () {
+  if (!this.canUndo()) return false;
+  var previous = this.history.pop();
+  this.undosLeft -= 1;
+  this.grid        = new Grid(previous.grid.size, previous.grid.cells);
+  this.score       = previous.score;
+  this.over        = false;
+  this.won         = previous.won;
+  this.keepPlaying = previous.keepPlaying;
+  this.actuator.continueGame();
+  this.actuate();
+  return true;
 };
 
 // Keep playing after winning (allows going over 2048)
@@ -33,22 +77,29 @@ GameManager.prototype.isGameTerminated = function () {
 
 // Set up the game
 GameManager.prototype.setup = function () {
-  var previousState = this.storageManager.getGameState();
+  var previousState = this.storageManager.getGameState(this.size);
 
   // Reload the game from a previous game if present
-  if (previousState) {
+  if (previousState && previousState.grid.size === this.size) {
     this.grid        = new Grid(previousState.grid.size,
                                 previousState.grid.cells); // Reload grid
     this.score       = previousState.score;
     this.over        = previousState.over;
     this.won         = previousState.won;
     this.keepPlaying = previousState.keepPlaying;
+    this.history     = previousState.history || [];
+    this.undosLeft   = previousState.undosLeft === undefined
+      ? GameManager.UNDO_LIMIT : previousState.undosLeft;
+    this.aiPlayed    = !!previousState.aiPlayed;
   } else {
     this.grid        = new Grid(this.size);
     this.score       = 0;
     this.over        = false;
     this.won         = false;
     this.keepPlaying = false;
+    this.history     = [];
+    this.undosLeft   = GameManager.UNDO_LIMIT;
+    this.aiPlayed    = false;
 
     // Add the initial tiles
     this.addStartTiles();
@@ -77,25 +128,31 @@ GameManager.prototype.addRandomTile = function () {
 
 // Sends the updated grid to the actuator
 GameManager.prototype.actuate = function () {
-  if (this.storageManager.getBestScore() < this.score) {
-    this.storageManager.setBestScore(this.score);
+  var self = this;
+
+  // Games the AI moved in don't count as personal bests.
+  if (!this.aiPlayed && this.storageManager.getBestScore(this.size) < this.score) {
+    this.storageManager.setBestScore(this.size, this.score);
   }
 
-  // Clear the state when the game is over (game over only, not win)
-  if (this.over) {
-    this.storageManager.clearGameState();
+  // Keep the state on game over while an undo can still rescue the game.
+  if (this.over && !this.canUndo()) {
+    this.storageManager.clearGameState(this.size);
   } else {
-    this.storageManager.setGameState(this.serialize());
+    this.storageManager.setGameState(this.size, this.serialize());
   }
 
   this.actuator.actuate(this.grid, {
     score:      this.score,
     over:       this.over,
     won:        this.won,
-    bestScore:  this.storageManager.getBestScore(),
+    bestScore:  this.storageManager.getBestScore(this.size),
     terminated: this.isGameTerminated()
   });
 
+  this.changeListeners.forEach(function (callback) {
+    callback(self);
+  });
 };
 
 // Represent the current game as an object
@@ -104,6 +161,19 @@ GameManager.prototype.serialize = function () {
     grid:        this.grid.serialize(),
     score:       this.score,
     over:        this.over,
+    won:         this.won,
+    keepPlaying: this.keepPlaying,
+    history:     this.history,
+    undosLeft:   this.undosLeft,
+    aiPlayed:    this.aiPlayed
+  };
+};
+
+// The part of the state an undo restores
+GameManager.prototype.snapshot = function () {
+  return {
+    grid:        this.grid.serialize(),
+    score:       this.score,
     won:         this.won,
     keepPlaying: this.keepPlaying
   };
@@ -138,6 +208,7 @@ GameManager.prototype.move = function (direction, addTile = true) {
   var vector     = this.getVector(direction);
   var traversals = this.buildTraversals(vector);
   var moved      = false;
+  var before     = this.snapshot();
 
   // Save the current tile positions and remove merger information
   this.prepareTiles();
@@ -165,6 +236,8 @@ GameManager.prototype.move = function (direction, addTile = true) {
 
           // Update the score
           self.score += merged.value;
+
+          if (merged.value === self.winTile() && !self.aiPlayed) self.won = true;
         } else {
           self.moveTile(tile, positions.farthest);
         }
@@ -177,6 +250,9 @@ GameManager.prototype.move = function (direction, addTile = true) {
   });
 
   if (moved) {
+    this.history.push(before);
+    if (this.history.length > GameManager.UNDO_LIMIT) this.history.shift();
+
     if (addTile) {
       this.addRandomTile();
 

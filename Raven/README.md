@@ -4,7 +4,35 @@
 
 In this 2D top-down action-puzzle game, the security cameras for a secret facility have been taken offline, and it is YOUR job to fix the problem. Take on a series of floors overrun by mysterious enemies known only as "Raven" -- although harmless as long as you can see them, they are deadly if you turn your back.
 
-Playable on the desktop in Chrome, Firefox, and Safari. Use your mouse or touchpad to look around, and W/A/S/D or the arrow keys to move.
+Use your mouse or touchpad to look around, and W/A/S/D or the arrow keys to move. Space or Enter uses terminals and Esc pauses. On a phone or tablet, drag with your left thumb to move and your right thumb to look; on-screen buttons pause and use terminals.
+
+The game has 13 levels. Pick any level you have reached from **Select Level**, which also shows your best clear time for each one. Volume is in the start and pause menus.
+
+## Making levels
+
+Levels are drawn in [Tiled](https://www.mapeditor.org/) (`levels/level*.json`, tileset `levels/raven.tsx`). Names, hints and intro text live in `Level_MetaData_Packer/level-metadata.js`. The packer in `Level_MetaData_Packer/level-packer.js` merges both into `js/LevelCache.js`; it needs Node.js and the `glob` package.
+
+## Checking the levels
+
+```
+node Raven/tools/verify-levels.mjs              # CI check: exit 1 on any problem
+node Raven/tools/map.mjs 11                     # print a level as text
+node Raven/tools/search-runs.mjs 11 --seeds 3   # find a new clearing run
+```
+
+`tools/sim.mjs` runs the real game logic in Node with a fixed 1/60 s step.
+Every level has a recorded input run in `tools/runs.json` (keys held, where
+the crosshair points, when the terminal key is pressed); the checker replays
+it and the level must be cleared without dying. The runs were found by the
+search bot in `tools/bot.mjs`: it walks to each terminal and the exit, turns
+its line of sight to whatever Raven could reach it unseen (scored with the
+game's own attack code), and when it dies it rewinds a little and tries other
+moves. The checker also prints, per level, how many Raven were awake at once,
+the pressure (Raven-seconds of awake Raven not held by a camera), how long they
+charged, how close they came, and how many deaths the search needed. The
+score is pressure + 10 x most awake at once; levels 11-13 (added later, the
+first ten are the original game) must score above all of levels 1-10 and
+rise in order.
 
 ## Postmortem
 

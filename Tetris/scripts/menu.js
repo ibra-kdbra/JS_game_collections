@@ -1,4 +1,5 @@
 const version = '0.1.0';
+let store;
 let setLoop;
 let arrowReleased = true;
 let arrowDelay = 0;
@@ -152,7 +153,7 @@ addEventListener(
       // Binds the key and saves the data.
       binds[currCell.id] = e.keyCode;
       currCell.innerHTML = key[e.keyCode];
-      localStorage.setItem('binds', JSON.stringify(binds));
+      store.set('binds', binds);
       currCell = 0;
     }
   },
@@ -179,36 +180,41 @@ let s;
 let settingsArrow;
 // TODO DRY this.
 function arrowRelease() {
+  if (this && this.onpointerup) this.onpointerup = this.onpointerleave = this.onpointercancel = null;
   resize();
   arrowReleased = true;
   arrowDelay = 0;
   clearTimeout(setLoop);
 }
-function left() {
-  settingsArrow = 1;
-  s = this.parentNode.id;
-  this.onmouseup = arrowRelease;
-  this.onmouseout = arrowRelease;
+// Pointer events, so holding an arrow repeats with a mouse, a pen or a finger.
+function arrowPress(el, dir, e) {
+  if (e.button > 0) return;
+  e.preventDefault();
+  clearTimeout(setLoop);
+  arrowReleased = true;
+  arrowDelay = 0;
+  settingsArrow = dir;
+  s = el.parentNode.id;
+  el.onpointerup = el.onpointerleave = el.onpointercancel = arrowRelease;
   settingsLoop();
 }
-function right() {
-  settingsArrow = 0;
-  s = this.parentNode.id;
-  this.onmouseup = arrowRelease;
-  this.onmouseout = arrowRelease;
-  settingsLoop();
+function left(e) {
+  arrowPress(this, 1, e);
+}
+function right(e) {
+  arrowPress(this, 0, e);
 }
 
 /**
- * LocalStorage functions
+ * Saved data lives in the Game Lab store under "tetris.*".
  */
 function saveSetting(s) {
-  localStorage['version'] = version;
+  store.set('version', version);
 
   document.getElementById(s).getElementsByTagName('span')[0].innerHTML =
     setting[s][settings[s]];
 
-  localStorage['settings'] = JSON.stringify(settings);
+  store.set('settings', settings);
 
   // Apply theme if changed
   if (s === 'Theme' && typeof LiveBackground !== 'undefined') {
@@ -217,42 +223,58 @@ function saveSetting(s) {
   }
 }
 function loadLocalData() {
-  if (localStorage['binds']) {
-    binds = JSON.parse(localStorage.getItem('binds'));
+  // Move data saved by older versions under the old, un-namespaced keys.
+  if (localStorage.getItem('version') === version) {
+    GameKit.migrateKey(store, 'version', 'version');
+    GameKit.migrateKey(store, 'settings', 'settings', { parse: JSON.parse });
+    GameKit.migrateKey(store, 'binds', 'binds', { parse: JSON.parse });
+  }
+
+  if (store.get('version') !== version) {
+    store.remove('settings');
+    store.remove('binds');
+  }
+  const savedBinds = store.get('binds');
+  if (savedBinds) {
+    binds = savedBinds;
     for (let i = 0, len = controlCells.length; i < len; i++) {
       controlCells[i].innerHTML = key[binds[controlCells[i].id]];
     }
   }
-  // TODO When new version just update with new stuff, rest stays unchanged.
-  if (localStorage['version'] !== version) {
-    localStorage.removeItem('settings');
-    localStorage.removeItem('binds');
-  }
-  if (localStorage['settings']) {
-    settings = JSON.parse(localStorage.getItem('settings'));
-  }
+  // Settings added since the save keep their defaults.
+  settings = Object.assign({}, settings, store.get('settings', {}));
 }
 
-loadLocalData();
-for (let s in settings) {
-  let div = document.createElement('div');
-  let b = document.createElement('b');
-  let iLeft = document.createElement('i');
-  let span = document.createElement('span');
-  let iRight = document.createElement('i');
+/**
+ * Runs once the page and the Game Lab kit have loaded.
+ */
+function bootTetris() {
+  store = GameKit.createStore('tetris');
+  loadLocalData();
+  for (let s in settings) {
+    let div = document.createElement('div');
+    let b = document.createElement('b');
+    let iLeft = document.createElement('i');
+    let span = document.createElement('span');
+    let iRight = document.createElement('i');
 
-  div.id = s;
-  b.innerHTML = s + ':';
-  span.innerHTML = setting[s][settings[s]];
-  iLeft.className = 'left';
-  iRight.className = 'right';
-  iLeft.onmousedown = left;
-  iRight.onmousedown = right;
+    div.id = s;
+    b.innerHTML = s + ':';
+    span.innerHTML = setting[s][settings[s]];
+    iLeft.className = 'left';
+    iRight.className = 'right';
+    iLeft.onpointerdown = left;
+    iRight.onpointerdown = right;
 
-  set.appendChild(div);
-  div.appendChild(b);
-  div.appendChild(iLeft);
-  div.appendChild(span);
-  div.appendChild(iRight);
+    set.appendChild(div);
+    div.appendChild(b);
+    div.appendChild(iLeft);
+    div.appendChild(span);
+    div.appendChild(iRight);
+  }
+  GameKit.initShell({ slug: 'tetris' });
+  Touch.init();
+  resize();
+  renderBests();
 }
-resize();
+document.addEventListener('DOMContentLoaded', bootTetris);

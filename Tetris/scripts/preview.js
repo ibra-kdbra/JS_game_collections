@@ -1,8 +1,8 @@
 function Preview() {
-  grabBag = this.gen();
+  this.grabBag = this.gen();
 }
 Preview.prototype.init = function() {
-  //XXX fix ugly code lolwut
+  // The first piece is never an O, S or Z.
   while (1) {
     this.grabBag = this.gen();
     if ([3, 4, 6].indexOf(this.grabBag[0]) === -1) break;
@@ -18,7 +18,6 @@ Preview.prototype.next = function() {
   }
   this.draw();
   return next;
-  //TODO Maybe return the next piece?
 };
 /**
  * Creates a "grab bag" of the 7 tetrominos.

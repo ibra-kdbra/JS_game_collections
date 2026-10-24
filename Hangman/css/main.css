@@ -3,7 +3,7 @@
 	font-style: normal;
 	font-weight: 400;
 	font-display: swap;
-	src: url(https://fonts.gstatic.com/s/balsamiqsans/v3/P5sEzZiAbNrN8SB3lQQX7Pncwd4XIA.woff2)
+	src: url(../fonts/balsamiq-sans-latin-400-normal.woff2)
 		format("woff2");
 	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
 		U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
@@ -14,7 +14,7 @@
 	font-style: normal;
 	font-weight: 700;
 	font-display: swap;
-	src: url(https://fonts.gstatic.com/s/balsamiqsans/v3/P5sZzZiAbNrN8SB3lQQX7PncyWUyNYhsAg.woff2)
+	src: url(../fonts/balsamiq-sans-latin-700-normal.woff2)
 		format("woff2");
 	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
 		U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
@@ -25,7 +25,7 @@
 	font-style: normal;
 	font-weight: 400;
 	font-display: swap;
-	src: url(https://fonts.gstatic.com/s/luckiestguy/v11/_gP_1RrxsjcxVyin9l9n_j2hTd52.woff2)
+	src: url(../fonts/luckiest-guy-latin-400-normal.woff2)
 		format("woff2");
 	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
 		U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
@@ -99,6 +99,15 @@ div.loading-screen {
 	background-size: cover;
 	background-position: top right;
 	overflow: hidden;
+}
+.bg-container > [data-depth] {
+	display: block;
+	position: absolute;
+	left: 0;
+	top: 0;
+}
+.bg-container > [data-depth]:first-child {
+	position: relative;
 }
 .hill-right {
 	height: 100%;
@@ -516,6 +525,7 @@ li.letter {
 	display: flex;
 	justify-content: center;
 	align-items: center;
+	overflow: hidden;
 	transition: opacity 600ms;
 }
 .drop-down {
@@ -698,6 +708,7 @@ li.letter {
 	height: 100vh;
 	width: 100%;
 	background: rgba(17, 3, 32, 0.4);
+	overflow: hidden;
 	z-index: 100;
 }
 .gameover-box {
@@ -1193,7 +1204,7 @@ li.letter {
 		align-items: center;
 		margin-right: 10px;
 	}
-	.score-container .best-score {
+	.score-container .best-score::before {
 		content: "";
 		background-image: url("../images/icons/star.png");
 		background-size: contain;
@@ -1491,27 +1502,293 @@ li.letter {
 	}
 }
 
-.credits {
-	position: fixed;
-	bottom: 10px;
-	right: 10px;
-	padding: 5px 10px;
-	background-color: rgba(0, 0, 0, 0.7);
-	border-radius: 5px;
-	color: #ffffff;
-	font-size: 14px;
+[hidden] {
+	display: none !important;
+}
+.home-container .hint-button {
+	cursor: pointer;
+	margin-right: 5%;
+	padding: 4px 12px;
+	min-height: 32px;
+	border: none;
+	border-radius: 7px;
+	background-color: var(--second-button-color);
+	color: var(--dark-main-color);
+	font-size: 1rem;
+	font-weight: bold;
+	transition: opacity 150ms, background-color 150ms;
+}
+.home-container .hint-button small {
+	font-size: 0.75rem;
+	opacity: 0.75;
+}
+.home-container .hint-button:hover:not(:disabled) {
+	background-color: rgb(231, 87, 188);
+}
+.home-container .hint-button:disabled {
+	cursor: default;
+	opacity: 0.35;
+}
+.menu-button:disabled {
+	cursor: default;
+	opacity: 0.6;
+	transform: none;
+	box-shadow: none;
+}
+.daily-button,
+.bonus-button {
+	font-size: 0.95rem;
+}
+.bonus-button {
+	background-color: rgb(73, 47, 102);
+	color: white;
+}
+.bonus-button[aria-pressed="true"] {
+	background-color: #37b666;
+	color: var(--dark-main-color);
+}
+.menu-status {
+	max-width: 260px;
+	min-height: 1.2em;
+	color: rgb(231, 87, 188);
+	font-size: 0.9rem;
+	text-align: center;
+}
+.menu-tip,
+.menu-credits {
+	max-width: 280px;
+	margin-top: 8px;
+	color: rgba(234, 214, 255, 0.6);
+	font-size: 0.85rem;
+	text-align: center;
+}
+.menu-credits a {
+	color: inherit;
+}
+.gameover-word,
+.daily-note {
+	margin-bottom: 6px;
+	color: rgb(234, 214, 255);
+	font-size: 1.1rem;
+	text-align: center;
+}
+.gameover-word b {
+	color: var(--second-button-color);
+	letter-spacing: 1px;
+}
+.streak-cont {
+	width: 80%;
+	margin: 10px 0;
 	display: flex;
-	align-items: center;
-	gap: 5px;
+	justify-content: space-between;
+	font-size: 1.3rem;
+	color: rgb(234, 214, 255);
 }
-.credits a {
-	color: #ffffff;
-	text-decoration: none;
+.gameover-data .streak {
+	color: var(--second-button-color);
 }
-.credits a:hover {
-	text-decoration: underline;
+@media (pointer: coarse) {
+	.menu-tip {
+		display: none;
+	}
 }
-.credits img {
-	width: 16px;
-	height: 16px;
+@media screen and (max-width: 480px) {
+	.home-container .hint-button {
+		min-height: 36px;
+		margin-right: 10%;
+	}
+	.streak-cont {
+		font-size: 1rem;
+	}
+	li.letter {
+		min-width: 0;
+		font-size: min(1rem, calc(64vw / var(--letters, 8)));
+	}
+	.gameover-word,
+	.daily-note {
+		font-size: 0.95rem;
+	}
+}
+
+/* ---------- Phones: visible viewport, touch-size keys and buttons ---------- */
+
+html,
+body {
+	overscroll-behavior: none;
+}
+button {
+	touch-action: manipulation;
+	-webkit-tap-highlight-color: transparent;
+}
+@supports (height: 100dvh) {
+	main,
+	div.loading-screen,
+	.bg-container,
+	.modal,
+	.gameover-modal {
+		height: 100dvh;
+	}
+}
+
+@media screen and (max-width: 480px), screen and (orientation: landscape) and (max-height: 500px) {
+	/* 44px tap areas; the icons keep their size */
+	.home-container .home-button,
+	.home-container .sound-button {
+		width: 44px;
+		height: 44px;
+		margin-top: 0;
+		margin-right: 0;
+		background-size: 28px;
+		background-position: center;
+	}
+	.home-container .hint-button {
+		min-height: 44px;
+		margin-right: 0;
+	}
+	.menu-button {
+		height: 44px;
+		margin: 6px 0;
+	}
+	.list li {
+		height: 44px;
+	}
+	.modal-content {
+		height: auto;
+		max-height: calc(100dvh - 24px);
+		padding: 20px 16px;
+		overflow: auto;
+	}
+
+	/* The keyboard sizes itself; keys are 40px+ tall and as wide as fit */
+	footer {
+		height: auto;
+		padding: 0 6px max(8px, env(safe-area-inset-bottom));
+	}
+	.word-container {
+		width: 100%;
+		height: 40px;
+		padding: 0;
+		margin: 0 0 6px;
+	}
+	.alpha-container {
+		width: 100%;
+		flex-grow: 0;
+		display: grid;
+		gap: 4px;
+		padding: 0;
+	}
+	button.letter {
+		width: auto;
+		height: 42px;
+		margin: 0;
+		border-radius: 6px;
+		font-size: 1.1rem;
+	}
+
+	/* Game over card: grows with its content instead of overflowing */
+	.gameover-box {
+		height: auto;
+		max-height: none;
+		padding: 44px 20px 40px;
+	}
+	.gameover-data {
+		padding: 12px 0 16px;
+	}
+	.gameover-box .buttons {
+		bottom: -24px;
+	}
+	.buttons .main-menu,
+	.buttons .play-again {
+		height: 48px;
+		width: 48px;
+	}
+}
+
+/* Phone portrait: 7 keys per row, the gallows sits a little higher */
+@media screen and (max-width: 480px) {
+	.alpha-container {
+		grid-template-columns: repeat(7, 1fr);
+	}
+	canvas {
+		margin-top: -6%;
+	}
+	.best-score-cont,
+	.score-cont,
+	.streak-cont {
+		margin: 6px 0;
+	}
+}
+
+/* Phone landscape: 13 keys per row, a two-column menu */
+@media screen and (orientation: landscape) and (max-height: 500px) {
+	.alpha-container {
+		grid-template-columns: repeat(13, 1fr);
+		gap: 3px;
+		max-width: 720px;
+		margin: 0 auto;
+	}
+	button.letter {
+		height: 40px;
+	}
+	.word-container {
+		height: 34px;
+		margin-bottom: 4px;
+	}
+	.modal-content {
+		width: auto;
+		max-width: calc(100vw - 24px);
+		padding: 12px 20px;
+	}
+	.menu-container {
+		display: grid;
+		grid-template-columns: 200px 200px;
+		column-gap: 12px;
+		justify-items: center;
+	}
+	.menu-container .menu-button {
+		width: 200px;
+		margin: 4px 0;
+	}
+	.menu-container .bonus-button,
+	.menu-container .retry-button,
+	.menu-status,
+	.menu-tip,
+	.menu-credits {
+		grid-column: 1 / -1;
+	}
+	.menu-status {
+		min-height: 0;
+	}
+	.list {
+		max-height: 45dvh;
+	}
+	.gameover-box {
+		width: min(440px, 80vw);
+		padding: 30px 20px 30px;
+	}
+	.gameover-box .text {
+		top: -22px;
+	}
+	.gameover-data {
+		padding: 22px 0 26px;
+	}
+	.best-score-cont,
+	.score-cont,
+	.streak-cont {
+		margin: 2px 0;
+		font-size: 1rem;
+	}
+}
+
+/* Short phones: lift the gallows so the keyboard never hides the hangman */
+@media screen and (max-width: 480px) and (max-height: 600px) {
+	canvas {
+		margin-top: -16%;
+	}
+}
+@media screen and (orientation: landscape) and (max-height: 360px) {
+	canvas {
+		margin-top: -12%;
+		margin-right: 34%;
+	}
 }

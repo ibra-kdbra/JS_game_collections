@@ -17,6 +17,9 @@ function audioTrack(url, volume) {
         looping = true;
     };
     this.stopLoop = function(noResetTime) {
+        // Ghost sounds are stopped every frame; skip the media calls (a pause and a
+        // seek) when the track is already stopped and rewound.
+        if (!looping && audio.paused && (noResetTime || audio.currentTime === 0)) return;
         try{ audio.removeEventListener('ended', audioLoop) } catch (e) {};
         audio.pause();
         if (!noResetTime) audio.currentTime = 0;

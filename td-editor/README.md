@@ -1,22 +1,29 @@
-# Tile Defence Tower Editor
-Map editor for tower defense game using p5.js that can be played
+# Tower Defense Map Editor
 
+Map editor for the [Tower Defense](../TowerDefense/index.html) game. Paint tiles with the
+mouse or a finger, then press **Play this map** to open it in the game as the Custom map.
+**Export map** gives a map string you can share; **Import map** loads one.
 
-### Controls:
-* Left and right brackets to change columns (will reset map!)
-* Left and right brackets + shift to change rows (will reset map!)
-* Mouse to place a tile
-* Spacebar to toggle graphical display mode
-* 0-7 and arrow keys to select tiles to place
-* C to clear graphical display tiles
-* D to toggle automatically updating display layer as you draw
-* F to fill map with currently selected tile
-* L to copy paths to display layer
-* M to import and load map string (will reset map!)
-* P to automatically pathfind
-* Q to erase all pathfinding
-* R to reset map
-* S to clear spawnpoints
-* U to update display layer from regular tiles
-* X to export map string (copies to clipboard)
-* Z to return to default zoom level (will reset map!)
+The map is drawn with the game's own terrain (`../TowerDefense/scripts/terrain.js`), so
+it looks the same as in the game. **Look** picks the theme saved with the map
+(Automatic chooses one from the decoration tiles). It uses p5.js and lz-string from
+`../TowerDefense/vendor/`.
+
+### Controls
+
+* Mouse or touch: paint the selected tile (drag to paint a line)
+* Columns / Rows buttons, or [ and ] (with Shift for rows): change the map size (resets the map)
+* Gameplay / Decoration buttons or Spacebar: switch between the gameplay tiles and the decorative display layer
+* 0-8 and arrow keys: select tiles to place
+* C: clear decorative display tiles
+* D: toggle automatically updating the display layer as you draw
+* F: fill the map with the selected tile
+* L: copy paths to the display layer
+* M: import a map string (replaces the map)
+* P: pathfind automatically
+* Q: erase all pathfinding
+* R: reset the map
+* S: clear spawnpoints
+* U: rebuild the display layer from the regular tiles
+* X: export the map string
+* Z: return to the default tile size (resets the map)

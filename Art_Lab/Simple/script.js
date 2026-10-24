@@ -108,7 +108,8 @@ class Effect {
         this.width = this.canvas.width;
         this.height = this.canvas.height;
         this.particles = [];
-        this.numberOfParticles = 3000;
+        // A live preview in the Art Lab (?embed=1) is a small frame: fewer lines.
+        this.numberOfParticles = window.ArtEmbed && window.ArtEmbed.on ? 400 : 3000;
         this.cellSize = 20;
         this.curve = 5;
         this.zoom = 0.12;
@@ -127,12 +128,19 @@ class Effect {
             }
             this.lastTouchTime = now;
         });
+        // Rebuild the field once the size settles (a phone rotation fires
+        // several resize events in a row).
+        let resizeTimer = 0;
         window.addEventListener('resize', () => {
-            this.canvas.width = window.innerWidth;
-            this.canvas.height = window.innerHeight;
-            this.width = this.canvas.width;
-            this.height = this.canvas.height;
-            this.init();
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if (this.canvas.width === window.innerWidth && this.canvas.height === window.innerHeight) return;
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                this.width = this.canvas.width;
+                this.height = this.canvas.height;
+                this.init();
+            }, 150);
         });
     }
 

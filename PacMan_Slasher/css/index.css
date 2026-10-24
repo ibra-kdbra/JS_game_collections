@@ -3,19 +3,18 @@
   font-family: 'Press Start 2P';
   font-style: normal;
   font-weight: 400;
-  src: url('./fonts/press-start-2p-v6-cyrillic-ext_cyrillic_greek_latin-ext_latin-regular.eot'); /* IE9 Compat Modes */
   src: local('Press Start 2P Regular'), local('PressStart2P-Regular'),
-       url('./fonts/press-start-2p-v6-cyrillic-ext_cyrillic_greek_latin-ext_latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
-       url('./fonts/press-start-2p-v6-cyrillic-ext_cyrillic_greek_latin-ext_latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
-       url('./fonts/press-start-2p-v6-cyrillic-ext_cyrillic_greek_latin-ext_latin-regular.woff') format('woff'), /* Modern Browsers */
-       url('./fonts/press-start-2p-v6-cyrillic-ext_cyrillic_greek_latin-ext_latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
-       url('./fonts/press-start-2p-v6-cyrillic-ext_cyrillic_greek_latin-ext_latin-regular.svg#PressStart2P') format('svg'); /* Legacy iOS */
+       url('./fonts/press-start-2p-v6-cyrillic-ext_cyrillic_greek_latin-ext_latin-regular.woff2') format('woff2');
 }
 
 html, body{
     margin: 0;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
     width: 100%;
     height: 100%;
+    overflow: hidden;
     background-color: black;
     font-family: 'Press Start 2P', sans-serif;
     color: white;
@@ -41,12 +40,21 @@ html, body{
   height: 60px;
   bottom: 150px;
   left: calc(50vw - 100px);
+  padding: 0;
   line-height: 60px;
   text-align: center;
-  font-size: 32px;
+  font: 32px 'Press Start 2P', sans-serif;
+  color: white;
   border: 2px solid white;
   cursor: pointer;
   background-color: rgba(0, 0, 0, .5);
+}
+
+.startButton:hover,
+.startButton:focus-visible{
+  border-color: #FFCC33;
+  color: #FFCC33;
+  outline: none;
 }
 
 canvas{
@@ -55,14 +63,185 @@ canvas{
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   touch-action: none;
 }
 
-.scores{
+/* HUD: wave, score and combo meter, centred between the corner buttons. */
+.hud{
   position: absolute;
-  top: 10px;
-  right: 20px;
-  font-size: 24px;
+  top: max(10px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(60vw, 420px);
+  text-align: center;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.hud-line{
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 4px 0 8px;
+  white-space: nowrap;
+}
+
+#score{
+  color: #FFCC33;
+}
+
+.combo{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.combo-bar{
+  flex: 1;
+  height: 8px;
+  border: 1px solid #2121DE;
+  background: rgba(0, 0, 0, .6);
+}
+
+.combo-fill{
+  display: block;
+  width: 0;
+  height: 100%;
+  background: #2DE5E5;
+  transition: width 120ms linear;
+}
+
+/* Narrow portrait screens: drop the HUD below the corner buttons. */
+@media (max-width: 640px) and (orientation: portrait){
+  .hud{
+    top: max(62px, calc(env(safe-area-inset-top) + 54px));
+    width: calc(100vw - 32px);
+  }
+}
+
+.hud.is-hot .combo-fill{
+  background: #FFCC33;
+}
+
+.hud.is-hot .combo-value{
+  color: #FFCC33;
+}
+
+.corner-buttons{
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top));
+  right: max(8px, env(safe-area-inset-right));
+  display: flex;
+  gap: 6px;
+  z-index: 3;
+}
+
+.icon-button{
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 2px solid #2121DE;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, .6);
+  color: white;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.icon-button:hover,
+.icon-button:focus-visible{
+  border-color: #FFCC33;
+  outline: none;
+}
+
+.icon-button svg{
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.icon-button .icon-off,
+.icon-button.is-off .icon-on{
+  display: none;
+}
+
+.icon-button.is-off .icon-off{
+  display: block;
+}
+
+.icon-button.hidden{
+  display: none;
+}
+
+.banner{
+  position: absolute;
+  top: 22vh;
+  left: 50%;
+  width: min(86vw, 520px);
+  padding: 12px 8px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.6;
+  background-color: rgba(0, 0, 0, .7);
+  border: 2px solid #2121DE;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transform: translate(-50%, -12px);
+  transition: opacity 250ms ease, transform 250ms ease;
+}
+
+.banner.is-showing{
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.banner p{
+  margin: 6px 0;
+}
+
+.banner .big{
+  color: #FFCC33;
+}
+
+.banner-icon{
+  position: static;
+  display: block;
+  width: 48px;
+  height: 48px;
+  margin: 4px auto;
+  image-rendering: pixelated;
+}
+
+.overlay{
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  background: rgba(0, 0, 0, .75);
+}
+
+.overlay.hidden{
+  display: none;
+}
+
+.overlay .startButton{
+  position: static;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .banner, .combo-fill{
+    transition: none;
+  }
 }
 
 .textBlock{
@@ -91,7 +270,38 @@ canvas{
 }
 
 #credits{
-  bottom: 50px;
+  bottom: max(50px, calc(env(safe-area-inset-bottom) + 16px));
+}
+
+/* A finger-sized target without moving the line. */
+#credits a{
+  display: inline-block;
+  padding: 14px 6px;
+  margin: -14px 0;
+}
+
+/* Short screens (landscape phones): text at the top, Start and credits below it. */
+@media (max-height: 500px){
+  #text{
+    top: max(8px, env(safe-area-inset-top));
+    font-size: 12px;
+  }
+
+  #text .big{
+    font-size: 20px;
+    line-height: 20px;
+  }
+
+  .startButton{
+    bottom: max(48px, calc(env(safe-area-inset-bottom) + 40px));
+    height: 52px;
+    line-height: 52px;
+    font-size: 28px;
+  }
+
+  #credits{
+    bottom: max(20px, env(safe-area-inset-bottom));
+  }
 }
 
 .big{

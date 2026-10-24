@@ -17,7 +17,7 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   line-height: 1.6;
-  background: var(--bg-gradient-start);
+  background: var(--bg);
 }
 
 /* Custom Tactical Scrollbar */
@@ -27,12 +27,12 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-gradient-start);
+  background: var(--bg);
 }
 
 ::-webkit-scrollbar-thumb {
   background: rgba(250, 204, 21, 0.3);
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -44,17 +44,13 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.01em;
 }
 
-/* ---------- Ambient Procedural Lighting Surface ---------- */
+/* ---------- Background: flat obsidian with a faint pixel grid ---------- */
 .cyber-bg {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background-color: #09090b;
-  background-image: 
-    radial-gradient(ellipse 80% 55% at 50% -10%, rgba(250, 204, 21, 0.2) 0%, transparent 70%),
-    radial-gradient(ellipse 65% 45% at 85% 85%, rgba(0, 240, 255, 0.08) 0%, transparent 65%),
-    radial-gradient(ellipse 55% 40% at 15% 85%, rgba(255, 153, 0, 0.08) 0%, transparent 60%);
-  background-attachment: fixed;
+  background-color: var(--bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='2' height='2' fill='%23facc15' fill-opacity='.07'/%3E%3C/svg%3E");
 }
 
 /* ---------- Section Styling ---------- */
@@ -74,6 +70,16 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 700;
   margin-bottom: 0.5rem;
   letter-spacing: -0.02em;
+}
+
+/* A short solid bar under section titles. */
+.section-title::after {
+  content: '';
+  display: block;
+  width: 48px;
+  height: 4px;
+  margin: 0.6rem auto 0;
+  background: var(--primary);
 }
 
 .section-subtitle {
@@ -99,16 +105,57 @@ h1, h2, h3, h4, h5, h6 {
 
 .text-glow {
   color: var(--primary);
-  text-shadow: 0 0 12px rgba(250, 204, 21, 0.4);
 }
 
 .text-glow-cyan {
   color: var(--accent);
-  text-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
 }
 
 .text-glow-magenta,
 .text-glow-orange {
   color: var(--secondary);
-  text-shadow: 0 0 12px rgba(255, 153, 0, 0.4);
+}
+
+/* ---------- Accessibility ---------- */
+::selection {
+  background: var(--primary);
+  color: #09090b;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  padding: 0.6rem 1.1rem;
+  background: var(--primary);
+  color: #09090b;
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  transform: translateY(-200%);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
 }

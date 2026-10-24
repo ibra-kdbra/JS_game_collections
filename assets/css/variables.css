@@ -1,52 +1,44 @@
 /* ---------- CSS Custom Properties ---------- */
 :root {
-  /* Primary Color Palette - High-Octane Cyber Yellow & Dark Obsidian */
-  --primary: #facc15;          /* Electric Cyber Yellow */
+  /* Cyber Yellow & Obsidian: flat fills, crisp lines, hard shadows. */
+  --primary: #facc15;          /* Cyber Yellow */
   --primary-light: #fef08a;    /* Light Gold Highlight */
   --primary-dark: #eab308;     /* Cyber Amber Gold */
   --secondary: #ff9900;        /* Cyber Orange */
-  --accent: #00f0ff;           /* High-Voltage Cyan Accent */
+  --accent: #00f0ff;           /* Cyan Accent */
   --accent-warm: #ff5500;      /* Tactical Orange */
-  
-  /* Background Gradient Colors */
-  --bg-gradient-start: #09090b; /* Pitch Obsidian */
-  --bg-gradient-mid: #12131a;   /* Deep Void Charcoal */
-  --bg-gradient-end: #1a1c24;   /* Tactical Dark Carbon */
-  
-  /* Glass Effect Colors */
-  --glass-bg: rgba(255, 255, 255, 0.03);
-  --glass-bg-hover: rgba(250, 204, 21, 0.06);
-  --glass-border: rgba(250, 204, 21, 0.15);
-  --glass-border-hover: rgba(250, 204, 21, 0.4);
-  
+
+  /* Surfaces */
+  --bg: #09090b;               /* Obsidian */
+  --surface: #12131a;          /* Panels and cards */
+  --surface-2: #1a1c24;        /* Raised: hover, inputs */
+  --ink: #09090b;              /* Text on yellow */
+
+  /* Lines */
+  --line: #2a2b33;
+  --line-accent: rgba(250, 204, 21, 0.35);
+
   /* Text Colors */
   --text-primary: #ffffff;
   --text-secondary: rgba(255, 255, 255, 0.75);
-  --text-muted: rgba(255, 255, 255, 0.45);
-  
-  /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.8);
-  --shadow-glow: 0 0 30px rgba(250, 204, 21, 0.25);
-  
+  --text-muted: rgba(255, 255, 255, 0.58);
+
+  /* Hard shadows (no blur) */
+  --shadow-hard: 4px 4px 0 #000;
+  --shadow-hard-accent: 5px 5px 0 var(--primary);
+
   /* Border Radius */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
   --radius-full: 9999px;
-  
-  /* Blur Effects */
-  --blur-sm: blur(8px);
-  --blur-md: blur(16px);
-  --blur-lg: blur(24px);
-  
+
   /* Transitions - Fast, Snappy Game World Response */
   --transition-fast: 0.08s cubic-bezier(0.2, 0, 0, 1);
   --transition-normal: 0.12s cubic-bezier(0.2, 0, 0, 1);
   --transition-slow: 0.2s cubic-bezier(0.2, 0, 0, 1);
-  
+
   /* Typography */
   --font-main: 'Albert Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-display: 'Chakra Petch', sans-serif;

@@ -1,12 +1,16 @@
 import { feedbackAPI } from './feedbackAPI.js';
 
+/** Feedback comes from the public; never let it be parsed as HTML. */
+const escapeHTML = (value) =>
+    String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
 export class FeedbackUI {
     constructor(gameId) {
         this.gameId = gameId;
         this.isOpen = false;
 
-        // Multi-solution regex for bad words (matching various formats)
-        this.profanityRegex = /b[i1]tch|f[u\*]ck|sh[i1]t|c[u\*]nt|uncensored|badword|testbad|fuck|shit|bitch|asshole|dick|cock|pussy|whore|slut|wanker/gi;
+        // Bad-word filter. No `g` flag: a global regex keeps lastIndex between test() calls.
+        this.profanityRegex = /b[i1]tch|f[u*]ck|sh[i1]t|c[u*]nt|asshole|dick|cock|pussy|whore|slut|wanker/i;
 
         this.init();
     }
@@ -30,17 +34,18 @@ export class FeedbackUI {
             const group = nav.querySelector('.nav-icons-group');
             const target = group || nav;
 
-            const btn = document.createElement('a');
+            const btn = document.createElement('button');
+            btn.type = 'button';
             btn.className = 'corner-link feedback-trigger';
-            // Use javascript:void(0) to act like a link but prevent nav
-            btn.href = 'javascript:void(0)';
-            btn.innerHTML = '<i class="fas fa-comments"></i>';
-            btn.title = "Community Feedback";
+            btn.innerHTML = '<i class="fas fa-comments" aria-hidden="true"></i>';
+            btn.title = 'Community Feedback';
+            btn.setAttribute('aria-label', 'Community feedback');
+            btn.setAttribute('aria-haspopup', 'dialog');
 
-            btn.onclick = (e) => {
-                e.preventDefault();
+            btn.addEventListener('click', () => {
+                this.opener = btn;
                 this.toggle();
-            };
+            });
 
             // Insert at the end
             target.appendChild(btn);
@@ -55,12 +60,15 @@ export class FeedbackUI {
         const modal = document.createElement('div');
         modal.id = 'feedback-modal';
         modal.className = 'feedback-modal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-labelledby', 'feedback-title');
         modal.innerHTML = `
             <div class="feedback-modal-content">
-                <button class="modal-close">&times;</button>
+                <button type="button" class="modal-close" aria-label="Close feedback">&times;</button>
                 
                 <div class="feedback-header">
-                    <h3><i class="fas fa-comments"></i> Community Feedback</h3>
+                    <h3 id="feedback-title"><i class="fas fa-comments" aria-hidden="true"></i> Community Feedback</h3>
                     <div class="feedback-stats" id="feedback-stats">
                         <span>Loading stats...</span>
                     </div>
@@ -68,8 +76,8 @@ export class FeedbackUI {
 
                 <div class="feedback-body">
                     <form id="feedback-form" class="feedback-form">
-                        <div class="rating-input">
-                            <span>Rate:</span>
+                        <div class="rating-input" role="radiogroup" aria-label="Rating">
+                            <span aria-hidden="true">Rate:</span>
                             <div class="stars">
                                 <input type="radio" name="rating" value="5" id="star5"><label for="star5">★</label>
                                 <input type="radio" name="rating" value="4" id="star4"><label for="star4">★</label>
@@ -80,15 +88,15 @@ export class FeedbackUI {
                         </div>
                         
                         <div class="form-group">
-                            <input type="text" id="author-name" placeholder="Your Name (Required)" class="feedback-input" required>
+                            <input type="text" id="author-name" placeholder="Your Name (Required)" aria-label="Your name" class="feedback-input" maxlength="40" autocomplete="nickname" required>
                         </div>
                         
                         <div class="form-group">
-                            <textarea id="feedback-comment" placeholder="Share your thoughts..." class="feedback-input" rows="3" required></textarea>
+                            <textarea id="feedback-comment" placeholder="Share your thoughts..." aria-label="Your feedback" class="feedback-input" rows="3" maxlength="600" required></textarea>
                         </div>
 
                         <button type="submit" class="btn-submit">Post Feedback</button>
-                        <div id="form-message" class="form-message"></div>
+                        <div id="form-message" class="form-message" role="status"></div>
                     </form>
 
                     <div class="feedback-list-container">
@@ -131,12 +139,14 @@ export class FeedbackUI {
         this.isOpen = true;
         this.loadFeedback();
         document.body.style.overflow = 'hidden'; // Prevent background scroll
+        this.modal.querySelector('.modal-close').focus();
     }
 
     close() {
         this.modal.classList.remove('active');
         this.isOpen = false;
         document.body.style.overflow = '';
+        this.opener?.focus();
     }
 
     validateInput(text) {
@@ -171,7 +181,7 @@ export class FeedbackUI {
         }
 
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Posting...';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Posting...';
 
         try {
             await feedbackAPI.submitFeedback(this.gameId, rating, comment, author);
@@ -216,8 +226,8 @@ export class FeedbackUI {
             const avg = statsData.average ? parseFloat(statsData.average).toFixed(1) : '0.0';
 
             statsContainer.innerHTML = `
-                <div class="stat-badge"><i class="fas fa-star"></i> ${avg}</div>
-                <div class="stat-count">${count} reviews</div>
+                <div class="stat-badge"><i class="fas fa-star" aria-hidden="true"></i> ${escapeHTML(avg)}</div>
+                <div class="stat-count">${Number(count)} reviews</div>
             `;
 
         } catch (error) {
@@ -227,17 +237,19 @@ export class FeedbackUI {
     }
 
     createFeedbackItem(item) {
-        const date = new Date(item.created_at).toLocaleDateString();
-        const stars = '★'.repeat(item.rating) + '☆'.repeat(5 - item.rating);
+        const created = new Date(item.created_at);
+        const date = Number.isNaN(created.getTime()) ? '' : created.toLocaleDateString();
+        const rating = Math.max(0, Math.min(5, Math.round(Number(item.rating) || 0)));
+        const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
 
         return `
             <div class="feedback-item">
                 <div class="feedback-item-header">
-                    <span class="author">${item.author_name || 'Anonymous'}</span>
-                    <span class="date">${date}</span>
+                    <span class="author">${escapeHTML(item.author_name || 'Anonymous')}</span>
+                    <span class="date">${escapeHTML(date)}</span>
                 </div>
-                <div class="star-display">${stars}</div>
-                <p class="comment-text">${item.comment}</p>
+                <div class="star-display" aria-label="${rating} out of 5">${stars}</div>
+                <p class="comment-text">${escapeHTML(item.comment)}</p>
             </div>
         `;
     }

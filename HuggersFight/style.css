@@ -1,0 +1,195 @@
+/* Menus drawn over the LittleJS canvas. The engine styles <body> and the canvas itself. */
+
+/* Touches on the game never scroll, zoom or pull to refresh; menus may still scroll. */
+html,
+body {
+    touch-action: none;
+    overscroll-behavior: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.screen {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    overflow-y: auto;
+    touch-action: pan-y;
+    background: rgba(0, 0, 0, .55);
+    color: #fff;
+    font: 16px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif;
+    text-align: center;
+}
+
+.screen[hidden] {
+    display: none;
+}
+
+.screen h1,
+.screen h2 {
+    margin: 0;
+    font: clamp(44px, 11vw, 120px)/1 Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    letter-spacing: 1px;
+    text-shadow: 4px 4px 0 #000;
+}
+
+.screen h2 {
+    font-size: clamp(40px, 9vw, 80px);
+}
+
+.byline {
+    margin: -6px 0 0;
+    font: 22px/1.2 Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    letter-spacing: 1px;
+}
+
+.lead {
+    max-width: 32em;
+    margin: 0;
+}
+
+.screen button {
+    min-width: 160px;
+    min-height: 52px;
+    padding: 0 28px;
+    border: 3px solid #000;
+    border-radius: 6px;
+    background: #ffd23f;
+    color: #000;
+    font: 28px/1 Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 4px 4px 0 #000;
+}
+
+.screen button:hover,
+.screen button:focus-visible {
+    background: #fff;
+    outline: 3px solid #fff;
+    outline-offset: 3px;
+}
+
+.screen button:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 #000;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px;
+}
+
+.best {
+    min-height: 1.4em;
+    margin: 0;
+    color: #ffd23f;
+    font-weight: 700;
+}
+
+.keys {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 6px;
+    color: #ddd;
+    font-size: 14px;
+}
+
+kbd {
+    display: inline-block;
+    padding: 1px 6px;
+    border: 1px solid #888;
+    border-radius: 4px;
+    background: #222;
+    font: 13px/1.4 ui-monospace, monospace;
+}
+
+.touch-help {
+    display: none;
+    max-width: 30em;
+    margin: 0;
+    color: #ddd;
+    font-size: 14px;
+}
+
+.gk-has-touch .keys {
+    display: none;
+}
+
+.gk-has-touch .touch-help {
+    display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .screen button:active {
+        transform: none;
+    }
+}
+
+/* ---------- Touch controls ----------
+   Four action buttons in a 2x2 block (Jump and Shoot nearest the thumb) so they
+   take a corner instead of a whole edge of the view. Pause leaves the group: above
+   the D-pad in portrait, in the top-right corner in landscape. */
+.gk-touch .gk-buttons {
+    max-width: 132px;
+    gap: 8px;
+}
+
+.gk-touch .gk-btn {
+    width: 62px;
+    height: 62px;
+}
+
+.gk-touch .gk-btn--small {
+    position: fixed;
+    width: auto;
+    min-width: 64px;
+    height: 44px;
+}
+
+@media (orientation: portrait) {
+    .gk-touch .gk-btn--small {
+        left: max(16px, env(safe-area-inset-left));
+        bottom: calc(max(16px, env(safe-area-inset-bottom)) + 3 * 56px + 2 * 4px + 12px);
+    }
+}
+
+@media (orientation: landscape) {
+    .gk-touch .gk-btn--small {
+        top: max(12px, env(safe-area-inset-top));
+        right: max(16px, env(safe-area-inset-right));
+    }
+}
+
+/* Very narrow phones: a slightly smaller pad so both groups fit side by side. */
+@media (max-width: 379px) {
+    .gk-touch .gk-dpad {
+        grid-template-columns: repeat(3, 48px);
+        grid-template-rows: repeat(3, 48px);
+    }
+
+    .gk-touch .gk-btn {
+        width: 60px;
+        height: 60px;
+    }
+
+    .gk-touch .gk-buttons {
+        max-width: 128px;
+    }
+}
+
+@media (max-width: 379px) and (orientation: portrait) {
+    .gk-touch .gk-btn--small {
+        bottom: calc(max(16px, env(safe-area-inset-bottom)) + 3 * 48px + 2 * 4px + 12px);
+    }
+}

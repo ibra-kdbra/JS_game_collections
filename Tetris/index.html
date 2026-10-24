@@ -2,13 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Tetris</title>
 
   <!-- Add a favicon (logo icon) -->
   <link rel="icon" type="image/x-icon" href="./imgs/tetris.ico">
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- CSS Stylesheet -->
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/screen.css">
@@ -33,15 +31,26 @@
       <div id="a">
         <canvas id="hold"></canvas>
       </div>
+      <button type="button" id="touchPause" class="touch-only" aria-label="Pause">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+      </button>
       <ul id="replay" style="display: none;">
         <li><a href="#" onclick="replay(-1)">Prev</a></li>
         <li><a href="#" onclick="replay()">Play/Pause</a></li>
         <li><a href="#" onclick="replay(1)">Next</a></li>
       </ul>
       <table id="stats">
+        <tr id="scoreRow">
+          <td id="score">0</td>
+          <th>Score</th>
+        </tr>
+        <tr id="levelRow">
+          <td id="level">1</td>
+          <th>Level</th>
+        </tr>
         <tr>
           <td id="line">0</td>
-          <th>Line</th>
+          <th id="lineLabel">Line</th>
         </tr>
         <tr>
           <td id="piece">0</td>
@@ -64,10 +73,12 @@
       <nav class="menu on">
         <h1>Tetris</h1>
         <ul>
-          <li><a href="#" onclick="init(0)">Play Sprint</a></li>
-          <li><a href="#" onclick="init(3)">Play Dig Race</a></li>
-          <li><a href="#" onclick="menu(2)"><i class="icon-controls"></i>Controls</a></li>
-          <li><a href="#" onclick="menu(1)"><i class="icon-cog"></i>Settings</a></li>
+          <li><a href="#" onclick="init(0)">Sprint<small>40 lines, fastest time</small><small class="best" data-best="0"></small></a></li>
+          <li><a href="#" onclick="init(4)">Marathon<small>Levels 1-15, speeds up every 10 lines</small><small class="best" data-best="4"></small></a></li>
+          <li><a href="#" onclick="init(5)">Ultra<small>Top score in 2 minutes</small><small class="best" data-best="5"></small></a></li>
+          <li><a href="#" onclick="init(3)">Dig Race<small>Clear 10 garbage lines</small><small class="best" data-best="3"></small></a></li>
+          <li><a href="#" onclick="init(6)">Zen<small>No gravity, no game over</small></a></li>
+          <li class="menu-row"><a href="#" onclick="menu(2)">Controls</a><a href="#" onclick="menu(1)"><i class="icon-cog"></i>Settings</a></li>
         </ul>
       </nav>
 
@@ -83,7 +94,12 @@
       <!-- Controls Menu -->
       <div class="menu">
         <h2>Controls</h2>
-        <p>Click on the control you want to change, then press any key.</p>
+        <div class="touch-help touch-only">
+          <p><b>Tap</b> the board to rotate, tap with <b>two fingers</b> to rotate the other way.</p>
+          <p><b>Drag</b> sideways to move a cell at a time, <b>drag down</b> to soft drop, <b>flick down</b> to hard drop, <b>flick up</b> or tap the Hold box to hold.</p>
+          <p>The on-screen buttons can be turned off under Settings.</p>
+        </div>
+        <p class="key-help">Click on the control you want to change, then press any key.</p>
         <table id="controls">
           <tr><th>Move Left:</th><td id="moveLeft">←</td></tr>
           <tr><th>Move Right:</th><td id="moveRight">→</td></tr>
@@ -103,6 +119,7 @@
 
       <!-- Game Over Menu -->
       <nav id="go" class="menu">
+        <p id="goNote" class="go-note"></p>
         <ul>
           <li><a href="#" onclick="init(gametype)">Retry</a></li>
           <li><a href="#" onclick="init('replay')">Watch Replay</a></li>
@@ -127,9 +144,25 @@
     </section>
   </div>
 
+  <!-- On-screen buttons for touch screens (left thumb moves, right thumb rotates and drops) -->
+  <div id="pad" class="touch-only" aria-hidden="true">
+    <div class="pad-group pad-left">
+      <button type="button" data-act="holdPiece" class="pad-hold">Hold</button>
+      <button type="button" data-act="moveDown"><svg viewBox="0 0 24 24"><path d="M12 18l7-10H5z"/></svg></button>
+      <button type="button" data-act="moveLeft"><svg viewBox="0 0 24 24"><path d="M6 12l10-7v14z"/></svg></button>
+      <button type="button" data-act="moveRight"><svg viewBox="0 0 24 24"><path d="M18 12L8 5v14z"/></svg></button>
+    </div>
+    <div class="pad-group pad-right">
+      <button type="button" data-act="hardDrop" class="pad-drop">Drop</button>
+      <button type="button" data-act="rotLeft" class="pad-rot">&#8634;</button>
+      <button type="button" data-act="rotRight" class="pad-rot">&#8635;</button>
+    </div>
+  </div>
+
   <canvas id="sprite"></canvas>
 
   <!-- Scripts -->
+  <script type="module" src="../assets/kit/index.js"></script>
   <script src="./scripts/tetris.js"></script>
   <script src="./scripts/piece.js"></script>
   <script src="./scripts/stack.js"></script>

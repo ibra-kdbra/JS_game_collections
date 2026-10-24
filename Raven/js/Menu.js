@@ -18,24 +18,32 @@ class Menu {
         if (this.scale > 0) this.scale -= 1;
     }
 
+    // Row pitch in view pixels: 36 normally, more on zoomed-out phone views so each
+    // entry is close to a 44px finger target, as long as the list still fits.
+    entryHeight() {
+        const k = game.textScale;
+        const finger = 44 / game.zoom;
+        return Math.max(36 * k, Math.min(finger, (game.viewH - 80) / this._options.length));
+    }
+
     render() {
-        let entryHeight = 36;
+        let entryHeight = this.entryHeight();
 
         game.ctx.fillStyle = 'rgba(0,0,0,0.7)';
-        game.ctx.fillRect(0, 0, game.canvas.width, game.canvas.height);
+        game.ctx.fillRect(0, 0, game.viewW, game.viewH);
 
-        let menuTop = game.canvas.height / 2 - this._options.length * (entryHeight * 0.75);
+        let menuTop = game.viewH / 2 - this._options.length * (entryHeight * 0.75);
 
         game.ctx.save();
-        game.ctx.translate(game.canvas.width / 2, game.canvas.height / 2);
+        game.ctx.translate(game.viewW / 2, game.viewH / 2);
         game.ctx.scale(1 + this.scale, 1 + this.scale);
-        game.ctx.translate(-game.canvas.width / 2, -game.canvas.height / 2);
+        game.ctx.translate(-game.viewW / 2, -game.viewH / 2);
 
         this._options.forEach((entry, idx) => {
-            game.ctx.font = Asset.getFontString(18);
+            game.ctx.font = Asset.getFontString(18 * game.textScale);
 
             entry.w = game.ctx.measureText(entry.text).width;
-            entry.x = game.canvas.width / 2 - entry.w / 2;
+            entry.x = game.viewW / 2 - entry.w / 2;
             entry.y = menuTop + idx * entryHeight;
 
             if (idx === this._selected && this.scale === 0) {
@@ -65,16 +73,20 @@ class Menu {
 
     onMouseMove(x, y) {
         let oldSelected = this._selected;
-        this._options.forEach((entry, idx) => {
-            if (x >= entry.x && x <= entry.x + entry.w &&
-                y >= entry.y - 30 && y <= entry.y) {
-                this._selected = idx;
-            }
-        });
+        let idx = this.entryAt(x, y);
+        if (idx >= 0) this._selected = idx;
 
         if (oldSelected !== this._selected) {
             game.audio.playClick();
         }
+    }
+
+    // Index of the entry under a point (generous enough for a fingertip), or -1
+    entryAt(x, y) {
+        const h = this.entryHeight();
+        return this._options.findIndex(entry =>
+            x >= entry.x - 16 && x <= entry.x + entry.w + 16 &&
+            y >= entry.y - h * 0.72 && y <= entry.y + h * 0.28);
     }
 
     select() {

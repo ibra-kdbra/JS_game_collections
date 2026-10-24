@@ -1,12 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=VT323&display=swap" rel="stylesheet">
+  <meta charset="utf-8" />
+  <title>Souls Bumper</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <link href="../assets/icons/soul.svg" rel="icon" type="image/svg+xml" />
-  <link rel="stylesheet" href="./css/style.css?v=6" />
+  <link rel="stylesheet" href="./css/style.css" />
 </head>
 <body onload="startGame()">
   <div id="ui-menu" class="creepy-ui">
@@ -15,6 +14,7 @@
       <p>[A][D] or [←][→] Left / Right</p>
       <p>[W] [Space] [↑] Jump</p>
       <p>[E] Rewind Ghost</p>
+      <p>[R] Reset · [Esc] Pause</p>
     </div>
     <div class="menu-section">
       <div class="header-accent">CREDITS</div>
@@ -23,32 +23,41 @@
     </div>
   </div>
 
-  <div id="intro-prompt" class="intro-overlay">
-    <div class="pulse-text">PRESS ANY KEY TO BEGIN</div>
+  <div id="intro" class="intro-overlay">
+    <div class="level-select creepy-ui">
+      <div class="header-accent">SELECT LEVEL</div>
+      <div class="level-grid" id="level-grid"></div>
+      <p id="level-info" class="level-info"></p>
+    </div>
+    <div class="pulse-text" id="intro-prompt">PRESS ANY KEY TO BEGIN</div>
   </div>
 
   <div id="pause-menu" class="pause-overlay hidden">
     <div class="pause-content creepy-ui">
       <h2>SOUL PAUSED</h2>
-      <button id="continue-btn">CONTINUE</button>
+      <button id="continue-btn" type="button">CONTINUE</button>
+      <button id="restart-btn" type="button" class="secondary">RESTART LEVEL</button>
+      <button id="select-btn" type="button" class="secondary">LEVEL SELECT</button>
     </div>
   </div>
 
-  <a href="https://github.com/ibra-kdbra/JS_game_collections/tree/main/Souls-Bumper" target="_blank" class="github-link" title="View Source on GitHub">
+  <a href="https://github.com/ibra-kdbra/JS_game_collections/tree/main/Souls-Bumper" target="_blank" rel="noopener" class="github-link" title="View Source on GitHub">
     <img src="../assets/icons/github-icon.svg" width="32" height="32" alt="GitHub">
   </a>
-  <script type="application/javascript" src="./js/audio.js"></script>
-  <script type="application/javascript" src="./js/camera.js"></script>
-  <script type="application/javascript" src="./js/particle.js"></script>
-  <script type="application/javascript" src="./js/keys.js"></script>
-  <script type="application/javascript" src="./js/sound.js"></script>
-  <script type="application/javascript" src="./js/entity.js"></script>
-  <script type="application/javascript" src="./js/hero.js"></script>
-  <script type="application/javascript" src="./js/enums.js"></script>
-  <script type="application/javascript" src="./js/tile.js"></script>
-  <script type="application/javascript" src="./js/utility.js"></script>
-  <script type="application/javascript" src="./js/level.js"></script>
-  <script type="application/javascript" src="./js/cart.js"></script>
-  <script type="application/javascript" src="./js/game.js"></script>
+  <script type="module" src="../assets/kit/index.js"></script>
+  <script src="./js/audio.js"></script>
+  <script src="./js/camera.js"></script>
+  <script src="./js/particle.js"></script>
+  <script src="./js/keys.js"></script>
+  <script src="./js/sound.js"></script>
+  <script src="./js/entity.js"></script>
+  <script src="./js/hero.js"></script>
+  <script src="./js/enums.js"></script>
+  <script src="./js/tile.js"></script>
+  <script src="./js/utility.js"></script>
+  <script src="./js/level.js"></script>
+  <script src="./js/levels.js"></script>
+  <script src="./js/cart.js"></script>
+  <script src="./js/game.js"></script>
 </body>
 </html>

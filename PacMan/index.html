@@ -1,22 +1,32 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Pac-Man</title>
-    <!-- Lock viewport on mobile devices. -->
-    <!--
-    <meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;" />
-    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <!-- Allow page to be saved as web app on iOS. -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <!-- Hide status bar -->
-    <meta names="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <!-- icon used for iOS Web App -->
     <link rel="apple-touch-icon-precomposed" href="icon/ios_icon.png"/>
     <link rel="icon" type="image/png" href="icon/favicon.png"/>
     <style>
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
         body {
             margin:0;
             background: #000;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+            /* Swipes steer Pac-Man; stop them from scrolling or zooming the page. */
+            touch-action: none;
+            overscroll-behavior: none;
         }
         @font-face {
             font-family: 'ArcadeR';
@@ -25,15 +35,25 @@
             src: url('font/PressStart2P.ttf');
             */
         }
+        #canvas {
+            display: block;
+        }
         #canvas-warning {
             color: #FF0;
             font-size: 1.5em;
         }
     </style>
+<script type="module" src="../assets/kit/index.js"></script>
+<script type="module">
+    GameKit.initShell({ slug: 'pacman' });
+    // Phones get a D-pad next to swiping; it also moves through menus.
+    GameKit.createTouchControls({
+        dpad: { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' },
+    });
+</script>
 <script src="pacman.js"></script>
 </head>
 <body>
-</div>
 
     <div style='font-family: ArcadeR'> </div>
     <canvas id='canvas'><div id="canvas-warning">Your browser does not support HTML Canvas.  Please update your Browser</div></canvas>

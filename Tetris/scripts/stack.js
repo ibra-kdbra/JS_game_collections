@@ -1,5 +1,5 @@
 function Stack() {
-  //this.grid;
+  this.grid = [];
 }
 /**
  * Creates a matrix for the playfield.
@@ -40,11 +40,15 @@ Stack.prototype.addPiece = function(tetro) {
     }
   }
 
-  // Lock out
+  // Lock out. Zen never ends: the board is cleared instead.
   if (!valid) {
-    gameState = 9;
-    msg.innerHTML = 'LOCK OUT!';
-    menu(3);
+    if (gametype === 6) {
+      this.new(10, 22);
+      this.draw();
+      showAction('FRESH START');
+    } else {
+      endGame(9, 'LOCK OUT!');
+    }
     return;
   }
 
@@ -89,9 +93,6 @@ Stack.prototype.addPiece = function(tetro) {
         }, 300);
       }
 
-      if (totalLinesCleared === 4) {
-        setTimeout(() => audioManager.playSound('level-up'), 800);
-      }
     }
 
     // Particle effects
@@ -100,15 +101,15 @@ Stack.prototype.addPiece = function(tetro) {
     }
   }
 
+  onLinesCleared(totalLinesCleared);
+
   statsFinesse += piece.finesse - finesse[piece.index][piece.pos][column];
   piecesSet++; // NOTE Stats
   // TODO Might not need this (same for in init)
   column = 0;
 
   statsPiece.innerHTML = piecesSet;
-
-  if (gametype !== 3) statsLines.innerHTML = lineLimit - lines;
-  else statsLines.innerHTML = digLines.length;
+  updateLineStat();
 
   this.draw();
 };

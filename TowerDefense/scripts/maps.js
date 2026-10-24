@@ -1,5 +1,45 @@
+// Campaign maps. The first eight are map strings made in the editor; the rest are
+// drawn as text (fromText). CAMPAIGN at the end lists them in the order they are
+// played, easiest first (tools/verify-maps.mjs plays each one with a bot to rate it).
+
 function toMap(str) {
     return JSON.parse(LZString.decompressFromBase64(str));
+}
+
+// A map drawn as text, one character per tile (column x, row y):
+//   #  wall               o  tower pad
+//   .  open ground: towers and enemies (build a maze)
+//   -  enemy road: enemies take the shortest way along it, no building
+//   < ^ > v  road with a fixed direction    +  crossing: enemies keep going straight
+//   S  portal             E  gate
+// The result has the same shape as a map string from the editor (Export map).
+function fromText(theme, lines) {
+    const rows = lines.length;
+    const cols = lines[0].length;
+    const tiles = { '#': [1, 'wall'], 'o': [3, 'tower'], '.': [0, 'empty'], '-': [4, 'empty'], 'S': [4, 'empty'], 'E': [4, 'empty'] };
+    const dirs = { '<': 1, '^': 2, '>': 3, 'v': 4, '+': 0 };
+    const layer = (v) => Array.from({ length: cols }, () => Array.from({ length: rows }, () => v));
+    const m = {
+        display: layer('empty'), displayDir: layer(0), grid: layer(0), metadata: layer(null), paths: layer(0),
+        exit: null, spawnpoints: [], bg: [0, 0, 0], border: 255, borderAlpha: 31, cols, rows, theme
+    };
+    lines.forEach((line, y) => {
+        if (line.length !== cols) throw new Error(`map row ${y} is ${line.length} wide, not ${cols}`);
+        [...line].forEach((ch, x) => {
+            if (ch in dirs) {
+                m.grid[x][y] = 2;
+                m.paths[x][y] = dirs[ch];
+                return;
+            }
+            const t = tiles[ch];
+            if (!t) throw new Error(`unknown map tile "${ch}" at ${x},${y}`);
+            m.grid[x][y] = t[0];
+            m.display[x][y] = t[1];
+            if (ch === 'S') m.spawnpoints.push([x, y]);
+            if (ch === 'E') m.exit = [x, y];
+        });
+    });
+    return m;
 }
 
 
@@ -14,3 +54,227 @@ maps.city = toMap('N4IgJglgzgDgNgQwJ4gFwG10gO4LnEAGhzwON3yJMvNKoFMBbGAFxWKdfZE7Y
 maps.freeway = toMap('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=');
 maps.walls = toMap('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=');
 maps.fork = toMap('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');
+
+
+// Branch had too few build pads next to its shared road to hold the late waves
+// (tools/verify-maps.mjs): a few more along the road up to the gate
+function addPads(m, look, tiles) {
+    tiles.forEach(([x, y]) => {
+        m.grid[x][y] = 3;
+        m.display[x][y] = look;
+    });
+    return m;
+}
+const BRANCH_PADS = [[9, 3], [11, 3], [9, 5], [11, 5], [9, 7], [11, 7], [9, 9], [11, 9], [3, 3], [17, 3], [3, 6], [17, 7]];
+addPads(maps.branch, 'tower', BRANCH_PADS);
+addPads(maps.branchAlt, 'c1_lightBlue', BRANCH_PADS);
+
+// Maps drawn as text
+
+maps.switchback = fromText('meadow', [
+    '#####################',
+    '#S>>>>>>>>>>>>>>>>>v#',
+    '#oo#oooo#oooo#oooo#v#',
+    '##################ov#',
+    '##oooo#oooo#oooo#oov#',
+    '#v<<<<<<<<<<<<<<<<<<#',
+    '#voo#oooo#oooo#oooo##',
+    '#vo##################',
+    '#v#oooo#oooo#oooo#oo#',
+    '#>>>>>>>>>>>>>>>>>>v#',
+    '#oooo#oooo#oooo#ooov#',
+    '##################ov#',
+    '#oo#oooo#oooo#oooo#v#',
+    '#E<<<<<<<<<<<<<<<<<<#',
+    '#####################'
+]);
+
+maps.twinRivers = fromText('desert', [
+    '########################',
+    '#o#oooooo#oooooo#oo#####',
+    '#S>>>>>>>vo#>>>>>v##ooo#',
+    '#ooooo#oovoo^#ooovo##Eo#',
+    '#########voo^o##ovo#o^##',
+    '########ov#o^o##ovo#o^o#',
+    '########ovoo^o##ovo#o^o#',
+    '########o>>>^o##ovo#o^o#',
+    '########o^oooo###vo#o^o#',
+    '########o^o#####ov##o^o#',
+    '########o^o#####ovo##^o#',
+    '##oooooo#^o#####ovooo^##',
+    '#S>>>>>>>^######o>>>>^o#',
+    '#oooo#ooooo#####ooo#ooo#',
+    '########################'
+]);
+
+maps.crossroads = fromText('frost', [
+    '###################',
+    '#######oSo#########',
+    '#######ovo#########',
+    '#ooooo#ovooo#oo####',
+    '#S>>>>>>+>>>>vo####',
+    '#o#ooooovoooov#####',
+    '#######ovo###vo####',
+    '#####ooovo#oovoo#o#',
+    '####o>>>+>E<<+<<<<#',
+    '####o^#ovooo#vooo^#',
+    '#####^oovo##ovo##^#',
+    '####o^oovoooov##o^#',
+    '####o^<<+<<<<<o#o^#',
+    '#####ooovo#oooo##^#',
+    '#######ovooooo#oo^#',
+    '#######o>>>>>>>>>^#',
+    '###################'
+]);
+
+maps.openField = fromText('meadow', [
+    '######################',
+    '#....................#',
+    '#....................#',
+    '#S...##..............#',
+    '#....#.........##....#',
+    '#...............#....#',
+    '#....................#',
+    '#...................E#',
+    '#...#................#',
+    '#.........##......#..#',
+    '#S.........#.........#',
+    '#......#......#......#',
+    '#....................#',
+    '######################'
+]);
+
+maps.bottleneck = fromText('ash', [
+    '########################',
+    '###o###ooooo############',
+    '#S>>>>>>>>vo###oooo###o#',
+    '#o###o##oovo###o>>>>>v##',
+    '#########ovo###o^o##ov##',
+    '#########ovo###o^o###v##',
+    '#########ovo###o^o###vo#',
+    '#o###o##oovooooo^o###v##',
+    '#S>>>>>>>>>>>>>>^o##ov##',
+    '###o###ooo^ooooooo###v##',
+    '#########o^o#########vo#',
+    '#########o^o#########v##',
+    '#########o^o########ov##',
+    '###o###ooo^o#########E##',
+    '#S>>>>>>>>^o##########o#',
+    '########################'
+]);
+
+maps.labyrinth = fromText('city', [
+    '#######################',
+    '#S>>>vo#####ov<<<<o####',
+    '##oo#vo#oo#oovoo#^o####',
+    '####ov##o>>v#vo#o^#####',
+    '#o#oovo##^ovov##o^oo#o#',
+    '##v<<<o#o^#vovo##^<<<o#',
+    '#ov#oo##o^ov#vo#oo#o^##',
+    '#ovo#####^oEov#####o^o#',
+    '##vo#oo#o^#^ovo##oo#^o#',
+    '#o>>>v##o^o^#vo#o>>>^##',
+    '#o#oovo##^o^ov##o^oo#o#',
+    '#####vo#o^#^<<o##^o####',
+    '####ov#oo^oo#oo#o^#oo##',
+    '####o>>>>^o#####o^<<<S#',
+    '#######################'
+]);
+
+maps.moat = fromText('void', [
+    '####################',
+    '#oo#oooo#oooo#oooo##',
+    '#o#oooo#oooo#oooo#o#',
+    '#S>>>>>>>>>>>>>>voo#',
+    '#ooo^ooooooooooovoo#',
+    '##oo^o#oooo#oooovoo#',
+    '##o#^oo##oooo#oovo##',
+    '#o#o^oo#ooEo##oov#o#',
+    '#ooo^oo#o#^oo##ovoo#',
+    '#S>>^oo#oo^ooooovoo#',
+    '##oooo##oo^#oooovoo#',
+    '#oo#ooo##o^<<<<<<o##',
+    '########oooo#oooo#o#',
+    '########o#oooo#oooo#',
+    '####################'
+]);
+
+maps.portalStorm = fromText('void', [
+    '#######################',
+    '#S>>>>>>vo###ov<<<<<<S#',
+    '##o#o#o#vo###ov#o#o#o##',
+    '###o#o#ovo###ovo#o#o###',
+    '####v<<<<o###o>>>>v####',
+    '###ovo#o#o###o#o#ovo###',
+    '####v#o#ooooooo#o#v####',
+    '###o>>>>>>>E<<<<<<<o###',
+    '####^#o#ooooooo#o#^####',
+    '###o^o#o#o###o#o#o^o###',
+    '####^<<<<o###o>>>>^####',
+    '###o#o#o^o###o^o#o#o###',
+    '##o#o#o#^o###o^#o#o#o##',
+    '#S>>>>>>^o###o^<<<<<<S#',
+    '#######################'
+]);
+
+maps.canyon = fromText('desert', [
+    '#########################',
+    '##S##o>>>>voS#>>>>v###Eo#',
+    '#ov###^o##v#vo^#o#vo##^##',
+    '##vo##^##ov#v#^o##v##o^##',
+    '##v##o^###vov#^##ov###^o#',
+    '#ov###^o##v#vo^###vo##^##',
+    '##vo##^##ov#>>^o##v##o^##',
+    '##v##o^###vo##^##ov###^o#',
+    '#ov###^o##v##o^###vo##^##',
+    '##vo##^##ov###^o##v##o^##',
+    '##v##o^###vo##^##ov#o#^o#',
+    '#o>>>>^o##>>>>^###>>>>^##',
+    '#########################'
+]);
+
+maps.gauntlet = fromText('ash', [
+    '##########################',
+    '#o#oo###oooo#oo###oooo#oo#',
+    '#S>v###o>>>>>v###o>>>>>v##',
+    '##ovo##o^oo#ovo##o^oo#ovo#',
+    '#oovo##o^o##ovo##o^o##ovo#',
+    '#S>vo##o^o##ovo##o^o##ovo#',
+    '#o#vo###^o###vo###^o###vo#',
+    '#oov#ooo^###ov###o^###ov##',
+    '#S>>>>>>^o##ovo##o^o##ovo#',
+    '#oo^oooo#o##ovo##o^o##ovo#',
+    '#oo^o#######ovo##o^o##ovo#',
+    '#S>^o########vo###^o###vo#',
+    '#oo^########ov#ooo^###ov##',
+    '##o^o#######o>>>>>^o##oEo#',
+    '#S>^o#######o#oooo#o##o#o#',
+    '##########################'
+]);
+
+
+// Campaign maps in the order they are played: Switchback first as the gentle start,
+// then by the margin tools/verify-maps.mjs --rate measures (bigger margin first,
+// then more lives left). idea: one line for the map screen.
+// hp: enemy health on this map (default 1), for maps that are much harder than
+// their place in the list (tools/verify-maps.mjs plays every map with a bot).
+const CAMPAIGN = [
+    { id: 'switchback', title: 'Switchback', idea: 'One portal, one long winding road', hp: 0.6 },
+    { id: 'city', title: 'City', idea: 'Seven portals, room to build a maze' },
+    { id: 'walls', title: 'Walls', idea: 'Six portals, open lanes between long walls' },
+    { id: 'canyon', title: 'Canyon', idea: 'A long zigzag with little room to build' },
+    { id: 'gauntlet', title: 'Gauntlet', idea: 'Five portals feed one long road' },
+    { id: 'loops', title: 'Loops', idea: 'Streets that cross and loop back' },
+    { id: 'crossroads', title: 'Crossroads', idea: 'Two roads cross four times' },
+    { id: 'freeway', title: 'Freeway', idea: 'Six portals on a maze of lanes' },
+    { id: 'branch', title: 'Branch', idea: 'Three portals, short roads', hp: 0.6 },
+    { id: 'branchAlt', title: 'Branch Alt', idea: 'Branch on ice', hp: 0.6 },
+    { id: 'bottleneck', title: 'Bottleneck', idea: 'Three portals, one choke point' },
+    { id: 'spiral', title: 'Spiral', idea: 'Two roads spiral in to the gate' },
+    { id: 'portalStorm', title: 'Portal Storm', idea: 'Four portals close to the gate', hp: 0.9 },
+    { id: 'fork', title: 'Fork', idea: 'Four portals, short forked roads', hp: 0.9 },
+    { id: 'twinRivers', title: 'Twin Rivers', idea: 'Two roads meet halfway' },
+    { id: 'openField', title: 'Open Field', idea: 'Open ground: build your own maze', hp: 0.8 },
+    { id: 'moat', title: 'Moat', idea: 'The road rings an island with the gate inside', hp: 0.9 },
+    { id: 'labyrinth', title: 'Labyrinth', idea: 'Two long streets wind to the middle' }
+];

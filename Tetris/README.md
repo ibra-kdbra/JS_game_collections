@@ -1,260 +1,87 @@
-# 🎮 Professional Tetris Enhanced 🎮
+# Tetris
 
-A modern, responsive, and feature-rich Tetris game with professional-grade enhancements.
+A guideline-style Tetris in plain JavaScript and canvas, based on tetr.js: hold, ghost piece, a seven-piece bag with a six-piece preview, SRS wall kicks, replays and fully adjustable handling.
 
-## ✨ Features
+## Modes
 
-### 🎯 Core Gameplay
-- Classic Tetris gameplay with all standard pieces
-- Smooth controls with customizable key bindings
-- Hold piece functionality
-- Ghost piece preview
-- Next piece preview
-- Line clear detection and scoring
-- Multiple game modes (Sprint, Dig Race)
+| Mode | Goal | Personal best |
+| --- | --- | --- |
+| **Sprint** | Clear 40 lines | Fastest time |
+| **Marathon** | Play through levels 1-15. Every 10 lines the level and the gravity go up | Highest score |
+| **Ultra** | Score as much as you can in 2 minutes | Highest score |
+| **Dig Race** | Clear 10 rows of garbage | Fastest time |
+| **Zen** | No gravity and no game over: if the stack tops out, the board is cleared and you carry on | - |
 
-### 📱 Responsive Design
-- **Mobile-Optimized**: Perfect touch controls for phones and tablets
-- **Tablet Support**: Optimized layout for iPad and Android tablets
-- **Desktop Experience**: Enhanced desktop controls with keyboard support
-- **Adaptive Layout**: Game scales perfectly to any screen size
-- **Touch Gestures**: Intuitive D-pad and button controls
-- **Haptic Feedback**: Vibration support on compatible devices
+Personal bests are shown in the main menu and on the game over screen.
 
-### 🎨 Live Background System
-- **Multiple Themes**:
-  - **Cyberpunk**: Neon blues and purples with connected particles
-  - **Neon**: Vibrant colors with glowing effects
-  - **Matrix**: Classic green falling code aesthetic
-  - **Retro**: Soft pastel colors with subtle connections
-- **Interactive Effects**: Particles react to line clears
-- **Smooth Transitions**: Animated gradients and particle movements
-- **Performance Optimized**: Runs at 60 FPS on all devices
+### Scoring (Marathon and Ultra)
 
-### 🎮 Enhanced Controls
-- **Professional Touch Controls**:
-  - Responsive D-pad with visual feedback
-  - Large, easy-to-tap buttons
-  - Smooth animations and transitions
-  - Multiple button sizes for different devices
-- **Keyboard Support**: Full customizable keyboard controls
-- **Continuous Actions**: Hold-to-move functionality
-- **Haptic Integration**: Different vibration patterns for actions
+- Single 100, double 300, triple 500, Tetris 800, all multiplied by the level
+- Back-to-back Tetrises score 1.5 times
+- Soft drop: 1 point per row, hard drop: 2 points per row
 
-### 🌟 Visual Enhancements
-- **CRT Effects**: Retro scanlines and screen flicker
-- **Glow Effects**: Dynamic glow on game board
-- **Professional Loading Screen**: Smooth animated loading
-- **Theme Switcher**: Instant theme switching with notifications
-- **Performance Monitor**: Real-time FPS counter (development mode)
-- **Micro-interactions**: Hover states, transitions, and animations
+## Controls
 
-### ⚡ Performance Features
-- **60 FPS Target**: Smooth gameplay on all devices
-- **Optimized Rendering**: Efficient canvas operations
-- **Memory Management**: Proper cleanup and garbage collection
-- **Responsive Throttling**: Debounced resize handling
-- **Performance Monitoring**: Built-in performance indicators
+### Keyboard (rebindable under Controls)
 
-## 🎛️ Controls
+| Key | Action |
+| --- | --- |
+| ← → | Move |
+| ↓ | Soft drop |
+| Space | Hard drop |
+| X / Z | Rotate clockwise / counter-clockwise |
+| Shift | Rotate 180° |
+| C | Hold |
+| R | Retry |
+| Esc | Pause (the game also pauses when you leave the tab) |
+| T | Cycle background themes |
 
-### Desktop
-- **Arrow Keys**: Move left/right/down
-- **Space**: Hard drop
-- **X**: Rotate clockwise
-- **Z**: Rotate counter-clockwise
-- **C**: Hold piece
-- **Shift**: 180° rotation
-- **R**: Retry
-- **Esc**: Pause
+### Touch
 
-### Mobile/Tablet
-- **D-Pad**: Movement control
-- **Center Button**: Rotate clockwise
-- **Down Button**: Hard drop
-- **Hold Button**: Hold current piece
+Gestures work anywhere on the game:
 
-### Keyboard Shortcuts
-- **T**: Cycle through background themes
-- **P**: Toggle performance monitor
+| Gesture | Action |
+| --- | --- |
+| Tap | Rotate clockwise |
+| Two-finger tap | Rotate counter-clockwise |
+| Drag sideways | Move one cell for every cell dragged |
+| Drag down | Soft drop, one row for every cell dragged |
+| Flick down | Hard drop (also after a sideways drag, in one motion) |
+| Flick up, or tap the Hold box | Hold |
 
-## 🚀 Getting Started
+On-screen buttons sit below the board in portrait and on both sides in landscape: hold, soft drop, left and right under the left thumb; drop and both rotations under the right thumb. Held buttons repeat with your DAS and ARR settings. Pause is next to the stats. The buttons can be switched off under Settings (Buttons), which gives the board more room.
 
-### Local Development
-1. Clone the repository
-2. Navigate to the Tetris directory
-3. Start a local server:
-   ```bash
-   python3 -m http.server 8000
-   # or
-   npx serve .
-   # or
-   php -S localhost:8000
-   ```
-4. Open `http://localhost:8000` in your browser
+## Settings
 
-### File Structure
+DAS, ARR, gravity, soft drop speed, lock delay, playfield size, on-screen buttons, sound and volume, block style, ghost piece, grid, outlines and background theme. Settings and key bindings are saved in the browser.
+
+## How it works
+
+- Game logic runs in fixed 60 Hz steps (DAS, ARR, gravity and lock delay are counted in those steps), so it plays the same on 60 Hz and 120 Hz screens. The clock counts steps too, so it stops while paused and replays show the same time.
+- The playfield, hold and preview canvases are drawn at the screen's pixel density, capped at 2x. On narrow screens the side panels shrink. On touch screens the board is sized to fit around the buttons and the safe areas; tall phones get the hold box and stats in a strip above the board. Layout runs once per frame at most while the window is resized or rotated.
+- Replays store the keys pressed on each step together with the random seed, and the touch gestures applied on each step.
+
+## Files
+
 ```
 Tetris/
-├── index.html                 # Main HTML file
-├── css/
-│   └── style.css            # Enhanced styles with responsive design
+├── index.html
+├── css/                 style.css (game) and screen.css (loading screen, effects)
 ├── scripts/
-│   ├── tetris.js            # Core game logic
-│   ├── responsive.js        # Responsive system and touch controls
-│   ├── liveBackground.js    # Live particle background system
-│   ├── piece.js            # Tetris piece logic
-│   ├── stack.js            # Game board management
-│   ├── hold.js             # Hold piece functionality
-│   ├── preview.js          # Next piece preview
-│   ├── menu.js             # Menu system
-│   ├── audio.js            # Sound effects
-│   └── particles.js        # Particle effects
-├── imgs/                   # Images and icons
-└── fonts/                  # Font files
+│   ├── tetris.js        game state, modes, scoring, loop, layout and drawing
+│   ├── piece.js         active piece: movement, rotation, gravity, locking
+│   ├── stack.js         playfield and line clears
+│   ├── hold.js          hold slot
+│   ├── preview.js       seven-piece bag and next queue
+│   ├── menu.js          menus, settings, key bindings, saving, touch controls
+│   ├── responsive.js    touch gestures and on-screen buttons
+│   ├── liveBackground.js animated background themes
+│   ├── audio.js         sound effects and music (Web Audio)
+│   ├── particles.js     line clear sparks
+│   └── init.js          loading screen and theme shortcut
+├── fonts/               icon font for the menus
+├── vendor/fonts/        Source Sans Pro and Lato (SIL OFL), self-hosted
+└── imgs/                favicon and background image
 ```
 
-## 🎨 Theme System
-
-The live background system supports multiple themes that can be cycled through:
-
-1. **Cyberpunk**: Neon aesthetic with particle connections
-2. **Neon**: Vibrant colors with glow effects
-3. **Matrix**: Classic green code rain
-4. **Retro**: Soft pastel colors
-
-Themes feature:
-- Animated gradients
-- Particle effects
-- Game state reactivity
-- Smooth transitions
-
-## 📱 Mobile Optimization
-
-### Touch Controls
-- **D-Pad**: Precise movement control
-- **Visual Feedback**: Immediate response to touches
-- **Haptic Feedback**: Vibration on actions
-- **Adaptive Sizing**: Buttons scale to screen size
-- **Gesture Support**: Swipe and tap recognition
-
-### Responsive Layout
-- **Portrait Mode**: Optimized vertical layout
-- **Landscape Mode**: Wide layout for tablets
-- **Auto-scaling**: Game board adapts to screen
-- **Touch Prevention**: Prevents accidental zoom/scroll
-
-## 🔧 Customization
-
-### Settings
-- **DAS/ARR**: Customizable movement timing
-- **Gravity**: Adjustable fall speed
-- **Lock Delay**: Control piece lock timing
-- **Visual Settings**: Grid, ghost piece, outlines
-- **Block Styles**: Multiple visual themes
-- **Sound**: Toggle sound effects
-
-### Controls
-- **Key Binding**: Customize all keyboard controls
-- **Touch Mapping**: Adjustable touch sensitivity
-- **Haptic Settings**: Vibration intensity control
-
-## 🎯 Performance
-
-### Optimization Features
-- **60 FPS Target**: Consistent frame rate
-- **Canvas Optimization**: Efficient rendering
-- **Memory Management**: Automatic cleanup
-- **Responsive Throttling**: Smooth resize handling
-- **Performance Monitoring**: Real-time metrics
-
-### Browser Compatibility
-- **Chrome/Chromium**: Full feature support
-- **Firefox**: All features supported
-- **Safari**: Including iOS Safari with touch support
-- **Edge**: Full compatibility
-- **Mobile Browsers**: Optimized for mobile performance
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**Touch controls not working:**
-- Ensure you're on a touch-enabled device
-- Check that JavaScript is enabled
-- Try refreshing the page
-
-**Performance issues:**
-- Close other browser tabs
-- Check if hardware acceleration is enabled
-- Try switching to a simpler theme
-
-**Mobile layout issues:**
-- Ensure viewport is set correctly
-- Check device orientation
-- Try refreshing the page
-
-**Background not animating:**
-- Check if WebGL is supported
-- Ensure liveBackground.js is loaded
-- Try a different browser
-
-### Development Mode
-When running on localhost, you'll see:
-- **Performance Monitor**: FPS counter and theme indicator
-- **Console Messages**: Detailed logging and feature notifications
-- **Debug Shortcuts**: Additional keyboard shortcuts for testing
-
-## 🎮 Game Mechanics
-
-### Scoring
-- **Single Line**: 100 points
-- **Double Line**: 300 points
-- **Triple Line**: 500 points
-- **Tetris**: 800 points
-- **Soft Drop**: 1 point per cell
-- **Hard Drop**: 2 points per cell
-
-### Controls Timing
-- **DAS (Delayed Auto Shift)**: Delay before automatic repeat
-- **ARR (Auto Repeat Rate)**: Speed of automatic movement
-- **Lock Delay**: Time before piece locks in place
-- **Gravity**: Speed of natural piece falling
-
-## 🔄 Updates and Features
-
-### Recent Enhancements
-- ✅ Professional responsive design
-- ✅ Live particle backgrounds
-- ✅ Enhanced touch controls
-- ✅ Multiple visual themes
-- ✅ Performance optimization
-- ✅ Haptic feedback
-- ✅ Professional loading screen
-- ✅ Enhanced visual effects
-
-### Planned Features
-- 🔄 Online multiplayer
-- 🔄 Custom piece sets
-- 🔄 Additional game modes
-- 🔄 Leaderboard system
-- 🔄 Achievement system
-- 🔄 Sound themes
-
-## 📄 License
-
-This enhanced version maintains the original license while adding new features for educational and demonstration purposes.
-
-## 🤝 Contributing
-
-Feel free to contribute to this project:
-- Report bugs and issues
-- Suggest new features
-- Submit pull requests
-- Share feedback and ideas
-
----
-
-**Enjoy the enhanced Tetris experience! 🎮✨**
-
-*Press 'T' to cycle themes and 'P' for performance monitoring!*
+Open the page with `?debug` to show a frame rate readout.

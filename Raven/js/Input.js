@@ -4,14 +4,11 @@
  */
 class Input {
     constructor(handlers) {
-        // Input queue (used only for cheat codes)
-        this.queue = [];
-
         // Map keys to in-game inputs
         this.map = [];
         this.map[87] = 'up';       // W
-        this.map[83] = 'down';     // A
-        this.map[65] = 'left';     // S
+        this.map[83] = 'down';     // S
+        this.map[65] = 'left';     // A
         this.map[68] = 'right';    // D
         this.map[38] = 'up';       // UpArrow
         this.map[40] = 'down';     // DownArrow
@@ -21,26 +18,13 @@ class Input {
         this.map[13] = 'toggle';   // Enter
         this.map[27] = 'escape';   // Escape
 
-        // TODO: A nice extension would be to have key remapping, which isn't that
-        // hard - make the above settings configurable, add in a Keys menu, etc. etc.
-        // Not going to bother for submission, though.
-
         // Key press handlers
         this.handlers = handlers;
-
-        // Mouse location
-        this.virtualMove = [];
-        this.virtualX = 0;
-        this.virtualY = 0;
-        this.mouseAngle = 0;
     }
 
     init() {
         document.addEventListener('keydown', event => {
             let k = this.map[event.keyCode];
-
-            // Uncomment to see key codes in console (an easy way to gather potential keys)
-            // console.log(event.keyCode);
 
             if (k) {
                 // Some keys are "stateful" (we evaluate each frame whether they are still
@@ -63,9 +47,6 @@ class Input {
         document.addEventListener('keyup', event => {
             let k = this.map[event.keyCode];
 
-            this.queue.unshift(event.key);
-            this.queue.splice(10);
-
             if (k) {
                 this[k] = undefined;
 
@@ -79,9 +60,9 @@ class Input {
             this.handlers['mousemove'](event.movementX, event.movementY, event.clientX, event.clientY);
         });
 
+        // A click acts like pressing Space (menus, restarting after death)
         document.addEventListener('click', event => {
-            // TODO: Today, we just treat a click as a click (like pressing spacebar).
-            // This can be a little weird if the user clicks without ever moving the mouse.
+            if (event.target.closest('a, button')) return;
             this.handlers['mouseclick']();
         });
 

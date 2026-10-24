@@ -21,13 +21,8 @@ class Door {
 
         if (this.exitDoor) this.locked = true;
 
-        //if (this.type === 'h') {
-            this.x = this.u * 32 + 32;
-            this.y = this.v * 32 + 16;
-        //} else {
-        //    this.x = this.u * 32 + 16;
-        //    this.y = this.v * 32 + 32;
-        //}
+        this.x = this.u * 32 + 32;
+        this.y = this.v * 32 + 16;
 
         // Select a radius just big enough to include our traditional
         // "elevator start position" (we want the effect of the doors
@@ -76,31 +71,21 @@ class Door {
         // TODO: For now, "vertical" doors are not implemented, because I needed to cut
         // a couple hundred extra bytes :(.
 
-        //if (this.type === 'h') {
-            game.ctx.save();
-            game.ctx.translate(game.offset.x + this.x, game.offset.y + this.y);
-            Asset.drawSprite2('door', game.ctx, slide, 0, 32 - slide, 32, -32, -16, 32 - slide, 32);
-            game.ctx.rotate(Util.d2r(180));
-            Asset.drawSprite2('door', game.ctx, slide, 0, 32 - slide, 32, -32, -16, 32 - slide, 32);
+        game.ctx.save();
+        game.ctx.translate(game.offset.x + this.x, game.offset.y + this.y);
+        Asset.drawSprite2('door', game.ctx, slide, 0, 32 - slide, 32, -32, -16, 32 - slide, 32);
+        game.ctx.rotate(Util.d2r(180));
+        Asset.drawSprite2('door', game.ctx, slide, 0, 32 - slide, 32, -32, -16, 32 - slide, 32);
 
-            if (this.locked) {
-                game.ctx.fillStyle = 'rgba(204, 36, 36, 0.8)';
-                game.ctx.fillRect(10, 8, 14, 2);
-                game.ctx.fillRect(-24, 8, 14, 2);
-                game.ctx.fillRect(10, -10, 14, 2);
-                game.ctx.fillRect(-24, -10, 14, 2);
-            }
+        if (this.locked) {
+            game.ctx.fillStyle = 'rgba(204, 36, 36, 0.8)';
+            game.ctx.fillRect(10, 8, 14, 2);
+            game.ctx.fillRect(-24, 8, 14, 2);
+            game.ctx.fillRect(10, -10, 14, 2);
+            game.ctx.fillRect(-24, -10, 14, 2);
+        }
 
-            game.ctx.restore();
-        //} else {
-        //    game.ctx.save();
-        //    game.ctx.translate(game.offset.x + this.x, game.offset.y + this.y);
-        //    game.ctx.rotate(Util.d2r(90));
-        //    game.ctx.drawImage(Asset.tile.door, slide, 0, 32 - slide, 32, -32, -16, 32 - slide, 32);
-        //    game.ctx.rotate(Util.d2r(270));
-        //    game.ctx.drawImage(Asset.tile.door, slide, 0, 32 - slide, 32, -32, -16, 32 - slide, 32);
-        //    game.ctx.restore();
-        //}
+        game.ctx.restore();
     }
 
     toggle() {

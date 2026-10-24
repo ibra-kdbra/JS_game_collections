@@ -1,0 +1,19 @@
+# GitHub Pages builds this repository with Jekyll. The site itself is plain static files;
+# this only keeps development material out of the published site. Nothing below is loaded
+# by any page (checked by tools/smoke.mjs, which fails on any same-origin 404).
+exclude:
+  - docs
+  - tools
+  - serve.py
+  - Brainy_Warrior/tools
+  - Gravity_Wells/tools
+  - Breakout/tools
+  - Minesweeper/test
+  - Raven/tools
+  - ReWire/tools
+  - Snake/tools
+  - Sokoban/tools
+  - Souls-Bumper/tools
+  - TowerDefense/tools
+  - PacMan/src
+  - Wahdatio/src

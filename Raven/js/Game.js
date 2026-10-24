@@ -2,15 +2,19 @@ class Game {
     init() {
         // Prep canvas
         this.canvas = document.getElementById('canvas');
-        this.canvas.width = this.canvas.clientWidth;
-        this.canvas.height = this.canvas.clientHeight;
         this.ctx = this.canvas.getContext('2d');
-        this.canvasBounds = this.canvas.getBoundingClientRect();
-
         this._losCanvas = document.getElementById('los');
-        this._losCanvas.width = this.canvas.width;
-        this._losCanvas.height = this.canvas.height;
         this._losCtx = this._losCanvas.getContext('2d');
+        this.resize();
+        // At most one resize per frame while the window is being resized or rotated
+        let resizeFrame = 0;
+        window.addEventListener('resize', () => {
+            if (resizeFrame) return;
+            resizeFrame = requestAnimationFrame(() => {
+                resizeFrame = 0;
+                this.resize();
+            });
+        });
 
         this._tileCanvas = document.getElementById('tile');
         this._tileCtx = this._tileCanvas.getContext('2d');
@@ -33,22 +37,13 @@ class Game {
             mouseclick: this.onMouseClick.bind(this)
         }).init();
 
-        this.audio = new Audio();
+        this.store = GameKit.createStore('raven');
+        this.volume = this.store.get('volume', 1);
+        this.audio = new RavenAudio(this.volume);
+        this.touch = new TouchControls(this);
 
-        // Check whether local storage is writable.
-        // Why not typeof()? See https://stackoverflow.com/questions/11214404/how-to-detect-if-browser-supports-html5-local-storage
-        try {
-            localStorage.setItem('lc', 7);
-            localStorage.removeItem('lc');
-        } catch (e) {
-            this._storageDisabled = true;
-        }
-
-        if (this._storageDisabled) {
-            this._startLevel = 0;
-        } else {
-            this._startLevel = parseInt(localStorage.getItem('level') || '0', 10);
-        }
+        this._startLevel = parseInt(this.store.get('level', 0), 10) || 0;
+        this.levelTime = 0;
 
         this.level = undefined;
         this.intro = undefined;
@@ -85,6 +80,24 @@ class Game {
         document.addEventListener('pointerlockchange', this.onMouseLock.bind(this));
         document.addEventListener('mozpointerlockchange', this.onMouseLock.bind(this));
         document.addEventListener('webkitpointerlockchange', this.onMouseLock.bind(this));
+        // Without pointer lock (denied, or unsupported) the game still plays: you aim at the cursor
+        document.addEventListener('pointerlockerror', () => {
+            this.freeMouse = true;
+            this.paused = false;
+            this.menu = undefined;
+        });
+
+        const volumeEntry = () => ({
+            text: this._volumeText(),
+            handler: function () {
+                game.cycleVolume();
+                this.text = game._volumeText();
+            }
+        });
+        const levelsEntry = (back) => ({
+            text: 'SELECT LEVEL',
+            handler: () => this.openMenu(this._levelMenu(back))
+        });
 
         this._startMenu = new Menu(
             [
@@ -94,7 +107,9 @@ class Game {
                         this._pendingLevelIndex = 0;
                         this.unpause();
                     }
-                }
+                },
+                levelsEntry(() => this._startMenu),
+                volumeEntry()
             ],
             () => false
         );
@@ -114,7 +129,9 @@ class Game {
                         this._pendingLevelIndex = 0;
                         this.unpause();
                     }
-                }
+                },
+                levelsEntry(() => this._continueMenu),
+                volumeEntry()
             ],
             () => false
         );
@@ -133,12 +150,88 @@ class Game {
                         this._pendingLevelIndex = this.levelIndex;
                         this.unpause();
                     }
-                }
+                },
+                levelsEntry(() => this._pauseMenu),
+                volumeEntry()
             ],
             () => this.unpause()
         );
 
+        // Never come back from a background tab to a level that kept running
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && this.level && !this.menu && !this.intro) this.pause();
+        });
+
         return this;
+    }
+
+    // Size the canvases to the window. The logical view is zoomed out on small
+    // screens so phones see about as much of the map as a small laptop.
+    resize() {
+        const cssW = this.canvas.clientWidth;
+        const cssH = this.canvas.clientHeight;
+        this.zoom = Math.min(1, Math.min(cssW, cssH) / 560);
+        this.viewW = Math.round(cssW / this.zoom);
+        this.viewH = Math.round(cssH / this.zoom);
+        // Text and on-screen buttons grow back on zoomed-out views so text stays
+        // readable (about 12px and up) and buttons stay finger-sized.
+        this.textScale = Math.min(1.8, Math.max(1, 12.5 / (16 * this.zoom)));
+        // Backing store capped at 2x: the view is redrawn every frame and a 3x
+        // canvas more than doubles the fill cost for no visible gain on a phone.
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        this.pixelScale = dpr * this.zoom;
+        [this.canvas, this._losCanvas].forEach(c => {
+            c.width = Math.round(cssW * dpr);
+            c.height = Math.round(cssH * dpr);
+        });
+        this.canvasBounds = this.canvas.getBoundingClientRect();
+    }
+
+    // Level list: every level reached so far, with the best clear time
+    _levelMenu(back) {
+        const bests = GameKit.readBests('raven');
+        const reached = Math.max(this.store.get('reached', 0), this._startLevel);
+        const entries = [];
+        for (let i = 0; i <= Math.min(reached, LevelCache.length - 1); i++) {
+            const best = bests['level' + (i + 1)];
+            entries.push({
+                text: LevelCache[i].name.toUpperCase() + (best ? '  ' + Util.formatTime(best.value) : ''),
+                handler: () => {
+                    this._pendingLevelIndex = i;
+                    this.unpause();
+                }
+            });
+        }
+        entries.push({ text: 'BACK', handler: () => this.openMenu(back()) });
+        return new Menu(entries, () => this.openMenu(back()));
+    }
+
+    _volumeText() {
+        return this.volume > 0 ? 'VOLUME ' + Math.round(this.volume * 100) + '%' : 'SOUND OFF';
+    }
+
+    cycleVolume() {
+        const steps = [1, 0.75, 0.5, 0.25, 0];
+        this.volume = steps[(steps.indexOf(this.volume) + 1) % steps.length];
+        this.audio.setVolume(this.volume);
+        this.store.set('volume', this.volume);
+    }
+
+    pause() {
+        this.paused = true;
+        this.openMenu(this._pauseMenu);
+        if (document.pointerLockElement) document.exitPointerLock();
+    }
+
+    _levelCleared() {
+        const index = this.levelIndex;
+        const ms = Math.round(this.levelTime * 1000);
+        const result = GameKit.recordBest('raven', ms, {
+            lowerIsBetter: true,
+            mode: 'level' + (index + 1),
+            label: LevelCache[index].name + ' in ' + Util.formatTime(ms)
+        });
+        this.clearInfo = { ms, isNew: result.isNew, best: result.best };
     }
 
     update(delta) {
@@ -180,12 +273,15 @@ class Game {
                     this.intro.update(delta);
                     this._renderPrep = false;
                     this._startLevel = 0;
-                    if (!this._storageDisabled) localStorage.setItem('level', 0);
+                    this.store.set('level', 0);
                     return;
                 } else {
-                    if (!this._storageDisabled) localStorage.setItem('level', this._pendingLevelIndex);
+                    this.store.set('level', this._pendingLevelIndex);
+                    this.store.set('reached', Math.max(this.store.get('reached', 0), this._pendingLevelIndex));
                 }
             }
+
+            if (!this.levelComplete && !this.player.dead) this.levelTime += delta;
 
             this.player.update(delta);
             this.terminals.forEach(terminal => terminal.update(delta));
@@ -193,18 +289,18 @@ class Game {
             this.doors.forEach(door => door.update(delta));
 
             this.offset = {
-                x: this.canvas.width / 2 - this.player.x,
-                y: this.canvas.height / 2 - this.player.y,
-                crosshairX: this.player.x - this.canvas.width / 2,
-                crosshairY: this.player.y - this.canvas.height / 2
+                x: this.viewW / 2 - this.player.x,
+                y: this.viewH / 2 - this.player.y,
+                crosshairX: this.player.x - this.viewW / 2,
+                crosshairY: this.player.y - this.viewH / 2
             };
 
             let cd = 4;
             let bound = {
                 left: this.offset.crosshairX + cd,
-                right: this.offset.crosshairX + this.canvas.width - cd,
+                right: this.offset.crosshairX + this.viewW - cd,
                 top: this.offset.crosshairY + cd,
-                bottom: this.offset.crosshairY + this.canvas.height - cd
+                bottom: this.offset.crosshairY + this.viewH - cd
             };
 
             if (this.crosshair.x < bound.left) {
@@ -263,26 +359,28 @@ class Game {
                     this.levelComplete = true;
                     this.levelCompleteMs = performance.now();
                     this.audio.playTri();
+                    this._levelCleared();
                 }
             }
 
             this._renderPrep = true;
         }
-
-        this._handleCheatCodes();
     }
 
     render() {
+        const k = this.pixelScale;
+        this.ctx.setTransform(k, 0, 0, k, 0, 0);
+        this._losCtx.setTransform(k, 0, 0, k, 0, 0);
         this.ctx.fillStyle = 'black';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.fillRect(0, 0, this.viewW, this.viewH);
 
         if (this.level && this._renderPrep && !this.intro) {
             if (this.player.dead) {
                 let scale = Math.min(3, 1 + this.deathFrame / 50);
-                this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
+                this.ctx.translate(this.viewW / 2, this.viewH / 2);
                 this.ctx.rotate(Util.d2r(this.deathFrame / 5));
                 this.ctx.scale(scale, scale);
-                this.ctx.translate(-this.canvas.width / 2, -this.canvas.height / 2);
+                this.ctx.translate(-this.viewW / 2, -this.viewH / 2);
             }
 
             // "Draw" the pre-rendered level onto the canvas. Normally here we'd loop through
@@ -296,33 +394,10 @@ class Game {
             this.cameras.forEach(camera => camera.render());
             this.doors.forEach(door => door.render());
 
-            // Uncomment this block to draw dashed yellow lines along the various
-            // visibility edges. Pretty much just for debugging.
-            /*let losEdges = this.losEdges;
-            this.doors.forEach(door => losEdges = losEdges.concat(door.getLosEdges()));
-            losEdges.forEach(edge => {
-                this.ctx.save();
-                this.ctx.globalAlpha = 0.9;
-                this.ctx.strokeStyle = 'yellow';
-                this.ctx.setLineDash([4, 2]);
-                this.ctx.beginPath();
-                this.ctx.moveTo(this.offset.x + edge.p1.x, this.offset.y + edge.p1.y);
-                this.ctx.lineTo(this.offset.x + edge.p2.x, this.offset.y + edge.p2.y);
-                this.ctx.stroke();
-                this.ctx.restore();
-            });*/
-
-            if (this.player.dead) {
-                this._losCtx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                let opacity = Math.max(0, 0.8 - this.deathFrame / 40);
-                this._losCtx.fillStyle = 'rgba(0,0,0,' + opacity + ')';
-                this._losCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-            }
-
             // Next, we "render" the LOS canvas
-            this._losCtx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this._losCtx.clearRect(0, 0, this.viewW, this.viewH);
             this._losCtx.fillStyle = 'rgba(0,0,0,0.8)';
-            this._losCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            this._losCtx.fillRect(0, 0, this.viewW, this.viewH);
             this.vision.forEach(polygon => {
                 this._losCtx.fillStyle = 'rgba(255,255,255,' + polygon.opacity + ')';
                 this._losCtx.beginPath();
@@ -337,14 +412,9 @@ class Game {
             // Prepare to put LOS visibility on top of the canvas
             this.ctx.save();
 
-            // LOS Blur actually looks REALLY nice in Chrome, gives your LOS beam a flashlight effect,
-            // but it totally screws up frame rate. I'd have to really optimize the rest of my code
-            // before I could turn on blur. (Uncomment if you want to check it out.)
-            //this.ctx.filter = 'blur(6px)';
-
             // attempted: lighten, multiply, darken, source-in (darken looks best for shadows so far)
             this.ctx.globalCompositeOperation = 'darken';
-            this.ctx.drawImage(this._losCanvas, 0, 0);
+            this.ctx.drawImage(this._losCanvas, 0, 0, this.viewW, this.viewH);
             this.ctx.restore();
 
             if (!this.player.dead) {
@@ -363,17 +433,17 @@ class Game {
             // Reset all global transforms. Note: do not render anything except "HUD UI"
             // after this point, as it won't line up with the rest of the map in case of,
             // e.g., the death spin animation.
-            this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+            this.ctx.setTransform(k, 0, 0, k, 0, 0);
 
             Enemy.renderAttackWarning();
 
             if (this.player.dead) {
                 let mult = Math.min(1, this.deathFrame / 100);
-                let b = -75 + mult * (this.canvas.height + 100);
+                let b = -75 + mult * (this.viewH + 100);
 
                 // A poor man's "blood splatter"
                 this.ctx.fillStyle = 'rgba(204,0,0,0.8)';
-                for (let i = 0; i < this.canvas.width; i++) {
+                for (let i = 0; i < this.viewW; i++) {
                     this.ctx.fillRect(i, 0, 1,
                         b + Math.abs(Math.cos(i / 29) * 30 +
                         Math.sin(0.5 + i / 22) * 40 * mult +
@@ -383,33 +453,40 @@ class Game {
                     );
                 }
 
-                /*let opacity = Math.min(0.8, this.deathFrame / 40);
-                this.ctx.fillStyle = 'rgba(204, 0, 0, ' + opacity + ')';
-                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);*/
-
                 let size = Math.min(80, 20 + this.deathFrame / 5);
                 let opacity = Math.min(0.5, this.deathFrame / 50);
                 this.ctx.font = Asset.getFontString(size);
-                let x = this.canvas.width / 2 - this.ctx.measureText('YOU ARE DEAD').width / 2;
+                let x = this.viewW / 2 - this.ctx.measureText('YOU ARE DEAD').width / 2;
                 this.ctx.fillStyle = 'rgba(255, 255, 255, ' + opacity + ')';
-                this.ctx.fillText('YOU ARE DEAD', x, this.canvas.height / 2);
+                this.ctx.fillText('YOU ARE DEAD', x, this.viewH / 2);
             }
 
             if (this.levelComplete) {
                 let opacity = Math.min(1, (game.framems - game.levelCompleteMs) / 2000);
                 this.ctx.fillStyle = 'rgba(0, 0, 0, ' + opacity + ')';
-                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.fillRect(0, 0, this.viewW, this.viewH);
 
                 this.ctx.font = Asset.getFontString(40);
-                let x = this.canvas.width / 2 - this.ctx.measureText('CLEAR').width / 2;
+                let x = this.viewW / 2 - this.ctx.measureText('CLEAR').width / 2;
                 this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                this.ctx.fillText('CLEAR', x, this.canvas.height / 2);
+                this.ctx.fillText('CLEAR', x, this.viewH / 2);
+
+                if (this.clearInfo) {
+                    let info = Util.formatTime(this.clearInfo.ms) +
+                        (this.clearInfo.isNew ? '  NEW BEST' : '  BEST ' + Util.formatTime(this.clearInfo.best));
+                    this.ctx.font = Asset.getFontString(18 * this.textScale);
+                    this.ctx.fillStyle = 'rgba(204, 204, 204, 0.8)';
+                    this.ctx.fillText(info, this.viewW / 2 - this.ctx.measureText(info).width / 2, this.viewH / 2 + 40 * this.textScale);
+                }
             }
 
             if (!this.menu) {
                 this.renderLevelText();
+                this.renderTimer();
             }
         }
+
+        if (!this.menu) this.touch.render();
 
         if (this.intro && !this.menu) {
             this.intro.render();
@@ -433,32 +510,48 @@ class Game {
         }
 
         if (this.framems - this.levelms - delayStart < 3000) {
-            this.ctx.font = Asset.getFontString(22);
+            const k = this.textScale;
+            // The name shares the top row with the clock and, on touch screens, the pause button
+            const nameRoom = this.viewW - 36 - (this.touch.active ? this.touch.buttonSize + 12 : 0);
+            this.fitFont(this.level.name, 22 * k, nameRoom);
             this.ctx.fillStyle = 'rgba(204, 255, 204, 0.9)';
-            this.ctx.fillText(this.level.name.substring(0, nameChars), 18, 36);
+            this.ctx.fillText(this.level.name.substring(0, nameChars), 18, 36 * k);
 
             if (this.level.hint) {
-                this.ctx.font = Asset.getFontString(18);
+                const hint = this.touch.active && this.level.touchHint ? this.level.touchHint : this.level.hint;
+                this.ctx.font = Asset.getFontString(18 * k);
                 this.ctx.fillStyle = 'rgba(204, 204, 204, 0.8)';
-                this.ctx.fillText(this.level.hint.substring(0, hintChars), 18, this.canvas.height - 30);
+                // Wrap long hints on narrow views, bottom line kept where it always was
+                const lines = Util.wrapText(this.ctx, hint, this.viewW - 36);
+                let shown = hintChars;
+                lines.forEach((line, i) => {
+                    if (shown <= 0) return;
+                    const y = this.viewH - 30 * k - (lines.length - 1 - i) * 24 * k;
+                    this.ctx.fillText(line.substring(0, shown), 18, y);
+                    shown -= line.length + 1;
+                });
             }
         }
     }
 
-    frame(nextms) {
-        let delta = nextms - this.framems;
-        this.framems = nextms;
+    // Set the canvas font to `px`, smaller if needed so `text` fits in `maxW`
+    fitFont(text, px, maxW) {
+        this.ctx.font = Asset.getFontString(px);
+        const w = this.ctx.measureText(text).width;
+        if (w > maxW) this.ctx.font = Asset.getFontString(Math.floor(px * maxW / w));
+    }
 
-        // Gut check - absorb random lag spike / frame jumps
-        // (The expected delta is 1000/60 = ~16.67ms.)
-        if (delta > 500) {
-            delta = 500;
-        }
-
-        this.update(delta / 1000);
-        this.render();
-
-        window.requestAnimationFrame(this.frame.bind(this));
+    // Level clock in the top right corner, next to the time to beat
+    renderTimer() {
+        if (this.intro || this.levelComplete) return;
+        const best = GameKit.readBests('raven')['level' + (this.levelIndex + 1)];
+        const text = Util.formatTime(this.levelTime * 1000) + (best ? ' / ' + Util.formatTime(best.value) : '');
+        const k = this.textScale;
+        this.ctx.font = Asset.getFontString(16 * k);
+        this.ctx.fillStyle = 'rgba(204, 204, 204, 0.7)';
+        // On touch screens the clock sits under the pause button
+        const y = this.touch.active ? this.touch.pauseButton().y + this.touch.buttonSize + 22 * k : 32;
+        this.ctx.fillText(text, this.viewW - this.ctx.measureText(text).width - 18, y);
     }
 
     start() {
@@ -467,7 +560,16 @@ class Game {
         } else {
             this.openMenu(this._startMenu);
         }
-        window.requestAnimationFrame(this.frame.bind(this));
+        // Fixed 1/60 s logic steps; the loop pauses itself while the tab is hidden
+        this.framems = performance.now();
+        this.loop = GameKit.createLoop({
+            update: (dt) => {
+                this.framems = performance.now();
+                this.update(dt);
+            },
+            render: () => this.render()
+        });
+        this.loop.start();
     }
 
     openMenu(menu) {
@@ -485,7 +587,12 @@ class Game {
     //
 
     unpause() {
-        this.canvas.requestPointerLock();
+        if (this.touch.active || this.freeMouse) {
+            this.paused = false;
+            this.menu = undefined;
+        } else {
+            this.canvas.requestPointerLock();
+        }
     }
 
     onUp() {
@@ -520,6 +627,8 @@ class Game {
     onEscape() {
         if (this.menu) {
             this.menu.onEscape();
+        } else if (this.freeMouse) {
+            this.pause();
         } else {
             // NOTE: My reading of the spec is that we should never reach this point, because
             // pressing ESC while we have no menu should be captured by the browser, and used
@@ -540,24 +649,28 @@ class Game {
             this.framems = performance.now();
         } else {
             this.mouselocked = false;
-            this.paused = true;
-            this.openMenu(this._pauseMenu);
+            if (!this.touch.active) this.pause();
         }
     }
 
     onMouseMove(deltaX, deltaY, clientX, clientY) {
-        if (!this.paused) {
-            this.crosshair.x += deltaX;
-            this.crosshair.y += deltaY;
-        }
+        if (this.touch.active) return;
+        this.mouse.x = (clientX - this.canvasBounds.left) / this.zoom;
+        this.mouse.y = (clientY - this.canvasBounds.top) / this.zoom;
 
-        this.mouse.x = clientX - this.canvasBounds.left;
-        this.mouse.y = clientY - this.canvasBounds.top;
+        if (!this.paused && this.freeMouse && this.offset) {
+            this.crosshair.x = this.mouse.x - this.offset.x;
+            this.crosshair.y = this.mouse.y - this.offset.y;
+        } else if (!this.paused) {
+            this.crosshair.x += deltaX / this.zoom;
+            this.crosshair.y += deltaY / this.zoom;
+        }
 
         if (this.menu) this.menu.onMouseMove(this.mouse.x, this.mouse.y);
     }
 
     onMouseClick() {
+        if (this.touch.active) return;
         if (this.menu) {
             this.menu.select();
         } else if (this.player.dead) {
@@ -572,6 +685,8 @@ class Game {
         this.levelComplete = false;
 
         let eb = this.level.enter;
+        this.levelTime = 0;
+        this.clearInfo = undefined;
 
         this.player = new Player();
         this.player.x = (eb.p1.x + eb.p2.x) / 2;
@@ -662,8 +777,6 @@ class Game {
         // the eyes), but it also explodes PNG size by an order of magnitude. Cheat
         // by saving the PNGs as mostly-solid-color and add noise in when we render
         // the level.
-        //let seeded = Util.Alea(seed);
-        //let rand = () => Math.floor(seeded() * 256);
         let r,g,b,a,w;
         for (let i = 1; i < 31; i++) {
             for(let j = 1; j < 31; j++) {
@@ -786,34 +899,6 @@ class Game {
 
             return result;
         });
-    }
-
-    // Cheat codes are disabled for submission. They are more of a development tool than
-    // actually useful for playing. (Actually, I think cheat codes are kind of a fun
-    // easter egg, but I needed those extra bytes!)
-    _handleCheatCodes() {
-        /*
-        // GOTOnn (nn = 01-99, number of a valid level)
-        if (this.input.queue[0] >= '0' && this.input.queue[0] <= '9' &&
-            this.input.queue[1] >= '0' && this.input.queue[1] <= '9' &&
-            this.input.queue[2] === 'o' &&
-            this.input.queue[3] === 't' &&
-            this.input.queue[4] === 'o' &&
-            this.input.queue[5] === 'g') {
-            this._pendingLevelIndex = parseInt(this.input.queue[1] + this.input.queue[0], 10) - 1;
-            if (this._pendingLevelIndex >= LevelCache.length || this._pendingLevelIndex < 0) {
-                this._pendingLevelIndex = undefined;
-            }
-            this.input.queue = [];
-        // DEAD
-        } else if (this.input.queue[0] === 'd' &&
-                   this.input.queue[1] === 'a' &&
-                   this.input.queue[2] === 'e' &&
-                   this.input.queue[3] === 'd') {
-            this.playerDied();
-            this.input.queue = [];
-        }
-        */
     }
 
     // This is what I ended up with instead, which is a basic map "flood fill". Because

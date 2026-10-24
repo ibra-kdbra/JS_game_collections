@@ -15,6 +15,19 @@ The game is divided into two primary interfaces:
 ### 1. Terminal Interface
 A realistic terminal emulator used for narrative progression, receiving mission objectives via encrypted emails, and launching network visualizers. It supports interactive command input and mimics a legacy OS environment.
 
+Menu commands:
+
+1. **Story**: the 16 story meshes, from practice runs to the final Goliath mesh.
+2. **Challenge**: a random mesh with random tools.
+3. **Continue**: the next story mesh you have not cleared.
+4. **Stages**: every story mesh you have reached, with the ones you took offline ticked.
+5. **Daily challenge**: one seeded mesh per day, the same for everyone; your fastest takedown is saved.
+6. **Shop**: spend MeshCoins on extra tool uses. They load into the next mesh that offers the tool.
+
+MeshCoins come from mining nodes, the first clear of each story mesh and the first daily win of the day.
+
+On a phone or tablet, tap the answer buttons under the terminal (or type in the command field) and tap **Continue** where the terminal says "press ENTER". In the visualizer, drag to pan and pinch to zoom; with the phone upright the visualizer turns sideways. On phones the visualizer is laid out at the screen's real size, with the tools in a grid on the left and Restart / Quit (tap twice) at the bottom. The speaker button mutes the sound effects.
+
 ### 2. Network Visualizer
 Once connected to a mesh, you are presented with a live visualization of nodes and connections. Your objective is to reduce the "Network Health" below a critical threshold (usually 50%) to force a total system failure.
 

@@ -2,161 +2,224 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#09090b" />
+    <link rel="canonical" href="https://jsgamelab.ibrakdbra.me/Art_Lab/" />
     <title>Art Lab | Creative Code Experiments</title>
-    
-    <!-- SEO Meta Tags -->
-    <meta name="description" content="Where mathematics meets creativity. Explore mesmerizing flow fields, particle systems, and generative art experiments built with JavaScript and Canvas." />
+
+    <meta name="description" content="Where mathematics meets creativity. Open a pack of seven generative art pieces: flow fields, particle systems and shaders built with JavaScript and Canvas." />
     <meta name="keywords" content="generative art, creative coding, flow fields, particle systems, JavaScript art, canvas experiments" />
     <meta name="author" content="ibra-kdbra" />
-    
-    <!-- Icons -->
+
     <link href="../assets/icons/video_game.ico" rel="icon" type="image/x-icon" />
     <link href="../assets/icons/video_game.svg" rel="icon" type="image/svg+xml" />
     <link href="../assets/icons/video_game.png" rel="icon" type="image/png" />
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700&family=Chakra+Petch:wght@400;600;700&display=swap"
-      rel="stylesheet"
-    />
-    
-    <!-- Styles -->
-    <link rel="stylesheet" href="../assets/css/artlab.css" />
-    <style>
-      body, p, li, a, span, button, input, select, textarea { font-family: 'Albert Sans', sans-serif; }
-      h1, h2, h3, h4, h5, h6 { font-family: 'Chakra Petch', sans-serif; }
-    </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- GSAP for animations -->
-    <script src="../assets/vendor/gsap/gsap.min.js" defer></script>
-  </head>
-  <body id="artlab-body">
-    <!-- Inline Error Overlay for Debugging -->
+
+    <!-- Pick the first view before anything paints: the opening on a first visit,
+         the deck afterwards, or the grid when that was the last view. -->
     <script>
-      window.addEventListener('error', function(e) {
-        var div = document.createElement('div');
-        div.style.position = 'fixed';
-        div.style.top = '10px';
-        div.style.left = '10px';
-        div.style.right = '10px';
-        div.style.background = 'rgba(255, 0, 0, 0.9)';
-        div.style.color = 'white';
-        div.style.padding = '15px';
-        div.style.zIndex = '99999';
-        div.style.fontFamily = 'monospace';
-        div.style.whiteSpace = 'pre-wrap';
-        div.style.borderRadius = '8px';
-        div.style.boxShadow = '0 4px 20px rgba(0,0,0,0.5)';
-        div.innerHTML = '<strong>JS Error:</strong> ' + e.message + '<br><small>' + e.filename + ':' + e.lineno + ':' + e.colno + '</small>';
-        document.body.appendChild(div);
-      });
-      window.addEventListener('unhandledrejection', function(e) {
-        var div = document.createElement('div');
-        div.style.position = 'fixed';
-        div.style.top = '80px';
-        div.style.left = '10px';
-        div.style.right = '10px';
-        div.style.background = 'rgba(255, 128, 0, 0.9)';
-        div.style.color = 'white';
-        div.style.padding = '15px';
-        div.style.zIndex = '99999';
-        div.style.fontFamily = 'monospace';
-        div.style.whiteSpace = 'pre-wrap';
-        div.style.borderRadius = '8px';
-        div.style.boxShadow = '0 4px 20px rgba(0,0,0,0.5)';
-        div.innerHTML = '<strong>Unhandled Promise Rejection:</strong> ' + e.reason;
-        document.body.appendChild(div);
-      });
+      (function () {
+        var v = 'opening';
+        try {
+          var calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+          if (location.hash === '#all' || localStorage.getItem('artlab.view') === '"grid"') v = 'grid';
+          else if (calm || localStorage.getItem('artlab.opened') === 'true') v = 'deck';
+        } catch (e) {}
+        document.documentElement.dataset.view = v;
+      })();
     </script>
-    <!-- Animated Background -->
-    <div class="artlab-bg"></div>
-    <!-- Three.js particle effect loads automatically -->
-    
-    <!-- Corner Navigation (back + icons) -->
-    <nav class="corner-nav artlab-nav">
-      <a href="../index.html" class="corner-back">
-        <i class="fas fa-arrow-left"></i>
+
+    <link rel="preload" href="../assets/fonts/chakra-petch-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="../assets/fonts/albert-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="../assets/css/fonts.css" />
+    <link rel="stylesheet" href="../assets/css/variables.css" />
+    <link rel="stylesheet" href="../assets/vendor/fontawesome/fontawesome.css" />
+    <link rel="stylesheet" href="../assets/css/feedback.css" />
+    <link rel="stylesheet" href="../assets/css/components/music-player.css" />
+    <link rel="stylesheet" href="css/deck.css" />
+    <link rel="modulepreload" href="js/cards.js" />
+    <script type="module" src="js/deck.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" id="skip-link" href="#all">Skip to all pieces</a>
+
+    <header class="bar corner-nav">
+      <a class="icon-btn" href="../index.html" aria-label="Back to Game Lab" title="Back to Game Lab">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6l-6 6 6 6M8 12h12" /></svg>
       </a>
+      <h1 class="bar-title"><b>Art Lab</b> <span id="bar-sub">Series 01 &middot; 7 generative pieces</span></h1>
       <div class="nav-icons-group">
-        <a href="https://github.com/ibra-kdbra/JS_game_collections/tree/main/Art_Lab" class="corner-link" target="_blank" aria-label="Source">
-          <i class="fab fa-github"></i>
+        <button class="icon-btn js-only" id="view-btn" type="button" aria-pressed="false" aria-label="All pieces" title="All pieces">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" /></svg><span class="lbl">All pieces</span>
+        </button>
+        <button class="icon-btn js-only" id="sound-btn" type="button" aria-pressed="false" aria-label="Sound" title="Sound"></button>
+        <button class="icon-btn js-only" id="pack-btn" type="button" aria-label="Open a new pack" title="Open a new pack">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5" /></svg><span class="lbl">New pack</span>
+        </button>
+        <button class="icon-btn icon-btn--text js-only" id="skip-btn" type="button" hidden>Skip <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l7 6-7 6M14 6l5 6-5 6" /></svg></button>
+        <a class="icon-btn wide-only" href="https://github.com/ibra-kdbra/JS_game_collections/tree/main/Art_Lab" target="_blank" rel="noopener" aria-label="Art Lab source on GitHub" title="Source on GitHub">
+          <i class="fab fa-github" aria-hidden="true"></i>
         </a>
-        <!-- Feedback icon added dynamically here -->
+        <!-- the feedback button is added here by FeedbackUI -->
       </div>
-    </nav>
-    
-    <!-- Hero Section -->
-    <section class="artlab-hero">
-      <div class="artlab-hero-badge">
-        <i class="fas fa-flask"></i>
-        Creative Coding Lab
-      </div>
-      
-      <h1 class="artlab-hero-title">Art Lab</h1>
-      
-      <p class="artlab-hero-subtitle">
-        Where <span style="color: var(--artlab-primary);">mathematics</span> meets 
-        <span style="color: var(--artlab-secondary);">creativity</span>. 
-        Explore mesmerizing flow fields, particle systems, and generative art experiments 
-        that push the boundaries of what's possible with code.
-      </p>
-      
-      <div class="artlab-hero-cta">
-        <a href="#experiments" class="btn btn-artlab">
-          <i class="fas fa-eye"></i>
-          View Experiments
-        </a>
-      </div>
-    </section>
-    
-    <!-- Experiments Carousel Section -->
-    <section class="carousel-section" id="experiments">
-      <div class="carousel-container">
-        <div class="carousel-track" id="carousel-track">
-          <!-- Experiment cards will be inserted dynamically -->
+    </header>
+
+    <main>
+      <!-- Opening: a sealed booster pack -->
+      <section class="view view-opening opening" id="opening" aria-label="Open a pack of Art Lab cards">
+        <div class="pack is-idle" id="pack">
+          <div class="pack-shadow" aria-hidden="true"></div>
+          <div class="pack-half pack-top" aria-hidden="true">
+            <div class="pack-skin">
+              <div class="crimp"></div>
+              <div class="pack-sheen"></div>
+            </div>
+          </div>
+          <div class="pack-half pack-body" aria-hidden="true">
+            <div class="pack-skin">
+              <div class="pack-head">
+                <span class="pack-series">Series 01</span>
+                <span class="pack-count">7 cards</span>
+              </div>
+              <div class="pack-name">Art<br />Lab</div>
+              <div class="pack-sub">Generative edition</div>
+              <div class="pack-window"><div class="pack-strip" id="pack-strip"></div></div>
+              <div class="pack-foot">
+                <span>Holo inside</span>
+                <span class="barcode"></span>
+              </div>
+              <div class="crimp crimp-bottom"></div>
+              <div class="pack-sheen"></div>
+            </div>
+          </div>
+          <div class="tear-guide" aria-hidden="true">
+            <span class="tear-progress" id="tear-progress"></span>
+            <span class="tear-hint">Tear <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg></span>
+          </div>
+          <button class="pack-hit" id="pack-hit" type="button" aria-label="Tear open the Art Lab pack"></button>
         </div>
-        
-        <div class="carousel-nav">
-          <button class="carousel-btn" id="carousel-prev">
-            <i class="fas fa-chevron-left"></i>
-          </button>
-          <button class="carousel-btn" id="carousel-next">
-            <i class="fas fa-chevron-right"></i>
-          </button>
+
+        <div class="fan" id="fan" role="list" aria-label="Your cards"></div>
+
+        <div class="hud">
+          <div class="stamp" id="stamp" hidden><b>Set complete</b><span>7 / 7</span></div>
+          <p class="hint" id="pack-hint" aria-live="polite">Drag along the top edge to tear it open, or tap</p>
+          <div class="hud-actions">
+            <button class="btn" id="reveal-all" type="button" hidden>Reveal all</button>
+          </div>
         </div>
-      </div>
-    </section>
-    
-    <!-- Footer -->
-    <footer class="artlab-footer">
-      <p class="artlab-footer-text">
-        Made by <a class="artlab-footer-link" href="https://github.com/ibra-kdbra" target="_blank">ibra-kdbra</a>
-      </p>
-    </footer>
-    
-    <!-- Scripts -->
-    <link rel="stylesheet" href="../assets/css/feedback.css">
-    
-    <!-- Initialize Music Player -->
+      </section>
+
+      <!-- Deck: the living card stack -->
+      <section class="view view-deck browser" id="deck" aria-label="Art Lab deck">
+        <div class="card-area" id="card-area">
+          <div class="stack" id="stack" tabindex="0" role="group" aria-roledescription="card stack" aria-describedby="info-title"></div>
+        </div>
+        <section class="info" id="info" aria-live="polite"></section>
+        <nav class="pipnav" aria-label="Cards">
+          <button class="btn pip-nav" id="prev-btn" type="button" aria-label="Previous card">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+          </button>
+          <div class="pip-row" id="pip-row"></div>
+          <button class="btn pip-nav" id="next-btn" type="button" aria-label="Next card">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+          </button>
+        </nav>
+        <p class="toast" id="deck-toast" role="status" hidden></p>
+      </section>
+
+      <!-- All pieces: a plain list (also what shows without JavaScript) -->
+      <section class="view view-grid all" id="all" aria-labelledby="all-title">
+        <div class="all-head">
+          <h2 class="all-title" id="all-title" tabindex="-1">All pieces</h2>
+          <p class="all-sub">Seven generative pieces in canvas, WebGL, p5 and pure CSS. Each opens in a new tab.</p>
+        </div>
+        <ol class="all-grid"><!-- render:artlab-grid -->
+          <li class="tile" data-rarity="1">
+            <img class="tile-art" src="../assets/thumbs/blossoming-flowers-480.webp" srcset="../assets/thumbs/blossoming-flowers-480.webp 480w, ../assets/thumbs/blossoming-flowers-960.webp 960w" sizes="(min-width: 1100px) 340px, (min-width: 640px) 45vw, 100vw" width="480" height="300" alt="" loading="eager" decoding="async">
+            <div class="tile-body">
+              <p class="tile-meta"><span class="tile-no">01 / 07</span><span class="tile-engine">CSS</span><span class="tile-rarity">Common <span aria-hidden="true">◆◇◇</span></span></p>
+              <h3 class="tile-title">Blossoming Flowers</h3>
+              <p class="tile-desc">Pure CSS blossoming flowers animation. Watch as petals unfold in a mesmerizing dance of color and motion.</p>
+              <p class="tile-tags">CSS Art · Animation</p>
+              <a class="btn btn-primary tile-enter" href="../Art_Lab/BlossomingFlowers/index.html" target="_blank" rel="noopener" aria-label="Enter Blossoming Flowers (opens in a new tab)">Enter <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a>
+            </div>
+          </li>
+          <li class="tile" data-rarity="1">
+            <img class="tile-art" src="../assets/thumbs/flow-fields-480.webp" srcset="../assets/thumbs/flow-fields-480.webp 480w, ../assets/thumbs/flow-fields-960.webp 960w" sizes="(min-width: 1100px) 340px, (min-width: 640px) 45vw, 100vw" width="480" height="300" alt="" loading="eager" decoding="async">
+            <div class="tile-body">
+              <p class="tile-meta"><span class="tile-no">02 / 07</span><span class="tile-engine">Canvas</span><span class="tile-rarity">Common <span aria-hidden="true">◆◇◇</span></span></p>
+              <h3 class="tile-title">Flow Fields</h3>
+              <p class="tile-desc">Experiment with flow fields. Press D to debug or double touch. Watch particles dance through invisible currents.</p>
+              <p class="tile-tags">Canvas · Particles</p>
+              <a class="btn btn-primary tile-enter" href="../Art_Lab/Simple/index.html" target="_blank" rel="noopener" aria-label="Enter Flow Fields (opens in a new tab)">Enter <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a>
+            </div>
+          </li>
+          <li class="tile" data-rarity="2">
+            <img class="tile-art" src="../assets/thumbs/text-fields-480.webp" srcset="../assets/thumbs/text-fields-480.webp 480w, ../assets/thumbs/text-fields-960.webp 960w" sizes="(min-width: 1100px) 340px, (min-width: 640px) 45vw, 100vw" width="480" height="300" alt="" loading="eager" decoding="async">
+            <div class="tile-body">
+              <p class="tile-meta"><span class="tile-no">03 / 07</span><span class="tile-engine">Canvas</span><span class="tile-rarity">Uncommon <span aria-hidden="true">◆◆◇</span></span></p>
+              <h3 class="tile-title">Text Fields</h3>
+              <p class="tile-desc">Typography meets generative art. Text rendered as particle systems moving through flow fields.</p>
+              <p class="tile-tags">Typography · Canvas</p>
+              <a class="btn btn-primary tile-enter" href="../Art_Lab/Text_Fields/index.html" target="_blank" rel="noopener" aria-label="Enter Text Fields (opens in a new tab)">Enter <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a>
+            </div>
+          </li>
+          <li class="tile" data-rarity="1">
+            <img class="tile-art" src="../assets/thumbs/experimental-math-480.webp" srcset="../assets/thumbs/experimental-math-480.webp 480w, ../assets/thumbs/experimental-math-960.webp 960w" sizes="(min-width: 1100px) 340px, (min-width: 640px) 45vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <div class="tile-body">
+              <p class="tile-meta"><span class="tile-no">04 / 07</span><span class="tile-engine">Canvas</span><span class="tile-rarity">Common <span aria-hidden="true">◆◇◇</span></span></p>
+              <h3 class="tile-title">Experimental Math</h3>
+              <p class="tile-desc">Low-level mathematical explorations with flow fields. Visualize equations in motion.</p>
+              <p class="tile-tags">Math · Generative</p>
+              <a class="btn btn-primary tile-enter" href="../Art_Lab/Experimental_math/index.html" target="_blank" rel="noopener" aria-label="Enter Experimental Math (opens in a new tab)">Enter <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a>
+            </div>
+          </li>
+          <li class="tile" data-rarity="2">
+            <img class="tile-art" src="../assets/thumbs/adaptive-fields-480.webp" srcset="../assets/thumbs/adaptive-fields-480.webp 480w, ../assets/thumbs/adaptive-fields-960.webp 960w" sizes="(min-width: 1100px) 340px, (min-width: 640px) 45vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <div class="tile-body">
+              <p class="tile-meta"><span class="tile-no">05 / 07</span><span class="tile-engine">p5.js</span><span class="tile-rarity">Uncommon <span aria-hidden="true">◆◆◇</span></span></p>
+              <h3 class="tile-title">Adaptive Fields</h3>
+              <p class="tile-desc">Try multiple variations with adaptive flow fields that respond to your interaction.</p>
+              <p class="tile-tags">Interactive · Canvas</p>
+              <a class="btn btn-primary tile-enter" href="../Art_Lab/Adaptive/index.html" target="_blank" rel="noopener" aria-label="Enter Adaptive Fields (opens in a new tab)">Enter <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a>
+            </div>
+          </li>
+          <li class="tile" data-rarity="3">
+            <img class="tile-art" src="../assets/thumbs/lsd-480.webp" srcset="../assets/thumbs/lsd-480.webp 480w, ../assets/thumbs/lsd-960.webp 960w" sizes="(min-width: 1100px) 340px, (min-width: 640px) 45vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <div class="tile-body">
+              <p class="tile-meta"><span class="tile-no">06 / 07</span><span class="tile-engine">WebGL</span><span class="tile-rarity">Holo <span aria-hidden="true">◆◆◆</span></span></p>
+              <h3 class="tile-title">LSD</h3>
+              <p class="tile-desc">Create psychedelic animations in real-time. A trip through color and form.</p>
+              <p class="tile-tags">Psychedelic · Real-time</p>
+              <a class="btn btn-primary tile-enter" href="../Art_Lab/LSD/index.html" target="_blank" rel="noopener" aria-label="Enter LSD (opens in a new tab)">Enter <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a>
+            </div>
+          </li>
+          <li class="tile" data-rarity="3">
+            <img class="tile-art" src="../assets/thumbs/particular-drift-480.webp" srcset="../assets/thumbs/particular-drift-480.webp 480w, ../assets/thumbs/particular-drift-960.webp 960w" sizes="(min-width: 1100px) 340px, (min-width: 640px) 45vw, 100vw" width="480" height="300" alt="" loading="lazy" decoding="async">
+            <div class="tile-body">
+              <p class="tile-meta"><span class="tile-no">07 / 07</span><span class="tile-engine">WebGL 2</span><span class="tile-rarity">Holo <span aria-hidden="true">◆◆◆</span></span></p>
+              <h3 class="tile-title">Particular Drift</h3>
+              <p class="tile-desc">Watch particles drift through space in this meditative visual experience.</p>
+              <p class="tile-tags">Particles · Ambient</p>
+              <a class="btn btn-primary tile-enter" href="../Art_Lab/ParticularDrift/index.html" target="_blank" rel="noopener" aria-label="Enter Particular Drift (opens in a new tab)">Enter <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a>
+            </div>
+          </li>
+        <!-- /render:artlab-grid --></ol>
+        <footer class="all-foot">
+          Made by <a href="https://github.com/ibra-kdbra" target="_blank" rel="noopener">ibra-kdbra</a>
+        </footer>
+      </section>
+    </main>
+
+    <!-- Music player (same as the hub), placed in the top bar's icon group -->
     <script type="module">
       import { VideoPlayerComponent } from '../assets/js/videoPlayer.js';
-      // Inject player into the icons group
       new VideoPlayerComponent().render('.nav-icons-group');
     </script>
     <script type="module" src="../assets/js/musicPlayer.js"></script>
-
-    <script type="module" src="../assets/js/dropEffect.js"></script>
-    <script type="module" src="../assets/js/lazyLoad.js"></script>
-    <script type="module" src="../assets/js/artlab.js"></script>
-    
-    <!-- Initialize Feedback (Modal Mode) -->
     <script type="module">
       import { FeedbackUI } from '../assets/js/feedback/FeedbackUI.js';
-      // Only initialize, it auto-attaches button to navbar
       new FeedbackUI('art_lab_hub');
     </script>
   </body>

@@ -1,0 +1,123 @@
+/* Game Lab kit: touch controls. Self-contained so any game can load it. */
+
+:root {
+  /* Game Lab's Cyber Yellow & Obsidian palette */
+  --gk-accent: #facc15;
+  --gk-ink: #09090b;
+  --gk-glass: rgba(18, 19, 26, 0.72);
+  --gk-line: rgba(250, 204, 21, 0.3);
+  --gk-font: 'Chakra Petch', 'Albert Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* ---------- Touch controls ---------- */
+
+.gk-touch {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 2147482000;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.gk-touch[hidden] {
+  display: none;
+}
+
+.gk-touch button {
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  border: 1px solid var(--gk-line);
+  background: var(--gk-glass);
+  color: #fff;
+  font: 700 15px/1 var(--gk-font);
+  transition: background-color 80ms ease, transform 80ms ease;
+}
+
+.gk-touch button[data-pressed] {
+  background: var(--gk-accent);
+  border-color: var(--gk-accent);
+  color: var(--gk-ink);
+  transform: scale(0.96);
+}
+
+.gk-dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  grid-template-rows: repeat(3, 56px);
+  gap: 4px;
+}
+
+.gk-dpad button {
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+}
+
+.gk-dpad svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.gk-dpad-up {
+  grid-area: 1 / 2;
+}
+
+.gk-dpad-left {
+  grid-area: 2 / 1;
+}
+
+.gk-dpad-left svg {
+  rotate: -90deg;
+}
+
+.gk-dpad-right {
+  grid-area: 2 / 3;
+}
+
+.gk-dpad-right svg {
+  rotate: 90deg;
+}
+
+.gk-dpad-down {
+  grid-area: 3 / 2;
+}
+
+.gk-dpad-down svg {
+  rotate: 180deg;
+}
+
+.gk-buttons {
+  display: flex;
+  flex-wrap: wrap-reverse;
+  justify-content: flex-end;
+  align-items: flex-end;
+  gap: 10px;
+  max-width: 50vw;
+}
+
+.gk-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+}
+
+.gk-btn--small {
+  width: auto;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gk-touch button {
+    transition: none;
+  }
+}

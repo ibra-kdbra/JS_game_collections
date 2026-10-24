@@ -28,7 +28,6 @@
 
 .logo-icon {
   font-size: 1.5rem;
-  filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.6));
 }
 
 .logo-text {
@@ -46,9 +45,7 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: rgba(18, 19, 26, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--surface);
   border: 1px solid rgba(250, 204, 21, 0.2);
   border-radius: 50%;
   color: var(--text-secondary);
@@ -64,7 +61,7 @@
   border-color: var(--primary);
   color: var(--primary);
   transform: translateY(-1px);
-  box-shadow: 0 0 20px rgba(250, 204, 21, 0.3);
+  box-shadow: 3px 3px 0 var(--primary);
 }
 
 /* Art Lab specific: back arrow left, icons right */
@@ -77,4 +74,10 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+/* The feedback trigger is a <button> styled like the corner links. */
+button.corner-link {
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
 }

@@ -1,3 +1,10 @@
+/* Modak by Ek Type, SIL Open Font License 1.1 (fonts/OFL.txt) */
+@font-face {
+  font-family: "Modak";
+  src: url("../fonts/Modak-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+
 html, body{
   font-size: 16px;
   font-family: Helvetica;
@@ -502,4 +509,136 @@ a, a:visited{
     transform: translateY(0);
     opacity: 1;
   }
+}
+/* ---------- Phones (also held sideways) ---------- */
+@media (max-width: 900px), (max-height: 500px) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  /* The canvas fills the visible screen; its pixels keep their own size */
+  canvas {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    max-width: none;
+    object-fit: cover;
+    touch-action: none;
+  }
+
+  #intro-overlay {
+    height: 100dvh;
+  }
+
+  #intro-content {
+    box-sizing: border-box;
+    width: calc(100% - 24px);
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 18px 16px;
+  }
+
+  #intro-title {
+    font-size: 30px;
+    line-height: 1.1;
+  }
+
+  .intro-text {
+    font-size: 15px;
+    margin: 0 0 10px;
+  }
+
+  #hotkeys-section {
+    padding: 10px 12px;
+    margin-bottom: 14px;
+  }
+
+  #start-button {
+    min-height: 44px;
+    min-width: 120px;
+  }
+
+  #info-container {
+    font-size: 12px;
+    padding-bottom: max(4px, env(safe-area-inset-bottom));
+  }
+
+  #zen-mode-button {
+    min-height: 44px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  #button-table {
+    bottom: max(3px, env(safe-area-inset-bottom));
+  }
+
+  .icon {
+    min-width: 44px;
+    min-height: 44px;
+    margin: 4px 1px;
+  }
+
+  /* dat.GUI: scrolls inside itself, rows sized for fingers, 12px labels */
+  /* Open controls sit above the bottom buttons, so Close stays reachable */
+  .dg.ac {
+    z-index: 200 !important;
+  }
+
+  /* Leaves room for the Zen Mode button on the left */
+  .dg.main {
+    width: min(245px, calc(100vw - 104px)) !important;
+  }
+
+  .dg.main > ul {
+    max-height: calc(100dvh - 44px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .dg {
+    font-size: 12px !important;
+  }
+
+  .dg ul:not(.closed) > li:not(.folder) {
+    height: 40px !important;
+    line-height: 40px !important;
+  }
+
+  .dg li.title,
+  .dg .close-button {
+    height: 40px !important;
+    line-height: 40px !important;
+  }
+
+  .dg .c input[type='text'] {
+    height: 30px;
+    font-size: 14px;
+  }
+
+  .dg .c .slider {
+    height: 30px;
+    margin-top: 5px;
+  }
+}
+
+/* ---------- Art Lab live preview (?embed=1, see ../../js/embed.js) ----------
+   Only the canvas shows, filling the frame; the intro, controls, buttons and
+   credits stay hidden and out of reach. */
+html.is-embed body {
+  visibility: hidden;
+}
+
+html.is-embed #canvas {
+  visibility: visible;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  object-fit: cover;
 }

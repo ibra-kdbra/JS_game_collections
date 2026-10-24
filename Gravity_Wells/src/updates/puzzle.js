@@ -62,24 +62,44 @@ let swipedRight = false;
 let swipedLeft = false;
 let swipeWait = 0;
 let swiped = false;
-let wheelLeft = false;
-let wheelRight = false;
+// 'next' | 'back' (reset, or previous when untouched) | 'prev' | 'reset' | index
+let pendingNav = null;
+let navMode = 'back';
 
 window.addEventListener('wheel', e => {
     if (swiped) {
         return;
     }
     if (e.deltaX <= -1) {
-        wheelRight = true;
+        pendingNav = 'back';
     } else if (e.deltaX >= 1) {
-        wheelLeft = true;
+        pendingNav = 'next';
     }
 });
+
+// Requests made mid-slide wait until the board has settled.
+let navigate = action => {
+    pendingNav = action;
+};
 
 let solution = [];
 
 let solved = dataSystem.load('solved') || [];
 let solutions = dataSystem.load('solutions') || {};
+
+let countSolved = sequence => sequence.filter(id => solved.indexOf(id) > -1).length;
+let countPuzzles = (entities, sequence) => sequence.filter(
+    id => entities[id].puzzle.grid.length
+).length;
+
+let jump = (entities, index) => {
+    let levels = entities.game.levels;
+    levels.current = index;
+    let puzzleId = levels.sequence[index];
+    dataSystem.save('level', puzzleId);
+    entities[puzzleId].puzzle.init = true;
+    entities.level.state.updates = [puzzleId];
+};
 
 let update = (entities, entity, time, delta) => {
     if (entity.puzzle.init === true) {
@@ -88,9 +108,7 @@ let update = (entities, entity, time, delta) => {
         entities.tapstext.text.text = (entity.puzzle.taps)
             ? entity.puzzle.taps + ' moves'
             : '';
-        let sequence = (
-            dataSystem.load('payed')
-        ) ? entities.game.levels.wm : entities.game.levels.sequence;
+        let sequence = entities.game.levels.sequence;
         let puzzleId = sequence[entities.game.levels.current];
         entities.titletext.text.text = (entity.puzzle.taps)
             ? 'The ' + puzzleId
@@ -174,21 +192,35 @@ let update = (entities, entity, time, delta) => {
         }
     }
     let game = entities.game;
-    if (wheelRight) {
+    if (typeof pendingNav === 'number') {
+        let index = pendingNav;
+        pendingNav = null;
+        swipedLeft = false;
+        swipedRight = false;
+        swipeWait = 0;
+        swiped = false;
+        entities.feedback.text.text = '';
+        game.canvas.oX = game.canvas.gX + game.canvas.gW;
+        jump(entities, index);
+        return;
+    }
+    let settled = !swiped;
+    if (settled && (pendingNav === 'back' || pendingNav === 'prev' || pendingNav === 'reset')) {
+        navMode = pendingNav;
         if (entity.puzzle.lT) {
             entities.feedback.text.text = entity.puzzle.lT;
-        } else if (solution.length === 0) {
-            entities.feedback.text.text = 'Back';
-        } else {
+        } else if (navMode === 'reset' || (navMode === 'back' && solution.length > 0)) {
             entities.feedback.text.text = 'Reset';
+        } else {
+            entities.feedback.text.text = 'Back';
         }
         swipedRight = true;
         swipeWait = 0;
         swiped = true;
-        wheelRight = false;
+        pendingNav = null;
         return;
     }
-    if (wheelLeft) {
+    if (settled && pendingNav === 'next') {
         if (entity.puzzle.rT) {
             entities.feedback.text.text = entity.puzzle.rT;
         } else {
@@ -197,7 +229,7 @@ let update = (entities, entity, time, delta) => {
         swipedLeft = true;
         swipeWait = 0;
         swiped = true;
-        wheelLeft = false;
+        pendingNav = null;
         return;
     }
     if (!swiped && game.pointer.isDown === true && (solution.length < entity.puzzle.taps || entity.puzzle.text)) {
@@ -239,27 +271,24 @@ let update = (entities, entity, time, delta) => {
                 < 1 / entities.game.canvas.zoom
             ) {
                 let levels = entities.game.levels;
-                let sequence = (
-                    dataSystem.load('payed')
-                ) ? entities.game.levels.wm : entities.game.levels.sequence;
-                if (swipedLeft || solution.length === 0) {
-                    let oldLevel = levels.current;
-                    levels.current = Math.min(
+                let sequence = levels.sequence;
+                let target = levels.current;
+                let changeLevel = swipedLeft || navMode === 'prev'
+                    || (navMode === 'back' && solution.length === 0);
+                if (changeLevel) {
+                    target = Math.min(
                         Math.max(levels.current + dir, 0),
                         sequence.length - 1
                     );
-                    dataSystem.save('current', levels.current);
-                    if (oldLevel === levels.current) {
+                    if (target === levels.current) {
                         dir = -dir;
                     }
                 }
-                let puzzleId = sequence[levels.current];
-                entities[puzzleId].puzzle.init = true;
-                let state = entities.level.state;
-                state.updates = [puzzleId];
+                jump(entities, target);
                 game.canvas.oX = game.canvas.oX + game.canvas.gW * 2 * dir;
                 swipedLeft = false;
                 swipedRight = false;
+                navMode = 'back';
             }
             return;
         } else if (swipeWait > 0) {
@@ -274,14 +303,13 @@ let update = (entities, entity, time, delta) => {
     if (entities.game.pointer.justUp === true) {
         let swipeX = game.pointer.x - game.pointer.downX;
         if (swipeX > 48) {
-            //console.log('swipe right');
+            navMode = 'back';
             swipedRight = true;
             swipeWait = 0;
             swiped = true;
             return;
         }
         if (swipeX < -48) {
-            //console.log('swipe left');
             swipedLeft = true;
             swipeWait = 0;
             swiped = true;
@@ -300,7 +328,6 @@ let update = (entities, entity, time, delta) => {
         x =  (x / 48) | 0;
         y = (y / 48) | 0;
         let i = x + y * 6;
-        //console.log('klik', i);
         let moves = {
             arrowup: a => {
                 return shiftPieces(
@@ -353,7 +380,6 @@ let update = (entities, entity, time, delta) => {
             }
         };
         let shiftPieces = (search, max, min, applyChanges = true) => {
-            //console.log('push stuff down');
             let next = entities['piece' + i];
             let j = i;
             let changes = [];
@@ -385,7 +411,6 @@ let update = (entities, entity, time, delta) => {
             if (changes.length < 1) {
                 return 0;
             }
-            //console.log(changes);
             let firstId = changes.shift();
             let prev = entities[firstId];
             let firstHome = prev.home;
@@ -428,13 +453,15 @@ let update = (entities, entity, time, delta) => {
                     soundSystem.playSong(victorySound);
                     entities.feedback.text.text = 'Clean!';
                     let levels = entities.game.levels;
-                    let sequence = (
-                        dataSystem.load('payed')
-                    ) ? levels.wm : levels.sequence;
+                    let sequence = levels.sequence;
                     let puzzleId = sequence[levels.current];
                     if (solved.indexOf(puzzleId) < 0) {
                         solved.push(puzzleId);
                         dataSystem.save('solved', solved);
+                        dataSystem.recordSolved(
+                            countSolved(sequence),
+                            countPuzzles(entities, sequence)
+                        );
                     }
                     if (solutions[puzzleId] === undefined) {
                         solutions[puzzleId] = [];
@@ -455,7 +482,6 @@ let update = (entities, entity, time, delta) => {
                 } else if (!entity.puzzle.grid.some((e, i) => clickables.some(
                     prop => entities['piece' + i][prop] !== undefined
                 ))) {
-                    //console.log('No clickables left, but blank squares left!');
                     swipedRight = true;
                     swipeWait = 750;
                     swiped = true;
@@ -508,6 +534,10 @@ let update = (entities, entity, time, delta) => {
     }
 };
 
+let isSolved = puzzleId => solved.indexOf(puzzleId) > -1;
+
 export default Object.freeze({
-    update
+    update,
+    navigate,
+    isSolved
 });

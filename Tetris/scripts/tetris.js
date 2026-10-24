@@ -14,6 +14,9 @@ var stats = document.getElementById('stats');
 var statsTime = document.getElementById('time');
 var statsLines = document.getElementById('line');
 var statsPiece = document.getElementById('piece');
+var statsScore = document.getElementById('score');
+var statsLevel = document.getElementById('level');
+var statsLineLabel = document.getElementById('lineLabel');
 var h3 = document.getElementsByTagName('h3');
 var set = document.getElementById('settings');
 
@@ -179,6 +182,7 @@ var settings = {
   'Soft Drop': 31,
   'Lock Delay': 30,
   Size: 0,
+  Buttons: 0,
   Sound: 0,
   Volume: 100,
   Block: 0,
@@ -208,6 +212,7 @@ var setting = {
   })(),
   'Lock Delay': range(0, 101),
   Size: ['Auto', 'Small', 'Medium', 'Large'],
+  Buttons: ['On', 'Off'],
   Sound: ['Off', 'On'],
   Volume: range(0, 101),
   Block: ['Shaded', 'Solid', 'Glossy', 'Arika', 'World'],
@@ -219,11 +224,37 @@ var setting = {
 var frame;
 
 /**
+ * Game modes. gametype values are stored in replays and keybinds, so they stay numeric.
+ *   0 Sprint: clear 40 lines as fast as possible.
+ *   3 Dig Race: clear 10 garbage lines.
+ *   4 Marathon: levels 1-15, speeding up every 10 lines, scored.
+ *   5 Ultra: score as much as possible in 2 minutes.
+ *   6 Zen: no gravity, no game over.
+ */
+var MODES = {
+  0: { key: 'sprint', name: 'Sprint' },
+  3: { key: 'dig', name: 'Dig Race' },
+  4: { key: 'marathon', name: 'Marathon' },
+  5: { key: 'ultra', name: 'Ultra' },
+  6: { key: 'zen', name: 'Zen' },
+};
+var FPS = 60; // Logic steps per second; every frame count below is in these steps.
+var ULTRA_FRAMES = 2 * 60 * FPS;
+var MARATHON_MAX_LEVEL = 15;
+var LINES_PER_LEVEL = 10;
+var LINE_SCORES = [0, 100, 300, 500, 800];
+
+// Scoring state (Marathon and Ultra).
+var score;
+var level;
+var backToBack;
+var playStartFrame;
+var stepper;
+
+/**
  *Pausing variables
  */
 
-var startPauseTime;
-var pauseTime;
 
 /**
  * 0 = Normal
@@ -241,15 +272,12 @@ var replayKeys;
 var watchingReplay = false;
 var toGreyRow;
 var gametype;
-//TODO Make dirty flags for each canvas, draw them all at once during frame call.
-// var dirtyHold, dirtyActive, dirtyStack, dirtyPreview;
 var lastX, lastY, lastPos, landed;
 
 // Stats
 var lines;
 var statsFinesse;
 var piecesSet;
-var startTime;
 var digLines;
 
 // Keys
@@ -280,82 +308,234 @@ var flags = {
   rot180: 128,
 };
 
+/**
+ * Lays out the hold panel, playfield and next queue to fit the screen.
+ *  Canvases are sized in device pixels (cellSize) and shown at CSS size, so
+ *  blocks stay sharp on high-DPI screens; the density is capped at 2, which
+ *  looks the same on phones and keeps the canvases small. Touch screens get
+ *  their own layout around the on-screen buttons (layoutTouch).
+ */
+var renderScale = 1;
+var MAX_RENDER_SCALE = 2;
+
 function resize() {
+  resizeQueued = false;
   var a = document.getElementById('a');
   var b = document.getElementById('b');
   var c = document.getElementById('c');
-  var content = document.getElementById('content');
+  var d = document.getElementById('d');
 
-  // TODO Finalize this.
-  // Aspect ratio: 1.024
-  var screenHeight = window.innerHeight - 34;
-  var screenWidth = ~~(screenHeight * 1.024);
-  if (screenWidth > window.innerWidth)
-    screenHeight = ~~(window.innerWidth / 1.024);
+  var dpr = Math.min(window.devicePixelRatio || 1, MAX_RENDER_SCALE);
+  renderScale = dpr;
+  var px = function(n) {
+    return n + 'px';
+  };
 
-  if (settings.Size === 1 && screenHeight > 602) cellSize = 15;
-  else if (settings.Size === 2 && screenHeight > 602) cellSize = 30;
-  else if (settings.Size === 3 && screenHeight > 902) cellSize = 45;
-  else cellSize = Math.max(~~(screenHeight / 20), 10);
+  if (document.documentElement.classList.contains('tt-touch')) {
+    layoutTouch(a, b, c, d, dpr, px);
+  } else {
+    var narrow = window.innerWidth < 700;
+    var top = 12;
+    var bottom = 12;
+    var availW = window.innerWidth - 16;
+    var availH = window.innerHeight - top - bottom;
 
-  var pad = (window.innerHeight - (cellSize * 20 + 2)) / 2 + 'px';
-  content.style.padding = pad + ' 0';
-  stats.style.bottom = pad;
+    // Side panels are 4 cells wide, scaled down on narrow screens.
+    var sideScale = narrow ? 0.6 : 1;
+    var cssCell = Math.min(availH / 20, availW / (10 + 8 * sideScale + 0.5));
+    cssCell = Math.max(Math.floor(capCellSize(cssCell)), 8);
+    cellSize = Math.round(cssCell * dpr);
 
-  // Size elements
-  a.style.padding = '0 0.5rem ' + ~~(cellSize / 2) + 'px';
+    var boardW = cssCell * 10;
+    var boardH = cssCell * 20;
+    var sideW = Math.round(cssCell * 4 * sideScale);
+    sizeBoard(b, boardW, boardH, px);
 
-  stackCanvas.width = activeCanvas.width = bgStackCanvas.width = cellSize * 10;
-  stackCanvas.height = activeCanvas.height = bgStackCanvas.height =
-    cellSize * 20;
-  b.style.width = stackCanvas.width + 'px';
-  b.style.height = stackCanvas.height + 'px';
+    holdCanvas.width = cellSize * 4;
+    holdCanvas.height = cellSize * 2;
+    holdCanvas.style.width = px(sideW);
+    holdCanvas.style.height = px(sideW / 2);
+    a.style.width = px(sideW);
+    a.style.height = px(sideW / 2);
+    d.style.width = px(sideW);
+    d.style.height = px(boardH);
 
-  holdCanvas.width = cellSize * 4;
-  holdCanvas.height = cellSize * 2;
-  a.style.width = holdCanvas.width + 'px';
-  a.style.height = holdCanvas.height + 'px';
+    previewCanvas.width = cellSize * 4;
+    previewCanvas.height = cellSize * 20;
+    previewCanvas.style.width = px(sideW);
+    previewCanvas.style.height = px(Math.round(boardH * sideScale));
+    c.style.width = px(sideW);
+    c.style.height = px(boardH);
 
-  previewCanvas.width = cellSize * 4;
-  previewCanvas.height = stackCanvas.height;
-  c.style.width = previewCanvas.width + 'px';
-  c.style.height = b.style.height;
+    var content = document.getElementById('content');
+    content.style.marginTop = px(top);
+    content.style.marginBottom = px(bottom);
 
-  // Scale the text so it fits in the thing.
-  // TODO get rid of extra font sizes here.
-  msg.style.lineHeight = b.style.height;
-  msg.style.fontSize = ~~(stackCanvas.width / 6) + 'px';
-  stats.style.fontSize = ~~(stackCanvas.width / 11) + 'px';
-  document.documentElement.style.fontSize = ~~(stackCanvas.width / 16) + 'px';
-
-  stats.style.width = a.style.width;
-  for (var i = 0, len = h3.length; i < len; i++) {
-    h3[i].style.lineHeight = a.style.height;
-    h3[i].style.fontSize = stats.style.fontSize;
+    // Scale the text with the playfield.
+    stats.style.fontSize = Math.max(~~((sideW / 4) * (narrow ? 0.9 : 0.68)), 9) + 'px';
+    stats.style.width = px(sideW);
+    document.documentElement.style.fontSize = Math.max(~~(boardW / 16), 12) + 'px';
+    for (var i = 0, len = h3.length; i < len; i++) {
+      h3[i].style.fontSize = Math.max(~~(sideW / 5), 10) + 'px';
+    }
   }
 
   // Redraw graphics
   makeSprite();
 
   if (settings.Grid === 1) bg(bgStackCtx);
+  else clear(bgStackCtx);
 
-  if (gameState === 0) {
-    piece.drawGhost();
-    piece.draw();
+  if (gameState === 0 || gameState === 1 || gameState === 9) {
     stack.draw();
     preview.draw();
-    if (hold.piece) {
-      hold.draw();
-    }
+    if (hold.piece !== void 0) hold.draw();
+  }
+  if (gameState === 0) {
+    clear(activeCtx);
+    piece.drawGhost();
+    piece.draw();
   }
 }
-addEventListener('resize', function() {
-  if (typeof Responsive !== 'undefined') {
-    Responsive.resize();
-  } else {
-    resize();
+
+/** Applies the Size setting (Auto, Small, Medium, Large) to a cell size. */
+function capCellSize(cssCell) {
+  if (settings.Size === 1) return Math.min(cssCell, 15);
+  if (settings.Size === 2) return Math.min(cssCell, 30);
+  if (settings.Size === 3) return Math.min(cssCell, 45);
+  return cssCell;
+}
+
+function sizeBoard(b, boardW, boardH, px) {
+  stackCanvas.width = activeCanvas.width = bgStackCanvas.width = cellSize * 10;
+  stackCanvas.height = activeCanvas.height = bgStackCanvas.height = cellSize * 20;
+  [stackCanvas, activeCanvas, bgStackCanvas].forEach(function(canvas) {
+    canvas.style.width = px(boardW);
+    canvas.style.height = px(boardH);
+  });
+  b.style.width = px(boardW);
+  b.style.height = px(boardH);
+  msg.style.lineHeight = px(boardH);
+  msg.style.fontSize = ~~(boardW / 6) + 'px';
+}
+
+/** Safe-area insets (notches, home indicator) in CSS pixels. */
+var safeProbe;
+function safeInsets() {
+  if (!safeProbe) {
+    safeProbe = document.createElement('div');
+    safeProbe.style.cssText =
+      'position:fixed;visibility:hidden;pointer-events:none;top:0;left:0;' +
+      'padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+    document.body.appendChild(safeProbe);
   }
-}, false);
+  var cs = getComputedStyle(safeProbe);
+  return {
+    t: parseFloat(cs.paddingTop) || 0,
+    r: parseFloat(cs.paddingRight) || 0,
+    b: parseFloat(cs.paddingBottom) || 0,
+    l: parseFloat(cs.paddingLeft) || 0,
+  };
+}
+
+/**
+ * Touch layout. Portrait: the board as large as fits, with hold and stats
+ *  either in a column on the left or, on tall phones, in a strip above, the
+ *  queue on the right and the buttons below. Landscape: hold, board and queue
+ *  in the middle with a button cluster on each side.
+ */
+function layoutTouch(a, b, c, d, dpr, px) {
+  var ins = safeInsets();
+  var vw = window.innerWidth - ins.l - ins.r;
+  var vh = window.innerHeight - ins.t - ins.b;
+  var portrait = vh >= vw;
+  var buttons = settings.Buttons !== 1;
+  var pad = 6;
+  var gap = 8;
+  var strip = false;
+  var stripH = 60;
+  var cell, side, row, availW, availH;
+  var sideFor = function(cell) {
+    return Math.min(Math.max(Math.round(cell * 2.6), 56), 84);
+  };
+  var fit = function(w, h) {
+    var c = h / 20;
+    for (var i = 0; i < 4; i++) c = Math.min(h / 20, (w - 2 * sideFor(c)) / 10);
+    return c;
+  };
+
+  if (portrait) {
+    row = vh >= 700 ? 60 : 52;
+    availW = vw - pad * 2;
+    availH = vh - pad * 2 - (buttons ? row * 2 + gap * 2 : 0);
+    cell = fit(availW, availH);
+    var cellStrip = Math.min((availH - stripH) / 20, (availW - 56) / 10);
+    if (cellStrip > cell * 1.06) {
+      strip = true;
+      cell = cellStrip;
+    }
+  } else {
+    row = 56;
+    availH = vh - pad * 2;
+    availW = vw - pad * 2 - (buttons ? (row * 2 + gap * 3) * 2 : 0);
+    cell = fit(availW, availH);
+  }
+  cell = Math.max(Math.floor(capCellSize(cell)), 8);
+  side = strip ? 56 : sideFor(cell);
+  cellSize = Math.round(cell * dpr);
+
+  var boardW = cell * 10;
+  var boardH = cell * 20;
+  sizeBoard(b, boardW, boardH, px);
+
+  // Spare height in portrait makes the buttons bigger.
+  if (portrait && buttons) {
+    var spare = vh - pad * 2 - boardH - (strip ? stripH : 0) - gap * 2;
+    row = Math.max(row, Math.min(68, Math.floor(spare / 2) - 4));
+  }
+
+  var holdW = strip ? 64 : side;
+  holdCanvas.width = cellSize * 4;
+  holdCanvas.height = cellSize * 2;
+  holdCanvas.style.width = px(holdW);
+  holdCanvas.style.height = px(holdW / 2);
+  a.style.width = px(holdW);
+  a.style.height = px(holdW / 2);
+  d.style.width = strip ? px(boardW + side) : px(side);
+  d.style.height = strip ? px(stripH) : px(boardH);
+
+  previewCanvas.width = cellSize * 4;
+  previewCanvas.height = cellSize * 20;
+  previewCanvas.style.width = px(side);
+  previewCanvas.style.height = px(Math.min(side * 5, boardH - 30));
+  c.style.width = px(side);
+  c.style.height = px(boardH);
+
+  var content = document.getElementById('content');
+  content.classList.toggle('tt-strip', strip);
+  content.style.marginTop = px(ins.t + pad);
+  content.style.marginBottom = px(ins.b + pad + (portrait && buttons ? row * 2 + gap * 2 : 0));
+  stats.style.width = strip ? '' : px(side);
+  stats.style.fontSize = Math.round(Math.min(26, Math.max(17, side / 3.2))) + 'px';
+
+  var root = document.documentElement;
+  root.classList.toggle('tt-landscape', !portrait);
+  root.classList.toggle('tt-nobuttons', !buttons);
+  root.style.setProperty('--pad-row', px(row));
+  root.style.setProperty('--board-w', px(boardW + side * 2));
+  root.style.fontSize = Math.min(Math.max(Math.round(Math.min(vw, vh) / 24), 14), 18) + 'px';
+}
+
+// Resizing waits for the next frame, so a burst of resize events (rotating
+// the phone, the address bar sliding) lays out once.
+var resizeQueued = false;
+function queueResize() {
+  if (resizeQueued) return;
+  resizeQueued = true;
+  requestAnimationFrame(resize);
+}
+addEventListener('resize', queueResize, false);
+addEventListener('orientationchange', queueResize, false);
 
 /**
  * ========================== Model ===========================================
@@ -375,23 +555,26 @@ function init(gt) {
     gametype = gt;
   }
 
-  lineLimit = 40;
+  lineLimit = gametype === 0 ? 40 : Infinity;
+  score = 0;
+  level = 1;
+  backToBack = false;
 
   //Reset
   column = 0;
   keysDown = 0;
+  Touch.reset();
   lastKeys = 0;
   released = 255;
   //TODO Check if needed.
   piece.shiftDir = 0;
   piece.shiftReleased = true;
 
-  startPauseTime = 0;
-  pauseTime = 0;
   paused = false;
 
-  // Start music
+  // Start music. init() always runs from a click or key press, so audio may start.
   if (typeof audioManager !== 'undefined') {
+    audioManager.unlock();
     audioManager.startMusic();
   }
 
@@ -402,17 +585,17 @@ function init(gt) {
   stack.new(10, 22);
   hold.piece = void 0;
   if (settings.Gravity === 0) gravity = gravityUnit * 4;
-  startTime = Date.now();
+  playStartFrame = 100;
 
   preview.init();
-  //preview.draw();
 
   statsFinesse = 0;
   lines = 0;
   piecesSet = 0;
 
   statsPiece.innerHTML = piecesSet;
-  statsLines.innerHTML = lineLimit - lines;
+  updateLineStat();
+  setupStatsForMode();
   statistics();
   clear(stackCtx);
   clear(activeCtx);
@@ -425,7 +608,6 @@ function init(gt) {
 
     digLines = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
 
-    statsLines.innerHTML = 10;
     statsLines.innerHTML = 10;
     var randomNums = [];
     for (var i = 0; i < 10; i++) {
@@ -446,9 +628,11 @@ function init(gt) {
   // Only start a loop if one is not running already.
   if (gameState === 3) {
     gameState = 2;
-    gameLoop();
+    stepper = GameKit.createStepper(FPS);
+    requestAnimationFrame(gameLoop);
   } else {
     gameState = 2;
+    stepper.reset();
   }
 }
 
@@ -462,31 +646,17 @@ function range(start, end, inc) {
 }
 
 /**
- * Add divisor method so we can do clock arithmetics. This is later used to
- *  determine tetromino orientation.
+ * Modulo that is always positive, for clock arithmetic on piece orientation.
  */
-Number.prototype.mod = function(n) {
-  return ((this % n) + n) % n;
-};
-
-/**
- * Shim.
- */
-window.requestAnimFrame = (function() {
-  return (
-    window.requestAnimationFrame ||
-    window.mozRequestAnimationFrame ||
-    window.webkitRequestAnimationFrame ||
-    function(callback) {
-      window.setTimeout(callback, 1000 / 60);
-    }
-  );
-})();
+function mod(value, n) {
+  return ((value % n) + n) % n;
+}
 
 function pause() {
-  if (gameState === 0) {
+  if (gameState === 0 && !paused) {
     paused = true;
-    startPauseTime = Date.now();
+    keysDown = 0;
+    Touch.reset();
     msg.innerHTML = 'Paused';
     menu(4);
     if (typeof audioManager !== 'undefined') {
@@ -497,7 +667,6 @@ function pause() {
 
 function unpause() {
   paused = false;
-  pauseTime += Date.now() - startPauseTime;
   msg.innerHTML = '';
   menu();
   if (typeof audioManager !== 'undefined') {
@@ -523,12 +692,157 @@ var rng = new function() {
 /**
  * Draws the stats next to the tetrion.
  */
+/**
+ * Draws the stats next to the tetrion. Time is counted in logic steps, so it
+ *  stops while paused and replays show the same time.
+ */
 function statistics() {
-  var time = Date.now() - startTime - pauseTime;
+  var time = elapsedMs();
+  if (gametype === 5) time = Math.max(0, ULTRA_FRAMES * (1000 / FPS) - time);
+  statsTime.innerHTML = formatTime(time);
+}
+
+function elapsedMs() {
+  return Math.max(0, frame - playStartFrame) * (1000 / FPS);
+}
+
+function formatTime(time) {
   var seconds = ((time / 1000) % 60).toFixed(2);
   var minutes = ~~(time / 60000);
-  statsTime.innerHTML =
-    (minutes < 10 ? '0' : '') + minutes + (seconds < 10 ? ':0' : ':') + seconds;
+  return (minutes < 10 ? '0' : '') + minutes + (seconds < 10 ? ':0' : ':') + seconds;
+}
+
+/**
+ * Lines left (Sprint, Dig Race) or lines cleared (other modes).
+ */
+function updateLineStat() {
+  if (gametype === 0) statsLines.innerHTML = lineLimit - lines;
+  else if (gametype === 3) statsLines.innerHTML = digLines ? digLines.length : 10;
+  else statsLines.innerHTML = lines;
+}
+
+function setupStatsForMode() {
+  var scored = gametype === 4 || gametype === 5;
+  document.getElementById('scoreRow').style.display = scored ? '' : 'none';
+  document.getElementById('levelRow').style.display = gametype === 4 ? '' : 'none';
+  statsLineLabel.innerHTML = gametype === 0 || gametype === 3 ? 'Left' : 'Lines';
+  statsScore.innerHTML = score;
+  statsLevel.innerHTML = level;
+}
+
+/**
+ * Gravity for the current mode in G (rows per step), or null to use the
+ *  Gravity setting. Marathon follows the guideline speed curve.
+ */
+function modeGravity() {
+  if (gametype === 6) return 0;
+  if (gametype === 4) {
+    var secondsPerRow = Math.pow(0.8 - (level - 1) * 0.007, level - 1);
+    return 1 / (secondsPerRow * FPS);
+  }
+  return null;
+}
+
+/**
+ * Called by the stack after a piece locks. Scores line clears in the scored
+ *  modes, tracks back-to-back Tetrises and levels, and drives the effects.
+ */
+function onLinesCleared(count) {
+  if (count > 0) {
+    if (gametype === 4 || gametype === 5) {
+      var points = LINE_SCORES[count] * level;
+      if (count === 4 && backToBack) points = Math.floor(points * 1.5);
+      score += points;
+      if (count === 4 && backToBack) showAction('BACK-TO-BACK');
+      backToBack = count === 4;
+    }
+    if (gametype === 4) {
+      var newLevel = Math.min(MARATHON_MAX_LEVEL, 1 + Math.floor(lines / LINES_PER_LEVEL));
+      if (newLevel > level) {
+        level = newLevel;
+        showAction('LEVEL ' + level);
+        if (typeof audioManager !== 'undefined') audioManager.playSound('level-up');
+      }
+    }
+    if (typeof LiveBackground !== 'undefined') LiveBackground.onLinesCleared(count);
+    if (count === 4) showAction('TETRIS');
+  }
+  statsScore.innerHTML = score;
+  statsLevel.innerHTML = level;
+}
+
+/**
+ * Points for dropping: 1 per row soft dropped, 2 per row hard dropped.
+ */
+function addDropScore(rows) {
+  if ((gametype === 4 || gametype === 5) && rows > 0) {
+    score += rows;
+    statsScore.innerHTML = score;
+  }
+}
+
+/**
+ * Briefly shows a callout over the playfield.
+ */
+var actionTimer;
+function showAction(text) {
+  if (gameState !== 0) return;
+  msg.innerHTML = '<span class="action">' + text + '</span>';
+  clearTimeout(actionTimer);
+  actionTimer = setTimeout(function() {
+    if (gameState === 0 && !paused) msg.innerHTML = '';
+  }, 900);
+}
+
+/**
+ * Ends the game. Wins and timed finishes record a personal best.
+ */
+function endGame(state, text) {
+  gameState = state;
+  msg.innerHTML = text;
+  if (typeof audioManager !== 'undefined') audioManager.stopMusic();
+  if (!watchingReplay) saveBest(state);
+  menu(3);
+}
+
+function saveBest(state) {
+  var mode = MODES[gametype];
+  if (!mode || typeof GameKit === 'undefined') return;
+  var result;
+  if ((gametype === 0 || gametype === 3) && state === 1) {
+    var time = elapsedMs();
+    result = GameKit.recordBest('tetris', Math.round(time), {
+      lowerIsBetter: true,
+      mode: mode.key,
+      label: mode.name + ' ' + formatTime(time),
+    });
+  } else if (gametype === 4 || gametype === 5) {
+    result = GameKit.recordBest('tetris', score, {
+      mode: mode.key,
+      label: mode.name + ' ' + score + ' pts',
+    });
+  }
+  var note = document.getElementById('goNote');
+  note.innerHTML = result ? (result.isNew ? 'New personal best!' : 'Best: ' + bestLabel(gametype)) : '';
+  renderBests();
+}
+
+function bestLabel(type) {
+  if (typeof GameKit === 'undefined') return '';
+  var best = GameKit.readBests('tetris')[MODES[type].key];
+  if (!best) return '';
+  return type === 0 || type === 3 ? formatTime(best.value) : best.value + ' pts';
+}
+
+/**
+ * Shows each mode's personal best in the main menu.
+ */
+function renderBests() {
+  var items = document.querySelectorAll('[data-best]');
+  for (var i = 0; i < items.length; i++) {
+    var label = bestLabel(+items[i].getAttribute('data-best'));
+    items[i].innerHTML = label ? 'Best ' + label : '';
+  }
 }
 
 // ========================== View ============================================
@@ -729,11 +1043,7 @@ function draw(tetro, cx, cy, ctx, color) {
 addEventListener(
   'keydown',
   function(e) {
-    // TODO send to menu or game depending on context.
     if ([32, 37, 38, 39, 40].indexOf(e.keyCode) !== -1) e.preventDefault();
-    //TODO if active, prevent default for binded keys
-    //if (bindsArr.indexOf(e.keyCode) !== -1)
-    //  e.preventDefault();
     if (e.keyCode === binds.pause) {
       if (paused) {
         unpause();
@@ -741,7 +1051,7 @@ addEventListener(
         pause();
       }
     }
-    if (e.keyCode === binds.retry) {
+    if (e.keyCode === binds.retry && gametype !== void 0 && !document.querySelector('.menu.on:not(#go):not(#pause)')) {
       init(gametype);
     }
     if (!watchingReplay) {
@@ -767,31 +1077,36 @@ addEventListener(
   },
   false,
 );
+/**
+ * A key released before the game has stepped since it was pressed still
+ *  counts for one step, so quick taps (and on-screen buttons) never get lost.
+ */
+var seenKeys = 0;
+var pendingRelease = 0;
+function releaseKey(flag) {
+  if (!(keysDown & flag)) return;
+  if (seenKeys & flag) keysDown &= ~flag;
+  else pendingRelease |= flag;
+}
+
 addEventListener(
   'keyup',
   function(e) {
-    if (!watchingReplay) {
-      if (e.keyCode === binds.moveLeft && keysDown & flags.moveLeft) {
-        keysDown ^= flags.moveLeft;
-      } else if (e.keyCode === binds.moveRight && keysDown & flags.moveRight) {
-        keysDown ^= flags.moveRight;
-      } else if (e.keyCode === binds.moveDown && keysDown & flags.moveDown) {
-        keysDown ^= flags.moveDown;
-      } else if (e.keyCode === binds.hardDrop && keysDown & flags.hardDrop) {
-        keysDown ^= flags.hardDrop;
-      } else if (e.keyCode === binds.rotRight && keysDown & flags.rotRight) {
-        keysDown ^= flags.rotRight;
-      } else if (e.keyCode === binds.rotLeft && keysDown & flags.rotLeft) {
-        keysDown ^= flags.rotLeft;
-      } else if (e.keyCode === binds.rot180 && keysDown & flags.rot180) {
-        keysDown ^= flags.rot180;
-      } else if (e.keyCode === binds.holdPiece && keysDown & flags.holdPiece) {
-        keysDown ^= flags.holdPiece;
-      }
+    if (watchingReplay) return;
+    for (var name in flags) {
+      if (e.keyCode === binds[name]) releaseKey(flags[name]);
     }
   },
   false,
 );
+
+// Leaving the tab pauses the game, so the clock and the stack wait for you.
+document.addEventListener('visibilitychange', function() {
+  if (document.hidden) pause();
+});
+addEventListener('blur', function() {
+  if (!watchingReplay) keysDown = 0;
+});
 
 // ========================== Loop ============================================
 
@@ -806,6 +1121,8 @@ function update() {
   } else if (frame in replayKeys) {
     keysDown = replayKeys[frame];
   }
+
+  Touch.apply();
 
   if (!(lastKeys & flags.holdPiece) && flags.holdPiece & keysDown) {
     piece.hold();
@@ -827,7 +1144,6 @@ function update() {
 
   if (flags.moveDown & keysDown) {
     piece.shiftDown();
-    //piece.finesse++;
   }
   if (!(lastKeys & flags.hardDrop) && flags.hardDrop & keysDown) {
     piece.hardDrop();
@@ -835,19 +1151,16 @@ function update() {
 
   piece.update();
 
-  // Win
-  // TODO
-  if (gametype !== 3) {
-    if (lines >= lineLimit) {
-      gameState = 1;
-      msg.innerHTML = 'GREAT!';
-      menu(3);
-    }
-  } else {
-    if (digLines.length === 0) {
-      gameState = 1;
-      msg.innerHTML = 'GREAT!';
-      menu(3);
+  // Win and finish conditions.
+  if (gameState === 0) {
+    if (gametype === 0 && lines >= lineLimit) {
+      endGame(1, 'GREAT!');
+    } else if (gametype === 3 && digLines.length === 0) {
+      endGame(1, 'GREAT!');
+    } else if (gametype === 4 && lines >= MARATHON_MAX_LEVEL * LINES_PER_LEVEL) {
+      endGame(1, 'GREAT!');
+    } else if (gametype === 5 && elapsedMs() >= ULTRA_FRAMES * (1000 / FPS)) {
+      endGame(1, 'TIME!');
     }
   }
 
@@ -858,20 +1171,23 @@ function update() {
   }
 }
 
-function gameLoop() {
-  requestAnimFrame(gameLoop);
+/**
+ * Runs every animation frame. Game logic advances in fixed 60 Hz steps, so
+ *  speed, DAS and gravity are the same on 60 Hz and 120 Hz screens.
+ */
+var playingClass = false;
+function gameLoop(now) {
+  requestAnimationFrame(gameLoop);
+  stepper.advance(now, step);
 
-  //TODO check to see how pause works in replays.
-  frame++;
+  // The on-screen buttons show only while a game is being played.
+  var playing = (gameState === 0 || gameState === 2) && !paused && !watchingReplay;
+  if (playing !== playingClass) {
+    playingClass = playing;
+    document.documentElement.classList.toggle('tt-playing', playing);
+  }
 
   if (gameState === 0) {
-    // Playing
-
-    if (!paused) {
-      update();
-    }
-
-    // TODO improve this with 'dirty' flags.
     if (
       piece.x !== lastX ||
       Math.floor(piece.y) !== lastY ||
@@ -886,8 +1202,32 @@ function gameLoop() {
     lastY = Math.floor(piece.y);
     lastPos = piece.pos;
     piece.dirty = false;
+  }
+}
+
+/**
+ * One logic step. The frame counter only advances while the game runs, so
+ *  pausing never shifts replays or the clock.
+ */
+function step() {
+  seenKeys = keysDown;
+  stepGame();
+  if (pendingRelease) {
+    keysDown &= ~pendingRelease;
+    pendingRelease = 0;
+  }
+}
+
+function stepGame() {
+  if (gameState === 0) {
+    // Playing
+    if (!paused) {
+      frame++;
+      update();
+    }
   } else if (gameState === 2) {
     // Count Down
+    frame++;
     if (frame < 50) {
       if (msg.innerHTML !== 'READY') msg.innerHTML = 'READY';
     } else if (frame < 100) {
@@ -895,7 +1235,7 @@ function gameLoop() {
     } else {
       msg.innerHTML = '';
       gameState = 0;
-      startTime = Date.now();
+      playStartFrame = frame;
       piece.new(preview.next());
     }
     // DAS Preload
@@ -917,8 +1257,9 @@ function gameLoop() {
     }
   } else if (toGreyRow >= 2) {
     /**
-     * Fade to grey animation played when player loses.
+     * Fade to grey animation played when the game ends.
      */
+    frame++;
     if (toGreyRow === 21) clear(activeCtx);
     if (frame % 2) {
       for (var x = 0; x < 10; x++) {

@@ -2,8 +2,8 @@
 
 Turn images into flowing particle animations! This javascript / WebGL tool creates particle animations from any image, with particles that dynamically respond to edge detection and flow fields.
 
-<img src="assets/example.gif">
-<img src="assets/onEdge.png">
+<img src="../../docs/media/particular-drift/example.webp" alt="Particular Drift animation example">
+<img src="../../docs/media/particular-drift/on-edge.webp" alt="Particles gathering on image edges">
 
 ## Features
 

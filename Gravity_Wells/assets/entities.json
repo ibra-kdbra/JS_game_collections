@@ -32,42 +32,26 @@
         "wait",
         "push",
         "move",
+        "relay",
         "tango",
         "substitute",
         "wander",
         "double",
+        "pivot",
         "conflict",
+        "orbit",
         "extract",
+        "shield",
         "grab",
         "twin",
         "snare",
         "sink",
+        "pulsar",
         "support",
         "snatch",
+        "eclipse",
         "swivel",
-        "turmoil",
-        "end"
-      ],
-      "wm": [
-        "titlescreen",
-        "startscreen",
-        "click",
-        "wait",
-        "push",
-        "move",
-        "tango",
-        "substitute",
-        "wander",
-        "double",
-        "conflict",
-        "extract",
-        "grab",
-        "twin",
-        "snare",
-        "sink",
-        "support",
-        "snatch",
-        "swivel",
+        "maelstrom",
         "turmoil",
         "end"
       ],
@@ -122,48 +106,12 @@
         "Swipe right to reset a puzzle",
         "or go back to the old ones.",
         "Swipe left to skip a puzzle.",
+        "Keys: arrows, R to reset.",
         "",
         "Swipe left for first puzzle!"
       ],
       "lT": "Wrong way",
       "rT": "Let's puzzle"
-    }
-  },
-  "ad": {
-    "puzzle": {
-      "grid": [],
-      "init": true,
-      "taps": "",
-      "text": [
-        "The edge of the universe...",
-        "",
-        "Thank you for playing!",
-        "",
-        "Did you know you could",
-        "unlock 3 bonus puzzles",
-        "when you support this game",
-        "through Web Monetization?"
-      ],
-      "rT": "Not too dark here"
-    }
-  },
-  "ty": {
-    "puzzle": {
-      "grid": [],
-      "init": true,
-      "taps": "",
-      "text": [
-        "Thank you",
-        "for supporting this game",
-        "through Web Monetization.",
-        "",
-        "The next 3 puzzles are only",
-        "for WM supporters.",
-        "",
-        "Swipe left for bonus puzzles"
-      ],
-      "lT": "Free puzzles",
-      "rT": "Bonus puzzles"
     }
   },
   "end": {
@@ -177,6 +125,104 @@
         "Thank you for playing!"
       ],
       "rT": "Just dark here"
+    }
+  },
+  "relay": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 6, 0, 0,
+        0, 5, 0, 0, 0, 0,
+        0, 0, 0, 2, 0, 0,
+        0, 0, 0, 1, 0, 0,
+        0, 0, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 5
+    }
+  },
+  "pivot": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 6, 0, 0,
+        0, 0, 0, 2, 0, 0,
+        0, 1, 4, 5, 7, 0,
+        0, 1, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 9
+    }
+  },
+  "orbit": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 6, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0,
+        0, 4, 5, 2, 7, 0,
+        0, 1, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 11
+    }
+  },
+  "shield": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 6, 3, 0,
+        0, 0, 0, 2, 0, 0,
+        0, 5, 0, 7, 1, 0,
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 9
+    }
+  },
+  "pulsar": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 1, 0,
+        0, 0, 6, 0, 0, 0,
+        0, 5, 2, 0, 0, 0,
+        0, 0, 8, 0, 4, 0,
+        0, 0, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 9
+    }
+  },
+  "eclipse": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 3, 1, 0, 7, 0,
+        0, 5, 6, 0, 0, 0,
+        0, 0, 8, 2, 0, 0,
+        0, 0, 0, 4, 0, 0,
+        0, 0, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 14
+    }
+  },
+  "maelstrom": {
+    "puzzle": {
+      "grid": [
+        0, 0, 0, 0, 0, 0,
+        0, 3, 6, 0, 0, 0,
+        0, 5, 2, 0, 1, 0,
+        0, 0, 4, 0, 0, 0,
+        0, 1, 0, 2, 7, 0,
+        0, 0, 0, 0, 0, 0
+      ],
+      "init": true,
+      "taps": 16
     }
   },
   "substitute": {
