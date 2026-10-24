@@ -13,7 +13,9 @@ State of the Game Lab upgrade, for continuing in a new session.
 6. `upgrade/phase-5-polish` – on top of phase 4: games fill the window (kit shell renders no
    buttons), Shadow Dog Runner removed, flat hub without gradients, Brainy Warrior rebuilt
    (rules engine, WebAssembly solver, Quaternius CC0 models, 34-level measured ramp), Tower
-   Defense UI and art rework, level difficulty audit across games. **Merge this to deploy everything.**
+   Defense UI, art, calm screen shake and 18 bot-proven campaign maps, level difficulty audit
+   across games, phone layouts for every game down to 320x568 (Tetris got touch gestures).
+   **Merge this to deploy everything.**
 7. `wip/souls-level-check` – merged into phase-2 and phase-3; kept for history.
 
 ## Open work
@@ -30,6 +32,9 @@ State of the Game Lab upgrade, for continuing in a new session.
 - Saved progress in Breakout, Snake and Minesweeper is keyed by level number, and their level
   order changed in phase 5; harmless while phase 3+ is not live.
 - Brainy Warrior's last six levels are very hard (bot success near 0%); needs playtesting.
+- Tower Defense balance changed in phase 5 (wave bonus, extra gold per portal, Hive portals close
+  after the wave, per-map enemy health) so a fair bot wins all 18 maps; existing maps are easier
+  than before. Owner to confirm.
 
 ## Rules the owner set
 - Author/committer `ibra-kdbra <git-repo-develop@outlook.com>`; no AI/Claude attribution
@@ -46,6 +51,8 @@ State of the Game Lab upgrade, for continuing in a new session.
   `node Raven/tools/verify-levels.mjs` (re-record a changed Raven level with
   `node Raven/tools/search-runs.mjs <n> --seeds 1`). Each prints its difficulty table.
 - Brainy Warrior budgets: `CHROME=<chromium> node Brainy_Warrior/tools/perf-check.mjs`.
+- Tower Defense: `node TowerDefense/tools/verify-maps.mjs` (bot wins every map) and
+  `node TowerDefense/tools/aim-test.mjs` (clicks land on the right tower during explosions).
 - Smoke test (every registered page at phone and desktop size): `node tools/smoke.mjs`
   (`--only <slug,...>`, `--viewport phone|desktop`; `SMOKE_OFFLINE=1` blocks the network,
   `SMOKE_STRICT=1` also fails on CDN loads). Needs Playwright: `npm i --no-save playwright` and
