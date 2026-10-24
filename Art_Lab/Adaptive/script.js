@@ -28,10 +28,16 @@ function compactHeight() {
     return Math.round(tall ? Math.min(window.innerHeight * 0.68, mainWidth * 1.3) : window.innerHeight * 0.82);
 }
 
+// Art Lab live preview (?embed=1): the canvas fills the frame.
+const embedded = !!(window.ArtEmbed && window.ArtEmbed.on);
+
 function setup() {
 
     // get size of div
-    if (isCompact()) {
+    if (embedded) {
+        mainWidth = window.innerWidth;
+        mainHeight = window.innerHeight;
+    } else if (isCompact()) {
         mainWidth = document.getElementById("main").clientWidth;
         mainHeight = compactHeight();
     } else if (window.innerWidth > 3000) {
@@ -44,7 +50,7 @@ function setup() {
 
     // 2 canvas pixels per CSS pixel at most: 3x phone screens would draw
     // more than twice the pixels for no visible gain.
-    pixelDensity(Math.min(2, displayDensity()));
+    pixelDensity(embedded ? window.ArtEmbed.dpr(1.5) : Math.min(2, displayDensity()));
 
     // initialize canvas
     createCanvas(mainWidth, mainHeight); // set canva size
@@ -103,6 +109,14 @@ function draw() {
 }
 
 function windowResized() {
+    if (embedded) {
+        if (window.innerWidth === width && window.innerHeight === height) return;
+        mainWidth = window.innerWidth;
+        mainHeight = window.innerHeight;
+        resizeCanvas(mainWidth, mainHeight);
+        reset();
+        return;
+    }
     if (isCompact()) {
         const w = document.getElementById("main").clientWidth;
         mainWidth = w;

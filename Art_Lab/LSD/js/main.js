@@ -20,6 +20,13 @@ if (window.innerWidth <= 900 || window.innerHeight <= 500) {
     startingWidth = Math.round(Math.min(1000, window.innerWidth * scale) / 4) * 4;
     startingHeight = Math.round(Math.min(4000, startingWidth * (window.innerHeight / window.innerWidth)) / 4) * 4;
 }
+// Art Lab live preview (?embed=1): the frame's own size, at most 1.5 pixels
+// per CSS pixel.
+if (window.ArtEmbed && window.ArtEmbed.on) {
+    const scale = window.ArtEmbed.dpr(1.5);
+    startingWidth = Math.max(4, Math.round((window.innerWidth * scale) / 4) * 4);
+    startingHeight = Math.max(4, Math.round((window.innerHeight * scale) / 4) * 4);
+}
 canvas.width = startingWidth;
 canvas.height = startingHeight;
 console.log("canvas width/height: "+canvas.width+" / "+canvas.height);

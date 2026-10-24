@@ -387,3 +387,20 @@ img {
         text-align: center;
     }
 }
+
+/* ---------- Art Lab live preview (?embed=1, see ../js/embed.js) ----------
+   Only the canvas shows, filling the frame; the panels, presets and footer
+   stay hidden and out of reach. */
+html.is-embed body {
+    visibility: hidden;
+}
+
+html.is-embed canvas {
+    visibility: visible;
+    position: fixed;
+    inset: 0;
+    width: 100vw !important;
+    height: 100vh !important;
+    border: 0;
+    z-index: 1;
+}
