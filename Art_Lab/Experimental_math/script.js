@@ -2,11 +2,11 @@ vec.polute();
 microcan.polute();
 
 const ctx = document.getElementById("main").getContext('2d');
-const w = window.innerWidth;
-const h = window.innerHeight;
+let w = window.innerWidth;
+let h = window.innerHeight;
 
 const n = 100;
-const fieldSize = w / n;
+let fieldSize = w / n;
 
 const maxLifetime = 30 * 10;
 const pn = 1000;
@@ -40,6 +40,25 @@ const field = Array.from({length: n}, (_, y) => Array.from({length: n}, (__, x) 
 
 setCanvasSize("main", w, h);
 background(ctx, 0, 0, 0, 1, w, h);
+
+// Rotating a phone or resizing the window: match the new size (once it
+// settles) instead of stretching the old drawing, and spread the particles
+// over the new area.
+let resizeTimer = 0;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    const nw = window.innerWidth;
+    const nh = window.innerHeight;
+    if (nw === w && nh === h) return;
+    for (let i = 0; i < pn; i++) particles[i] = [particles[i][0] * nw / w, particles[i][1] * nh / h];
+    w = nw;
+    h = nh;
+    fieldSize = w / n;
+    setCanvasSize("main", w, h);
+    background(ctx, 0, 0, 0, 1, w, h);
+  }, 150);
+});
 
 const draw = () => {
   // background(ctx, 0, 0, 0, 0.05, w, h);
