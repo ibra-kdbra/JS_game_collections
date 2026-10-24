@@ -4,14 +4,7 @@
 // terrain.js.
 
 const MAP_LIST = [
-    { id: 'spiral', title: 'Spiral', group: 'designed' },
-    { id: 'loops', title: 'Loops', group: 'designed' },
-    { id: 'branch', title: 'Branch', group: 'designed' },
-    { id: 'branchAlt', title: 'Branch Alt', group: 'designed' },
-    { id: 'fork', title: 'Fork', group: 'designed' },
-    { id: 'walls', title: 'Walls', group: 'designed' },
-    { id: 'city', title: 'City', group: 'designed' },
-    { id: 'freeway', title: 'Freeway', group: 'designed' },
+    ...CAMPAIGN.map((m, i) => ({ ...m, group: 'designed', num: i + 1 })),
     { id: 'empty2', title: 'Empty', spawns: 2, cover: 0, group: 'random' },
     { id: 'sparse2', title: 'Sparse', spawns: 2, cover: 0.1, group: 'random' },
     { id: 'dense2', title: 'Dense', spawns: 2, cover: 0.2, group: 'random' },
@@ -62,7 +55,7 @@ const ENEMY_INFO = {
     faster: { title: 'Racer', blurb: 'Very fast and shrugs off explosions.' },
     tank: { title: 'Tank', blurb: 'Immune to slow and poison. Weak to explosions and snipers.' },
     taunt: { title: 'Taunt', blurb: 'Boss. Draws every tower\'s fire. Huge health.' },
-    spawner: { title: 'Hive', blurb: 'Boss. Opens a new portal where it dies.' }
+    spawner: { title: 'Hive', blurb: 'Boss. Opens a new portal where it dies, until the wave is over.' }
 };
 
 const TYPE_NAMES = {
@@ -97,8 +90,8 @@ function towerNumbers(t) {
     const cd = Math.max(1, (t.cooldownMin + t.cooldownMax) / 2);
     const rate = 60 / cd;
     let hit = (t.damageMin + t.damageMax) / 2;
-    if (t.name === 'tesla' || t.name === 'lightningStrike') hit *= 2;     // zap plus the extra hit
-    if (t.name === 'clusterBomb') hit *= 4;                                 // main blast and three more
+    if (HITS_TWICE.has(t.name)) hit *= 2;                                   // shot plus the blast or extra zap
+    if (t.name === 'clusterBomb') hit *= 2;                                 // and three more blasts around it
     let dps = hit * rate;
     if (t.name === 'beamEmitter') dps = 400;                                // ramps up on one target
     if (t.type === 'poison') dps = 60;
@@ -130,29 +123,60 @@ function barsHTML(t, next = null) {
     return row('power', 'Power', power) + row('range', 'Range', `Range ${t.range}`) + row('rate', 'Rate', `${n.rate >= 30 ? 'Constant' : n.rate.toFixed(1) + ' shots per second'}`);
 }
 
+// Towers whose target is hit twice per shot: Tesla and Lightning Strike zap it
+// again, bombs and the railgun blast around it (the target too)
+const HITS_TWICE = new Set(['tesla', 'lightningStrike', 'bomb', 'clusterBomb', 'railgun']);
+
+// What a tower does, in words and numbers. Type is shown next to the name.
 function towerStats(t) {
-    const { rate } = towerNumbers(t);
-    let damage = t.getDamage();
-    let speedText = rate >= 30 ? 'Constant' : `${rate < 10 ? rate.toFixed(1) : Math.round(rate)}/s`;
-    if (t.type === 'slow') damage = 'Slows 50%';
+    const { rate, dps } = towerNumbers(t);
+    let damage = t.getDamage() + (HITS_TWICE.has(t.name) ? ' ×2' : '');
+    let rateText = rate >= 30 ? 'Constant' : `${rate < 10 ? rate.toFixed(1) : Math.round(rate)}/s`;
+    let dpsText = dps >= 1000 ? `${(dps / 1000).toFixed(1)}k` : String(Math.round(dps));
+    if (t.type === 'slow') {
+        damage = 'None';
+        dpsText = 'Slows 50%';
+    }
     if (t.type === 'poison') {
         damage = '60 over 1s';
-        speedText = `${rate.toFixed(1)}/s`;
+        rateText = `${rate.toFixed(1)}/s`;
     }
-    if (t.name === 'beamEmitter') damage = 'Ramps up';
+    if (t.name === 'beamEmitter') {
+        damage = 'Ramps up';
+        dpsText = 'Grows';
+    }
     return {
         Damage: damage,
-        Speed: speedText,
+        Rate: rateText,
         Range: String(t.range),
+        DPS: dpsText,
         Type: TYPE_NAMES[t.type] || t.type
     };
 }
 
+const STAT_TIPS = {
+    Damage: 'Damage per hit (×2: the target is hit twice per shot)',
+    Rate: 'Shots per second',
+    Range: 'Reach in tiles',
+    DPS: 'About this much damage per second on one target'
+};
+
 function statGrid(t) {
     const st = towerStats(t);
-    return `<dl class="statgrid">${Object.entries(st).map(([k, v]) =>
-        `<div><dt>${k}</dt><dd title="${esc(v)}">${esc(v)}</dd></div>`).join('')}</dl>`;
+    return `<dl class="statgrid">${['Damage', 'Rate', 'Range', 'DPS'].map(k =>
+        `<div title="${esc(STAT_TIPS[k])}"><dt>${k}</dt><dd>${esc(st[k])}</dd></div>`).join('')}</dl>`;
 }
+
+// Damage type as a small coloured tag
+const typeTag = (t) => `<span class="type-tag t-${esc(t.type)}">${esc(TYPE_NAMES[t.type] || t.type)}</span>`;
+
+// One line of stats for small screens
+const statLine = (t) => {
+    const st = towerStats(t);
+    return `<p class="stat-line phone-only">${['Damage', 'Rate', 'Range', 'DPS'].map(k => `<span>${k} <b>${esc(st[k])}</b></span>`).join('')}</p>`;
+};
+
+const short = (n) => n >= 10000 ? `${Math.round(n / 1000)}k` : n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.round(n));
 
 const tagsHTML = (name) => (TOWER_TAGS[name] || []).join(' · ');
 
@@ -162,9 +186,10 @@ function upgradeDiff(t, u) {
     next.upgrade(u);
     const a = towerStats(t);
     const b = towerStats(next);
-    const rows = Object.keys(a).filter(k => a[k] !== b[k])
-        .map(k => `<li><span>${k}</span> ${esc(a[k])} &rarr; <b>${esc(b[k])}</b></li>`);
-    return { next, rows: rows.join('') };
+    const changed = Object.keys(a).filter(k => a[k] !== b[k]);
+    const rows = changed.map(k => `<li><span>${k}</span> ${esc(a[k])} &rarr; <b>${esc(b[k])}</b></li>`);
+    const line = changed.filter(k => k !== 'Type').slice(0, 2).map(k => `${k} <b>${esc(b[k])}</b>`).join(' · ');
+    return { next, rows: rows.join(''), line };
 }
 
 
@@ -231,6 +256,18 @@ function clearInfo() {
 
 function idleHTML() {
     const touch = isTouch();
+    if (gameOver) return overHTML();
+    if (started) {
+        // During a game: how it is going, and the shortcuts
+        const rows = [['g-kills', 'Defeated'], ['g-leaked', 'Lives lost'], ['g-towers', 'Towers'], ['g-earned', 'Gold earned']];
+        Object.keys(liveText).forEach(k => delete liveText[k]);
+        return `<div class="insp-head"><div><h2>This game</h2><p>${esc(mapTitle())} &middot; ${esc(difficulty.title)}</p></div></div>
+            <dl class="record two">${rows.map(([id, k]) => `<div><dt>${k}</dt><dd id="${id}">${liveValue(id)}</dd></div>`).join('')}</dl>
+            <p class="hint">${touch
+                ? 'Tap a tower to upgrade, sell or retarget it. Pinch or use + and &minus; to zoom.'
+                : 'Click a tower to upgrade, sell or retarget it. Scroll to zoom, drag to look around.'}</p>
+            <p class="hint desk-only keys-line"><kbd>Space</kbd> pause <kbd>T</kbd> speed <kbd>N</kbd> next wave <kbd>U</kbd> upgrade <kbd>S</kbd> sell <kbd>Esc</kbd> menu</p>`;
+    }
     return `<div class="insp-head"><div><h2>Build &amp; defend</h2></div></div>
         <p class="hint">${touch
             ? 'Pick a tower, then tap a tile on the map. Tap a built tower to upgrade or sell it. Pinch to zoom.'
@@ -240,17 +277,34 @@ function idleHTML() {
             <li>${gatePic()}Your gate: every enemy that reaches it costs lives</li>
             <li>${chevronPic()}Arrows show their way. On open ground towers block it, so build a maze</li>
         </ul>
-        <p class="hint desk-only" style="margin-top:12px">Space start / pause &middot; T speed &middot; N send wave &middot; Esc menu</p>`;
+        <p class="hint desk-only keys-line"><kbd>Space</kbd> start / pause <kbd>T</kbd> speed <kbd>N</kbd> send wave <kbd>Esc</kbd> menu</p>`;
+}
+
+// Side panel after the game ended (the end screen may be closed to look at the map)
+function overHTML() {
+    const won = health > 0;
+    return `<div class="insp-head"><div><h2 class="${won ? 'won' : 'lost'}">${won ? 'Victory' : 'Defeat'}</h2>
+            <p>${esc(mapTitle())} &middot; ${esc(difficulty.title)} &middot; ${won ? `${health} of ${maxHealth} lives left` : `fell on wave ${wave}`}</p></div></div>
+        <dl class="record two">
+            <div><dt>Waves held</dt><dd>${won ? wave : wave - 1}</dd></div>
+            <div><dt>Defeated</dt><dd>${stats.kills}</dd></div>
+            <div><dt>Towers</dt><dd>${stats.built}</dd></div>
+            <div><dt>Gold earned</dt><dd>$${stats.earned}</dd></div>
+        </dl>
+        <div class="insp-actions">
+            <button type="button" class="primary" data-act="again">Play again</button>
+            <button type="button" data-act="maps">Change map</button>
+        </div>`;
 }
 
 function placeHTML() {
     const t = createTower(0, 0, tower[towerType]);
     return `<div class="insp-head">${towerPic(towerType, 64)}
-            <div><h2>${esc(t.title)} <span style="color:var(--accent)">$${t.cost}</span></h2><p class="blurb">${esc(TOWER_BLURBS[towerType])}</p><p>${tagsHTML(towerType)}</p></div>
+            <div><h2>${esc(t.title)} <span class="price">$${t.cost}</span></h2><p class="blurb">${esc(TOWER_BLURBS[towerType])}</p><p>${typeTag(t)} ${tagsHTML(towerType)}</p></div>
             <button type="button" class="icon-btn" data-act="cancel" aria-label="Stop building (Esc)">${icon('close')}</button>
         </div>
         ${statGrid(t)}
-        <p class="stat-line phone-only">${Object.entries(towerStats(t)).map(([k, v]) => `${k} <b>${esc(v)}</b>`).join(' · ')}</p>
+        ${statLine(t)}
         <div class="insp-bars">${barsHTML(t)}</div>
         <div class="switch phone-only" role="group" aria-label="Switch tower">${TOWER_ORDER.map(n =>
             `<button type="button" data-act="switch" data-tower="${n}" aria-label="${esc(tower[n].title)} $${tower[n].cost}" aria-pressed="${n === towerType}"${!godMode && cash < tower[n].cost ? ' class="poor"' : ''}>${towerPic(n, 64)}</button>`).join('')}</div>
@@ -265,42 +319,80 @@ function selectedHTML(t) {
     const level = (tower[baseName(t)]?.upgrades?.length || 0) + 1;
     const now = level - t.upgrades.length;
     let upgradeBlock;
+    let upLine = '';
     let nextT = null;
     if (t.upgrades.length) {
         const u = t.upgrades[0];
-        const { next, rows } = upgradeDiff(t, u);
+        const { next, rows, line } = upgradeDiff(t, u);
         nextT = next;
-        upgradeBlock = `<p class="insp-label">Upgrade</p>
-            <div class="upgrade-card">
-                <h3>${towerPic(u.name, 48)}<span>${esc(next.title)}</span><span class="price">$${u.cost}</span></h3>
-                <ul>${rows}<li><span>${esc(TOWER_BLURBS[u.name] || '')}</span></li></ul>
-                <button type="button" class="primary" data-act="upgrade" data-up>Upgrade $${u.cost}<span class="desk-only">&nbsp;(U)</span></button>
+        upgradeBlock = `<div class="upgrade-card">
+                <h3>${towerPic(u.name, 48)}<span><small>Upgrade to</small>${esc(next.title)}</span><span class="price">$${u.cost}</span></h3>
+                <ul>${rows}<li class="blurb"><span>${esc(TOWER_BLURBS[u.name] || '')}</span></li></ul>
                 <p class="need" id="up-need" hidden></p>
             </div>`;
+        upLine = `<p class="up-line phone-only"><span>Next: <b>${esc(next.title)}</b></span>${line ? ` <span>${line}</span>` : ''}</p>`;
     } else {
-        upgradeBlock = `<div class="upgrade-card maxed" style="margin-top:10px">Fully upgraded</div>`;
+        upgradeBlock = `<div class="upgrade-card maxed">${icon('star')} Fully upgraded</div>`;
     }
-    const targeting = hasTargeting(t) ? `<p class="insp-label">Target <span class="desk-only" style="text-transform:none;font-weight:400">(C)</span></p>
-        <div class="seg" role="group" aria-label="Target">${Object.entries(targetModes).map(([m, label]) =>
+    const targeting = hasTargeting(t) ? `<p class="insp-label">Target <kbd class="desk-only">C</kbd></p>
+        <div class="seg target-seg" role="group" aria-label="Target">${Object.entries(targetModes).map(([m, label]) =>
             `<button type="button" data-act="target" data-mode="${m}" aria-pressed="${t.targetMode === m}">${label}</button>`).join('')}</div>` : '';
     const quickUp = t.upgrades.length
         ? `<button type="button" class="primary" data-act="upgrade" data-up>Upgrade $${t.upgrades[0].cost}</button>`
         : '<button type="button" disabled>Max level</button>';
+    Object.keys(liveText).forEach(k => delete liveText[k]);
+    const record = `<dl class="record">
+            <div><dt>Kills</dt><dd id="t-kills">${liveValue('t-kills')}</dd></div>
+            <div><dt>Damage dealt</dt><dd id="t-dealt">${liveValue('t-dealt')}</dd></div>
+            <div><dt>Spent</dt><dd>$${t.totalCost}</dd></div>
+        </dl>`;
     return `<div class="insp-head">${towerPic(t.name, 64)}
-            <div><h2>${esc(t.title)}</h2><p>Level ${now} of ${level} &middot; ${tagsHTML(t.name)}</p></div>
+            <div><h2>${esc(t.title)}</h2><p>Level ${now} of ${level} &middot; ${typeTag(t)} ${tagsHTML(t.name)}</p></div>
             <button type="button" class="icon-btn" data-act="cancel" aria-label="Deselect (Esc)">${icon('close')}</button>
         </div>
-        <div class="insp-actions phone-only" style="margin:0 0 8px">${quickUp}
+        <div class="insp-actions phone-only quick">${quickUp}
             <button type="button" class="sell" data-act="sell">Sell +$${t.sellPrice()}</button>
         </div>
         ${statGrid(t)}
+        ${statLine(t)}
+        ${upLine}
         <div class="insp-bars">${barsHTML(t, nextT)}</div>
         ${targeting}
-        ${upgradeBlock}
+        ${record}
+        <div class="desk-only-block">${upgradeBlock}</div>
         <div class="insp-actions full">
-            <button type="button" class="sell" data-act="sell">Sell +$${t.sellPrice()}<span class="desk-only">&nbsp;(S)</span></button>
-            <button type="button" data-act="cancel">Done</button>
+            ${t.upgrades.length
+                ? `<button type="button" class="primary" data-act="upgrade" data-up>Upgrade $${t.upgrades[0].cost}<kbd>U</kbd></button>`
+                : '<button type="button" disabled>Max level</button>'}
+            <button type="button" class="sell" data-act="sell">Sell +$${t.sellPrice()}<kbd>S</kbd></button>
         </div>`;
+}
+
+// Numbers in the side panel that change during play; refreshed by updateStatus
+// without rebuilding the panel (rebuilding would drop a hover or a click in progress)
+const liveText = {};
+function liveValue(id) {
+    switch (id) {
+        case 't-kills': return String(selected ? selected.kills || 0 : 0);
+        case 't-dealt': return short(selected ? selected.dealt || 0 : 0);
+        case 'g-kills': return String(stats.kills);
+        case 'g-leaked': return String(stats.leaked);
+        case 'g-towers': return String(towers.length);
+        case 'g-earned': return `$${stats.earned}`;
+    }
+    return '';
+}
+
+function refreshLive() {
+    for (const id of ['t-kills', 't-dealt', 'g-kills', 'g-leaked', 'g-towers', 'g-earned']) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const v = liveValue(id);
+        if (liveText[id] !== v) {
+            liveText[id] = v;
+            el.textContent = v;
+        }
+    }
 }
 
 // The store entry a tower came from (towers keep their upgraded name)
@@ -386,6 +478,13 @@ $('inspector').addEventListener('click', e => {
         case 'switch':
             if (b.dataset.tower !== towerType) setPlace(b.dataset.tower);
             break;
+        case 'again':
+            resetGame();
+            break;
+        case 'maps':
+            closeOverlay('end');
+            openLevels();
+            break;
     }
 });
 
@@ -415,11 +514,12 @@ function setHTML(id, value) {
 
 function updateControls() {
     const pauseBtn = $('pause');
-    const label = gameOver ? 'Game over' : !started ? 'Start' : paused ? 'Resume' : 'Pause';
-    setHTML('pause', `${icon(paused || gameOver ? 'play' : 'pause')}<span>${label}</span>`);
-    pauseBtn.setAttribute('aria-label', `${label} (Space)`);
-    pauseBtn.disabled = gameOver;
-    pauseBtn.classList.toggle('primary', !started || paused);
+    // After the game the button starts a new one on the same map
+    const label = gameOver ? 'Play again' : !started ? 'Start' : paused ? 'Resume' : 'Pause';
+    setHTML('pause', `${icon(gameOver ? 'replay' : paused ? 'play' : 'pause')}<span>${label}</span>`);
+    pauseBtn.setAttribute('aria-label', gameOver ? 'Play again' : `${label} (Space)`);
+    pauseBtn.classList.toggle('primary', !started || paused || gameOver);
+    document.body.classList.toggle('game-over', gameOver);
     document.querySelectorAll('[data-speed]').forEach(b => {
         b.setAttribute('aria-pressed', String(Number(b.dataset.speed) === speed));
     });
@@ -490,7 +590,7 @@ function updateStatus() {
         let counts;
         let fresh = [];
         if (gameOver) {
-            label = 'Game over';
+            label = health > 0 ? 'Victory' : `Defeat on wave ${wave}`;
             counts = null;
         } else if (!started) {
             label = `First wave`;
@@ -506,7 +606,10 @@ function updateStatus() {
             fresh = newInWave(wave + 1);
         }
         setText('wave-label', label);
-        setHTML('preview', counts ? chipsHTML(counts, fresh) : '<span class="chip muted">Play again or pick another map</span>');
+        setHTML('preview', counts ? chipsHTML(counts, fresh)
+            : `<span class="chip muted">${health > 0 ? `All ${wave} waves held` : `${Math.max(0, wave - 1)} waves held`}</span>`);
+        // The side panel shows something else before, during and after a game
+        if (!toPlace && !(selected && selected.alive)) updateInfo();
     }
 
     // Countdown / enemies left
@@ -519,10 +622,11 @@ function updateStatus() {
     const nb = $('next-wave');
     const canCall = toWait && !gameOver && !!upcoming;
     nb.disabled = !canCall;
+    nb.hidden = gameOver;
     const bonus = earlyCallBonus();
     setHTML('next-label', canCall
         ? `<span class="long">Send wave ${wave + 1} now </span><b>+$${bonus}</b>`
-        : `<span class="long">${!started ? 'Next wave' : gameOver ? 'Next wave' : 'Wave in progress'}</span>`);
+        : `<span class="long">${!started ? 'Send early between waves' : upcoming ? 'Wave in progress' : 'Last wave'}</span>`);
     $('next-fill').style.width = canCall ? `${100 * (1 - wcd / difficulty.waveCool)}%` : '0';
     nb.setAttribute('aria-label', canCall ? `Send wave ${wave + 1} now for $${bonus} (N)` : 'Send next wave (N)');
 
@@ -540,6 +644,7 @@ function updateStatus() {
     setText('map-tip', tip);
 
     refreshAffordability();
+    refreshLive();
 }
 
 function flashLives() {
@@ -560,7 +665,8 @@ function toggleMute() {
 }
 
 $('pause').addEventListener('click', e => {
-    pause();
+    if (gameOver) resetGame();
+    else pause();
     e.currentTarget.blur();
 });
 document.querySelectorAll('[data-speed]').forEach(b => {
@@ -666,8 +772,8 @@ function announceWave() {
 
 function waveCleared() {
     sfx('cleared');
-    const next = skipToNext ? '' : `Next wave in ${Math.ceil(wcd / 60)}s · send it early for bonus gold`;
-    showBanner(`Wave ${wave} cleared`, next, 'good');
+    const next = skipToNext ? '' : ` · next wave in ${Math.ceil(wcd / 60)}s`;
+    showBanner(`Wave ${wave} cleared`, `+$${clearBonus} bonus${next}`, 'good');
     tipEvent('cleared');
 }
 
@@ -805,10 +911,20 @@ document.querySelectorAll('.overlay').forEach(o => {
 function openMenu() {
     menuResume = !paused && !gameOver;
     if (menuResume) pause();
-    setText('menu-title', !started || gameOver ? 'Menu' : 'Paused');
+    setText('menu-title', gameOver ? (health > 0 ? 'Victory' : 'Game over') : !started ? 'Menu' : 'Paused');
+    $('menu-resume').textContent = gameOver ? 'Play again' : !started ? 'Back to building' : 'Resume';
+    $('restart').hidden = gameOver;
+    $('open-levels').closest('.menu-row').classList.toggle('one', gameOver);
     const best = GameKit.readBests(SLUG)[bestMode()];
-    $('menu-where').textContent = `${mapTitle()} · ${gameMode === 'campaign' ? 'Campaign' : 'Endless'} · ${difficulty.title} · wave ${wave}` +
-        (best ? ` · best ${best.value} waves` : '');
+    const total = gameMode === 'campaign' ? `/${campaignWaves.length}` : '';
+    const where = [
+        mapTitle(),
+        gameMode === 'campaign' ? 'Campaign' : 'Endless',
+        difficulty.title,
+        `Wave ${wave}${total}`
+    ];
+    if (best) where.push(`Best ${best.value} wave${best.value === 1 ? '' : 's'}`);
+    $('menu-where').innerHTML = where.map((w, i) => `<li${i === 0 ? ' class="map"' : ''}>${esc(w)}</li>`).join('');
     syncSettings();
     openOverlay('menu');
 }
@@ -819,9 +935,9 @@ function syncSettings() {
     $('set-bars').checked = healthBar;
     $('set-effects').checked = showEffects;
     $('set-autosend').checked = skipToNext;
-    $('set-shake').checked = screenShake;
+    document.querySelectorAll('[data-shake]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.shake) === shakeLevel)));
     $('set-haptics').checked = haptics;
-    $('haptics-row').hidden = !('vibrate' in navigator);
+    $('haptics-row').hidden = !('vibrate' in navigator) || !matchMedia('(pointer: coarse)').matches;
 }
 
 $('set-sound').addEventListener('change', e => {
@@ -844,9 +960,11 @@ $('set-autosend').addEventListener('change', e => {
     skipToNext = e.target.checked;
     savePrefs();
 });
-$('set-shake').addEventListener('change', e => {
-    screenShake = e.target.checked;
-    FX.shakeOn = screenShake;
+$('shake-seg').addEventListener('click', e => {
+    const b = e.target.closest('[data-shake]');
+    if (!b) return;
+    shakeLevel = Number(b.dataset.shake);
+    FX.shakeLevel = shakeLevel;
     savePrefs();
 });
 $('set-haptics').addEventListener('change', e => {
@@ -865,6 +983,16 @@ $('open-levels').addEventListener('click', () => {
     openLevels();
 });
 $('export').addEventListener('click', showExportMap);
+$('menu-import').addEventListener('click', () => {
+    menuResume = false;
+    closeOverlay('menu');
+    showImportMapPrompt();
+});
+$('menu-resume').addEventListener('click', () => {
+    if (!gameOver) return;
+    menuResume = false;
+    resetGame();
+});
 
 
 // ---------- Level select ----------
@@ -888,7 +1016,7 @@ function renderLevels() {
     document.querySelectorAll('[data-diff]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.diff === pickDiff)));
     const d = difficulties[pickDiff];
     const hp = d.hp === 1 ? 'normal enemies' : d.hp < 1 ? 'weaker enemies' : 'tougher enemies';
-    $('diff-note').textContent = `${d.title}: ${d.health} lives, $${d.cash} to start, ${hp}. ` +
+    $('diff-note').textContent = `${d.title}: ${d.health} lives, $${d.cash} to start (+$${portalCash} per extra portal), ${hp}. ` +
         (pickMode === 'campaign' ? 'Hold all 30 waves to win; keep more lives for more stars.' : 'Waves never stop. How far can you get?');
 
     const bests = GameKit.readBests(SLUG);
@@ -905,7 +1033,7 @@ function renderLevels() {
             if (disabled) sub = 'Import a map or make one in the editor';
             else if (pickMode === 'campaign' && st) sub = 'Cleared';
             else if (best) sub = `Best: ${best.value} wave${best.value === 1 ? '' : 's'}`;
-            else sub = m.spawns ? `${m.spawns} portals` : 'Not played yet';
+            else sub = m.spawns ? `${m.spawns} portals` : m.idea || 'Not played yet';
             const data = thumbData(m);
             const themeName = data ? Terrain.THEMES[Terrain.themeFor(data, m.group === 'custom' ? null : m.id)].title : '';
             const b = document.createElement('button');
@@ -917,7 +1045,7 @@ function renderLevels() {
                 ? `<span class="mini-stars" aria-label="${st} of 3 stars">${[1, 2, 3].map(i => `<span class="${i <= st ? 'on' : ''}">${icon('star')}</span>`).join('')}</span>`
                 : '';
             b.innerHTML = `<span class="thumb"><canvas width="320" height="200" aria-hidden="true"></canvas>${themeName ? `<span class="theme">${esc(themeName)}</span>` : ''}</span>
-                <span class="title"><span>${esc(m.spawns ? `${m.title} ×${m.spawns}` : m.title)}</span>${starHTML}</span>
+                <span class="title"><span>${m.num ? `<span class="num">${m.num}</span>` : ''}${esc(m.spawns ? `${m.title} ×${m.spawns}` : m.title)}</span>${starHTML}</span>
                 <span class="sub">${esc(sub)}</span>`;
             holder.append(b);
             queueThumb(b.querySelector('canvas'), m, data);
@@ -1066,7 +1194,7 @@ function endGame(won) {
         store.set('stars', all);
     }
     sfx(won ? 'victory' : 'defeat');
-    FX.buzz(won ? [40, 60, 40, 60, 120] : [200, 80, 300]);
+    FX.buzz(won ? [40, 60, 40, 60, 120] : [200, 80, 300], true);
 
     $('end').querySelector('.panel').classList.toggle('lost', !won);
     $('end-kicker').textContent = `${mapTitle()} · ${gameMode === 'campaign' ? 'Campaign' : 'Endless'} · ${difficulty.title}`;

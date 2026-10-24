@@ -14,5 +14,6 @@ exclude:
   - Snake/tools
   - Sokoban/tools
   - Souls-Bumper/tools
+  - TowerDefense/tools
   - PacMan/src
   - Wahdatio/src

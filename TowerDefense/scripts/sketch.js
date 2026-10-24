@@ -24,6 +24,7 @@ let grid;               // tile type
                         //  4 = enemy-only pathing)
 let metadata;           // tile metadata
 let paths;              // direction to reach exit
+let flowPaths;          // shortest-way direction on every tile (ignores the roads' own directions)
 let visitMap;           // whether exit can be reached
 let walkMap;            // walkability map
 
@@ -60,12 +61,15 @@ let diffId = 'normal';
 let upcoming = null;    // pattern of the wave after the current one, for the preview
 let started = false;    // whether the first wave has been released
 let earlyBonus = 0;     // bonus paid for the wave that was just called early
+let clearBonus = 0;     // gold paid for the wave that was just cleared
+let mapHp = 1;          // enemy health tuning of the campaign map (CAMPAIGN in maps.js)
 let floaters = [];      // floating numbers: { x, y, text, color, life, size }
 let hurt = 0;           // ticks left of the red edge flash after losing lives
 let damageNumbers = true;
-let screenShake = true; // shake the map on big hits
+let shakeLevel = 1;     // screen shake: 0 off, 1 subtle (big hits only), 2 full
 let haptics = true;     // vibrate on phones for key events
 let stats;              // per-game totals for the end screen
+let dmgSource = null;   // tower whose shot is being resolved, credited with damage and kills
 
 let godMode = false;    // make player immortal for test purposes
 let healthBar = true;   // display enemy health bar
@@ -422,6 +426,8 @@ function loadMap() {
     }
 
     tempSpawns = [];
+    const tuning = CAMPAIGN.find(m => m.id === name);
+    mapHp = tuning && tuning.hp ? tuning.hp : 1;
     mapTheme = Terrain.themeFor(name === 'custom' ? custom : maps[name] || null, name === 'custom' ? null : name);
     mapStamp++;
     fitCanvas();
@@ -651,6 +657,10 @@ function recalculate() {
         }
     }
 
+    // Shortest way from every tile, also kept for road tiles without a direction
+    // (crossings), where an enemy that starts there (a Hive portal) has no way to go
+    flowPaths = newPaths.map(col => col.slice());
+
     // Preserve old paths on path tiles
     for (let x = 0; x < cols; x++) {
         for (let y = 0; y < rows; y++) {
@@ -686,7 +696,7 @@ function resetGame() {
     // Reset all stats
     health = difficulty.health;
     maxHealth = health;
-    cash = difficulty.cash;
+    cash = difficulty.cash + portalCash * Math.max(0, spawnpoints.length - 1);
     wave = 0;
     // Reset all flags
     gameOver = false;
@@ -806,7 +816,7 @@ function walkable(col, row) {
 
 // Give an enemy its difficulty and endless-mode health
 function scaleEnemy(e) {
-    let mult = difficulty.hp;
+    let mult = difficulty.hp * mapHp;
     if (gameMode === 'endless' && wave > campaignWaves.length) {
         mult *= 1 + endlessHpGrowth * (wave - campaignWaves.length);
     }
@@ -861,7 +871,9 @@ function tick() {
             if (s[1] === 0) continue;
             s[1]--;
             const c = center(s[0].x, s[0].y);
-            enemies.push(scaleEnemy(createEnemy(c.x, c.y, enemy[name])));
+            const e = scaleEnemy(createEnemy(c.x, c.y, enemy[name]));
+            if (s[2] && s[2].magSq() > 0) e.vel.set(s[2].x, s[2].y).normalize().mult(e.pxSpeed());
+            enemies.push(e);
         }
 
         // Reset cooldown
@@ -891,9 +903,11 @@ function tick() {
             towers.splice(i, 1);
             continue;
         }
+        dmgSource = t;
         t.target(enemies);
         t.update();
     }
+    dmgSource = null;
 
     // Visual effects advance with the game
     FX.tick();
@@ -901,11 +915,13 @@ function tick() {
     // Projectiles
     for (let i = projectiles.length - 1; i >= 0; i--) {
         const p = projectiles[i];
+        dmgSource = p.source;
         p.steer();
         p.update();
 
         // Attack target
         if (p.alive && p.reachedTarget()) p.explode();
+        dmgSource = null;
 
         // Kill if outside map
         if (outsideMap(p)) p.kill();
@@ -933,10 +949,15 @@ function tick() {
     // Wave cleared: wait for the next one
     if (noMoreEnemies() && !toWait) {
         recordWave(wave);
+        // Portals opened by Hives close with the wave
+        tempSpawns = [];
         if (gameMode === 'campaign' && wave >= campaignWaves.length) {
             endGame(true);
             return;
         }
+        clearBonus = waveBonus(wave, spawnpoints.length);
+        cash += clearBonus;
+        stats.earned += clearBonus;
         wcd = difficulty.waveCool;
         toWait = true;
         waveCleared();
@@ -1225,10 +1246,11 @@ function loadPrefs() {
     if (typeof prefs.bars === 'boolean') healthBar = prefs.bars;
     if (typeof prefs.effects === 'boolean') showEffects = prefs.effects;
     skipToNext = !!prefs.autosend;
-    if (typeof prefs.shake === 'boolean') screenShake = prefs.shake;
+    if (typeof prefs.shake === 'boolean') shakeLevel = prefs.shake ? 1 : 0;
+    if (typeof prefs.shake === 'number') shakeLevel = Math.max(0, Math.min(2, prefs.shake | 0));
     if (typeof prefs.haptics === 'boolean') haptics = prefs.haptics;
     FX.enabled = showEffects;
-    FX.shakeOn = screenShake;
+    FX.shakeLevel = shakeLevel;
     return !!linked && mapId === linked;
 }
 
@@ -1242,7 +1264,7 @@ function savePrefs() {
         bars: healthBar,
         effects: showEffects,
         autosend: skipToNext,
-        shake: screenShake,
+        shake: shakeLevel,
         haptics
     });
     syncSettings();
@@ -1252,10 +1274,14 @@ function savePrefs() {
 // Events
 
 document.addEventListener('keydown', onKey);
+// Switching between mouse and touch: restyle at once, but leave the side panel's
+// buttons alone until this press is over (rebuilding them now would eat the click)
 document.addEventListener('pointerdown', e => {
     if (e.pointerType !== lastPointer) {
         lastPointer = e.pointerType;
-        updateInfo();
+        document.body.classList.toggle('touch', isTouch());
+        updatePlaceStatus();
+        document.addEventListener('click', () => setTimeout(updateInfo, 0), { once: true });
     }
 }, { capture: true });
 document.addEventListener('visibilitychange', () => {

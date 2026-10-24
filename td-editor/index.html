@@ -11,6 +11,7 @@
     <script src="../TowerDefense/vendor/p5-1.11.2.min.js" defer></script>
     <script src="../TowerDefense/vendor/lz-string-1.5.0.min.js" defer></script>
     <script src="../TowerDefense/scripts/ui.js" defer></script>
+    <script src="../TowerDefense/scripts/maps.js" defer></script>
     <script src="scripts/utils.js" defer></script>
     <script src="scripts/tiles.js" defer></script>
     <script src="../TowerDefense/scripts/terrain.js" defer></script>
@@ -118,6 +119,11 @@
       <div class="aside-holder">
         <aside id="status">
           <h2>Map</h2>
+          <label class="theme-row" for="campaign-map"><span>Open</span>
+            <select id="campaign-map">
+              <option value="">Campaign map&hellip;</option>
+            </select>
+          </label>
           <p id="dim"></p>
           <p id="coord">Tile: (0, 0)</p>
           <div class="size-row">

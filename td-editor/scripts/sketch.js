@@ -109,33 +109,57 @@ const getWalkMap = () => {
 // Load a map from a map string
 const importMap = (str) => {
     try {
-        const m = JSON.parse(LZString.decompressFromBase64(str));
-
-        // Grids
-        display = m.display;
-        displayDir = m.displayDir;
-        grid = m.grid;
-        metadata = m.metadata;
-        paths = m.paths;
-        // Important tiles
-        exit = createVector(m.exit[0], m.exit[1]);
-        spawnpoints = m.spawnpoints.map(s => createVector(s[0], s[1]));
-        // Colors
-        bg = m.bg;
-        border = m.border;
-        borderAlpha = m.borderAlpha;
-        // Misc
-        cols = m.cols;
-        rows = m.rows;
-        theme = m.theme && Terrain.THEMES[m.theme] ? m.theme : 'auto';
-        document.getElementById('theme').value = theme;
-
-        resizeFit();
+        loadMapData(JSON.parse(LZString.decompressFromBase64(str)));
         toast('Map imported', 'ok');
     } catch (err) {
         toast('That is not a valid map string', 'error');
     }
 };
+
+// Put a map (the game's map object) into the editor
+function loadMapData(source) {
+    const m = JSON.parse(JSON.stringify(source));
+
+    // Grids
+    display = m.display;
+    displayDir = m.displayDir;
+    grid = m.grid;
+    metadata = m.metadata;
+    paths = m.paths;
+    // Important tiles
+    exit = createVector(m.exit[0], m.exit[1]);
+    spawnpoints = m.spawnpoints.map(s => createVector(s[0], s[1]));
+    // Colors
+    bg = m.bg;
+    border = m.border;
+    borderAlpha = m.borderAlpha;
+    // Misc
+    cols = m.cols;
+    rows = m.rows;
+    theme = m.theme && Terrain.THEMES[m.theme] ? m.theme : 'auto';
+    document.getElementById('theme').value = theme;
+
+    resizeFit();
+}
+
+// Campaign maps from the game (TowerDefense/scripts/maps.js), to look at, change or play
+function listCampaignMaps() {
+    const select = document.getElementById('campaign-map');
+    CAMPAIGN.forEach((c, i) => {
+        const o = document.createElement('option');
+        o.value = c.id;
+        o.textContent = `${i + 1}. ${c.title}`;
+        select.append(o);
+    });
+    select.addEventListener('change', () => {
+        const m = maps[select.value];
+        if (!m) return;
+        loadMapData(m);
+        toast(`${CAMPAIGN.find(c => c.id === select.value).title} loaded`, 'ok');
+        select.value = '';
+        select.blur();
+    });
+}
 
 function showImportMapPrompt() {
     textDialog({
@@ -403,6 +427,7 @@ function setup() {
     resizeMax();
     resetMap(0);
     markSelected();
+    listCampaignMaps();
 
     // Paint with mouse, pen or finger
     const el = canvas.elt;

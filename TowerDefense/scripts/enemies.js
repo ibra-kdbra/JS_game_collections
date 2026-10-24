@@ -155,7 +155,9 @@ enemy.spawner = {
             for (let i = 0; i < tempSpawns.length; i++) {
                 if (c.equals(tempSpawns[i][0])) return;
             }
-            tempSpawns.push([createVector(c.x, c.y), tempSpawnCount]);
+            // Enemies from the new portal set off the way the Hive was walking
+            // (on a crossing the tile itself has no direction)
+            tempSpawns.push([createVector(c.x, c.y), tempSpawnCount, this.vel.copy()]);
         }
     }
 };

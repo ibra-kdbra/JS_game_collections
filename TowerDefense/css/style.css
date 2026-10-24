@@ -177,6 +177,46 @@ button.link {
     font-size: 20px;
 }
 
+kbd {
+    font: 700 11px/1 var(--display);
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 2px 5px;
+    text-transform: none;
+}
+
+button kbd {
+    margin-left: 8px;
+    color: inherit;
+    background: rgba(9, 9, 11, 0.18);
+    border-color: transparent;
+    opacity: 0.85;
+}
+
+.sell kbd {
+    background: var(--panel-3);
+}
+
+.type-tag {
+    display: inline-block;
+    font: 700 10px/1 var(--display);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 3px;
+    padding: 2px 5px;
+    background: var(--panel-3);
+    color: var(--text);
+    vertical-align: 1px;
+}
+
+.type-tag.t-energy { background: rgba(0, 240, 255, 0.16); color: #7ff7ff; }
+.type-tag.t-explosion { background: rgba(255, 153, 0, 0.18); color: #ffc266; }
+.type-tag.t-piercing { background: rgba(216, 180, 254, 0.18); color: #e2c9ff; }
+.type-tag.t-poison { background: rgba(132, 204, 22, 0.18); color: #b5e36a; }
+.type-tag.t-slow { background: rgba(96, 165, 250, 0.2); color: #a9cdfd; }
+
 .seg {
     display: flex;
     background: var(--bg);
@@ -213,6 +253,11 @@ button.link {
     flex-direction: column;
     gap: 2px;
     min-height: 46px;
+}
+
+.seg.small button {
+    font-size: 13px;
+    padding: 0 10px;
 }
 
 /* ---------- Panels ---------- */
@@ -675,6 +720,10 @@ body.is-placing #sketch-holder canvas {
     display: none;
 }
 
+.map-tip.faded {
+    opacity: 0.2;
+}
+
 .zoom-ctl {
     position: absolute;
     right: 6px;
@@ -682,11 +731,16 @@ body.is-placing #sketch-holder canvas {
     z-index: 2;
     display: none;
     gap: 6px;
-    opacity: 0.85;
 }
 
-body.touch .zoom-ctl {
+body.touch .zoom-ctl.on-map {
     display: grid;
+}
+
+.zoom-ctl.in-hud {
+    position: static;
+    grid-auto-flow: column;
+    gap: 4px;
 }
 
 .zoom-ctl button {
@@ -698,6 +752,58 @@ body.touch .zoom-ctl {
 
 .zoom-ctl button:disabled {
     opacity: 0.35;
+}
+
+/* The map leaves a strip free (render.js sets data-gutter and --gutter): the hint
+   and the zoom buttons sit in it instead of on the map */
+#sketch-holder[data-gutter="bottom"] .map-tip {
+    bottom: calc(var(--gutter) / 2);
+    transform: translate(-50%, 50%);
+}
+
+body.touch #sketch-holder[data-gutter="bottom"] .map-tip {
+    left: 8px;
+    transform: translateY(50%);
+    max-width: calc(100% - 128px);
+}
+
+#sketch-holder[data-gutter="bottom"] .zoom-ctl {
+    top: auto;
+    bottom: calc(var(--gutter) / 2);
+    transform: translateY(50%);
+    grid-auto-flow: column;
+}
+
+#sketch-holder[data-gutter="right"] .zoom-ctl {
+    right: calc(var(--gutter) / 2);
+    transform: translateX(50%);
+}
+
+#sketch-holder[data-gutter="right"][data-wide="1"] .map-tip,
+body.touch #sketch-holder[data-gutter="right"] .map-tip {
+    left: auto;
+    right: 6px;
+    bottom: 6px;
+    transform: none;
+    width: calc(var(--gutter) - 12px);
+    max-width: none;
+    white-space: normal;
+    text-align: center;
+    border-radius: 10px;
+    padding: 6px 8px;
+    font-size: 12px;
+}
+
+/* No room next to the map: small and see-through, on the map's edge */
+#sketch-holder[data-gutter="none"] .zoom-ctl {
+    opacity: 0.6;
+}
+
+#sketch-holder[data-gutter="none"] .map-tip {
+    bottom: 3px;
+    font-size: 12px;
+    padding: 4px 10px;
+    background: rgba(9, 9, 11, 0.8);
 }
 
 .perf {
@@ -778,11 +884,18 @@ button.small, .button.small {
     padding: 12px;
     overflow-y: auto;
     min-height: 0;
-    flex: 1 1 auto;
+    flex: 0 1 auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--panel-3) transparent;
 }
 
 body.is-selected #store {
     display: none;
+}
+
+body.game-over .store-grid {
+    opacity: 0.45;
+    pointer-events: none;
 }
 
 .insp-head {
@@ -802,6 +915,13 @@ body.is-selected #store {
     line-height: 1.1;
 }
 
+.insp-head h2 .price {
+    color: var(--accent);
+}
+
+.insp-head h2.won { color: var(--green); }
+.insp-head h2.lost { color: var(--red); }
+
 .insp-head p {
     margin: 2px 0 0;
     font-size: 12px;
@@ -810,6 +930,60 @@ body.is-selected #store {
 
 .insp-head .icon-btn {
     margin-left: auto;
+    flex: none;
+}
+
+.insp-head > div {
+    min-width: 0;
+}
+
+/* Kills and damage of the selected tower, or the game so far */
+.record {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+    gap: 4px;
+    margin: 0 0 10px;
+}
+
+.record.two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.record div {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 5px 7px;
+    min-width: 0;
+}
+
+.record dt {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+.record dd {
+    margin: 2px 0 0;
+    font: 700 15px/1.1 var(--display);
+    font-variant-numeric: tabular-nums;
+}
+
+.keys-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 4px;
+    font-size: 12px;
+}
+
+.keys-line kbd {
+    margin-left: 6px;
+}
+
+.keys-line kbd:first-child {
+    margin-left: 0;
 }
 
 .statgrid {
@@ -865,6 +1039,18 @@ body.is-selected #store {
     text-transform: uppercase;
     color: var(--muted);
     margin: 10px 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.target-seg {
+    margin-bottom: 10px;
+}
+
+.target-seg button {
+    font-size: 13px;
+    padding: 0 4px;
 }
 
 .upgrade-card {
@@ -891,6 +1077,18 @@ body.is-selected #store {
     color: var(--accent);
 }
 
+.upgrade-card h3 small {
+    display: block;
+    font: 600 10px/1.2 var(--body);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.upgrade-card li.blurb {
+    margin-top: 2px;
+}
+
 .upgrade-card ul {
     list-style: none;
     margin: 6px 0 8px;
@@ -915,8 +1113,15 @@ body.is-selected #store {
 .upgrade-card.maxed {
     color: var(--muted);
     font-size: 13px;
-    text-align: center;
     padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.upgrade-card.maxed svg {
+    color: var(--accent);
 }
 
 .need {
@@ -935,6 +1140,16 @@ body.is-selected #store {
 
 .insp-actions .sell {
     color: var(--accent);
+}
+
+/* Sell and Done stay in reach at the bottom of the panel while it scrolls */
+.insp-actions.full {
+    position: sticky;
+    bottom: -12px;
+    margin: 8px -12px -12px;
+    padding: 8px 12px 12px;
+    background: var(--panel);
+    border-top: 1px solid var(--line);
 }
 
 .place-status {
@@ -1120,6 +1335,19 @@ body.is-selected #store {
     min-height: 15px;
 }
 
+.map-card .num {
+    display: inline-block;
+    min-width: 20px;
+    margin-right: 6px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    background: var(--panel-3);
+    color: var(--accent);
+    font-size: 12px;
+    text-align: center;
+    vertical-align: 1px;
+}
+
 .map-card.current {
     border-color: var(--accent);
 }
@@ -1140,9 +1368,147 @@ body.is-selected #store {
     gap: 8px;
 }
 
-.menu-buttons.small {
+/* Pause menu: game actions, help and map tools on the left, settings on the right */
+.panel.menu-panel {
+    width: min(820px, 100%);
+    padding: 20px 22px 22px;
+}
+
+.menu-panel .panel-head {
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.menu-title {
+    min-width: 0;
+}
+
+.menu-title h2 {
+    font-size: 28px;
+    line-height: 1;
+}
+
+.where {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.where li {
+    font: 600 12px/1 var(--body);
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 10px;
+    white-space: nowrap;
+}
+
+.where li.map {
+    color: var(--ink);
+    background: var(--accent);
+    border-color: var(--accent);
+    font-weight: 700;
+}
+
+.menu-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.menu-col {
+    display: grid;
+    gap: 14px;
+}
+
+.menu-sec {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px;
+    display: grid;
+    gap: 8px;
+}
+
+.panel .menu-sec h3 {
+    margin: 0 0 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text);
+    font-size: 13px;
+    letter-spacing: 0.06em;
+}
+
+.menu-sec h3 svg {
+    color: var(--accent);
+    font-size: 15px;
+}
+
+.menu-sec .wide {
+    width: 100%;
+    font-size: 15px;
+    min-height: 48px;
+}
+
+.menu-row {
+    display: grid;
     grid-template-columns: 1fr 1fr;
-    margin-top: 14px;
+    gap: 8px;
+}
+
+.menu-row.one {
+    grid-template-columns: 1fr;
+}
+
+.menu-row.three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.menu-row button, .menu-row .button {
+    min-width: 0;
+    padding: 0 8px;
+}
+
+.set-group {
+    display: grid;
+}
+
+.set-group + .set-group {
+    border-top: 1px solid var(--line);
+    padding-top: 6px;
+    margin-top: 4px;
+}
+
+.set-group h4 {
+    margin: 2px 0 2px;
+    font: 700 11px/1.4 var(--display);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+}
+
+.set-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 48px;
+}
+
+.set-row .seg {
+    flex: none;
+}
+
+#replay-tips {
+    justify-self: start;
+    color: var(--muted);
+    border-color: transparent;
+    padding: 0 4px;
 }
 
 .toggles {
@@ -1202,8 +1568,12 @@ body.is-selected #store {
 }
 
 .help {
-    margin-top: 14px;
     font-size: 14px;
+    border-bottom: 1px solid var(--line);
+}
+
+.help:last-of-type {
+    border-bottom: 0;
 }
 
 .help summary {
@@ -1211,7 +1581,27 @@ body.is-selected #store {
     min-height: 44px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     font-weight: 600;
+    list-style: none;
+}
+
+.help summary::-webkit-details-marker {
+    display: none;
+}
+
+.help summary::after {
+    content: '+';
+    font: 700 18px/1 var(--display);
+    color: var(--accent);
+}
+
+.help[open] summary::after {
+    content: '\2212';
+}
+
+.help .keys {
+    margin-bottom: 10px;
 }
 
 .help p {
@@ -1425,16 +1815,22 @@ body.is-selected #store {
     border-color: var(--red);
 }
 
-/* Phone placement panel: one-line stats and a row to switch tower */
-.stat-line {
+/* Small screens: one line of stats, the next upgrade in a line, a row to switch tower */
+.stat-line, .up-line {
     margin: 0 0 6px;
     font-size: 12px;
     color: var(--muted);
+    gap: 2px 12px;
+    flex-wrap: wrap;
 }
 
-.stat-line b {
+.stat-line b, .up-line b {
     color: var(--text);
     font-weight: 600;
+}
+
+.up-line b {
+    color: var(--green);
 }
 
 .switch {
@@ -1463,6 +1859,21 @@ body.is-selected #store {
     opacity: 0.4;
 }
 
+/* Narrow screens: the pause menu in one column, settings after the game buttons */
+@media (max-width: 720px) {
+    .menu-cols {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .panel.menu-panel {
+        padding: 16px;
+    }
+
+    .menu-title h2 {
+        font-size: 24px;
+    }
+}
+
 /* ---------- Medium widths: narrower side column ---------- */
 
 @media (max-width: 1100px) {
@@ -1478,12 +1889,16 @@ body.is-selected #store {
 /* ---------- Phones and tablets in portrait: map on top, dock under it ---------- */
 
 @media (max-width: 899px) and (orientation: portrait) {
-    body.is-placing .statgrid {
+    body.touch .zoom-ctl.in-hud {
+        display: grid;
+    }
+
+    body.touch .zoom-ctl.on-map {
         display: none;
     }
 
-    .stat-line {
-        display: block;
+    .stats {
+        overflow: hidden;
     }
 
     body {
@@ -1535,7 +1950,7 @@ body.is-selected #store {
 
     #side {
         display: grid;
-        grid-template-rows: auto 200px;
+        grid-template-rows: auto clamp(200px, 31dvh, 270px);
         gap: 5px;
     }
 
@@ -1639,12 +2054,32 @@ body.is-selected #store {
         height: 40px;
     }
 
-    .desk-only, .insp-head p.blurb, .upgrade-card button, .insp-actions.full, .insp-bars {
+    .desk-only, .desk-only-block, .insp-head p.blurb, .insp-actions.full, .insp-bars, .statgrid {
         display: none;
     }
 
     .phone-only {
         display: grid;
+    }
+
+    .stat-line.phone-only, .up-line.phone-only {
+        display: flex;
+    }
+
+    .insp-actions.quick {
+        margin: 0 0 8px;
+    }
+
+    .record {
+        margin-bottom: 4px;
+    }
+
+    .record div {
+        padding: 4px 6px;
+    }
+
+    .record dd {
+        font-size: 13px;
     }
 
     .place-status {
@@ -1689,14 +2124,6 @@ body.is-selected #store {
 /* ---------- Phones in landscape: side column on the left ---------- */
 
 @media (max-height: 560px) and (orientation: landscape) {
-    body.is-placing .statgrid {
-        display: none;
-    }
-
-    .stat-line {
-        display: block;
-    }
-
     body {
         grid-template-columns: 252px minmax(0, 1fr);
         grid-template-rows: auto minmax(0, 1fr);
@@ -1852,12 +2279,32 @@ body.is-selected #store {
         font-size: 15px;
     }
 
-    .desk-only, .insp-head p.blurb, .upgrade-card button, .insp-actions.full, .insp-bars {
+    .desk-only, .desk-only-block, .insp-head p.blurb, .insp-actions.full, .insp-bars, .statgrid {
         display: none;
     }
 
     .phone-only {
         display: grid;
+    }
+
+    .stat-line.phone-only, .up-line.phone-only {
+        display: flex;
+    }
+
+    .insp-actions.quick {
+        margin: 0 0 8px;
+    }
+
+    .record {
+        margin-bottom: 4px;
+    }
+
+    .record div {
+        padding: 4px 6px;
+    }
+
+    .record dd {
+        font-size: 13px;
     }
 
     .place-status {
