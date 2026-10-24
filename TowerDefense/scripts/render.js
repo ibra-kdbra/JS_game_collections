@@ -36,6 +36,8 @@ const Renderer = (() => {
     let hurtVignette = null;
 
     let hover = null;       // mouse position in world units, or null
+    let shakeX = 0;         // shake offset of the last frame in CSS pixels (tests read it)
+    let shakeY = 0;
     let drawCalls = 0;
     let last = performance.now();
     let time = 0;           // seconds, for idle animation
@@ -131,6 +133,35 @@ const Renderer = (() => {
         camY = mh <= hh * 2 ? mh / 2 : Math.max(hh, Math.min(mh - hh, camY));
         ox = cssW / 2 - camX * zoom;
         oy = cssH / 2 - camY * zoom;
+        // A map smaller than the view is centred, but keeps a strip free at the bottom
+        // (or the right) for the hint and the zoom buttons, so they never cover it
+        const sx = cssW - mw * zoom;
+        const sy = cssH - mh * zoom;
+        const g = gutterFor(mw, mh);
+        if (g.side === 'bottom' && sy > 0) oy = Math.min(sy / 2, sy - GUTTER);
+        if (g.side === 'right' && sx > 0) ox = Math.min(sx / 2, sx - GUTTER);
+        layoutGutter(g);
+    }
+
+    // Free strip next to the whole map (zoom 1) for the overlays: bottom if there is
+    // room, else right, else none (the overlays then sit small over the map)
+    const GUTTER = 54;
+    function gutterFor(mw, mh) {
+        const sy = cssH - mh;
+        const sx = cssW - mw;
+        if (sy >= GUTTER) return { side: 'bottom', size: Math.max(GUTTER, sy / 2) };
+        if (sx >= GUTTER) return { side: 'right', size: Math.max(GUTTER, sx / 2) };
+        return { side: 'none', size: 0 };
+    }
+
+    let gutterKey = '';
+    function layoutGutter(g) {
+        const key = `${g.side}|${Math.round(g.size)}`;
+        if (key === gutterKey || !holder) return;
+        gutterKey = key;
+        holder.dataset.gutter = g.side;
+        holder.dataset.wide = g.size >= 170 ? '1' : '0';
+        holder.style.setProperty('--gutter', `${Math.round(g.size)}px`);
     }
 
     function rebuild() {
@@ -189,10 +220,18 @@ const Renderer = (() => {
         return { x: (clientX - r.left - ox) / zoom, y: (clientY - r.top - oy) / zoom };
     }
 
+    // A press only turns into a pan after the pointer travels this far (CSS px), so
+    // a click or tap with a shaky hand still lands. Below TAP_SLOP it is a tap even
+    // when it moved (there is nothing to pan at zoom 1).
+    const PAN_START = { mouse: 12, pen: 14, touch: 16 };
+    const TAP_SLOP = 28;
+
     function bindInput() {
         canvas.addEventListener('contextmenu', e => e.preventDefault());
         canvas.addEventListener('pointerdown', e => {
             canvas.setPointerCapture(e.pointerId);
+            if (e.pointerType === 'mouse') hover = toWorld(e.clientX, e.clientY);
+            FX.calm(700);
             if (e.pointerType === 'mouse' && e.button !== 0) {
                 if (e.button === 2) onMapTap(null, e);
                 return;
@@ -205,14 +244,17 @@ const Renderer = (() => {
             }
         });
         canvas.addEventListener('pointermove', e => {
-            if (e.pointerType === 'mouse') hover = toWorld(e.clientX, e.clientY);
+            if (e.pointerType === 'mouse') {
+                hover = toWorld(e.clientX, e.clientY);
+                FX.calm(500);
+            }
             const p = pointers.get(e.pointerId);
             if (!p) return;
             const dx = e.clientX - p.x;
             const dy = e.clientY - p.y;
             p.x = e.clientX;
             p.y = e.clientY;
-            if (Math.hypot(p.x - p.sx, p.y - p.sy) > (e.pointerType === 'mouse' ? 6 : 10)) p.moved = true;
+            if (!p.moved && Math.hypot(p.x - p.sx, p.y - p.sy) > (PAN_START[e.pointerType] || 14)) p.moved = true;
             if (pinch && pointers.size >= 2) {
                 const [a, b] = [...pointers.values()];
                 const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
@@ -238,7 +280,11 @@ const Renderer = (() => {
             pointers.delete(e.pointerId);
             if (pointers.size < 2) pinch = null;
             if (!p) return;
-            if (!p.moved && !dragging) onMapTap(toWorld(e.clientX, e.clientY), e);
+            // No pan or pinch happened: it's a tap on the tile under the press
+            // (where the player aimed), whatever the pointer drifted to since
+            if (!dragging && Math.hypot(e.clientX - p.sx, e.clientY - p.sy) < TAP_SLOP) {
+                onMapTap(toWorld(p.sx, p.sy), e);
+            }
             if (pointers.size === 0) dragging = false;
         };
         canvas.addEventListener('pointerup', end);
@@ -274,34 +320,43 @@ const Renderer = (() => {
         updateZoomButtons();
     }
 
-    let zoomEls = null;
+    // Zoom buttons for touch screens: next to the map, or in the top bar on phones
+    // held upright (no room beside the map there; the CSS shows one of the two)
+    let zoomEls = [];
     function buildZoomControls() {
-        const box = document.createElement('div');
-        box.className = 'zoom-ctl';
-        box.innerHTML = `<button type="button" data-z="in" aria-label="Zoom in">+</button>
-            <button type="button" data-z="out" aria-label="Zoom out">&minus;</button>`;
-        box.addEventListener('click', e => {
-            const b = e.target.closest('[data-z]');
-            if (!b) return;
-            setZoom(b.dataset.z === 'in' ? zoom * 1.5 : zoom / 1.5);
-            b.blur();
-        });
-        holder.append(box);
-        zoomEls = box;
+        const make = (cls, parent, first) => {
+            if (!parent) return;
+            const box = document.createElement('div');
+            box.className = `zoom-ctl ${cls}`;
+            box.innerHTML = `<button type="button" data-z="in" aria-label="Zoom in">+</button>
+                <button type="button" data-z="out" aria-label="Zoom out">&minus;</button>`;
+            box.addEventListener('click', e => {
+                const b = e.target.closest('[data-z]');
+                if (!b) return;
+                setZoom(b.dataset.z === 'in' ? zoom * 1.5 : zoom / 1.5);
+                b.blur();
+            });
+            if (first) parent.prepend(box); else parent.append(box);
+            zoomEls.push(box);
+        };
+        make('on-map', holder);
+        make('in-hud', document.querySelector('.hud-buttons'), true);
     }
 
     function updateZoomButtons() {
-        if (!zoomEls) return;
-        zoomEls.querySelector('[data-z="in"]').disabled = zoom >= maxZoom() - 0.01;
-        zoomEls.querySelector('[data-z="out"]').disabled = zoom <= 1.001;
+        zoomEls.forEach(box => {
+            box.querySelector('[data-z="in"]').disabled = zoom >= maxZoom() - 0.01;
+            box.querySelector('[data-z="out"]').disabled = zoom <= 1.001;
+        });
     }
 
-    // Keep the selected tower visible when a panel opens over the map
+    // Bring the selected tower into view if it is off screen (never moves the map
+    // under a tower that was just clicked or tapped: that one is on screen)
     function reveal(wx, wy) {
         if (zoom <= 1.001) return;
         const sx = ox + wx * zoom;
         const sy = oy + wy * zoom;
-        if (sx > 40 && sx < cssW - 40 && sy > 40 && sy < cssH - 40) return;
+        if (sx > 0 && sx < cssW && sy > 0 && sy < cssH) return;
         camX = wx;
         camY = wy;
         clampCamera();
@@ -458,17 +513,14 @@ const Renderer = (() => {
         ctx.fillStyle = (Terrain.THEMES[theme] || Terrain.THEMES.meadow).frame;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Camera with shake
-        let shx = 0;
-        let shy = 0;
-        const sm = FX.shakeMag;
-        if (sm > 0) {
-            shx = (Math.random() - 0.5) * sm * ts * 0.5 * zoom * dpr;
-            shy = (Math.random() - 0.5) * sm * ts * 0.5 * zoom * dpr;
-        }
+        // Camera, plus the screen shake. The shake only moves the picture of the
+        // world: hover, clicks and taps go through toWorld, which never sees it.
+        const sh = FX.shakeOffset(now);
+        shakeX = sh.x;
+        shakeY = sh.y;
         K = zoom * dpr;
-        baseE = ox * dpr + shx;
-        baseF = oy * dpr + shy;
+        baseE = (ox + sh.x) * dpr;
+        baseF = (oy + sh.y) * dpr;
         resetTransform();
         ctx.imageSmoothingEnabled = true;
 
@@ -508,6 +560,7 @@ const Renderer = (() => {
         // Screen-space overlays
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         drawOverlays();
+        fadeTip();
         setAlpha(1);
         setOp('source-over');
 
@@ -1017,6 +1070,19 @@ const Renderer = (() => {
         }
     }
 
+    // The hint over the map fades while the mouse works near it
+    let tipEl = null;
+    let tipFaded = false;
+    function fadeTip() {
+        if (!tipEl) tipEl = document.getElementById('map-tip');
+        if (!tipEl) return;
+        const near = !!hover && holder.dataset.gutter !== 'bottom' && oy + hover.y * zoom > cssH - 80;
+        if (near !== tipFaded) {
+            tipFaded = near;
+            tipEl.classList.toggle('faded', near);
+        }
+    }
+
     function radial(inner, outer) {
         const c = Terrain.makeCanvas(256, 256);
         const g = c.getContext('2d', { willReadFrequently: true });
@@ -1105,6 +1171,7 @@ const Renderer = (() => {
         init, resize, mapChanged, frame, reveal, logicTime, setQualityAuto, setZoom, togglePerf, toScreen,
         get hover() { return hover; },
         get zoom() { return zoom; },
+        get shake() { return { x: shakeX, y: shakeY }; },
         set upgradeRange(v) { upgradeRange = v; },
         get perfMode() { return perfMode; }
     };

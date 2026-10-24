@@ -39,8 +39,20 @@ const FX = (() => {
     const beams = pool(() => ({ kind: '', x1: 0, y1: 0, x2: 0, y2: 0, tower: null, target: null, life: 0, max: 1, w: 1, pts: null, seed: 0 }));
     const rings = pool(() => ({ x: 0, y: 0, r0: 0, r1: 1, life: 0, max: 1, sprite: '', a0: 1 }));
 
-    let shakeMag = 0;
-    let shakeOn = true;
+    // Screen shake: a short, small wobble of the map picture only (never the page,
+    // and never the coordinates used for clicks and taps). Kicks don't add up: a new
+    // one only raises the level to its own size, and small kicks are ignored while
+    // the last one is still fresh, so a late wave full of bombs can't keep the map
+    // moving. Level: 0 off, 1 subtle (big events only), 2 full.
+    const SHAKE_PX = [0, 3, 6];         // largest offset in CSS pixels per level
+    const SHAKE_MS = 320;               // a full-size kick fades out over this long
+    const SHAKE_GAP = 450;              // ms before a kick that isn't bigger may start again
+    let shakeLevel = 1;
+    let shakeMag = 0;                   // 0..1, fades linearly in real time
+    let shakeAt = -1e9;                 // when the last kick started
+    let shakeLast = 0;                  // performance.now() of the last decay step
+    let calmUntil = 0;                  // while the player aims (see calm), the shake is damped
+    let lastBuzz = -1e9;
     let gateHit = 0;        // ticks left of the exit gate flash
     let ticks = 0;          // ticks since start, drives cheap animation
 
@@ -205,7 +217,7 @@ const FX = (() => {
             case 'railgun':
                 t._flash = 6;
                 beam('rail', { x1: m.x, y1: m.y, x2: e.pos.x, y2: e.pos.y, life: 14, w: 1 });
-                shake(0.12);
+                shake(0.15, true);
                 break;
             case 'bomb':
             case 'clusterBomb':
@@ -280,7 +292,8 @@ const FX = (() => {
             smoke(x, y, count(big ? 6 : 4), Math.min(1.6, r / t * 0.7), 30, 0.05);
             if (kind !== 'rail') debris(x, y, count(5), ['#3b3430', '#5a4d44', '#2a2523'], 0.09, 0.08);
         }
-        shake(kind === 'sub' ? 0.08 : big ? 0.3 : 0.18);
+        // Routine blasts only shake on Full, and only a little
+        shake(big ? 0.35 : kind === 'sub' ? 0 : 0.2, true);
     }
 
     // An enemy died
@@ -296,7 +309,7 @@ const FX = (() => {
         }
         if (boss) {
             spawnParticle(e.pos.x, e.pos.y, { life: 16, s0: 3, s1: 1, sprite: e.name === 'taunt' ? 'glow_purple' : 'glow_yellow', add: true, drag: 1 });
-            shake(0.5);
+            shake(0.8);
             buzz([30, 40, 60]);
         }
     }
@@ -318,18 +331,56 @@ const FX = (() => {
 
     function leak() {
         gateHit = 24;
-        shake(0.35);
+        shake(0.6);
         buzz(60);
     }
 
-    function shake(m) {
-        if (!shakeOn) return;
-        shakeMag = Math.min(1, shakeMag + m);
+    // Kick the shake. m is the size (0..1); minor kicks (routine explosions) are
+    // skipped unless the level is Full.
+    function shake(m, minor = false) {
+        if (!shakeLevel || m <= 0 || (minor && shakeLevel < 2)) return;
+        const now = performance.now();
+        if (m <= shakeMag + 0.05) return;
+        if (now - shakeAt < SHAKE_GAP && m < shakeMag * 1.5 + 0.2) return;
+        shakeMag = Math.min(1, m);
+        shakeAt = now;
+        shakeLast = now;
     }
 
-    function buzz(pattern) {
+    // The player is aiming (pointer pressed, or the mouse moving over the map):
+    // keep the shake down to a tremble for a moment
+    function calm(ms = 500) {
+        calmUntil = Math.max(calmUntil, performance.now() + ms);
+    }
+
+    // Current shake offset in CSS pixels; called once per frame by the renderer
+    const offset = { x: 0, y: 0 };
+    function shakeOffset(now) {
+        if (shakeMag > 0) {
+            shakeMag = Math.max(0, shakeMag - (now - shakeLast) / SHAKE_MS);
+            shakeLast = now;
+        }
+        if (!shakeMag || !shakeLevel) {
+            offset.x = offset.y = 0;
+            return offset;
+        }
+        // Smooth wobble (two sines per axis), eased out: never more than SHAKE_PX
+        const a = SHAKE_PX[shakeLevel] * shakeMag * shakeMag * (now < calmUntil ? 0.25 : 1);
+        const t = (now - shakeAt) / 1000;
+        offset.x = a * (0.7 * Math.sin(t * 61) + 0.3 * Math.sin(t * 97 + 1.3));
+        offset.y = a * (0.7 * Math.sin(t * 53 + 2.1) + 0.3 * Math.sin(t * 89 + 0.4));
+        return offset;
+    }
+
+    // Vibrate on phones only (touch input, coarse pointer), at most every 300 ms
+    // unless it matters (end of a game)
+    const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+    function buzz(pattern, important = false) {
         if (typeof haptics !== 'undefined' && !haptics) return;
-        if (typeof lastPointer !== 'undefined' && lastPointer === 'mouse') return;
+        if (!coarse || typeof lastPointer !== 'undefined' && lastPointer === 'mouse') return;
+        const now = performance.now();
+        if (!important && now - lastBuzz < 300) return;
+        lastBuzz = now;
         if (navigator.vibrate) {
             try { navigator.vibrate(pattern); } catch (err) { /* not allowed */ }
         }
@@ -365,10 +416,8 @@ const FX = (() => {
         }
     }
 
-    // Per frame: tower recoil and flash timers, shake decay (real time)
+    // Per frame: tower recoil and flash timers
     function frame(stepped) {
-        shakeMag *= 0.88;
-        if (shakeMag < 0.01) shakeMag = 0;
         if (!stepped) return;
         for (let i = 0; i < towers.length; i++) {
             const t = towers[i];
@@ -390,13 +439,15 @@ const FX = (() => {
     }
 
     return {
-        fire, launch, trail, pulse, blast, death, status, leak, shake, buzz, tick, frame, clear, setQuality,
+        fire, launch, trail, pulse, blast, death, status, leak, shake, calm, shakeOffset, buzz, tick, frame, clear, setQuality,
         muzzle,
         get quality() { return quality; },
         get enabled() { return enabled; },
         set enabled(v) { enabled = v; if (!v) while (particles.n) release(particles, particles.n - 1); },
-        set shakeOn(v) { shakeOn = v; if (!v) shakeMag = 0; },
+        get shakeLevel() { return shakeLevel; },
+        set shakeLevel(v) { shakeLevel = Math.max(0, Math.min(2, v | 0)); if (!shakeLevel) shakeMag = 0; },
         get shakeMag() { return shakeMag; },
+        SHAKE_PX,
         get gateHit() { return gateHit; },
         get ticks() { return ticks; },
         particles, beams, rings, LIMITS
