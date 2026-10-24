@@ -86,19 +86,56 @@ const hideElement = (element, onComplete) => {
 
 // The stage is a fixed 1280 x 720 box scaled to fit the window. On phones held
 // upright it is turned sideways so it can use the long side of the screen.
+//
+// When the stage gets small (phones), its buttons and labels would shrink
+// below a usable size, so the page switches to a compact layout: the buttons
+// move into a bar next to the stage (below it, or beside it when that leaves
+// the stage bigger), and buttons, labels and menus are laid out in real CSS
+// pixels (zoomed by 1 / stage scale) so they keep a usable size.
 const stageWidth = 1280;
 const stageHeight = 720;
 let stageScale = 1;
 let stageRotated = false;
 
+const COMPACT_BELOW = 0.85; // stage scale under which the compact layout is used
+const BAR = 52;             // compact button bar, CSS px (44px buttons + margins)
+const SIDE = 120;           // compact side column, CSS px
+
+// Safe-area insets (notches, home indicator) measured from CSS env().
+const safeProbe = document.createElement('div');
+safeProbe.style.cssText = 'position:fixed;inset:0;visibility:hidden;pointer-events:none;'
+    + 'padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+document.body.appendChild(safeProbe);
+
 const resize = () => {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    const cs = getComputedStyle(safeProbe);
+    const width = window.innerWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const height = window.innerHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
     stageRotated = height > width && width < 700;
+    // Available box in stage orientation
     const fitW = stageRotated ? height : width;
     const fitH = stageRotated ? width : height;
-    stageScale = Math.min(fitW / stageWidth, fitH / stageHeight);
-    gameElement.style.transform = `${stageRotated ? 'rotate(90deg) ' : ''}scale(${stageScale})`;
+    const plain = Math.min(fitW / stageWidth, fitH / stageHeight);
+    let layout = 'full';
+    stageScale = plain;
+    if (plain < COMPACT_BELOW) {
+        const below = Math.min(fitW / stageWidth, (fitH - BAR) / stageHeight);
+        const side = Math.min((fitW - SIDE) / stageWidth, fitH / stageHeight);
+        layout = side >= below ? 'side' : 'below';
+        stageScale = Math.max(below, side);
+    }
+    // Offset (stage orientation) that centres stage + bar together
+    let ox = 0;
+    let oy = 0;
+    if (layout === 'below') oy = -BAR / 2;
+    if (layout === 'side') ox = -SIDE / 2;
+    const [dx, dy] = stageRotated ? [-oy, ox] : [ox, oy];
+    const sx = (parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)) / 2;
+    const sy = (parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)) / 2;
+    gameElement.style.transform = `translate(${dx + sx}px, ${dy + sy}px) ${stageRotated ? 'rotate(90deg) ' : ''}scale(${stageScale})`;
+    gameElement.dataset.layout = layout;
+    gameElement.style.setProperty('--inv', String(1 / stageScale));
+    gameElement.style.setProperty('--s', String(stageScale));
 };
 
 // Canvas backing store matching the device pixels the stage covers

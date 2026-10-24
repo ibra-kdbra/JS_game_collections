@@ -50,17 +50,38 @@ const touch = createTouchControls({
 const hasTouch = !touch.el.hidden;
 const touchMagic = [...touch.el.querySelectorAll('button')].find((b) => b.textContent === 'Magic');
 
+// Phones held sideways: the touch pad and the AI panel sit beside the board, not under it.
+const sideways = matchMedia('(orientation: landscape) and (max-height: 500px)');
+
 function layout() {
     // Tell the camera how much of the screen the HUD and touch pad cover.
     const hud = $('hud').getBoundingClientRect();
+    const W = window.innerWidth;
     let bottom = 16;
-    if (hasTouch && !touch.el.hidden) bottom = Math.max(bottom, window.innerHeight - touch.el.getBoundingClientRect().top + 4);
-    if (!$('ai-panel').hidden && window.innerWidth <= 720) {
-        bottom = Math.max(bottom, window.innerHeight - $('ai-panel').getBoundingClientRect().top + 6);
+    let left = 0;
+    let right = 0;
+    const aiOpen = !$('ai-panel').hidden;
+    if (sideways.matches) {
+        if (hasTouch && !touch.el.hidden) {
+            const pad = touch.el.querySelector('.gk-dpad')?.getBoundingClientRect();
+            const btns = touch.el.querySelector('.gk-buttons')?.getBoundingClientRect();
+            if (pad?.width) left = pad.right + 6;
+            if (btns?.width) right = W - btns.left + 6;
+        }
+        if (aiOpen) right = Math.max(right, W - $('ai-panel').getBoundingClientRect().left + 6);
+    } else {
+        if (hasTouch && !touch.el.hidden) bottom = Math.max(bottom, window.innerHeight - touch.el.getBoundingClientRect().top + 4);
+        if (aiOpen && W <= 720) {
+            bottom = Math.max(bottom, window.innerHeight - $('ai-panel').getBoundingClientRect().top + 6);
+        }
     }
-    world.setInsets({ top: hud.bottom + 6, bottom });
+    world.setInsets({ top: hud.bottom + 6, bottom, left, right });
 }
-addEventListener('resize', () => requestAnimationFrame(layout));
+let layoutFrame = 0;
+addEventListener('resize', () => {
+    cancelAnimationFrame(layoutFrame);
+    layoutFrame = requestAnimationFrame(layout);
+});
 
 // ---------------------------------------------------------------- HUD --
 function updateHud() {
@@ -348,6 +369,7 @@ function renderAlgo() {
 function openAi() {
     if (mode === 'busy') return;
     $('ai-panel').hidden = false;
+    document.body.classList.add('ai-open');
     if (hasTouch) touch.hide();
     $('compare').hidden = true;
     layout();
@@ -356,6 +378,7 @@ function openAi() {
 function closeAi() {
     aiRun++;
     $('ai-panel').hidden = true;
+    document.body.classList.remove('ai-open');
     world.clearHeat();
     if (mode === 'ai') {
         mode = 'play';

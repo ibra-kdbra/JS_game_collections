@@ -11,6 +11,15 @@ Generate perfect loops in x seconds
 const canvas = document.getElementById('canvas');
 let startingWidth = 1000;
 let startingHeight = Math.round(Math.max(1000, Math.min(4000, startingWidth * (window.innerHeight/window.innerWidth))) / 4) * 4;
+// Phones: render at the screen's shape and at most 2 pixels per CSS pixel.
+// The shader runs once per pixel, so a 1000px-wide canvas on a 320px-wide
+// phone cost more than twice the work for no visible gain. Width and height
+// can still be raised in the controls (e.g. for exports).
+if (window.innerWidth <= 900 || window.innerHeight <= 500) {
+    const scale = Math.min(2, window.devicePixelRatio || 1);
+    startingWidth = Math.round(Math.min(1000, window.innerWidth * scale) / 4) * 4;
+    startingHeight = Math.round(Math.min(4000, startingWidth * (window.innerHeight / window.innerWidth)) / 4) * 4;
+}
 canvas.width = startingWidth;
 canvas.height = startingHeight;
 console.log("canvas width/height: "+canvas.width+" / "+canvas.height);

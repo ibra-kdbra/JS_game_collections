@@ -127,12 +127,19 @@ class Effect {
             }
             this.lastTouchTime = now;
         });
+        // Rebuild the field once the size settles (a phone rotation fires
+        // several resize events in a row).
+        let resizeTimer = 0;
         window.addEventListener('resize', () => {
-            this.canvas.width = window.innerWidth;
-            this.canvas.height = window.innerHeight;
-            this.width = this.canvas.width;
-            this.height = this.canvas.height;
-            this.init();
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if (this.canvas.width === window.innerWidth && this.canvas.height === window.innerHeight) return;
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                this.width = this.canvas.width;
+                this.height = this.canvas.height;
+                this.init();
+            }, 150);
         });
     }
 

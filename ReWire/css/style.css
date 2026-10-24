@@ -310,7 +310,7 @@ body::after {
 }
 
 #description .status-line {
-    font-size: 10px;
+    font-size: 12px;
     color: #3e7ff9;
     letter-spacing: 4px;
     margin-bottom: 20px;
@@ -548,4 +548,279 @@ body::after {
 #closeLevelsBtn {
     display: inline-block;
     width: 240px;
+}
+
+/* ---------- Compact layout (phones) ----------
+   html.js sets data-layout="below" or "side" on #game when the stage is too
+   small for its own buttons. Elements below use zoom: var(--inv) (1 / stage
+   scale), so their sizes are real CSS pixels: 44px touch targets, 12px+ text. */
+
+#game[data-layout="below"],
+#game[data-layout="side"] {
+    overflow: visible;
+}
+
+[data-layout="below"] #reset,
+[data-layout="side"] #reset,
+[data-layout="below"] #settings-container,
+[data-layout="side"] #settings-container,
+[data-layout="below"] #levelInfo,
+[data-layout="side"] #levelInfo,
+[data-layout="below"] #nodeInfo,
+[data-layout="side"] #nodeInfo,
+[data-layout="below"] #main-menu,
+[data-layout="side"] #main-menu,
+[data-layout="below"] #levelSelect,
+[data-layout="side"] #levelSelect,
+[data-layout="below"] #levelDone,
+[data-layout="side"] #levelDone,
+[data-layout="below"] #loading,
+[data-layout="side"] #loading {
+    zoom: var(--inv);
+}
+
+[data-layout="below"] #reset,
+[data-layout="side"] #reset {
+    gap: 6px;
+}
+
+[data-layout="below"] #reset .btn,
+[data-layout="side"] #reset .btn {
+    min-width: 0;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 12px;
+    font-size: 13px;
+    letter-spacing: 1px;
+    line-height: 42px;
+    backdrop-filter: none;
+}
+
+[data-layout="below"] .settings-btn,
+[data-layout="side"] .settings-btn {
+    width: 44px;
+    height: 44px;
+    backdrop-filter: none;
+}
+
+[data-layout="below"] .settings-btn svg,
+[data-layout="side"] .settings-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+[data-layout="below"] #settings-container,
+[data-layout="side"] #settings-container {
+    gap: 6px;
+}
+
+/* Bar under the stage */
+[data-layout="below"] #reset {
+    top: 100%;
+    bottom: auto;
+    left: 0;
+    margin-top: 4px;
+}
+
+[data-layout="below"] #settings-container {
+    top: 100%;
+    bottom: auto;
+    right: 0;
+    margin-top: 4px;
+}
+
+/* Column beside the stage */
+[data-layout="side"] #reset {
+    top: 0;
+    bottom: auto;
+    left: 100%;
+    margin-left: 8px;
+    width: 108px;
+    flex-direction: column;
+}
+
+[data-layout="side"] #settings-container {
+    top: auto;
+    bottom: 0;
+    right: auto;
+    left: 100%;
+    margin-left: 8px;
+}
+
+[data-layout="below"] #levelInfo,
+[data-layout="side"] #levelInfo,
+[data-layout="below"] #nodeInfo,
+[data-layout="side"] #nodeInfo {
+    top: 6px;
+    font-size: 13px;
+    letter-spacing: 1px;
+    opacity: 1;
+}
+
+[data-layout="below"] #levelInfo,
+[data-layout="side"] #levelInfo {
+    left: 8px;
+}
+
+[data-layout="below"] #nodeInfo,
+[data-layout="side"] #nodeInfo {
+    right: 8px;
+}
+
+/* Menus, in CSS pixels; the stage is at least 476 x 268 px here */
+[data-layout="below"] #main-menu,
+[data-layout="side"] #main-menu {
+    width: calc(1280px * var(--s) - 24px);
+    max-width: 640px;
+    gap: 10px;
+}
+
+[data-layout="below"] #title,
+[data-layout="side"] #title {
+    flex-direction: row;
+    gap: 14px;
+}
+
+[data-layout="below"] .circuit-logo,
+[data-layout="side"] .circuit-logo {
+    zoom: 0.24;
+}
+
+[data-layout="below"] .logo-text,
+[data-layout="side"] .logo-text {
+    font-size: 34px;
+    letter-spacing: 9px;
+    margin-right: -9px;
+}
+
+[data-layout="below"] #description,
+[data-layout="side"] #description {
+    width: 100%;
+    padding: 10px 14px;
+    backdrop-filter: none;
+}
+
+[data-layout="below"] #description .status-line,
+[data-layout="side"] #description .status-line {
+    font-size: 12px;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+}
+
+[data-layout="below"] #description h2,
+[data-layout="side"] #description h2 {
+    font-size: 15px;
+    margin-bottom: 4px;
+}
+
+[data-layout="below"] #description h3,
+[data-layout="side"] #description h3 {
+    font-size: 12px;
+    line-height: 1.4;
+    opacity: 0.75;
+}
+
+[data-layout="below"] #menu,
+[data-layout="side"] #menu {
+    gap: 8px;
+    width: 100%;
+}
+
+[data-layout="below"] #menu .btn,
+[data-layout="side"] #menu .btn {
+    flex: 1 1 0;
+    width: auto;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 8px;
+    font-size: 13px;
+    letter-spacing: 1px;
+    line-height: 42px;
+    white-space: nowrap;
+    backdrop-filter: none;
+}
+
+[data-layout="below"] #levelSelect,
+[data-layout="side"] #levelSelect {
+    width: calc(1280px * var(--s) - 16px);
+    max-width: 560px;
+    padding: 10px 12px;
+    backdrop-filter: none;
+}
+
+[data-layout="below"] #levelSelect h2,
+[data-layout="side"] #levelSelect h2 {
+    font-size: 18px;
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+}
+
+[data-layout="below"] #levelGrid,
+[data-layout="side"] #levelGrid {
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+[data-layout="below"] #levelGrid button,
+[data-layout="side"] #levelGrid button {
+    height: 44px;
+    font-size: 18px;
+}
+
+[data-layout="below"] #levelGrid button.solved::after,
+[data-layout="side"] #levelGrid button.solved::after {
+    top: 4px;
+    right: 4px;
+    width: 7px;
+    height: 7px;
+}
+
+[data-layout="below"] #closeLevelsBtn,
+[data-layout="side"] #closeLevelsBtn {
+    width: 160px;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 12px;
+    font-size: 13px;
+    line-height: 42px;
+    backdrop-filter: none;
+}
+
+[data-layout="below"] #levelDone,
+[data-layout="side"] #levelDone {
+    width: calc(1280px * var(--s));
+    padding: 16px 0;
+}
+
+[data-layout="below"] #levelDone h1,
+[data-layout="side"] #levelDone h1 {
+    font-size: 34px;
+    letter-spacing: -1px;
+    margin-bottom: 10px;
+}
+
+[data-layout="below"] #nextBtn,
+[data-layout="side"] #nextBtn {
+    display: inline-block;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 24px;
+    font-size: 14px;
+    line-height: 42px;
+    backdrop-filter: none;
+}
+
+/* The tutorial cards are canvases with 20px text. Draw them at 0.6 CSS px per
+   pixel (12px text) in the gap between the coils and the socket that levels
+   1 and 3 (the ones with tutorials) keep clear, stage x 545-1190; smaller
+   stages shrink them to fit that gap. Offsets are divided by the zoom, which scales them. */
+[data-layout="below"] .tutorial,
+[data-layout="side"] .tutorial {
+    --tz: min(0.6 * var(--inv), 1.43);
+    zoom: var(--tz);
+    top: calc(max(36px, 30px * var(--inv)) / var(--tz)); /* below the node counter */
+    left: calc(545px / var(--tz));
+    right: auto;
+    box-shadow: none;
+    pointer-events: none;
 }

@@ -26,7 +26,7 @@ Menu commands:
 
 MeshCoins come from mining nodes, the first clear of each story mesh and the first daily win of the day.
 
-On a phone or tablet, tap the answer buttons under the terminal (or type in the command field) and tap **Continue** where the terminal says "press ENTER". In the visualizer, drag to pan and pinch to zoom; with the phone upright the visualizer turns sideways. The speaker button mutes the sound effects.
+On a phone or tablet, tap the answer buttons under the terminal (or type in the command field) and tap **Continue** where the terminal says "press ENTER". In the visualizer, drag to pan and pinch to zoom; with the phone upright the visualizer turns sideways. On phones the visualizer is laid out at the screen's real size, with the tools in a grid on the left and Restart / Quit (tap twice) at the bottom. The speaker button mutes the sound effects.
 
 ### 2. Network Visualizer
 Once connected to a mesh, you are presented with a live visualization of nodes and connections. Your objective is to reduce the "Network Health" below a critical threshold (usually 50%) to force a total system failure.

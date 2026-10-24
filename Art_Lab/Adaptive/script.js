@@ -17,16 +17,34 @@ let mainWidth, mainHeight; // size of the canvas
 let currentColor; // color of the points
 let currentColor2; // 2nd color of the points (if needed)
 
+// Phones (and phones held sideways): the canvas spans the width and the
+// controls follow below it (style.css), so its height comes from the screen.
+function isCompact() {
+    return window.innerWidth <= 700 || window.innerHeight <= 500;
+}
+
+function compactHeight() {
+    const tall = window.innerHeight > window.innerWidth;
+    return Math.round(tall ? Math.min(window.innerHeight * 0.68, mainWidth * 1.3) : window.innerHeight * 0.82);
+}
+
 function setup() {
 
     // get size of div
-    if (window.innerWidth > 3000) {
+    if (isCompact()) {
+        mainWidth = document.getElementById("main").clientWidth;
+        mainHeight = compactHeight();
+    } else if (window.innerWidth > 3000) {
         mainWidth = document.getElementById("main").clientWidth;
         mainHeight = window.innerHeight - 400; // test
     } else {
         mainWidth = document.getElementById("main").clientWidth;
         mainHeight = document.getElementById("setterCanvaHeight").clientHeight + 25; // + 25 is a manual offset to make canvas slightly bigger than the sidebar
     }
+
+    // 2 canvas pixels per CSS pixel at most: 3x phone screens would draw
+    // more than twice the pixels for no visible gain.
+    pixelDensity(Math.min(2, displayDensity()));
 
     // initialize canvas
     createCanvas(mainWidth, mainHeight); // set canva size
@@ -85,6 +103,18 @@ function draw() {
 }
 
 function windowResized() {
+    if (isCompact()) {
+        const w = document.getElementById("main").clientWidth;
+        mainWidth = w;
+        const h = compactHeight();
+        // On phones the browser bar showing or hiding changes the height a
+        // little while scrolling: only a real change (rotation) redraws.
+        if (w === width && Math.abs(h - height) < 80) return;
+        mainHeight = h;
+        resizeCanvas(mainWidth, mainHeight);
+        reset();
+        return;
+    }
     if (mainWidth != document.getElementById("main").clientWidth) { // check that it is not only the height that changed (we don't care in this case)
         // get new div size
         if (window.innerWidth > 1920) {

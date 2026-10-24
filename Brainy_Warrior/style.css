@@ -944,3 +944,177 @@ svg {
         transition: none !important;
     }
 }
+
+/* ---------- Phones ---------- */
+
+html,
+body {
+    overscroll-behavior: none;
+}
+
+/* Upright phones: icon-only toolbar (labels stay as aria-label and title),
+   12px labels everywhere else. */
+@media (max-width: 720px) {
+    .tool span {
+        display: none;
+    }
+
+    .tool,
+    .tool-icon {
+        flex: 1;
+        height: 44px;
+        min-height: 44px;
+    }
+
+    .stat span,
+    .ai-stats dt,
+    .compare th {
+        font-size: 12px;
+        letter-spacing: 0.04em;
+    }
+
+    .close {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    /* While the AI solves, the panel and the level card share the screen with
+       the board; the stats and toolbar come back when the panel closes. */
+    .ai-open .hud-stats,
+    .ai-open .toolbar {
+        display: none;
+    }
+
+    .ai-panel {
+        max-height: min(52dvh, calc(100dvh - 140px));
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+}
+
+/* Phones held sideways: one HUD row on top, touch pad and buttons at the
+   sides of the board, the AI panel on the right. */
+@media (orientation: landscape) and (max-height: 500px) {
+    .hud {
+        top: max(6px, env(safe-area-inset-top));
+        display: flex;
+        gap: 6px;
+        align-items: stretch;
+    }
+
+    .hud-level {
+        flex: 0 1 auto;
+        min-width: 0;
+        min-height: 44px;
+        padding: 4px 10px 4px 4px;
+        gap: 8px;
+    }
+
+    .lvl-badge {
+        width: 34px;
+        height: 34px;
+        font-size: 17px;
+    }
+
+    .lvl-text h1 {
+        font-size: 15px;
+    }
+
+    .tip {
+        display: none;
+    }
+
+    .hud-stats {
+        flex: none;
+        padding: 3px 0;
+    }
+
+    .stat {
+        min-width: 0;
+        padding: 1px 8px;
+    }
+
+    .stat span {
+        font-size: 12px;
+        letter-spacing: 0.04em;
+    }
+
+    .stat b {
+        margin-top: 2px;
+        font-size: 18px;
+    }
+
+    .toolbar {
+        flex: none;
+        margin-left: auto;
+        padding: 2px;
+    }
+
+    .tool {
+        min-width: 40px;
+        height: 44px;
+        padding: 0 4px;
+    }
+
+    .tool span {
+        display: none;
+    }
+
+    .ai-stats dt,
+    .compare th {
+        font-size: 12px;
+        letter-spacing: 0.04em;
+    }
+
+    .close {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .gk-touch .gk-dpad {
+        grid-template-columns: repeat(3, 48px);
+        grid-template-rows: repeat(3, 48px);
+    }
+
+    .gk-touch {
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
+    }
+
+    .ai-panel {
+        top: calc(max(6px, env(safe-area-inset-top)) + 54px);
+        bottom: max(6px, env(safe-area-inset-bottom));
+        left: auto;
+        right: var(--gap);
+        width: min(340px, 56vw);
+        max-height: none;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: 10px 12px;
+    }
+
+    .algo-note {
+        min-height: 0;
+    }
+
+    .banner,
+    .gk-has-touch .banner {
+        bottom: max(10px, env(safe-area-inset-bottom));
+        max-width: calc(100vw - 2 * 190px);
+    }
+
+    .dialog {
+        padding: 16px 18px;
+    }
+
+    .dialog h2 {
+        font-size: 24px;
+    }
+
+    .overlay {
+        padding: 8px;
+    }
+
+    .dialog {
+        max-height: calc(100dvh - 16px);
+    }
+}

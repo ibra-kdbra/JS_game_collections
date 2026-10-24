@@ -175,7 +175,7 @@ export class World {
         this.time = 0;
         this.view = { azimuth: 0, polar: 0.92, zoom: 1, targetAz: 0, targetPolar: 0.92, targetZoom: 1 };
         this.fitted = { az: NaN, polar: NaN };
-        this.insets = { top: 0, bottom: 0 };
+        this.insets = { top: 0, bottom: 0, left: 0, right: 0 };
         this.enemies = [];
         this.pool = new Map(); // enemy actors kept for reuse between levels
         this.highlights = [];
@@ -742,7 +742,7 @@ export class World {
 
     // ---- camera
     setInsets(insets) {
-        this.insets = insets;
+        this.insets = { top: 0, bottom: 0, left: 0, right: 0, ...insets };
         this.fitCamera();
     }
 
@@ -781,6 +781,7 @@ export class World {
         const W = this.container.clientWidth || 1;
         const H = this.container.clientHeight || 1;
         const free = Math.max(0.3, (H - this.insets.top - this.insets.bottom) / H);
+        const freeW = Math.max(0.3, (W - this.insets.left - this.insets.right) / W);
         const cam = this.camera;
         cam.clearViewOffset();
         cam.aspect = W / H;
@@ -798,7 +799,7 @@ export class World {
             let ok = true;
             for (let k = 0; k < 8 && ok; k++) {
                 _v.set(k & 1 ? hw : -hw, k & 2 ? 0.9 : -0.3, k & 4 ? hd : -hd).project(cam);
-                ok = Math.abs(_v.x) < (W < 600 ? 0.97 : 0.92) && Math.abs(_v.y) < 0.9 * free;
+                ok = Math.abs(_v.x) < (W < 600 ? 0.97 : 0.92) * freeW && Math.abs(_v.y) < 0.9 * free;
             }
             if (ok) far = mid;
             else near = mid;
@@ -806,9 +807,11 @@ export class World {
         this.fitDistance = far;
         this.fitted.az = this.view.azimuth;
         this.fitted.polar = this.view.polar;
-        // Shift the image so the board centres in the free area between the HUD bars.
+        // Shift the image so the board centres in the free area between the HUD bars
+        // (and between the touch pad and buttons when they sit at the sides).
         const shift = (this.insets.top - this.insets.bottom) / 2;
-        cam.setViewOffset(W, H, 0, -shift, W, H);
+        const shiftX = (this.insets.left - this.insets.right) / 2;
+        cam.setViewOffset(W, H, -shiftX, -shift, W, H);
         this.applyCamera();
     }
 
