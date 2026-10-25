@@ -86,11 +86,12 @@ export function createAudio({ muted = false, music = true } = {}) {
     eat: () => tone({ type: 'triangle', f0: 260, f1: 520, dur: 0.07, vol: 0.12 }),
     grow: () => [0, 1, 2].forEach((i) => tone({ f0: NOTE(74 + i * 5), dur: 0.12, vol: 0.09, at: now() + i * 0.06 })),
     coin: (type) => {
-      const base = type === 'silver' ? 88 : type === 'gold' ? 91 : 95;
+      const base = type === 'silver' ? 88 : type === 'gold' ? 91 : type === 'chest' ? 84 : 95;
       tone({ type: 'triangle', f0: NOTE(base), dur: 0.12, vol: 0.12 });
       tone({ type: 'triangle', f0: NOTE(base + 7), dur: 0.18, vol: 0.1, at: now() + 0.05 });
     },
     buy: () => tone({ type: 'square', f0: NOTE(79), f1: NOTE(86), dur: 0.1, vol: 0.06 }),
+    splash: () => tone({ type: 'sine', f0: 700, f1: 160, dur: 0.22, vol: 0.14 }),
     nope: () => tone({ type: 'square', f0: 180, dur: 0.12, vol: 0.05 }),
     starve: () => tone({ type: 'triangle', f0: 400, f1: 120, dur: 0.5, vol: 0.12 }),
     gulp: () => tone({ type: 'sine', f0: 200, f1: 60, dur: 0.18, vol: 0.2 }),
