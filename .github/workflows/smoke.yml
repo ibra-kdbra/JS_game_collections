@@ -32,6 +32,8 @@ jobs:
         run: node Souls-Bumper/tools/verify-levels.mjs
       - name: Gravity Wells puzzles
         run: node Gravity_Wells/tools/verify-puzzles.mjs
+      - name: Reef Keeper balance
+        run: node Reef_Keeper/tools/verify.mjs
       - name: ReWire levels
         run: node ReWire/tools/verify-levels.mjs
       - name: Raven levels

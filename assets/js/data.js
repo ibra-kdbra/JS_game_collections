@@ -196,6 +196,15 @@ export const games = [
     mobile: true,
   },
   {
+    slug: 'reef-keeper',
+    title: 'Reef Keeper',
+    href: 'Reef_Keeper/index.html',
+    blurb: 'Keep an aquarium: feed your fish, collect the coins they drop, fight off squid and eels, and buy three pearls to clear each tank.',
+    genre: 'strategy',
+    inputs: ['mouse', 'touch', 'keyboard'],
+    mobile: true,
+  },
+  {
     slug: 'breakout',
     title: 'Breakout',
     href: 'Breakout/index.html',
