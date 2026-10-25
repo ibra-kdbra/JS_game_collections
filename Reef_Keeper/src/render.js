@@ -4,7 +4,7 @@
  * outlines, shaded bodies, big eyes. The frame keeps its 4:3 shape and is
  * scaled to fit the canvas.
  */
-import { FRAME, BAR, TANK, FISH, COINS, ALIENS, FOOD } from './config.js';
+import { FRAME, BAR, TANK, FISH, COINS, ALIENS, FOOD, PETS } from './config.js';
 
 const INK = '#1a2433';
 const FONT = '"Luckiest Guy", "Chakra Petch", system-ui, sans-serif';
@@ -17,12 +17,15 @@ const TANKS = [
   { top: '#3a6f9e', mid: '#1d4475', bottom: '#0a1a3d', rock: '#2a3350', rock2: '#3b4668', sand: '#8e86a3', sand2: '#625b7a', plant: '#5fe0c8', plant2: '#a07cf0', deco: 'vents' },
 ];
 
+// Guppies are green with yellow fins, darker as they grow; star guppies are gold.
 const GUPPY = [
-  { body: '#ffd34d', light: '#fff1a6', belly: '#fff6d6', fin: '#ff9d2e' },
-  { body: '#ffa63d', light: '#ffd28c', belly: '#ffe9c9', fin: '#ff6d2e' },
-  { body: '#ff7a45', light: '#ffb38a', belly: '#ffe0cc', fin: '#e8473b' },
+  { body: '#7ed957', light: '#c9f59e', belly: '#f2ffd9', fin: '#ffd23f' },
+  { body: '#4fbf4a', light: '#a8ec8a', belly: '#e8fbd0', fin: '#ffb627' },
+  { body: '#2f9e44', light: '#86d96f', belly: '#dcf5c4', fin: '#ff9f1c' },
+  { body: '#ffc93c', light: '#fff1a6', belly: '#fffbe0', fin: '#ff7b2e' },
 ];
-const HUNGRY = { body: '#a8cf7a', light: '#d7efb2', belly: '#eef8dc', fin: '#7fae55' };
+// Hungry fish fade to a sickly olive.
+const HUNGRY = { body: '#b5a46a', light: '#ddd2a0', belly: '#f1ead0', fin: '#9c8a55' };
 
 const lerp = (a, b, t) => a + (b - a) * t;
 function hex(c) {
@@ -35,7 +38,7 @@ function mix(c1, c2, t) {
 }
 
 /** Shop bar layout, in frame pixels. */
-export const SLOT = { x: 8, y: 7, w: 70, h: 60, gap: 6 };
+export const SLOT = { x: 7, y: 7, w: 62, h: 60, gap: 5 }; // eight fit before the money box
 export const slotRect = (i) => ({ x: SLOT.x + i * (SLOT.w + SLOT.gap), y: SLOT.y, w: SLOT.w, h: SLOT.h });
 export const MONEY = { x: 546, y: 7, w: 86, h: 36 };
 export const MENU = { x: 546, y: 47, w: 86, h: 21 };
@@ -297,7 +300,7 @@ export function createRenderer(canvas) {
       plants.push({ x: 20 + rnd() * (TANK.w - 40), h: 50 + rnd() * 90, w: 9 + rnd() * 6, color: rnd() < 0.5 ? P.plant : P.plant2, phase: rnd() * 6, glow: level === 4 });
     }
     bg = c;
-    bgKey = `${level}:${canvas.width}x${canvas.height}`;
+    bgKey = `${level}:${canvas.width}x${canvas.height}`; // level here is the world index
   }
 
   function drawPlants(t) {
@@ -470,6 +473,25 @@ export function createRenderer(canvas) {
     const r = H * (f.stage === 0 ? 0.48 : 0.42);
     eye(L * 0.42, -H * 0.2, r, 0, { dead: f.dead, closed: f.eatT > 8 });
     mouth(L * 0.9, H * 0.28, H, f, hungry);
+    if (f.stage === 3 && !f.dead) {
+      // A crown of stars for star guppies.
+      for (let i = 0; i < 3; i++) starShape(-L * 0.25 + i * L * 0.25, -H * 1.25 - (i === 1 ? 5 : 0), 5 + (i === 1 ? 2 : 0), '#fff36b', Math.sin(t / 10 + i));
+    }
+  }
+
+  function starShape(x, y, r, fill, rot = 0, lw = 1.6) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot * 0.3);
+    ctx.beginPath();
+    for (let k = 0; k < 10; k++) {
+      const rr = k % 2 ? r * 0.45 : r;
+      const a = -Math.PI / 2 + (k / 10) * Math.PI * 2;
+      ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+    }
+    ctx.closePath();
+    ink(fill, lw);
+    ctx.restore();
   }
 
   function mouth(x, y, H, f, hungry) {
@@ -588,6 +610,138 @@ export function createRenderer(canvas) {
     mouth(L * 0.88, H * 0.25, H * 0.7, f, hungry);
   }
 
+  function leviathan(f, t, world) {
+    const L = FISH.leviathan.size;
+    const H = L * 0.55;
+    const hungry = !f.dead && world.isHungry(f);
+    const body = f.dead ? '#9aa0a8' : hungry ? '#8a8fb0' : '#4a5bb8';
+    const wag = f.dead ? 0 : Math.sin(t / 8 + f.phase) * H * 0.3;
+    ctx.beginPath();
+    ctx.moveTo(-L * 0.7, 0);
+    ctx.quadraticCurveTo(-L * 1.1, -H * 0.3, -L * 1.35, -H * 1.0 + wag);
+    ctx.lineTo(-L * 1.15, wag * 0.3);
+    ctx.lineTo(-L * 1.35, H * 1.0 + wag);
+    ctx.quadraticCurveTo(-L * 1.1, H * 0.3, -L * 0.7, 0);
+    ink('#2e3a8a');
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath();
+      ctx.moveTo(-L * 0.55 + i * L * 0.28, -H * 0.85);
+      ctx.lineTo(-L * 0.42 + i * L * 0.28, -H * 1.35);
+      ctx.lineTo(-L * 0.3 + i * L * 0.28, -H * 0.85);
+      ink('#2e3a8a', 2);
+    }
+    const grad = ctx.createLinearGradient(0, -H, 0, H);
+    grad.addColorStop(0, mix(body, '#ffffff', 0.3));
+    grad.addColorStop(0.55, body);
+    grad.addColorStop(1, mix(body, '#000000', 0.2));
+    ctx.beginPath();
+    ctx.moveTo(L * 1.05, -H * 0.05);
+    ctx.bezierCurveTo(L * 0.8, -H * 1.2, -L * 0.6, -H * 1.1, -L * 0.85, 0);
+    ctx.bezierCurveTo(-L * 0.6, H * 1.15, L * 0.75, H * 1.2, L * 1.05, H * 0.35);
+    ctx.closePath();
+    ink(grad, 3);
+    // Huge jaw.
+    const open = f.eatT > 0 ? Math.sin((f.eatT / 16) * Math.PI) * H * 0.6 : H * 0.12;
+    ctx.beginPath();
+    ctx.moveTo(L * 1.05, H * 0.0);
+    ctx.lineTo(L * 0.3, H * 0.25);
+    ctx.lineTo(L * 1.0, H * 0.3 + open);
+    ctx.closePath();
+    ink('#3a0f2a', 2);
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 5; i++) {
+      const x = L * (0.42 + i * 0.12);
+      ctx.beginPath();
+      ctx.moveTo(x, H * 0.12);
+      ctx.lineTo(x + L * 0.05, H * 0.32);
+      ctx.lineTo(x + L * 0.1, H * 0.14);
+      ctx.fill();
+    }
+    eye(L * 0.55, -H * 0.38, H * 0.24, 0, { dead: f.dead, angry: true });
+  }
+
+  function starcatcher(f, t, world) {
+    // A round, flat-bottomed sand dweller with a wide mouth turned up for stars.
+    const L = FISH.starcatcher.size;
+    const hungry = !f.dead && world.isHungry(f);
+    const body = f.dead ? '#a0a0a0' : hungry ? '#c9b98a' : '#ff9f6b';
+    const bob = f.dead ? 0 : Math.abs(Math.sin(t / 10 + f.phase)) * 2;
+    ctx.translate(0, -bob);
+    ctx.beginPath();
+    ctx.moveTo(-L, 4);
+    ctx.bezierCurveTo(-L, -L * 1.1, L, -L * 1.1, L, 4);
+    ctx.closePath();
+    ink(body);
+    ctx.fillStyle = mix(body, '#ffffff', 0.4);
+    ctx.beginPath();
+    ctx.ellipse(-L * 0.3, -L * 0.5, L * 0.25, L * 0.15, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.ellipse(s * L * 0.95, 0, L * 0.3, L * 0.14, s * 0.4, 0, Math.PI * 2);
+      ink(mix(body, '#000000', 0.15), 2);
+    }
+    eye(-L * 0.3, -L * 0.45, L * 0.2, 1, { dead: f.dead });
+    eye(L * 0.3, -L * 0.45, L * 0.2, 1, { dead: f.dead });
+    const open = f.eatT > 0 ? 6 : hungry ? 4 : 1.5;
+    ctx.beginPath();
+    ctx.ellipse(0, -L * 0.1, L * 0.35, open, 0, 0, Math.PI * 2);
+    ink('#7a2230', 2);
+  }
+
+  function grubber(f, t, world) {
+    // A segmented sand worm.
+    const L = FISH.grubber.size;
+    const hungry = !f.dead && world.isHungry(f);
+    const body = f.dead ? '#a0a0a0' : hungry ? '#c4b98a' : '#e98ad9';
+    for (let i = 4; i >= 0; i--) {
+      const x = -i * L * 0.35;
+      const y = Math.sin(t / 8 - i * 0.9 + f.phase) * 3 * (f.dead ? 0 : 1);
+      ctx.beginPath();
+      ctx.ellipse(x, y, L * (0.42 - i * 0.03), L * (0.36 - i * 0.03), 0, 0, Math.PI * 2);
+      ink(i % 2 ? mix(body, '#000000', 0.12) : body, 2);
+    }
+    eye(L * 0.12, -L * 0.15, L * 0.16, 1, { dead: f.dead });
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 2;
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(L * 0.1 + s * 5, -L * 0.3);
+      ctx.lineTo(L * 0.2 + s * 9, -L * 0.62);
+      ctx.stroke();
+    }
+  }
+
+  function muncher(f, t, world) {
+    const L = FISH.muncher.size;
+    const H = L * 0.7;
+    const hungry = !f.dead && world.isHungry(f);
+    const body = f.dead ? '#a0a0a0' : hungry ? '#b5a46a' : '#56c2e6';
+    const wag = f.dead ? 0 : Math.sin(t / 5 + f.phase) * H * 0.3;
+    ctx.beginPath();
+    ctx.moveTo(-L * 0.7, 0);
+    ctx.lineTo(-L * 1.2, -H * 0.7 + wag);
+    ctx.lineTo(-L * 1.2, H * 0.7 + wag);
+    ctx.closePath();
+    ink('#2f8fb8');
+    ctx.beginPath();
+    ctx.ellipse(0, 0, L * 0.9, H * 0.8, 0, 0, Math.PI * 2);
+    ink(body);
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.ellipse(L * 0.1, H * 0.35, L * 0.5, H * 0.3, 0, 0, Math.PI);
+    ctx.fill();
+    // Buck teeth for grubs.
+    const open = f.eatT > 0 ? 6 : 2;
+    ctx.beginPath();
+    ctx.ellipse(L * 0.75, H * 0.2, L * 0.18, open, 0, 0, Math.PI * 2);
+    ink('#5a1d2a', 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(L * 0.68, H * 0.2 - open, 5, 6);
+    ctx.fillRect(L * 0.76, H * 0.2 - open, 5, 6);
+    eye(L * 0.35, -H * 0.3, H * 0.32, 0, { dead: f.dead, closed: f.eatT > 8 });
+  }
+
   function drawFish(f, t, world) {
     ctx.save();
     let x = f.x;
@@ -601,9 +755,7 @@ export function createRenderer(canvas) {
       ctx.scale(0.6 + 0.4 * k, 0.6 + 0.4 * k);
     }
     if (f.dead) ctx.globalAlpha = Math.max(0, 1 - Math.max(0, f.deadT - 150) / 90);
-    if (f.kind === 'guppy') guppy(f, t, world);
-    else if (f.kind === 'carnivore') carnivore(f, t, world);
-    else breeder(f, t, world);
+    ({ guppy, carnivore, breeder, leviathan, starcatcher, grubber, muncher })[f.kind](f, t, world);
     ctx.restore();
     // A hunger bubble over fish about to starve.
     if (!f.dead && world.isHungry(f) && f.starveAt - world.time < 600 && Math.floor(t / 15) % 2) {
@@ -637,6 +789,11 @@ export function createRenderer(canvas) {
       ctx.beginPath();
       ctx.ellipse(-r * 0.35, -r * 0.4, r * 0.22, r * 0.12, -0.7, 0, Math.PI * 2);
       ctx.fill();
+    } else if (type === 'star') {
+      ctx.restore();
+      starShape(x, y, r * 1.1, '#ffe14d', spin, 2.5);
+      ctx.save();
+      ctx.translate(x, y);
     } else if (type === 'diamond') {
       ctx.beginPath();
       ctx.moveTo(-r, -r * 0.35);
@@ -691,7 +848,39 @@ export function createRenderer(canvas) {
   function foodPiece(p, t) {
     ctx.save();
     ctx.translate(p.x + Math.sin(t / 9 + p.id) * 1.5, p.y);
-    if (p.level === 0) {
+    if (p.kind === 'grub') {
+      ctx.rotate(Math.sin(t / 6 + p.id) * 0.4);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 8, 4, 0, 0, Math.PI * 2);
+      ink('#ffb3c7', 1.6);
+      ctx.strokeStyle = 'rgba(26,36,51,0.5)';
+      ctx.lineWidth = 1;
+      for (const dx of [-3, 0, 3]) {
+        ctx.beginPath();
+        ctx.moveTo(dx, -4);
+        ctx.lineTo(dx, 4);
+        ctx.stroke();
+      }
+    } else if (p.kind === 'potion') {
+      ctx.rotate(Math.sin(t / 12) * 0.2);
+      ctx.beginPath();
+      ctx.moveTo(-3, -12);
+      ctx.lineTo(3, -12);
+      ctx.lineTo(3, -6);
+      ctx.quadraticCurveTo(10, -2, 9, 5);
+      ctx.quadraticCurveTo(8, 11, 0, 11);
+      ctx.quadraticCurveTo(-8, 11, -9, 5);
+      ctx.quadraticCurveTo(-10, -2, -3, -6);
+      ctx.closePath();
+      ink('#e7f6ff', 2);
+      ctx.fillStyle = '#ffd84a';
+      ctx.beginPath();
+      ctx.ellipse(0, 5, 7, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      starShape(p.x, p.y + 4, 4, '#fff7a8', t / 10, 1);
+      ctx.save();
+    } else if (p.level === 0) {
       ctx.rotate(p.id);
       ctx.beginPath();
       ctx.moveTo(-5, -2);
@@ -813,20 +1002,181 @@ export function createRenderer(canvas) {
       ctx.beginPath();
       ctx.arc(16, 4, 3, 0, Math.PI * 2);
       ink('#e86a6a', 1.5);
+    } else if (p.kind === 'seahorse') {
+      ctx.scale(p.face, 1);
+      const bob = Math.sin(t / 12) * 2;
+      ctx.translate(0, bob);
+      ctx.beginPath();
+      ctx.moveTo(4, -22);
+      ctx.quadraticCurveTo(16, -18, 12, -8);
+      ctx.quadraticCurveTo(10, 4, 4, 10);
+      ctx.quadraticCurveTo(-2, 18, 6, 22);
+      ctx.quadraticCurveTo(-8, 24, -6, 12);
+      ctx.quadraticCurveTo(-8, 0, -4, -10);
+      ctx.quadraticCurveTo(-4, -20, 4, -22);
+      ink('#ff9f43');
+      ctx.beginPath();
+      ctx.moveTo(10, -18);
+      ctx.lineTo(22, -16);
+      ctx.lineTo(20, -12);
+      ctx.lineTo(10, -13);
+      ink('#ff9f43', 2);
+      ctx.beginPath();
+      ctx.ellipse(-7, -2, 4, 8, 0.3, 0, Math.PI * 2);
+      ink('#ffd23f', 1.5);
+      eye(6, -16, 4, 0);
+    } else if (p.kind === 'turtle') {
+      ctx.scale(p.face, 1);
+      const step = Math.sin(t / 10) * 2;
+      for (const [x, d] of [[-14, step], [12, -step]]) {
+        ctx.beginPath();
+        ctx.ellipse(x, -2 + d * 0.3, 6, 4, 0, 0, Math.PI * 2);
+        ink('#8fd18a', 2);
+      }
+      ctx.beginPath();
+      ctx.ellipse(26, -10, 8, 7, 0, 0, Math.PI * 2);
+      ink('#8fd18a', 2);
+      eye(28, -12, 3.5, 1);
+      ctx.beginPath();
+      ctx.ellipse(0, -10, 24, 15, 0, Math.PI, 0);
+      ctx.closePath();
+      ink('#3f8f5a');
+      ctx.strokeStyle = 'rgba(26,36,51,0.45)';
+      ctx.lineWidth = 1.5;
+      for (const x of [-10, 0, 10]) {
+        ctx.beginPath();
+        ctx.moveTo(x - 5, -18);
+        ctx.lineTo(x + 5, -18);
+        ctx.lineTo(x + 7, -11);
+        ctx.lineTo(x - 7, -11);
+        ctx.closePath();
+        ctx.stroke();
+      }
+    } else if (p.kind === 'octopus') {
+      ctx.strokeStyle = INK;
+      for (let i = 0; i < 6; i++) {
+        const x = -12 + i * 5;
+        ctx.beginPath();
+        ctx.moveTo(x, 4);
+        ctx.quadraticCurveTo(x + Math.sin(t / 8 + i) * 8, 16, x + Math.sin(t / 8 + i + 1) * 6, 26);
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = INK;
+        ctx.stroke();
+        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = '#ff6fa8';
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.ellipse(0, -6, 17, 16, 0, 0, Math.PI * 2);
+      ink('#ff6fa8');
+      eye(-6, -6, 5);
+      eye(6, -6, 5);
+    } else if (p.kind === 'angel') {
+      ctx.scale(p.face, 1);
+      ctx.beginPath();
+      ctx.moveTo(-6, -4);
+      ctx.lineTo(-6, -28);
+      ctx.lineTo(8, -6);
+      ctx.closePath();
+      ink('#cfe8ff', 2);
+      ctx.beginPath();
+      ctx.moveTo(-6, 4);
+      ctx.lineTo(-6, 28);
+      ctx.lineTo(8, 6);
+      ctx.closePath();
+      ink('#cfe8ff', 2);
+      ctx.beginPath();
+      ctx.ellipse(2, 0, 16, 12, 0, 0, Math.PI * 2);
+      ink('#ffffff');
+      ctx.strokeStyle = '#7aa7ff';
+      ctx.lineWidth = 2.5;
+      for (const x of [-4, 4]) {
+        ctx.beginPath();
+        ctx.moveTo(x, -11);
+        ctx.lineTo(x, 11);
+        ctx.stroke();
+      }
+      eye(10, -3, 4);
+      ctx.strokeStyle = '#ffe14d';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.ellipse(2, -20, 9, 3, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (p.kind === 'eel') {
+      ctx.scale(p.face, 1);
+      for (let i = 6; i >= 0; i--) {
+        ctx.beginPath();
+        ctx.arc(-i * 6, Math.sin(t / 6 - i * 0.8) * 4, 8 - i * 0.6, 0, Math.PI * 2);
+        ink(i % 2 ? '#3fb6c9' : '#5fd3e0', 1.8);
+      }
+      eye(3, -3, 3.5);
+      ctx.strokeStyle = '#ffe14d';
+      ctx.lineWidth = 2;
+      if (Math.floor(t / 6) % 3 === 0) {
+        ctx.beginPath();
+        ctx.moveTo(-10, -12);
+        ctx.lineTo(-6, -18);
+        ctx.lineTo(-2, -12);
+        ctx.lineTo(2, -18);
+        ctx.stroke();
+      }
+    } else if (p.kind === 'jelly') {
+      ctx.globalAlpha = 0.9;
+      ctx.strokeStyle = 'rgba(214,170,255,0.9)';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-10 + i * 5, 2);
+        ctx.quadraticCurveTo(-10 + i * 5 + Math.sin(t / 10 + i) * 5, 14, -10 + i * 5, 26);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.moveTo(-17, 2);
+      ctx.bezierCurveTo(-17, -22, 17, -22, 17, 2);
+      ctx.quadraticCurveTo(0, 6, -17, 2);
+      ink('rgba(222,190,255,0.92)', 2);
+      ctx.globalAlpha = 1;
+      eye(-5, -7, 3.5);
+      eye(5, -7, 3.5);
+    } else if (p.kind === 'crab') {
+      ctx.scale(p.face, 1);
+      const step = p.walking ? Math.sin(t / 3) * 2 : 0;
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 2.5;
+      for (const sd of [-1, 1]) {
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath();
+          ctx.moveTo(sd * 8, -4 + i * 3);
+          ctx.lineTo(sd * (18 + i * 2), -2 + i * 3 + (i % 2 ? step : -step));
+          ctx.lineTo(sd * (21 + i * 2), 3 + i);
+          ctx.stroke();
+        }
+      }
+      ctx.beginPath();
+      ctx.ellipse(0, -8, 15, 10, 0, 0, Math.PI * 2);
+      ink('#ff6a4a');
+      for (const sd of [-1, 1]) {
+        ctx.beginPath();
+        ctx.ellipse(sd * 19, -18, 6, 5, sd * 0.4, 0, Math.PI * 2);
+        ink('#ff6a4a', 2);
+      }
+      eye(-5, -18, 3.5);
+      eye(5, -18, 3.5);
     }
     ctx.restore();
   }
 
   /* ---------- Aliens ---------- */
 
-  function alien(a, t) {
+  function alien(a, t, iconOnly = false) {
     const spec = ALIENS[a.kind];
     const flash = a.hitT > 0 && a.hitT % 4 < 2;
     ctx.save();
     ctx.translate(a.x, a.y);
     const r = spec.r;
-    if (a.kind === 'gobbler') {
-      // A wobbly purple blob, mostly mouth.
+    if (a.kind === 'gobbler' || a.kind === 'twins') {
+      // A wobbly blob, mostly mouth. Twins are smaller and teal.
+      const twin = a.kind === 'twins';
       ctx.beginPath();
       for (let i = 0; i <= 24; i++) {
         const ang = (i / 24) * Math.PI * 2;
@@ -837,8 +1187,8 @@ export function createRenderer(canvas) {
         else ctx.lineTo(x, y);
       }
       const g = ctx.createRadialGradient(-r * 0.3, -r * 0.4, 4, 0, 0, r * 1.1);
-      g.addColorStop(0, flash ? '#ffffff' : '#c78cf0');
-      g.addColorStop(1, flash ? '#ffd0d0' : '#7a3fb0');
+      g.addColorStop(0, flash ? '#ffffff' : twin ? '#8ef0d8' : '#c78cf0');
+      g.addColorStop(1, flash ? '#ffd0d0' : twin ? '#1f9c86' : '#7a3fb0');
       ink(g, 3);
       // Mouth.
       const open = 0.25 + (a.chomp > 0 ? Math.sin((a.chomp / 20) * Math.PI) * 0.35 : 0.08 * Math.sin(t / 10));
@@ -863,6 +1213,85 @@ export function createRenderer(canvas) {
         ctx.quadraticCurveTo(s * r * 0.7, -r * 1.25, s * r * 0.9, -r * 1.05);
         ctx.quadraticCurveTo(s * r * 0.7, -r * 0.9, s * r * 0.65, -r * 0.65);
         ink('#ffd84a', 2);
+      }
+    } else if (a.kind === 'glutton') {
+      // A big round belly that wants food, not zaps.
+      const full = 1 - a.hp / a.maxHp;
+      const R = r * (0.9 + full * 0.35);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, R, R * 0.95, 0, 0, Math.PI * 2);
+      const g = ctx.createRadialGradient(-R * 0.3, -R * 0.4, 4, 0, 0, R * 1.1);
+      g.addColorStop(0, flash ? '#ffffff' : '#b8f08a');
+      g.addColorStop(1, flash ? '#ffd0d0' : '#4f9e2f');
+      ink(g, 3);
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(0, R * 0.25, R * 0.55, R * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+      eye(-R * 0.3, -R * 0.35, R * 0.2, a.face * 2);
+      eye(R * 0.3, -R * 0.35, R * 0.2, a.face * 2);
+      const open = 0.18 + (a.chomp > 0 ? Math.sin((a.chomp / 16) * Math.PI) * 0.25 : 0.05 * Math.sin(t / 8));
+      ctx.beginPath();
+      ctx.ellipse(0, R * 0.1, R * 0.35, R * open, 0, 0, Math.PI * 2);
+      ink('#3a0f2a', 2.5);
+      // A bib.
+      ctx.beginPath();
+      ctx.moveTo(-R * 0.35, R * 0.5);
+      ctx.quadraticCurveTo(0, R * 0.95, R * 0.35, R * 0.5);
+      ctx.closePath();
+      ink('#ffffff', 2);
+    } else if (a.kind === 'bomber') {
+      // A crab-like cannon on the sand.
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r, r * 0.6, 0, Math.PI, 0);
+      ctx.closePath();
+      const g = ctx.createLinearGradient(0, -r * 0.6, 0, 0);
+      g.addColorStop(0, flash ? '#ffffff' : '#9aa6b8');
+      g.addColorStop(1, flash ? '#ffd0d0' : '#55607a');
+      ink(g, 3);
+      ctx.save();
+      ctx.translate(0, -r * 0.5);
+      ctx.rotate(a.face * 0.35);
+      ctx.beginPath();
+      ctx.rect(-8, -26 - (a.chomp > 0 ? 4 : 0), 16, 28);
+      ink('#3b4458', 2.5);
+      ctx.restore();
+      eye(-r * 0.35, -r * 0.25, r * 0.16, a.face * 2, { angry: true });
+      eye(r * 0.35, -r * 0.25, r * 0.16, a.face * 2, { angry: true });
+      for (const sd of [-1, 1]) {
+        ctx.beginPath();
+        ctx.ellipse(sd * r * 1.05, -r * 0.1, r * 0.25, r * 0.18, 0, 0, Math.PI * 2);
+        ink('#7a869c', 2);
+      }
+    } else if (a.kind === 'mirror') {
+      // A silver diamond creature; its shield glows when zaps would heal it.
+      ctx.save();
+      ctx.rotate(Math.sin(t / 30) * 0.15);
+      ctx.beginPath();
+      ctx.moveTo(0, -r);
+      ctx.lineTo(r * 0.85, 0);
+      ctx.lineTo(0, r);
+      ctx.lineTo(-r * 0.85, 0);
+      ctx.closePath();
+      const g = ctx.createLinearGradient(-r, -r, r, r);
+      g.addColorStop(0, flash ? '#ffffff' : '#f2f6ff');
+      g.addColorStop(0.5, flash ? '#ffd0d0' : '#a9b6d6');
+      g.addColorStop(1, flash ? '#ffffff' : '#6c7aa3');
+      ink(g, 3);
+      ctx.restore();
+      eye(0, -r * 0.15, r * 0.28, a.face * 2, { angry: true });
+      const open = a.chomp > 0 ? Math.sin((a.chomp / 20) * Math.PI) * r * 0.2 : r * 0.04;
+      ctx.beginPath();
+      ctx.ellipse(0, r * 0.35, r * 0.25, open + 2, 0, 0, Math.PI * 2);
+      ink('#3a0f2a', 2);
+      if (a.shield) {
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 1.15 + Math.sin(t / 4) * 2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(120,220,255,0.25)';
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(120,220,255,0.95)';
+        ctx.stroke();
       }
     } else {
       // Grinder: a red, spiky, spinning beast.
@@ -893,13 +1322,46 @@ export function createRenderer(canvas) {
       for (let i = 0; i < 5; i++) ctx.fillRect(-r * 0.33 + i * r * 0.14, r * 0.15, r * 0.08, r * 0.08);
     }
     ctx.restore();
-    // Health bar.
+    if (iconOnly) return;
+    // Health bar (for a glutton: how full it is).
     const w = 74;
     const frac = Math.max(0, a.hp / a.maxHp);
-    roundRect(a.x - w / 2, a.y - r - 22, w, 9, 4);
+    const top = a.kind === 'bomber' ? a.y - r - 34 : a.y - r - 22;
+    roundRect(a.x - w / 2, top, w, 9, 4);
     ink('#2a1a1a', 2);
-    ctx.fillStyle = frac > 0.5 ? '#5ee06b' : frac > 0.25 ? '#ffd84a' : '#ff5b5b';
-    ctx.fillRect(a.x - w / 2 + 2, a.y - r - 20, (w - 4) * frac, 5);
+    if (a.kind === 'glutton') {
+      ctx.fillStyle = '#ffb02e';
+      ctx.fillRect(a.x - w / 2 + 2, top + 2, (w - 4) * (1 - frac), 5);
+      text('FEED ME!', a.x, top - 12, 14, '#ffe14d', { lw: 3.5 });
+    } else {
+      ctx.fillStyle = a.shield ? '#78dcff' : frac > 0.5 ? '#5ee06b' : frac > 0.25 ? '#ffd84a' : '#ff5b5b';
+      ctx.fillRect(a.x - w / 2 + 2, top + 2, (w - 4) * frac, 5);
+    }
+    if (a.stun > 0) {
+      ctx.fillStyle = 'rgba(30,20,50,0.55)';
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        ctx.arc(a.x + Math.cos(i * 1.3 + t / 20) * r * 0.6, a.y + Math.sin(i * 1.7) * r * 0.5, 10 + (i % 3) * 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  function bomb(b, t) {
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.beginPath();
+    ctx.arc(0, 0, 9, 0, Math.PI * 2);
+    ink('#2b2f3a', 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.beginPath();
+    ctx.arc(-3, -3, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = Math.floor(t / 4) % 2 ? '#ff5b5b' : '#ffe14d';
+    ctx.beginPath();
+    ctx.arc(0, -11, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
   /* ---------- Shop bar ---------- */
@@ -913,14 +1375,28 @@ export function createRenderer(canvas) {
       ctx.save();
       ctx.scale(scale, scale);
       const f = { kind, stage, x: 0, y: 0, face: 1, turn: 1, vy: 0, eatT: 0, phase: 1, dead: false, bornT: 99, fedUntil: 1, starveAt: 1e9 };
-      if (kind === 'guppy') guppy(f, 0, fake);
-      else if (kind === 'carnivore') carnivore(f, 0, fake);
-      else breeder(f, 0, fake);
+      ({ guppy, carnivore, breeder, leviathan, starcatcher, grubber, muncher })[kind](f, 0, fake);
       ctx.restore();
     };
     if (id === 'guppy') fish('guppy', 0, 1.1);
     else if (id === 'carnivore') fish('carnivore', 0, 0.62);
     else if (id === 'breeder') fish('breeder', 0, 0.65);
+    else if (id === 'leviathan') fish('leviathan', 0, 0.42);
+    else if (id === 'starcatcher') {
+      ctx.translate(0, 8);
+      fish('starcatcher', 0, 0.85);
+    } else if (id === 'grubber') fish('grubber', 0, 0.8);
+    else if (id === 'muncher') fish('muncher', 0, 0.8);
+    else if (id === 'more') {
+      text('MORE', 0, -2, 16, '#ffe14d', { lw: 3.5 });
+      text('▸', 0, 14, 18, '#ffffff', { lw: 3 });
+    } else if (id === 'potion') {
+      ctx.scale(1.4, 1.4);
+      foodPiece({ x: 0, y: 0, kind: 'potion', id: 0 }, 0);
+    } else if (ALIENS[id]) {
+      ctx.scale(0.55, 0.55);
+      alien({ kind: id, x: 0, y: 0, hp: 1, maxHp: 1, face: 1, hitT: 0, chomp: 0, stun: 0, shield: false }, 0, true);
+    }
     else if (id === 'quality') {
       ctx.scale(2, 2);
       foodPiece({ x: 0, y: 0, level: Math.min(level + 1, FOOD.levels.length - 1), id: 1 }, 0);
@@ -940,8 +1416,9 @@ export function createRenderer(canvas) {
       ink('#ffe14d', 2);
     } else if (id === 'egg') {
       egg(0, 0, 15, level);
-    } else if (id in { snail: 1, clam: 1, puffer: 1 }) {
-      pet({ kind: id, x: 0, y: id === 'puffer' ? 0 : 14, face: 1, open: true, walking: false }, 0);
+    } else if (id in PETS) {
+      const ground = id === 'snail' || id === 'clam' || id === 'turtle' || id === 'crab';
+      pet({ kind: id, x: 0, y: ground ? 14 : 0, face: 1, open: true, walking: false }, 0);
     }
     ctx.restore();
   }
@@ -1028,6 +1505,7 @@ export function createRenderer(canvas) {
       const bob = hover ? Math.sin(t / 8) * 1.5 : 0;
       icon(item.id, r.x + r.w / 2, r.y + 23 + dy + bob, 1, item.level ?? 0);
       ctx.globalAlpha = 1;
+      if (item.id === 'more') return;
       const price = item.maxed ? 'MAX' : `$${item.cost.toLocaleString('en-US')}`;
       text(price, r.x + r.w / 2, r.y + r.h - 10 + dy, item.cost >= 1000 ? 13 : 15, item.maxed ? '#9fb3bd' : item.affordable ? '#ffe14d' : '#ff8a7a', { lw: 3.5 });
       // Level pips for upgrades.
@@ -1059,7 +1537,7 @@ export function createRenderer(canvas) {
   /* ---------- Frame ---------- */
 
   function draw(world, ui, fx, t) {
-    if (bgKey !== `${world.level}:${canvas.width}x${canvas.height}`) buildBackground(world.level);
+    if (bgKey !== `${world.world}:${canvas.width}x${canvas.height}`) buildBackground(world.world);
     ctx = main;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(bg, 0, 0);
@@ -1083,17 +1561,19 @@ export function createRenderer(canvas) {
       ctx.lineWidth = 1.4;
       ctx.stroke();
     }
-    for (const p of world.pets) if (p.kind !== 'puffer') pet(p, t);
+    const swims = (p) => !['snail', 'clam', 'turtle', 'crab'].includes(p.kind);
+    for (const p of world.pets) if (!swims(p)) pet(p, t);
     for (const p of world.food) foodPiece(p, t);
     for (const f of world.fish) drawFish(f, t, world);
-    for (const p of world.pets) if (p.kind === 'puffer') pet(p, t);
+    for (const p of world.pets) if (swims(p)) pet(p, t);
     for (const c of world.coins) {
       const fading = c.type !== 'chest' && c.floorT > COINS.floorLife - 90 && Math.floor(t / 5) % 2;
       ctx.globalAlpha = fading ? 0.35 : 1;
       coin(c.type, c.x, c.y, c.floorT > 0 ? 0 : t / 8 + c.spin);
       ctx.globalAlpha = 1;
     }
-    if (world.alien) alien(world.alien, t);
+    for (const a of world.aliens) alien(a, t);
+    for (const b of world.bombs) bomb(b, t);
     // Effects.
     for (const r of fx.rings) {
       ctx.globalAlpha = r.life / r.max;
@@ -1171,10 +1651,60 @@ export function createRenderer(canvas) {
       coin(c.type, x, y, c.t / 3, 1 - 0.4 * k);
     }
     drawBar(world, ui, t);
+    if (ui.hint) drawHint(ui.hint, t);
     // Frame edge.
     ctx.strokeStyle = INK;
     ctx.lineWidth = 4;
     ctx.strokeRect(0, 0, FRAME.w, FRAME.h);
+  }
+
+  /** Tutorial bubble: wrapped text in a box, with a bouncing arrow at the target. */
+  function drawHint(h, t) {
+    ctx.font = '15px "Balsamiq Sans", system-ui, sans-serif';
+    const words = h.text.split(' ');
+    const lines = [];
+    let line = '';
+    for (const w of words) {
+      const next = line ? `${line} ${w}` : w;
+      if (ctx.measureText(next).width > 300 && line) {
+        lines.push(line);
+        line = w;
+      } else line = next;
+    }
+    lines.push(line);
+    const bw = 330;
+    const bh = 22 + lines.length * 20 + (h.tap ? 20 : 0);
+    const bx = Math.max(8, Math.min(FRAME.w - bw - 8, (h.boxX ?? FRAME.w / 2) - bw / 2));
+    const by = h.boxY ?? 250;
+    if (h.x !== undefined) {
+      // Arrow from the box towards the target.
+      const bounce = Math.sin(t / 6) * 5;
+      const ax = h.x;
+      const ay = h.y + (h.y < by ? 30 : -30) + (h.y < by ? bounce : -bounce);
+      ctx.save();
+      ctx.translate(ax, ay);
+      ctx.rotate(h.y < by ? Math.PI : 0);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-12, -16);
+      ctx.lineTo(-5, -16);
+      ctx.lineTo(-5, -34);
+      ctx.lineTo(5, -34);
+      ctx.lineTo(5, -16);
+      ctx.lineTo(12, -16);
+      ctx.closePath();
+      ink('#ffe14d', 2.5);
+      ctx.restore();
+      ctx.beginPath();
+      ctx.arc(h.x, h.y, 22 + Math.sin(t / 5) * 3, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,225,77,0.9)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+    roundRect(bx, by, bw, bh, 12);
+    ink('rgba(255,252,235,0.97)', 2.5);
+    lines.forEach((l, i) => text(l, bx + 15, by + 20 + i * 20, 15, '#1a2433', { align: 'left', stroke: null, font: '"Balsamiq Sans", system-ui, sans-serif' }));
+    if (h.tap) text(Math.floor(t / 30) % 2 ? 'Tap to continue' : 'Tap to continue ›', bx + bw - 15, by + bh - 14, 13, '#2f6f86', { align: 'right', stroke: null });
   }
 
   /** Draw an icon onto another canvas (for the DOM screens). */
