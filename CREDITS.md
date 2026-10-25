@@ -108,5 +108,5 @@ its licence file.
 | `ARCADE_R.TTF` ("Arcade" font) | `PacMan/font/`: licence **unknown**; the upstream author removed an earlier copy of this font over its licence |
 | Clear Sans (Intel) | `2048/style/fonts/`: Apache 2.0 |
 | Source Code Pro (Adobe) | `TowerDefense/fonts/`, `td-editor/fonts/` (no licence file shipped) |
-| Balsamiq Sans, Luckiest Guy | `Hangman/fonts/` |
+| Balsamiq Sans, Luckiest Guy | `Hangman/fonts/`, `Reef_Keeper/fonts/` |
 | `Art_Lab/Adaptive/font.otf` | **unknown** |

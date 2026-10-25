@@ -1,14 +1,15 @@
 /**
  * Reef Keeper game logic. Pure: no DOM, no timers, so the same code runs in the
- * browser and in the headless checks (tools/verify.mjs).
+ * browser and in the headless checks (tools/verify.mjs). Coordinates are frame
+ * pixels (640 x 480); the tank is the part below the shop bar.
  *
- *   const world = createWorld({ level: 0, seed: 1 });
- *   world.click(x, y);       // collect a coin, shoot an invader, or drop food
- *   world.buy('minnow');     // see world.shop()
- *   world.step();            // 60 steps per second
- *   world.outcome            // null | 'clear' | 'lost'
+ *   const world = createWorld({ level: 0, seed: 1, pets: ['snail'] });
+ *   world.click(x, y);     // collect a coin, shoot an alien, or drop food
+ *   world.buy('guppy');    // see world.shop()
+ *   world.step();          // 60 steps per second
+ *   world.outcome          // null | 'clear' | 'lost'
  */
-import { TANK, FISH, COINS, FOOD, WEAPON, INVADERS, CRAB, LEVELS, LIMITS } from './config.js';
+import { TANK, FISH, COINS, FOOD, WEAPON, ALIENS, LEVELS, LIMITS } from './config.js';
 
 export function mulberry32(seed) {
   let a = seed >>> 0;
@@ -22,8 +23,10 @@ export function mulberry32(seed) {
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const TOP = TANK.surface + 18;
+const BOTTOM = TANK.floor - 22;
 
-export function createWorld({ level = 0, seed = 1, upgrades = null } = {}) {
+export function createWorld({ level = 0, seed = 1, pets = [] } = {}) {
   const L = LEVELS[level];
   const rand = mulberry32(seed);
   const events = [];
@@ -35,82 +38,86 @@ export function createWorld({ level = 0, seed = 1, upgrades = null } = {}) {
     def: L,
     time: 0,
     money: L.start.money,
-    shards: 0,
+    eggs: 0,
     fish: [],
-    pellets: [],
+    food: [],
     coins: [],
-    crab: null,
-    invader: null,
-    warning: 0, // steps until the next invader arrives, while the warning shows
-    nextInvader: L.invaders.first,
-    // Upgrades carry over between levels within a game.
-    up: upgrades ? { ...upgrades } : { quality: 0, count: 0, weapon: 0 },
+    pets: [],
+    alien: null,
+    warning: 0,
+    nextAlien: L.aliens ? L.aliens.first : Infinity,
+    up: { quality: 0, count: 0, weapon: 0 },
     outcome: null,
     events,
-    stats: { coins: 0, earned: 0, fed: 0, starved: 0, eaten: 0, invaders: 0, bought: 0 },
+    stats: { coins: 0, earned: 0, fed: 0, starved: 0, eaten: 0, aliens: 0, bought: 0, wasted: 0 },
     step,
     click,
     buy,
     shop,
-    maxPellets,
+    maxFood,
+    isHungry: (f) => world.time >= f.fedUntil,
+    sizeOf,
   };
 
   /* ---------- Fish ---------- */
 
-  function spawnFish(kind, x = 120 + rand() * (TANK.w - 240), y = TANK.surface + 30) {
+  function spawnFish(kind, x = 80 + rand() * (TANK.w - 160), y = TANK.surface + 6) {
+    const spec = FISH[kind];
     const f = {
       id: nextId++,
       kind,
       x,
       y,
-      vx: 0,
-      vy: 1,
+      vx: (rand() - 0.5) * 0.5,
+      vy: 1.2, // drops in from the surface
       face: rand() < 0.5 ? -1 : 1,
+      turn: 1, // -1..1, eases towards face: the sprite flips through its width
       stage: 0,
       growth: 0,
-      fedUntil: world.time + FISH[kind].hungryAfter,
-      starveAt: world.time + FISH[kind].starveAfter,
-      coinT: Math.floor(rand() * 300),
+      fedUntil: world.time + spec.hungryAfter,
+      starveAt: world.time + spec.starveAfter,
+      coinT: 200 + Math.floor(rand() * 200),
+      breedT: spec.breedEvery ?? 0,
       goal: null,
       goalT: 0,
+      eatT: 0,
       dead: false,
       deadT: 0,
-      wiggle: rand() * 100,
-      spawnT: 0,
+      bornT: 0,
+      phase: rand() * 100,
     };
+    f.turn = f.face;
     world.fish.push(f);
     return f;
   }
 
-  for (let i = 0; i < L.start.minnows; i++) spawnFish('minnow');
+  for (let i = 0; i < L.start.guppies; i++) spawnFish('guppy', 160 + i * 220, TOP + 60);
 
-  const sizeOf = (f) => (f.kind === 'pike' ? FISH.pike.size : FISH.minnow.size[f.stage]);
-  const speedOf = (f) => (f.kind === 'pike' ? FISH.pike.speed : FISH.minnow.speed[f.stage]);
-  const hungry = (f) => world.time >= f.fedUntil;
-  world.isHungry = hungry;
-  world.sizeOf = sizeOf;
+  function sizeOf(f) {
+    return f.kind === 'guppy' ? FISH.guppy.size[f.stage] : FISH[f.kind].size;
+  }
 
   function feed(f, foodLevel) {
     const spec = FISH[f.kind];
-    const fl = FOOD.levels[foodLevel];
-    const fed = Math.round(spec.hungryAfter * (f.kind === 'pike' ? 1 : fl.fed));
+    const fl = FOOD.levels[foodLevel] ?? FOOD.levels[0];
+    const fed = Math.round(spec.hungryAfter * (f.kind === 'carnivore' ? 1 : fl.fed));
     f.fedUntil = world.time + fed;
     f.starveAt = f.fedUntil + (spec.starveAfter - spec.hungryAfter);
+    f.eatT = 16;
     world.stats.fed++;
-    if (f.kind === 'minnow' && f.stage < 2) {
+    if (f.kind === 'guppy' && f.stage < 2) {
       f.growth += fl.growth;
-      const need = FISH.minnow.grow[f.stage];
-      if (f.growth >= need) {
+      if (f.growth >= FISH.guppy.grow[f.stage]) {
         f.growth = 0;
         f.stage++;
-        f.coinT = 120;
+        f.coinT = 90;
         emit('grow', { x: f.x, y: f.y, stage: f.stage });
       }
     }
-    emit('eat', { x: f.x, y: f.y });
+    emit('eat', { x: f.x, y: f.y, kind: f.kind });
   }
 
-  function steer(f, tx, ty, speed, k = 0.08) {
+  function steer(f, tx, ty, speed, k) {
     const dx = tx - f.x;
     const dy = ty - f.y;
     const d = Math.hypot(dx, dy) || 1;
@@ -118,11 +125,28 @@ export function createWorld({ level = 0, seed = 1, upgrades = null } = {}) {
     f.vy += ((dy / d) * speed - f.vy) * k;
   }
 
+  function nearest(list, from, ok = () => true) {
+    let best = null;
+    let bd = Infinity;
+    for (const o of list) {
+      if (!ok(o)) continue;
+      const d = dist(o, from);
+      if (d < bd) {
+        bd = d;
+        best = o;
+      }
+    }
+    return [best, bd];
+  }
+
   function stepFish(f) {
+    f.bornT++;
+    if (f.eatT > 0) f.eatT--;
+    f.turn += (f.face - f.turn) * 0.18;
     if (f.dead) {
       f.deadT++;
-      f.vx *= 0.95;
-      f.y = Math.min(TANK.floor - 6, f.y + 0.5);
+      f.vx *= 0.9;
+      f.y = Math.min(BOTTOM + 8, f.y + 0.45);
       return;
     }
     const spec = FISH[f.kind];
@@ -132,93 +156,94 @@ export function createWorld({ level = 0, seed = 1, upgrades = null } = {}) {
       emit('starve', { x: f.x, y: f.y });
       return;
     }
-    const speed = speedOf(f);
+    // Falling in from the surface after being bought.
+    if (f.bornT < 40) {
+      f.y += f.vy;
+      f.vy *= 0.94;
+      return;
+    }
+    const base = f.kind === 'guppy' ? spec.speed[f.stage] : spec.speed;
     let chasing = false;
-    if (hungry(f)) {
-      if (f.kind === 'minnow') {
-        let best = null;
-        let bd = Infinity;
-        for (const p of world.pellets) {
-          const d = dist(f, p);
-          if (d < bd) {
-            bd = d;
-            best = p;
-          }
-        }
-        if (best) {
+    if (world.isHungry(f)) {
+      if (f.kind === 'carnivore') {
+        const [prey, d] = nearest(world.fish, f, (o) => o.kind === 'guppy' && o.stage === 0 && !o.dead && o.bornT > 40);
+        if (prey) {
           chasing = true;
-          steer(f, best.x, best.y, speed * 1.7, 0.12);
-          if (bd < sizeOf(f) * 0.6 + 6) {
-            best.eaten = true;
-            world.pellets = world.pellets.filter((p) => p !== best);
-            feed(f, best.level);
+          steer(f, prey.x, prey.y, base * 1.9, 0.14);
+          if (d < sizeOf(f) * 0.7 + 6) {
+            world.fish = world.fish.filter((o) => o !== prey);
+            world.stats.eaten++;
+            emit('gulp', { x: prey.x, y: prey.y, by: 'carnivore' });
+            feed(f, 0);
           }
         }
       } else {
-        // Pike hunt the smallest minnows.
-        let best = null;
-        let bd = Infinity;
-        for (const m of world.fish) {
-          if (m.kind !== 'minnow' || m.stage !== 0 || m.dead) continue;
-          const d = dist(f, m);
-          if (d < bd) {
-            bd = d;
-            best = m;
-          }
-        }
-        if (best) {
+        const [p, d] = nearest(world.food, f);
+        if (p) {
           chasing = true;
-          steer(f, best.x, best.y, speed * 1.6, 0.12);
-          if (bd < sizeOf(f) * 0.6 + 8) {
-            world.fish = world.fish.filter((m) => m !== best);
-            world.stats.eaten++;
-            emit('gulp', { x: best.x, y: best.y });
-            feed(f, 0);
+          steer(f, p.x, p.y, base * 2.0, 0.15);
+          if (d < sizeOf(f) * 0.6 + 8) {
+            world.food = world.food.filter((o) => o !== p);
+            feed(f, p.level);
           }
         }
       }
     }
     if (!chasing) {
-      if (!f.goal || --f.goalT <= 0 || dist(f, f.goal) < 12) {
-        f.goal = { x: 40 + rand() * (TANK.w - 80), y: TANK.surface + 30 + rand() * (TANK.floor - TANK.surface - 80) };
-        f.goalT = 180 + rand() * 300;
+      if (!f.goal || --f.goalT <= 0 || dist(f, f.goal) < 14) {
+        f.goal = { x: 40 + rand() * (TANK.w - 80), y: TOP + rand() * (BOTTOM - TOP) };
+        f.goalT = 150 + rand() * 260;
       }
-      steer(f, f.goal.x, f.goal.y, speed * (0.5 + 0.5 * Math.sin((world.time + f.wiggle * 9) / 90) ** 2), 0.04);
+      // Cruise, with the odd lazy pause.
+      const pace = 0.35 + 0.65 * Math.sin((world.time + f.phase * 13) / 110) ** 2;
+      steer(f, f.goal.x, f.goal.y, base * pace, 0.035);
     }
-    f.x = clamp(f.x + f.vx, 20, TANK.w - 20);
-    f.y = clamp(f.y + f.vy, TANK.surface + 14, TANK.floor - 18);
-    if (Math.abs(f.vx) > 0.15) f.face = f.vx > 0 ? 1 : -1;
+    f.x = clamp(f.x + f.vx, 24, TANK.w - 24);
+    f.y = clamp(f.y + f.vy, TOP, BOTTOM);
+    if (Math.abs(f.vx) > 0.2) f.face = f.vx > 0 ? 1 : -1;
 
-    // Coins.
-    const every = f.kind === 'pike' ? spec.coinEvery : spec.coinEvery[f.stage];
-    const type = f.kind === 'pike' ? spec.coin : spec.coin[f.stage];
-    if (type && --f.coinT <= 0) {
-      f.coinT = every * (0.85 + rand() * 0.3);
-      world.coins.push({ id: nextId++, x: f.x, y: f.y + 6, type, floorT: 0, vx: (rand() - 0.5) * 0.3 });
-      emit('drop', { x: f.x, y: f.y, coin: type });
+    // Coins and babies.
+    if (f.kind === 'breeder') {
+      if (!world.isHungry(f) && --f.breedT <= 0) {
+        f.breedT = spec.breedEvery;
+        if (world.fish.length < LIMITS.fish) {
+          spawnFish('guppy', f.x, f.y).bornT = 40;
+          emit('birth', { x: f.x, y: f.y });
+        }
+      }
+    } else {
+      const type = f.kind === 'guppy' ? spec.coin[f.stage] : spec.coin;
+      const every = f.kind === 'guppy' ? spec.coinEvery[f.stage] : spec.coinEvery;
+      if (type && --f.coinT <= 0) {
+        f.coinT = every * (0.85 + rand() * 0.3);
+        dropCoin(type, f.x, f.y + 8);
+      }
     }
   }
 
-  /* ---------- Food and coins ---------- */
+  /* ---------- Coins, food, pets ---------- */
 
-  function maxPellets() {
-    return FOOD.maxCount[0] + world.up.count;
+  function dropCoin(type, x, y) {
+    world.coins.push({ id: nextId++, x, y, type, vy: 0.2, floorT: 0, spin: rand() * 10 });
+    emit('drop', { x, y, coin: type });
   }
 
-  function dropFood(x, y) {
-    if (world.pellets.length >= maxPellets() || world.money < FOOD.cost) return false;
-    world.money -= FOOD.cost;
-    world.pellets.push({ x: clamp(x, 20, TANK.w - 20), y: clamp(y, TANK.surface, TANK.floor - 10), level: world.up.quality, floorT: 0 });
-    emit('food', { x, y });
-    return true;
+  function maxFood() {
+    return Math.min(FOOD.max, FOOD.start + world.up.count);
   }
 
-  function stepPellets() {
-    for (const p of world.pellets) {
+  function addFood(x, y, free = false) {
+    world.food.push({ id: nextId++, x: clamp(x, 16, TANK.w - 16), y: clamp(y, TANK.surface + 4, BOTTOM), level: world.up.quality, floorT: 0, free });
+  }
+
+  function stepFood() {
+    for (const p of world.food) {
       if (p.y < TANK.floor - 6) p.y += FOOD.sink;
       else p.floorT++;
     }
-    world.pellets = world.pellets.filter((p) => p.floorT < 40);
+    const before = world.food.length;
+    world.food = world.food.filter((p) => p.floorT < 45);
+    world.stats.wasted += before - world.food.length;
   }
 
   function collect(c, by = 'click') {
@@ -232,115 +257,142 @@ export function createWorld({ level = 0, seed = 1, upgrades = null } = {}) {
 
   function stepCoins() {
     for (const c of world.coins) {
-      if (c.y < TANK.floor - COINS[c.type].r) {
-        c.y += c.type === 'chest' ? COINS.sink * 1.4 : COINS.sink;
-        c.x = clamp(c.x + c.vx, 16, TANK.w - 16);
-      } else {
-        c.floorT++;
+      const r = COINS[c.type].r;
+      if (c.y < TANK.floor - r) {
+        c.vy = Math.min(c.type === 'chest' ? 1.4 : COINS.sink, c.vy + 0.03);
+        c.y = Math.min(TANK.floor - r, c.y + c.vy);
+        if (c.y >= TANK.floor - r) emit('land', { x: c.x, y: c.y, coin: c.type });
+      } else c.floorT++;
+    }
+    const before = world.coins.length;
+    world.coins = world.coins.filter((c) => c.type === 'chest' || c.floorT <= COINS.floorLife);
+    if (world.coins.length < before) emit('fade');
+  }
+
+  for (const kind of pets) {
+    const p = { kind, x: TANK.w * (0.25 + 0.25 * world.pets.length), y: TANK.floor - 4, face: 1, t: 0, walking: false, timer: 0 };
+    if (kind === 'clam') p.timer = 900;
+    if (kind === 'puffer') {
+      p.y = TOP + 40;
+      p.timer = 600;
+    }
+    world.pets.push(p);
+  }
+
+  function stepPets() {
+    for (const p of world.pets) {
+      p.t++;
+      if (p.kind === 'snail') {
+        // Crawls to the coin closest to the sand and picks it up there.
+        let best = null;
+        for (const c of world.coins) if (c.y > TANK.floor - 70 && (!best || c.y > best.y)) best = c;
+        if (best) {
+          const dx = best.x - p.x;
+          p.x += clamp(dx, -1.3, 1.3);
+          p.face = dx >= 0 ? 1 : -1;
+          p.walking = Math.abs(dx) > 1;
+          if (Math.abs(dx) < 16 && best.y > TANK.floor - 40) collect(best, 'pet');
+        } else p.walking = false;
+      } else if (p.kind === 'clam') {
+        if (--p.timer <= 0) {
+          p.timer = 1800;
+          dropCoin('pearl', p.x, TANK.floor - COINS.pearl.r);
+          emit('pearl', { x: p.x, y: p.y });
+        }
+        p.open = p.timer < 90 || p.timer > 1740;
+      } else if (p.kind === 'puffer') {
+        // Drifts about and feeds the fish nearest to starving.
+        p.x = TANK.w / 2 + Math.sin(p.t / 300) * (TANK.w / 2 - 70);
+        p.y = TOP + 30 + Math.sin(p.t / 170) * 30;
+        p.face = Math.cos(p.t / 300) >= 0 ? 1 : -1;
+        if (--p.timer <= 0) {
+          p.timer = 900;
+          const starving = world.fish.filter((f) => !f.dead && f.kind !== 'carnivore' && world.isHungry(f)).sort((a, b) => a.starveAt - b.starveAt)[0];
+          if (starving) {
+            addFood(starving.x, Math.max(TANK.surface + 6, starving.y - 40), true);
+            emit('petFood', { x: p.x, y: p.y });
+          }
+        }
       }
     }
-    const gone = world.coins.filter((c) => c.floorT > COINS.floorLife && c.type !== 'chest');
-    if (gone.length) world.coins = world.coins.filter((c) => !gone.includes(c));
   }
 
-  function stepCrab() {
-    const crab = world.crab;
-    if (!crab) return;
-    // Head for the lowest coin; pick it up once it is near the sand.
-    let best = null;
-    for (const c of world.coins) if (!best || c.y > best.y) best = c;
-    if (best) {
-      const dx = best.x - crab.x;
-      crab.x += clamp(dx, -CRAB.speed, CRAB.speed);
-      crab.face = dx >= 0 ? 1 : -1;
-      crab.walking = Math.abs(dx) > 1;
-      if (Math.abs(dx) < 18 && best.y > TANK.floor - 34) collect(best, 'crab');
-    } else crab.walking = false;
-  }
+  /* ---------- Aliens ---------- */
 
-  /* ---------- Invaders ---------- */
-
-  function stepInvaders() {
-    const inv = world.invader;
-    if (!inv) {
+  function stepAlien() {
+    const a = world.alien;
+    if (!a) {
       if (world.warning > 0) {
         if (--world.warning === 0) {
-          const spec = INVADERS[L.invaders.kind];
+          const spec = ALIENS[L.aliens.kind];
           const side = rand() < 0.5 ? -1 : 1;
-          world.invader = { kind: L.invaders.kind, x: side < 0 ? -40 : TANK.w + 40, y: 140 + rand() * 160, hp: spec.hp, maxHp: spec.hp, biteT: 60, face: -side, hitT: 0, t: 0 };
-          emit('invader', { kind: L.invaders.kind });
+          world.alien = { kind: L.aliens.kind, x: TANK.w / 2 + side * 150, y: TOP + 70, hp: spec.hp, maxHp: spec.hp, biteT: 90, face: -side, hitT: 0, t: 0, chomp: 0 };
+          emit('alien', { kind: L.aliens.kind });
         }
-      } else if (world.time >= world.nextInvader) {
-        world.warning = INVADERS.warning;
-        world.nextInvader = world.time + L.invaders.every;
+      } else if (world.time >= world.nextAlien) {
+        world.warning = ALIENS.warning;
+        world.nextAlien = world.time + ALIENS.warning + L.aliens.every;
         emit('warning');
       }
       return;
     }
-    const spec = INVADERS[inv.kind];
-    inv.t++;
-    if (inv.hitT > 0) inv.hitT--;
-    let best = null;
-    let bd = Infinity;
-    for (const f of world.fish) {
-      if (f.dead) continue;
-      const d = dist(inv, f);
-      if (d < bd) {
-        bd = d;
-        best = f;
-      }
-    }
-    const tx = best ? best.x : TANK.w / 2 + Math.sin(inv.t / 80) * 200;
-    const ty = best ? best.y : 200 + Math.cos(inv.t / 60) * 80;
-    const dx = tx - inv.x;
-    const dy = ty - inv.y;
-    const d = Math.hypot(dx, dy) || 1;
-    const slow = inv.hitT > 0 ? 0.35 : 1; // knocked back a little by each hit
-    inv.x += (dx / d) * spec.speed * slow;
-    inv.y += (dy / d) * spec.speed * slow;
-    inv.y = clamp(inv.y, TANK.surface + 30, TANK.floor - 40);
-    if (Math.abs(dx) > 2) inv.face = dx > 0 ? 1 : -1;
-    if (inv.biteT > 0) inv.biteT--;
-    if (best && bd < spec.size * 0.7 && inv.biteT === 0) {
-      world.fish = world.fish.filter((f) => f !== best);
+    const spec = ALIENS[a.kind];
+    a.t++;
+    if (a.hitT > 0) a.hitT--;
+    if (a.chomp > 0) a.chomp--;
+    const [prey, d] = nearest(world.fish, a, (f) => !f.dead);
+    const tx = prey ? prey.x : TANK.w / 2 + Math.sin(a.t / 90) * 200;
+    const ty = prey ? prey.y : TOP + 100 + Math.cos(a.t / 70) * 60;
+    const dx = tx - a.x;
+    const dy = ty - a.y;
+    const dd = Math.hypot(dx, dy) || 1;
+    const speed = spec.speed * (a.hitT > 0 ? 0.3 : 1);
+    a.x = clamp(a.x + (dx / dd) * speed, 40, TANK.w - 40);
+    a.y = clamp(a.y + (dy / dd) * speed, TOP + 10, BOTTOM - 10);
+    if (Math.abs(dx) > 3) a.face = dx > 0 ? 1 : -1;
+    if (a.biteT > 0) a.biteT--;
+    if (prey && d < spec.r * 0.75 && a.biteT === 0) {
+      world.fish = world.fish.filter((f) => f !== prey);
       world.stats.eaten++;
-      inv.biteT = spec.bite;
-      emit('gulp', { x: best.x, y: best.y, by: 'invader' });
+      a.biteT = spec.bite;
+      a.chomp = 20;
+      emit('gulp', { x: prey.x, y: prey.y, by: 'alien' });
     }
   }
 
   function shoot(x, y) {
-    const inv = world.invader;
-    if (!inv) return false;
-    const spec = INVADERS[inv.kind];
-    if (Math.hypot(x - inv.x, y - inv.y) > spec.size + 10) return false;
-    inv.hp -= WEAPON.damage[world.up.weapon];
-    inv.hitT = 8;
-    // Each hit nudges it away from the click.
-    const d = Math.hypot(inv.x - x, inv.y - y) || 1;
-    inv.x += ((inv.x - x) / d) * 6;
-    inv.y += ((inv.y - y) / d) * 6;
-    emit('hit', { x, y });
-    if (inv.hp <= 0) {
-      world.invader = null;
-      world.stats.invaders++;
-      world.coins.push({ id: nextId++, x: inv.x, y: inv.y, type: spec.reward, floorT: 0, vx: 0 });
-      emit('defeat', { x: inv.x, y: inv.y });
+    const a = world.alien;
+    const spec = ALIENS[a.kind];
+    if (Math.hypot(x - a.x, y - a.y) > spec.r + 18) return false;
+    a.hp -= WEAPON.damage[world.up.weapon];
+    a.hitT = 10;
+    const d = Math.hypot(a.x - x, a.y - y) || 1;
+    a.x = clamp(a.x + ((a.x - x) / d) * 10, 40, TANK.w - 40);
+    a.y = clamp(a.y + ((a.y - y) / d) * 10, TOP + 10, BOTTOM - 10);
+    emit('hit', { x, y, damage: WEAPON.damage[world.up.weapon] });
+    if (a.hp <= 0) {
+      world.alien = null;
+      world.stats.aliens++;
+      dropCoin(spec.reward, a.x, a.y);
+      emit('defeat', { x: a.x, y: a.y, kind: a.kind });
     }
     return true;
   }
 
-  /* ---------- Player actions ---------- */
+  /* ---------- Player ---------- */
 
-  /** A click or tap at tank coordinates. Returns what it did. */
+  /**
+   * A click or tap at frame coordinates. Returns what happened:
+   * 'coin' | 'hit' | 'miss' | 'food' | 'full' (food limit) | 'broke' | 'none'.
+   */
   function click(x, y) {
-    if (world.outcome) return null;
-    // Coins first: the nearest one under the pointer.
+    if (world.outcome) return 'none';
+    if (y < TANK.y) return 'none';
     let best = null;
     let bd = Infinity;
     for (const c of world.coins) {
       const d = Math.hypot(c.x - x, c.y - y);
-      if (d < COINS[c.type].r + 14 && d < bd) {
+      if (d < COINS[c.type].r + COINS.grab && d < bd) {
         bd = d;
         best = c;
       }
@@ -349,68 +401,68 @@ export function createWorld({ level = 0, seed = 1, upgrades = null } = {}) {
       collect(best);
       return 'coin';
     }
-    // While an invader is in the tank, clicks are shots: no feeding.
-    if (world.invader) return shoot(x, y) ? 'hit' : 'miss';
-    return dropFood(x, y) ? 'food' : 'none';
+    if (world.alien) {
+      if (shoot(x, y)) return 'hit';
+      emit('miss', { x, y });
+      return 'miss';
+    }
+    if (world.food.filter((p) => !p.free).length >= maxFood()) {
+      emit('full', { x, y });
+      return 'full';
+    }
+    if (world.money < FOOD.cost) {
+      emit('broke', { x, y });
+      return 'broke';
+    }
+    world.money -= FOOD.cost;
+    addFood(x, Math.max(y, TANK.surface + 4));
+    emit('food', { x, y });
+    return 'food';
   }
 
+  const fishCount = () => world.fish.filter((f) => !f.dead).length;
+
   function shop() {
-    const items = [];
-    for (const id of L.shop) {
+    return L.shop.map((id) => {
       let cost = null;
-      let label = '';
       let level = null;
-      if (id === 'minnow') {
-        cost = FISH.minnow.cost;
-        label = 'Minnow';
-      } else if (id === 'pike') {
-        cost = FISH.pike.cost;
-        label = 'Pike';
-      } else if (id === 'quality') {
-        const next = world.up.quality + 1;
-        cost = next < FOOD.levels.length ? FOOD.qualityCost[next] : null;
-        label = next < FOOD.levels.length ? FOOD.levels[next].name : FOOD.levels[world.up.quality].name;
+      if (id === 'guppy' || id === 'carnivore' || id === 'breeder') cost = FISH[id].cost;
+      else if (id === 'quality') {
         level = world.up.quality;
+        cost = level + 1 < FOOD.levels.length ? FOOD.qualityCost[level + 1] : null;
       } else if (id === 'count') {
-        cost = maxPellets() < FOOD.maxCount[1] ? FOOD.countCost : null;
-        label = `Food ×${maxPellets()}`;
-        level = maxPellets();
+        level = maxFood();
+        cost = level < FOOD.max ? FOOD.countCost : null;
       } else if (id === 'weapon') {
-        const next = world.up.weapon + 1;
-        cost = next < WEAPON.cost.length ? WEAPON.cost[next] : null;
-        label = 'Zapper';
         level = world.up.weapon;
-      } else if (id === 'crab') {
-        cost = world.crab ? null : CRAB.cost;
-        label = 'Crab';
-      } else if (id === 'shard') {
-        cost = L.shard;
-        label = 'Pearl';
-        level = world.shards;
+        cost = level + 1 < WEAPON.cost.length ? WEAPON.cost[level + 1] : null;
+      } else if (id === 'egg') {
+        level = world.eggs;
+        cost = L.egg;
       }
-      const full = (id === 'minnow' || id === 'pike') && world.fish.length >= LIMITS.fish;
-      items.push({ id, label, cost, level, maxed: cost === null, affordable: cost !== null && !full && world.money >= cost });
-    }
-    return items;
+      const full = FISH[id] && fishCount() >= LIMITS.fish;
+      return { id, cost, level, maxed: cost === null, affordable: cost !== null && !full && world.money >= cost };
+    });
   }
 
   function buy(id) {
     if (world.outcome) return false;
     const item = shop().find((i) => i.id === id);
-    if (!item || !item.affordable) return false;
+    if (!item || !item.affordable) {
+      emit('cantBuy', { id });
+      return false;
+    }
     world.money -= item.cost;
     world.stats.bought++;
-    if (id === 'minnow') spawnFish('minnow');
-    else if (id === 'pike') spawnFish('pike');
+    if (FISH[id]) spawnFish(id);
     else if (id === 'quality') world.up.quality++;
     else if (id === 'count') world.up.count++;
     else if (id === 'weapon') world.up.weapon++;
-    else if (id === 'crab') world.crab = { x: TANK.w / 2, face: 1, walking: false };
-    else if (id === 'shard') {
-      world.shards++;
-      if (world.shards >= 3) {
+    else if (id === 'egg') {
+      world.eggs++;
+      if (world.eggs >= 3) {
         world.outcome = 'clear';
-        emit('clear');
+        emit('clear', { hatch: L.hatch });
       }
     }
     emit('buy', { id });
@@ -424,14 +476,13 @@ export function createWorld({ level = 0, seed = 1, upgrades = null } = {}) {
     if (world.outcome) return;
     world.time++;
     for (const f of world.fish) stepFish(f);
-    world.fish = world.fish.filter((f) => !f.dead || f.deadT < 150);
-    stepPellets();
+    world.fish = world.fish.filter((f) => !f.dead || f.deadT < 240);
+    stepFood();
     stepCoins();
-    stepCrab();
-    stepInvaders();
-    // Lost: no live fish, nothing left to collect, and not enough money for a minnow.
+    stepPets();
+    if (L.aliens) stepAlien();
     const alive = world.fish.some((f) => !f.dead);
-    if (!alive && world.coins.length === 0 && world.money < FISH.minnow.cost) {
+    if (!alive && world.coins.length === 0 && world.money < FISH.guppy.cost) {
       world.outcome = 'lost';
       emit('lost');
     }
