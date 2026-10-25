@@ -196,6 +196,15 @@ export const games = [
     mobile: true,
   },
   {
+    slug: 'barrel-tower',
+    title: 'Barrel Tower',
+    href: 'Barrel_Tower/index.html',
+    blurb: 'Climb a half-built tower while a scrap-metal brute rolls barrels at you. Ramps, lifts and rivets, after the 1981 arcade classics.',
+    genre: 'arcade',
+    inputs: ['keyboard', 'touch'],
+    mobile: true,
+  },
+  {
     slug: 'breakout',
     title: 'Breakout',
     href: 'Breakout/index.html',

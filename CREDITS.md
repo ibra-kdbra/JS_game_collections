@@ -31,7 +31,7 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | Tron | [momajd/Tron](https://github.com/momajd/Tron) (the original DOM version; the arena, AI and soundtrack were rewritten here) | momajd | **unknown** (no licence file found) |
 | Wahdatio | [monsterkodi/konnekt](https://github.com/monsterkodi/konnekt) (CoffeeScript sources in `Wahdatio/src/`) | monsterkodi | Unlicense |
 | Sprite tutorials (`Sprites_Games/*_project`) | Frank's Laboratory JavaScript game development tutorials and their sprite sheets | Frank's Laboratory | assets: **unknown** terms |
-| Breakout, Snake, Minesweeper, Crate Lab | Written for this collection | ibra-kdbra | MIT |
+| Barrel Tower, Breakout, Snake, Minesweeper, Crate Lab | Written for this collection (Barrel Tower's stages, art, music and sounds are original; only the genre comes from the 1981 arcade games) | ibra-kdbra | MIT |
 
 ## Art Lab
 

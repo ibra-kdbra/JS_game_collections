@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Barrel Tower · Game Lab</title>
+  <meta name="description" content="Climb a half-built tower while a scrap-metal brute rolls barrels at you. Ramps, lifts and rivets, in the spirit of the 1981 arcade classics.">
+  <meta name="theme-color" content="#07080d">
+  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
+  <link rel="preload" href="../assets/fonts/chakra-petch-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <canvas id="game" aria-label="Barrel Tower playfield" role="img"></canvas>
+
+  <div id="hud" class="hud" hidden>
+    <div class="hud-cell"><span class="hud-label">Score</span><span id="hudScore" class="hud-value">0</span></div>
+    <div class="hud-cell hud-cell--bonus"><span class="hud-label">Bonus</span><span id="hudBonus" class="hud-value">5000</span></div>
+    <div class="hud-cell"><span class="hud-label" id="hudStageLabel">Round 1</span><span id="hudLives" class="hud-lives" aria-label="Lives"></span></div>
+    <div class="hud-buttons">
+      <button class="icon-btn" id="muteBtn" type="button" aria-label="Mute sound (M)" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path class="i-speaker" d="M4 9h4l5-4v14l-5-4H4z"/><path class="i-waves" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/><path class="i-cross" d="M16 9l6 6M22 9l-6 6"/></svg>
+      </button>
+      <button class="icon-btn" id="pauseBtn" type="button" aria-label="Pause (P)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="card" class="card" hidden>
+    <p class="card-kicker" id="cardKicker">Round 1</p>
+    <h2 class="card-title" id="cardTitle">The Ramps</h2>
+    <p class="card-tip" id="cardTip">Climb to the beacon.</p>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <section class="screen screen--title" id="screenTitle" aria-labelledby="titleHeading">
+    <div class="panel panel--title">
+      <p class="kicker">Game Lab arcade</p>
+      <h1 id="titleHeading" class="logo">BARREL<span>TOWER</span></h1>
+      <p class="tagline">A scrap-metal brute has taken the half-built tower. Climb it anyway.</p>
+      <div class="menu">
+        <button class="btn btn--primary" id="btnPlay" type="button">Play</button>
+        <button class="btn btn--quiet" id="btnHelp" type="button">How to play</button>
+      </div>
+      <p class="best-line" id="titleBest"></p>
+    </div>
+  </section>
+
+  <section class="screen" id="screenHelp" aria-labelledby="helpHeading" hidden>
+    <div class="panel">
+      <header class="panel-head">
+        <h2 id="helpHeading">How to play</h2>
+        <button class="btn btn--quiet btn--small" id="helpBack" type="button">Back</button>
+      </header>
+      <ul class="help-list">
+        <li><b>Move</b> ← → or A D. <b>Climb</b> ↑ ↓ or W S at a ladder.</li>
+        <li><b>Jump</b> Space, Z or K. You can't steer in the air, and a long drop is fatal.</li>
+        <li><b>Hammer</b> jump to grab one: it smashes barrels and sparks for ten seconds, but you can't climb while you hold it.</li>
+        <li><b>Broken ladders</b> are only for barrels and sparks.</li>
+        <li><b>Bonus</b> counts down: what's left is added when you clear a stage. At zero you lose a life.</li>
+        <li><b>Pause</b> P or Esc. <b>Mute</b> M.</li>
+      </ul>
+      <h3 class="help-sub">Stages</h3>
+      <ul class="help-list">
+        <li><b>The Ramps</b> barrels roll down six girders and sometimes take a ladder. Jump them for 100 points. The ones that reach the fuel drum set it alight, and the sparks come after you.</li>
+        <li><b>The Lifts</b> ride the elevators up, hop across, and dodge the springs that bounce along the top.</li>
+        <li><b>The Rivets</b> walk over all eight rivets to pull them. Pull the last one and the brute comes down with the tower.</li>
+      </ul>
+      <p class="help-note">Every round brings faster barrels, more sparks and quicker lifts. An extra life at 10,000 points.</p>
+    </div>
+  </section>
+
+  <section class="screen" id="screenPause" aria-labelledby="pauseHeading" hidden>
+    <div class="panel panel--narrow">
+      <h2 id="pauseHeading">Paused</h2>
+      <div class="menu">
+        <button class="btn btn--primary" id="btnResume" type="button">Resume</button>
+        <button class="btn" id="btnSound" type="button" aria-pressed="true">Sound: on</button>
+        <button class="btn" id="btnMusic" type="button" aria-pressed="true">Music: on</button>
+        <button class="btn btn--quiet" id="btnQuit" type="button">Quit to title</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screenOver" aria-labelledby="overHeading" hidden>
+    <div class="panel panel--narrow">
+      <p class="kicker" id="overKicker">Round 1 · The Ramps</p>
+      <h2 id="overHeading">Game over</h2>
+      <p class="over-score" id="overScore">0</p>
+      <p class="new-best" id="overBest" hidden>New best</p>
+      <div class="menu">
+        <button class="btn btn--primary" id="btnAgain" type="button">Play again</button>
+        <button class="btn btn--quiet" id="btnOverTitle" type="button">Title</button>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

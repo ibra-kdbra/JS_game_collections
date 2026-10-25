@@ -18,6 +18,8 @@ jobs:
           node-version: 22
       - name: Pre-rendered pages match data.js
         run: node tools/render-pages.mjs --check
+      - name: Barrel Tower stages
+        run: node Barrel_Tower/tools/verify.mjs
       - name: Brainy Warrior levels
         run: node Brainy_Warrior/tools/verify-levels.mjs
       - name: Crate Lab levels

@@ -5,6 +5,7 @@ exclude:
   - docs
   - tools
   - serve.py
+  - Barrel_Tower/tools
   - Brainy_Warrior/tools
   - Gravity_Wells/tools
   - Breakout/tools
