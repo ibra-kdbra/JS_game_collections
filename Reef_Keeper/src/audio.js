@@ -1,7 +1,10 @@
 /**
  * Synthesised sound: soft underwater effects and a calm original loop that
- * turns tense while an invader is in the tank. WebAudio only, no files.
+ * turns tense while an invader is in the tank. WebAudio only, no files of
+ * our own; with the original game loaded, its sound effects play instead.
  */
+
+import { decodeAu } from './original.js';
 
 const NOTE = (n) => 440 * 2 ** ((n - 69) / 12);
 
@@ -100,6 +103,8 @@ export function createAudio({ muted = false, music = true } = {}) {
     hit: () => tone({ type: 'square', f0: 1400, f1: 500, dur: 0.06, vol: 0.06 }),
     defeat: () => [72, 76, 79, 84].forEach((n, i) => tone({ type: 'triangle', f0: NOTE(n), dur: 0.16, vol: 0.12, at: now() + i * 0.08 })),
     clear: () => [74, 78, 81, 86, 81, 86, 90].forEach((n, i) => tone({ type: 'triangle', f0: NOTE(n), dur: i === 6 ? 0.7 : 0.15, vol: 0.13, at: now() + i * 0.12 })),
+    boom: () => tone({ type: 'sine', f0: 200, f1: 60, dur: 0.18, vol: 0.2 }),
+    heal: () => tone({ type: 'square', f0: 180, dur: 0.12, vol: 0.05 }),
     lost: () => [74, 71, 67, 62].forEach((n, i) => tone({ type: 'triangle', f0: NOTE(n), dur: 0.3, vol: 0.12, at: now() + i * 0.22 })),
   };
 
@@ -156,5 +161,53 @@ export function createAudio({ muted = false, music = true } = {}) {
     else ctx.resume();
   }
 
-  return { unlock, play: (name, arg) => sfx[name]?.(arg), startMusic, stopMusic, setMood, set, suspend, get state() { return state; } };
+  // Sound effects from the original game: name -> AudioBuffers.
+  let samples = null;
+
+  /** Use the original game's sounds: `table` maps our names to its files, `get` reads one. */
+  async function useSamples(table, get) {
+    if (!table) {
+      samples = null;
+      return;
+    }
+    const c = ensure();
+    if (!c) return;
+    const out = {};
+    for (const [name, files] of Object.entries(table)) {
+      const list = [];
+      for (const file of files) {
+        const s = get(file);
+        if (!s) continue;
+        try {
+          const buf = await s.blob.arrayBuffer();
+          if (s.au) {
+            const d = decodeAu(buf);
+            if (!d) continue;
+            const b = c.createBuffer(1, d.data.length, d.rate);
+            b.copyToChannel(d.data, 0);
+            list.push(b);
+          } else list.push(await c.decodeAudioData(buf));
+        } catch {
+          // A sound the browser can't decode keeps our own.
+        }
+      }
+      if (list.length) out[name] = list;
+    }
+    samples = out;
+  }
+
+  function play(name, arg) {
+    const list = samples?.[name === 'coin' ? `coin:${arg}` : name];
+    if (!list) return sfx[name]?.(arg);
+    const c = ensure();
+    if (!c) return;
+    const src = c.createBufferSource();
+    src.buffer = list[Math.floor(Math.random() * list.length)];
+    const g = c.createGain();
+    g.gain.value = 0.8;
+    src.connect(g).connect(master);
+    src.start();
+  }
+
+  return { unlock, play, useSamples, startMusic, stopMusic, setMood, set, suspend, get state() { return state; } };
 }
