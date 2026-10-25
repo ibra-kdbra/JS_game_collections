@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Reef Keeper · Game Lab</title>
+  <meta name="description" content="Keep an aquarium: feed your fish, collect the coins they drop, fight off invaders and buy the three pearls to clear each tank.">
+  <meta name="theme-color" content="#06283d">
+  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
+  <link rel="preload" href="../assets/fonts/chakra-petch-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="topbar">
+      <div class="money" aria-live="off"><span class="money-coin" aria-hidden="true"></span><span id="money">0</span></div>
+      <div class="pearls" id="pearls" aria-label="Pearls: 0 of 3"><i></i><i></i><i></i></div>
+      <p class="level-name" id="levelName">Shallows</p>
+      <div class="top-buttons">
+        <button class="icon-btn" id="muteBtn" type="button" aria-label="Mute sound (M)" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path class="i-speaker" d="M4 9h4l5-4v14l-5-4H4z"/><path class="i-waves" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/><path class="i-cross" d="M16 9l6 6M22 9l-6 6"/></svg>
+        </button>
+        <button class="icon-btn" id="pauseBtn" type="button" aria-label="Pause (P)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <nav class="shop" id="shop" aria-label="Shop"></nav>
+
+    <main class="tank-wrap" id="tankWrap">
+      <canvas id="tank" aria-label="Aquarium. Click to drop food, collect coins and fight invaders." role="img"></canvas>
+      <div class="banner" id="banner" hidden>Invader incoming!</div>
+      <div class="card" id="card" hidden>
+        <p class="card-kicker" id="cardKicker">Tank 1</p>
+        <h2 class="card-title" id="cardTitle">Shallows</h2>
+        <p class="card-tip" id="cardTip">Click to drop food.</p>
+      </div>
+    </main>
+  </div>
+
+  <section class="screen screen--title" id="screenTitle" aria-labelledby="titleHeading">
+    <div class="panel panel--title">
+      <p class="kicker">Game Lab</p>
+      <h1 id="titleHeading" class="logo">Reef <span>Keeper</span></h1>
+      <p class="tagline">Feed the fish. Pocket the coins. Keep the squid away from your tank.</p>
+      <div class="menu">
+        <button class="btn btn--primary" id="btnPlay" type="button">Play</button>
+        <button class="btn" id="btnLevels" type="button">Choose a tank</button>
+        <button class="btn btn--quiet" id="btnHelp" type="button">How to play</button>
+      </div>
+      <p class="best-line" id="titleBest"></p>
+    </div>
+  </section>
+
+  <section class="screen" id="screenLevels" aria-labelledby="levelsHeading" hidden>
+    <div class="panel">
+      <header class="panel-head">
+        <h2 id="levelsHeading">Choose a tank</h2>
+        <button class="btn btn--quiet btn--small" id="levelsBack" type="button">Back</button>
+      </header>
+      <div class="level-grid" id="levelGrid"></div>
+    </div>
+  </section>
+
+  <section class="screen" id="screenHelp" aria-labelledby="helpHeading" hidden>
+    <div class="panel">
+      <header class="panel-head">
+        <h2 id="helpHeading">How to play</h2>
+        <button class="btn btn--quiet btn--small" id="helpBack" type="button">Back</button>
+      </header>
+      <ul class="help-list">
+        <li><b>Feed</b> click or tap the water to drop food (5 coins). Only fish that are hungry eat, and a hungry fish turns pale green and opens its mouth. Leave it too long and it dies.</li>
+        <li><b>Grow</b> a minnow grows as it eats: medium minnows drop silver coins (15), large ones gold (35).</li>
+        <li><b>Collect</b> click coins before they fade on the sand. A crab will pick them up for you.</li>
+        <li><b>Invaders</b> a warning sounds first. While one is in the tank, clicks are shots: hit it until it gives up, and it leaves a treasure chest (1,500).</li>
+        <li><b>Clear the tank</b> by buying all three pearls.</li>
+      </ul>
+      <h3 class="help-sub">Shop</h3>
+      <ul class="help-list">
+        <li><b>Minnow</b> 100 · <b>Pike</b> 1,000, eats small minnows and drops gems (200).</li>
+        <li><b>Food</b> better food grows fish faster and keeps them fed longer; more food lets you drop more at once.</li>
+        <li><b>Zapper</b> hits invaders harder. <b>Crab</b> collects coins from the sand.</li>
+      </ul>
+      <p class="help-note">Keys: 1–7 buy from the shop, P pause, M mute.</p>
+    </div>
+  </section>
+
+  <section class="screen" id="screenPause" aria-labelledby="pauseHeading" hidden>
+    <div class="panel panel--narrow">
+      <h2 id="pauseHeading">Paused</h2>
+      <div class="menu">
+        <button class="btn btn--primary" id="btnResume" type="button">Resume</button>
+        <button class="btn" id="btnSound" type="button" aria-pressed="true">Sound: on</button>
+        <button class="btn" id="btnMusic" type="button" aria-pressed="true">Music: on</button>
+        <button class="btn btn--quiet" id="btnQuit" type="button">Quit to title</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screenResult" aria-labelledby="resultHeading" hidden>
+    <div class="panel panel--narrow">
+      <p class="kicker" id="resultKicker">Tank 1 · Shallows</p>
+      <h2 id="resultHeading">Tank cleared</h2>
+      <p class="result-line" id="resultLine"></p>
+      <div class="menu">
+        <button class="btn btn--primary" id="btnNext" type="button">Next tank</button>
+        <button class="btn" id="btnRetry" type="button">Play again</button>
+        <button class="btn btn--quiet" id="btnResultTitle" type="button">Title</button>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

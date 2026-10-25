@@ -31,7 +31,7 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | Tron | [momajd/Tron](https://github.com/momajd/Tron) (the original DOM version; the arena, AI and soundtrack were rewritten here) | momajd | **unknown** (no licence file found) |
 | Wahdatio | [monsterkodi/konnekt](https://github.com/monsterkodi/konnekt) (CoffeeScript sources in `Wahdatio/src/`) | monsterkodi | Unlicense |
 | Sprite tutorials (`Sprites_Games/*_project`) | Frank's Laboratory JavaScript game development tutorials and their sprite sheets | Frank's Laboratory | assets: **unknown** terms |
-| Breakout, Snake, Minesweeper, Crate Lab | Written for this collection | ibra-kdbra | MIT |
+| Breakout, Snake, Minesweeper, Crate Lab, Reef Keeper | Written for this collection (Reef Keeper's fish, art, music and sounds are original; the genre comes from PopCap's 2001 *Insaniquarium*) | ibra-kdbra | MIT |
 
 ## Art Lab
 
