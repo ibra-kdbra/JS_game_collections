@@ -31,7 +31,9 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | Tron | [momajd/Tron](https://github.com/momajd/Tron) (the original DOM version; the arena, AI and soundtrack were rewritten here) | momajd | **unknown** (no licence file found) |
 | Wahdatio | [monsterkodi/konnekt](https://github.com/monsterkodi/konnekt) (CoffeeScript sources in `Wahdatio/src/`) | monsterkodi | Unlicense |
 | Sprite tutorials (`Sprites_Games/*_project`) | Frank's Laboratory JavaScript game development tutorials and their sprite sheets | Frank's Laboratory | assets: **unknown** terms |
-| Breakout, Snake, Minesweeper, Crate Lab, Reef Keeper | Written for this collection (Reef Keeper's fish, art, music and sounds are original; the genre comes from PopCap's 2001 *Insaniquarium*) | ibra-kdbra | MIT |
+| Breakout, Snake, Minesweeper, Crate Lab, Reef Keeper | Written for this collection (Reef Keeper's genre comes from PopCap's 2001 *Insaniquarium*; its sprites are credited below, the rest of its art, music and sounds are original) | ibra-kdbra | MIT |
+| Reef Keeper sprites: guppies, carnivore, coins, diamond, jellyfish, first tank (`Reef_Keeper/sprites/`) | [Fish Set](https://opengameart.org/content/fish-set) | Andrew Tidey | CC0 |
+| Reef Keeper sprites: breeder, muncher, leviathan (`Reef_Keeper/sprites/fish-*.webp`) | [Cartoon fish](https://opengameart.org/content/cartoon-fish) | Robert Brooks, [Game Developer Studio](https://www.gamedeveloperstudio.com) | CC-BY 3.0 |
 
 ## Art Lab
 

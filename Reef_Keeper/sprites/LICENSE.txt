@@ -1,0 +1,12 @@
+Sprites in this folder come from two free packs.
+
+Andrew Tidey, "Fish Pack" (Fish Set), CC0 1.0 (public domain dedication)
+  https://opengameart.org/content/fish-set  ·  andrewtidey.blogspot.co.uk
+  guppy-*.webp, predator*.webp, coin-*.webp, diamond.webp, jelly.webp, tank-shallows.webp
+  Converted to WebP and trimmed; the jellyfish frames are packed into one strip.
+
+Robert Brooks / Game Developer Studio, "Cartoon fish", CC-BY 3.0
+  https://opengameart.org/content/cartoon-fish  ·  https://www.gamedeveloperstudio.com
+  https://creativecommons.org/licenses/by/3.0/
+  fish-black.webp, fish-blue.webp, fish-purple.webp
+  The 12-frame swim animations, scaled to 128 px wide and packed into one strip per colour.

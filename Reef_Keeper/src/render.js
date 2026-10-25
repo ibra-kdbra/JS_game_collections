@@ -5,6 +5,7 @@
  * scaled to fit the canvas.
  */
 import { FRAME, BAR, TANK, FISH, COINS, ALIENS, FOOD, PETS } from './config.js';
+import { loadSprites, sprite, STRIPS } from './sprites.js';
 
 const INK = '#1a2433';
 const FONT = '"Luckiest Guy", "Chakra Petch", system-ui, sans-serif';
@@ -45,6 +46,11 @@ export const MENU = { x: 546, y: 47, w: 86, h: 21 };
 
 export function createRenderer(canvas) {
   const main = canvas.getContext('2d');
+  let spritesReady = false;
+  loadSprites(() => {
+    spritesReady = true;
+    bgKey = ''; // rebuild the tank with its painted background
+  });
   let ctx = main;
   let view = { scale: 1, dpr: 1, ox: 0, oy: 0, cssW: FRAME.w, cssH: FRAME.h };
   let bgKey = '';
@@ -98,6 +104,60 @@ export function createRenderer(canvas) {
     ctx.fillText(str, x, y);
   }
 
+  /* ---------- Sprites ---------- */
+
+  /** Draw an image (or one frame of a strip) centred at (x, y), `w` wide. */
+  function drawSprite(name, x, y, w, frame = 0) {
+    const img = sprite(name);
+    if (!img) return false;
+    const frames = STRIPS[name.replace(/-(hungry|dead|flash|teal)$/, '')] ?? 1;
+    const fw = (img.naturalWidth || img.width) / frames;
+    const fh = img.naturalHeight || img.height;
+    const h = (w * fh) / fw;
+    ctx.drawImage(img, (frame % frames) * fw, 0, fw, fh, x - w / 2, y - h / 2, w, h);
+    return true;
+  }
+
+  /** Swap in a crossfade: `a` at full strength, `b` on top at `k`. */
+  function blend(a, b, k, x, y, w, frame) {
+    drawSprite(a, x, y, w, frame);
+    if (k > 0.02 && sprite(b)) {
+      ctx.globalAlpha *= k;
+      drawSprite(b, x, y, w, frame);
+      ctx.globalAlpha /= k;
+    }
+  }
+
+  const hungerOf = (f, world) => (!f.dead && world.isHungry(f) ? Math.min(1, (world.time - f.fedUntil) / 240) : 0);
+  const eatPulse = (f) => (f.eatT > 0 ? 1 + 0.14 * Math.sin((f.eatT / 16) * Math.PI) : 1);
+
+  /** Andrew Tidey's fish (they face right). Dead fish use their own upright art. */
+  function tideyFish(base, f, t, world, width) {
+    if (f.dead) {
+      ctx.scale(1, -1); // drawFish turned the fish belly up; this art is drawn that way already
+      drawSprite(`${base}-dead`, 0, 0, width);
+      return;
+    }
+    const wob = Math.sin(t / 7 + f.phase) * 0.05;
+    const k = eatPulse(f);
+    ctx.rotate(wob);
+    ctx.scale(k, k * (1 + Math.sin(t / 5 + f.phase) * 0.025));
+    blend(base, `${base}-sick`, hungerOf(f, world), 0, 0, width);
+  }
+
+  /** Game Developer Studio's swimming fish (they face left, 12 frames). */
+  function cartoonFish(name, f, t, world, width) {
+    const frame = Math.floor(t * 0.35 + f.phase * 7);
+    ctx.scale(-1, 1);
+    if (f.dead) {
+      drawSprite(`${name}-dead`, 0, 0, width, 0);
+      return;
+    }
+    const k = eatPulse(f);
+    ctx.scale(k, k);
+    blend(name, `${name}-hungry`, hungerOf(f, world), 0, 0, width, frame);
+  }
+
   /* ---------- Tank background (cached per level and size) ---------- */
 
   function rock(g, x, y, w, h, fill, shade) {
@@ -139,6 +199,17 @@ export function createRenderer(canvas) {
     g.fillRect(0, TANK.y, TANK.w, TANK.h);
     let seed = level * 131 + 7;
     const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    // The first tank uses Andrew Tidey's painted background.
+    if (level === 0 && sprite('tank-shallows')) {
+      const img = sprite('tank-shallows');
+      const h = (TANK.w * img.naturalHeight) / img.naturalWidth;
+      g.drawImage(img, 0, FRAME.h - h, TANK.w, h);
+      g.restore();
+      plants = [];
+      bg = c;
+      bgKey = `${level}:${canvas.width}x${canvas.height}:${spritesReady}`;
+      return;
+    }
     // Far rocks, hazy.
     g.globalAlpha = 0.35;
     g.fillStyle = P.rock;
@@ -300,7 +371,7 @@ export function createRenderer(canvas) {
       plants.push({ x: 20 + rnd() * (TANK.w - 40), h: 50 + rnd() * 90, w: 9 + rnd() * 6, color: rnd() < 0.5 ? P.plant : P.plant2, phase: rnd() * 6, glow: level === 4 });
     }
     bg = c;
-    bgKey = `${level}:${canvas.width}x${canvas.height}`; // level here is the world index
+    bgKey = `${level}:${canvas.width}x${canvas.height}:${spritesReady}`; // level here is the world index
   }
 
   function drawPlants(t) {
@@ -414,6 +485,17 @@ export function createRenderer(canvas) {
 
   function guppy(f, t, world) {
     const L = world.sizeOf(f);
+    const art = `guppy-${['small', 'medium', 'large', 'large'][f.stage]}`;
+    if (sprite(art)) {
+      if (f.stage === 3 && !f.dead) {
+        ctx.shadowColor = '#ffe14d';
+        ctx.shadowBlur = 14;
+      }
+      tideyFish(art, f, t, world, L * 2.5);
+      ctx.shadowBlur = 0;
+      if (f.stage === 3 && !f.dead) for (let i = 0; i < 3; i++) starShape(-L * 0.35 + i * L * 0.35, -L * 1.05 - (i === 1 ? 5 : 0), 5 + (i === 1 ? 2 : 0), '#fff36b', Math.sin(t / 10 + i));
+      return;
+    }
     const H = L * 0.62;
     const hungry = !f.dead && world.isHungry(f);
     const hungerT = hungry ? Math.min(1, (world.time - f.fedUntil) / 240) : 0;
@@ -523,6 +605,7 @@ export function createRenderer(canvas) {
 
   function carnivore(f, t, world) {
     const L = FISH.carnivore.size;
+    if (sprite('predator')) return tideyFish('predator', f, t, world, L * 2.4);
     const H = L * 0.5;
     const hungry = !f.dead && world.isHungry(f);
     const body = f.dead ? '#9aa0a8' : hungry ? '#7fb39c' : '#3fa58c';
@@ -578,6 +661,23 @@ export function createRenderer(canvas) {
 
   function breeder(f, t, world) {
     const L = FISH.breeder.size;
+    if (sprite('fish-purple')) {
+      cartoonFish('fish-purple', f, t, world, L * 2.5);
+      if (!f.dead) {
+        // Her bow, so she reads as the breeder.
+        ctx.beginPath();
+        ctx.moveTo(L * 0.1, -L * 0.62);
+        ctx.lineTo(-L * 0.2, -L * 0.85);
+        ctx.lineTo(-L * 0.2, -L * 0.42);
+        ctx.closePath();
+        ctx.moveTo(L * 0.1, -L * 0.62);
+        ctx.lineTo(L * 0.4, -L * 0.85);
+        ctx.lineTo(L * 0.4, -L * 0.42);
+        ctx.closePath();
+        ink('#ffd84d', 2);
+      }
+      return;
+    }
     const H = L * 0.85;
     const hungry = !f.dead && world.isHungry(f);
     const body = f.dead ? '#a8a0a8' : hungry ? '#c9c79a' : '#ff8fc7';
@@ -612,6 +712,7 @@ export function createRenderer(canvas) {
 
   function leviathan(f, t, world) {
     const L = FISH.leviathan.size;
+    if (sprite('fish-black')) return cartoonFish('fish-black', f, t, world, L * 2.6);
     const H = L * 0.55;
     const hungry = !f.dead && world.isHungry(f);
     const body = f.dead ? '#9aa0a8' : hungry ? '#8a8fb0' : '#4a5bb8';
@@ -714,6 +815,7 @@ export function createRenderer(canvas) {
 
   function muncher(f, t, world) {
     const L = FISH.muncher.size;
+    if (sprite('fish-blue')) return cartoonFish('fish-blue', f, t, world, L * 2.4);
     const H = L * 0.7;
     const hungry = !f.dead && world.isHungry(f);
     const body = f.dead ? '#a0a0a0' : hungry ? '#b5a46a' : '#56c2e6';
@@ -767,6 +869,15 @@ export function createRenderer(canvas) {
 
   function coin(type, x, y, spin = 0, scale = 1) {
     const r = COINS[type].r * scale;
+    const art = { silver: 'coin-silver', gold: 'coin-gold', diamond: 'diamond' }[type];
+    if (art && sprite(art)) {
+      ctx.save();
+      ctx.translate(x, y);
+      if (type !== 'diamond') ctx.scale(0.35 + 0.65 * Math.abs(Math.cos(spin)), 1);
+      drawSprite(art, 0, 0, r * 2.3);
+      ctx.restore();
+      return;
+    }
     ctx.save();
     ctx.translate(x, y);
     if (type === 'silver' || type === 'gold') {
@@ -1174,7 +1285,13 @@ export function createRenderer(canvas) {
     ctx.save();
     ctx.translate(a.x, a.y);
     const r = spec.r;
-    if (a.kind === 'gobbler' || a.kind === 'twins') {
+    if ((a.kind === 'gobbler' || a.kind === 'twins') && sprite('jelly')) {
+      // Andrew Tidey's jellyfish, pulsing through its six frames.
+      const name = flash ? 'jelly-flash' : a.kind === 'twins' ? 'jelly-teal' : 'jelly';
+      const k = a.chomp > 0 ? 1 + 0.15 * Math.sin((a.chomp / 20) * Math.PI) : 1;
+      ctx.scale(k, k);
+      drawSprite(name, 0, 0, r * 1.5, Math.floor(t / 7));
+    } else if (a.kind === 'gobbler' || a.kind === 'twins') {
       // A wobbly blob, mostly mouth. Twins are smaller and teal.
       const twin = a.kind === 'twins';
       ctx.beginPath();
@@ -1537,7 +1654,7 @@ export function createRenderer(canvas) {
   /* ---------- Frame ---------- */
 
   function draw(world, ui, fx, t) {
-    if (bgKey !== `${world.world}:${canvas.width}x${canvas.height}`) buildBackground(world.world);
+    if (bgKey !== `${world.world}:${canvas.width}x${canvas.height}:${spritesReady}`) buildBackground(world.world);
     ctx = main;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(bg, 0, 0);
