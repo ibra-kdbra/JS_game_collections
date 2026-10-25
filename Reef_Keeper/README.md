@@ -8,7 +8,22 @@ An aquarium money game in the style of PopCap's *Insaniquarium* (2001), written 
 - three egg pieces to clear a level;
 - pets that hatch from the eggs and help you.
 
-The fish, aliens, pets, art, music and sounds are original and drawn in code. The only files are the icon and two OFL fonts (Luckiest Guy, Balsamiq Sans).
+## Art
+
+- **Andrew Tidey's [Fish Set](https://opengameart.org/content/fish-set) (CC0):**
+  - the guppies, in normal, sick (hungry) and dead versions;
+  - the carnivore;
+  - the silver and gold coins and the diamond;
+  - the jellyfish, the Gobbler alien (tinted teal for the Twins);
+  - the first world's tank.
+- **Robert Brooks / [Game Developer Studio](https://www.gamedeveloperstudio.com)'s [Cartoon fish](https://opengameart.org/content/cartoon-fish) (CC-BY 3.0):** the swimming breeder (purple), muncher (blue) and leviathan (black). The hungry tint and grey dead versions are made from these sprites by `src/sprites.js` when the game loads.
+- **Drawn in code, in the same outlined cartoon style:**
+  - the other fish, aliens and pets;
+  - the star, pearl, chest, food and grubs;
+  - the other four tanks.
+- **Fonts:** Luckiest Guy and Balsamiq Sans (OFL).
+
+`sprites/LICENSE.txt` lists which file comes from which pack. If an image can't load, the game draws its own version instead.
 
 ## Modes
 
@@ -106,6 +121,7 @@ CI runs it from `.github/workflows/smoke.yml`.
 | `src/config.js` | Balance and content: fish, coins, food, zapper, aliens, pets, worlds, level builder, endless and free tank |
 | `src/pars.js` | Target time per level (generated) |
 | `src/sim.js` | Game logic: fish AI, hunger and growth, coins, food, grubs and potions, pets, aliens, bombs, shop. Pure, no DOM |
+| `src/sprites.js` | Loads the sprite packs and makes the hungry, dead, flash and teal variants |
 | `src/render.js` | The 640 × 480 frame: shop bar, money box, tank, every character, coins, effects, tooltips, tutorial hints |
 | `src/fx.js` | Ripples, bubbles, stars, floating text, coins flying to the money box, shake |
 | `src/audio.js` | WebAudio effects and an original calm loop that turns tense when an alien arrives |
