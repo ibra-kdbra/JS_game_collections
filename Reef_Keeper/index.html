@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Reef Keeper · Game Lab</title>
-  <meta name="description" content="Keep an aquarium: feed your fish, collect the coins they drop, zap the aliens and buy the three egg pieces to clear each tank.">
+  <meta name="description" content="Keep an aquarium: feed your fish, collect the coins they drop, zap the aliens and hatch pets. 100 levels, endless mode and a free tank.">
   <meta name="theme-color" content="#05121d">
   <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
   <link rel="preload" href="./fonts/luckiest-guy-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
@@ -14,11 +14,24 @@
   <canvas id="game" aria-label="Aquarium. Click the water to drop food, click coins to collect them, click aliens to zap them. The shop is along the top." role="img"></canvas>
 
   <div class="card" id="card" hidden>
-    <p class="card-kicker" id="cardKicker">Tank 1-1</p>
-    <h2 class="card-title" id="cardTitle">First Fish</h2>
-    <p class="card-tip" id="cardTip">Click the water to feed your fish.</p>
+    <p class="card-kicker" id="cardKicker">Level 1-1</p>
+    <h2 class="card-title" id="cardTitle">Shallows</h2>
+    <p class="card-tip" id="cardTip"></p>
   </div>
   <button class="rotate-hint" id="rotateHint" type="button" hidden>Turn your phone sideways for a bigger tank ✕</button>
+
+  <!-- "New!" card: shown the first time a fish, item, alien or pet appears -->
+  <section class="screen screen--soft" id="screenNew" aria-labelledby="newHeading" hidden>
+    <div class="panel panel--narrow new-card">
+      <p class="new-badge">New!</p>
+      <canvas id="newArt" width="160" height="160" aria-hidden="true"></canvas>
+      <h2 id="newHeading">Carnivore</h2>
+      <p class="new-what" id="newWhat"></p>
+      <div class="menu">
+        <button class="btn btn--primary" id="btnNewOk" type="button">Got it</button>
+      </div>
+    </div>
+  </section>
 
   <section class="screen screen--title" id="screenTitle" aria-labelledby="titleHeading">
     <div class="panel panel--title">
@@ -26,21 +39,54 @@
       <p class="tagline">Feed the fish. Grab the coins. Zap the aliens.</p>
       <div class="menu">
         <button class="btn btn--primary" id="btnPlay" type="button">Play</button>
-        <button class="btn" id="btnLevels" type="button">Tanks</button>
+        <div class="menu-row">
+          <button class="btn" id="btnLevels" type="button">Levels</button>
+          <button class="btn" id="btnModes" type="button">More modes</button>
+        </div>
         <button class="btn btn--quiet" id="btnHelp" type="button">How to play</button>
       </div>
       <p class="best-line" id="titleBest"></p>
     </div>
   </section>
 
+  <section class="screen" id="screenModes" aria-labelledby="modesHeading" hidden>
+    <div class="panel panel--wide">
+      <header class="panel-head">
+        <h2 id="modesHeading">Modes</h2>
+        <button class="btn btn--quiet btn--small" id="modesBack" type="button">Back</button>
+      </header>
+      <div class="mode-grid">
+        <button class="mode-card" id="modeCampaign" type="button"><b>Campaign</b><span>50 levels in five worlds. Hatch ten pets.</span></button>
+        <button class="mode-card" id="modeHard" type="button"><b>Hard</b><span>The 50 levels again: hungrier fish, tougher aliens.</span><em id="hardLock"></em></button>
+        <button class="mode-card" id="modeEndless" type="button"><b>Endless</b><span>Aliens keep coming, faster each wave. How long can you last?</span><em id="endlessBest"></em></button>
+        <button class="mode-card" id="modeFree" type="button"><b>Free tank</b><span>No aliens, no goal, plenty of money. Just enjoy your fish.</span></button>
+      </div>
+    </div>
+  </section>
+
   <section class="screen" id="screenLevels" aria-labelledby="levelsHeading" hidden>
     <div class="panel panel--wide">
       <header class="panel-head">
-        <h2 id="levelsHeading">Tanks</h2>
+        <h2 id="levelsHeading">Campaign</h2>
         <button class="btn btn--quiet btn--small" id="levelsBack" type="button">Back</button>
       </header>
+      <div class="tabs" id="worldTabs" role="tablist"></div>
       <div class="level-grid" id="levelGrid"></div>
-      <div class="pets" id="petList"></div>
+      <p class="stars-line" id="starsLine"></p>
+    </div>
+  </section>
+
+  <section class="screen" id="screenPets" aria-labelledby="petsHeading" hidden>
+    <div class="panel panel--wide">
+      <header class="panel-head">
+        <h2 id="petsHeading">Pick your pets</h2>
+        <button class="btn btn--quiet btn--small" id="petsBack" type="button">Back</button>
+      </header>
+      <p class="panel-sub">Take up to three pets into this tank.</p>
+      <div class="pet-grid" id="petGrid"></div>
+      <div class="menu">
+        <button class="btn btn--primary" id="btnPetsGo" type="button">Start</button>
+      </div>
     </div>
   </section>
 
@@ -51,19 +97,19 @@
         <button class="btn btn--quiet btn--small" id="helpBack" type="button">Back</button>
       </header>
       <ul class="help-list">
-        <li><b>Feed.</b> Click the water to drop food ($5). Hungry fish turn green and open their mouths. Starving ones tremble and show a <b>!</b>.</li>
+        <li><b>Feed.</b> Click the water to drop food ($5). Hungry fish turn olive and open their mouths. Starving ones tremble and show a <b>!</b>.</li>
         <li><b>Grow.</b> Guppies grow as they eat. Medium ones drop silver coins ($15), big ones gold ($35).</li>
         <li><b>Collect.</b> Click coins before they fade on the sand.</li>
-        <li><b>Aliens.</b> A siren warns you first. While an alien is in the tank, clicks zap it instead of feeding. Beat it for a treasure chest ($1,500).</li>
-        <li><b>Egg.</b> Buy the three egg pieces to clear the tank. The egg hatches a pet that helps you in later tanks.</li>
+        <li><b>Aliens.</b> A siren warns you first. While an alien is in the tank, clicks zap it. Some aliens need other tricks: each one is explained the first time you meet it.</li>
+        <li><b>Egg.</b> Buy the three egg pieces to clear the level. Some eggs hatch pets that help you later.</li>
+        <li><b>Stars.</b> Clear a level quickly for up to three stars.</li>
       </ul>
-      <h3 class="help-sub">Shop (along the top)</h3>
-      <ul class="help-list">
-        <li><b>Guppy</b> $100 · <b>Food</b> better food fills fish up for longer · <b>More food</b> drop more at once.</li>
-        <li><b>Carnivore</b> $1,000: eats baby guppies, drops diamonds ($200) · <b>Breeder</b> $750: has baby guppies while fed.</li>
-        <li><b>Zapper</b> hits aliens harder.</li>
-      </ul>
-      <p class="help-note">Keys: 1–7 buy from the shop · P pause · M mute.</p>
+      <p class="help-note">Keys: 1–9 buy from the shop · P pause · M mute.</p>
+      <div class="menu">
+        <button class="btn btn--primary" id="btnTutorial" type="button">Play the tutorial</button>
+      </div>
+      <h3 class="help-sub">Everything you can meet</h3>
+      <div class="codex" id="codex"></div>
     </div>
   </section>
 
@@ -74,7 +120,7 @@
         <button class="btn btn--primary" id="btnResume" type="button">Resume</button>
         <button class="btn" id="btnSound" type="button">Sound: on</button>
         <button class="btn" id="btnMusic" type="button">Music: on</button>
-        <button class="btn btn--quiet" id="btnRestart" type="button">Restart tank</button>
+        <button class="btn btn--quiet" id="btnRestart" type="button">Restart</button>
         <button class="btn btn--quiet" id="btnQuit" type="button">Quit to title</button>
       </div>
     </div>
@@ -82,17 +128,18 @@
 
   <section class="screen" id="screenResult" aria-labelledby="resultHeading" hidden>
     <div class="panel panel--narrow">
-      <p class="kicker" id="resultKicker">Tank 1-1</p>
-      <h2 id="resultHeading">Tank cleared!</h2>
+      <p class="kicker" id="resultKicker">Level 1-1</p>
+      <h2 id="resultHeading">Level cleared!</h2>
+      <div class="result-stars" id="resultStars" aria-label=""></div>
       <div class="hatch" id="hatch" hidden>
         <canvas id="hatchArt" width="160" height="160" aria-hidden="true"></canvas>
         <p class="hatch-line" id="hatchLine"></p>
       </div>
       <p class="result-line" id="resultLine"></p>
       <div class="menu">
-        <button class="btn btn--primary" id="btnNext" type="button">Next tank</button>
+        <button class="btn btn--primary" id="btnNext" type="button">Next level</button>
         <button class="btn" id="btnRetry" type="button">Play again</button>
-        <button class="btn btn--quiet" id="btnResultTitle" type="button">Title</button>
+        <button class="btn btn--quiet" id="btnResultLevels" type="button">Levels</button>
       </div>
     </div>
   </section>

@@ -199,7 +199,7 @@ export const games = [
     slug: 'reef-keeper',
     title: 'Reef Keeper',
     href: 'Reef_Keeper/index.html',
-    blurb: 'Feed your fish, grab the coins they drop, zap the aliens and buy three egg pieces to hatch a pet. An aquarium game in the style of Insaniquarium.',
+    blurb: 'An aquarium game in the style of Insaniquarium: feed your fish, grab their coins, zap six kinds of alien and hatch ten pets. 100 levels, endless mode and a free tank.',
     genre: 'strategy',
     inputs: ['mouse', 'touch', 'keyboard'],
     mobile: true,

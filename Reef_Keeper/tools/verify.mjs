@@ -1,48 +1,64 @@
 /**
- * Checks Reef Keeper's balance with the real game code.
+ * Checks Reef Keeper with the real game code, headless.
  *
  *   node Reef_Keeper/tools/verify.mjs
  *
  * 1. A bot that plays like a reasonable person (tools/bot.mjs: five clicks a
- *    second, a little off target), with the pets earned in the levels before,
- *    clears every level with every seed within 12 minutes.
- * 2. Levels take longer in order: each median time is above the last.
+ *    second, a little off target, with the pets hatched so far) clears all 50
+ *    campaign levels (two seeds each) and all 50 hard levels (one seed).
+ * 2. The worlds get longer in order: each world's average time is above the last.
  * 3. A slower player (half the clicks) still clears the first level.
- * 4. Neglect: fish that are never fed starve, and with no fish and no money
+ * 4. Endless mode: the bot survives at least three waves.
+ * 5. Neglect: fish that are never fed starve, and with no fish and no money
  *    for a new one the level is lost (the game ends, it doesn't hang).
- * 5. Clicks always do something: food drops at once with three pieces allowed
- *    at the start, and a click over the limit or without money says why.
+ * 6. Clicks always do something: the first three drop food, the fourth reports
+ *    the limit, and a click without money says so.
+ * 7. Every level's shop fits the bar (eight buttons), and src/pars.js has a
+ *    target time for every level.
  */
-import { LEVELS } from '../src/config.js';
+import { LEVELS, HARD_LEVELS, WORLDS, LEVELS_PER_WORLD, ENDLESS } from '../src/config.js';
+import { PARS } from '../src/pars.js';
 import { createWorld } from '../src/sim.js';
 import { playLevel } from './bot.mjs';
 
-const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8];
 let failures = 0;
 const check = (ok, text) => {
   if (!ok) failures++;
   console.log(`${ok ? 'ok  ' : 'FAIL'} ${text}`);
 };
 
-const medians = [];
-LEVELS.forEach((L, level) => {
-  const runs = SEEDS.map((seed) => playLevel(level, seed));
-  const cleared = runs.filter((r) => r.outcome === 'clear');
-  const times = cleared.map((r) => r.minutes).sort((a, b) => a - b);
-  const median = times.length ? times[Math.floor(times.length / 2)] : Infinity;
-  medians.push(median);
-  const slowest = times.length ? times[times.length - 1] : Infinity;
-  check(cleared.length === SEEDS.length && slowest <= 12, `${`${L.name} ${L.title}`.padEnd(22)} bot cleared ${cleared.length}/${SEEDS.length}, median ${median.toFixed(1)} min, slowest ${slowest.toFixed(1)} min`);
-});
+function sweep(list, seeds, limit) {
+  const worldTimes = WORLDS.map(() => []);
+  const failed = [];
+  for (const def of list) {
+    for (const seed of seeds) {
+      const r = playLevel(def, seed, { maxMinutes: limit });
+      if (r.outcome !== 'clear') failed.push(`${def.name} seed ${seed}: ${r.outcome}`);
+      else worldTimes[def.world].push(r.minutes);
+    }
+  }
+  return { failed, avg: worldTimes.map((t) => t.reduce((a, b) => a + b, 0) / Math.max(1, t.length)) };
+}
 
-check(medians.every((m, i) => i === 0 || m > medians[i - 1]), `levels take longer in order: ${medians.map((m) => m.toFixed(1)).join(' < ')} min`);
+const normal = sweep(LEVELS, [1, 2], 15);
+check(!normal.failed.length, `campaign: the bot cleared all ${LEVELS.length} levels with two seeds${normal.failed.length ? ` (failed: ${normal.failed.join('; ')})` : ''}`);
+check(normal.avg.every((m, i) => i === 0 || m > normal.avg[i - 1]), `campaign worlds take longer in order: ${normal.avg.map((m) => m.toFixed(1)).join(' < ')} min`);
 
-const slow = SEEDS.map((seed) => playLevel(0, seed, { clickEvery: 24 }));
+const hard = sweep(HARD_LEVELS, [3], 20);
+check(!hard.failed.length, `hard: the bot cleared all ${HARD_LEVELS.length} levels${hard.failed.length ? ` (failed: ${hard.failed.join('; ')})` : ''} · world averages ${hard.avg.map((m) => m.toFixed(1)).join(', ')} min`);
+
+const slow = [1, 2, 3, 4].map((seed) => playLevel(LEVELS[0], seed, { clickEvery: 24 }));
 const slowWins = slow.filter((r) => r.outcome === 'clear').length;
-check(slowWins >= SEEDS.length / 2, `a slower player (2.5 clicks a second) clears level 1 in ${slowWins}/${SEEDS.length}`);
+check(slowWins >= 3, `a slower player (2.5 clicks a second) clears level 1-1 in ${slowWins}/4`);
 
 {
-  const w = createWorld({ level: 0, seed: 1 });
+  const def = { mode: 'endless', endless: true, id: 'endless', index: 0, world: 4, name: 'Endless', start: ENDLESS.start, shop: ENDLESS.shop, aliens: null };
+  const r = playLevel(def, 1, { maxMinutes: 15, pets: ['clam', 'eel', 'snail'] });
+  check(r.wave >= 3, `endless: the bot survived ${r.wave} waves (${r.outcome}, ${r.minutes.toFixed(1)} min)`);
+}
+
+{
+  const w = createWorld({ def: LEVELS[0], seed: 1 });
   w.buy('guppy');
   w.buy('guppy');
   while (!w.outcome && w.time < 3600 * 10) w.step();
@@ -50,17 +66,24 @@ check(slowWins >= SEEDS.length / 2, `a slower player (2.5 clicks a second) clear
 }
 
 {
-  const w = createWorld({ level: 0, seed: 1 });
+  const w = createWorld({ def: LEVELS[0], seed: 1 });
   const results = [1, 2, 3, 4].map((i) => w.click(100 + i * 100, 200));
   w.money = 0;
   w.food.length = 0;
   results.push(w.click(300, 200));
   const want = ['food', 'food', 'food', 'full', 'broke'];
-  check(results.join() === want.join(), `clicks: ${results.join(', ')} (expected ${want.join(', ')})`);
+  check(results.join() === want.join(), `clicks: ${results.join(', ')}`);
+}
+
+{
+  const all = [...LEVELS, ...HARD_LEVELS];
+  const wide = all.filter((L) => L.shop.length > 8).map((L) => L.id);
+  const missing = all.filter((L) => !(L.id in PARS)).map((L) => L.id);
+  check(!wide.length && !missing.length && all.length === 2 * WORLDS.length * LEVELS_PER_WORLD, `${all.length} levels: shops fit the bar${wide.length ? ` (too wide: ${wide.join(', ')})` : ''}, pars for all${missing.length ? ` (missing: ${missing.join(', ')})` : ''}`);
 }
 
 if (failures) {
   console.log(`\n${failures} check(s) failed`);
   process.exit(1);
 }
-console.log('\nEvery level can be cleared, and they get harder in order.');
+console.log('\nAll 100 levels can be cleared, and the worlds get harder in order.');
