@@ -7,6 +7,7 @@ import { createWorld } from './sim.js';
 import { createRenderer, slotRect, MENU } from './render.js';
 import { createFx } from './fx.js';
 import { createAudio } from './audio.js';
+import { original, loadOriginal, importOriginal, forgetOriginal, SOUNDS } from './original.js';
 
 const SLUG = 'reef-keeper';
 const $ = (id) => document.getElementById(id);
@@ -95,7 +96,7 @@ $('rotateHint').addEventListener('click', () => {
 
 /* ---------- Screens ---------- */
 
-const SCREENS = { title: 'screenTitle', modes: 'screenModes', levels: 'screenLevels', pets: 'screenPets', help: 'screenHelp', pause: 'screenPause', result: 'screenResult', new: 'screenNew' };
+const SCREENS = { original: 'screenOriginal', title: 'screenTitle', modes: 'screenModes', levels: 'screenLevels', pets: 'screenPets', help: 'screenHelp', pause: 'screenPause', result: 'screenResult', new: 'screenNew' };
 
 function show(name) {
   screen = name;
@@ -341,7 +342,7 @@ const TUTORIAL = [
 function slotCenter(id) {
   const i = ui.shop.findIndex((s) => s.id === id);
   if (i < 0) return null;
-  const r = slotRect(i);
+  const r = slotRect(i, ui.shop.length);
   return { x: r.x + r.w / 2, y: r.y + r.h / 2 + 4 };
 }
 
@@ -434,7 +435,7 @@ function handleEvents() {
         if (e.by === 'alien' || e.by === 'bomb') fx.shake(3, 10);
         break;
       case 'boom':
-        audio.play('gulp');
+        audio.play('boom');
         fx.burst(e.x, e.y, ['#ff9f43', '#ffe14d', '#555555'], 16, 3);
         fx.shake(3, 8);
         break;
@@ -477,7 +478,7 @@ function handleEvents() {
         fx.shake(1.5, 4);
         break;
       case 'heal':
-        audio.play('nope');
+        audio.play('heal');
         fx.popup(e.x, e.y - 50, 'SHIELD! WAIT!', '#78dcff', 16);
         break;
       case 'bounce':
@@ -534,7 +535,7 @@ function slotAt(p) {
   if (p.y >= BAR.h) return null;
   if (p.x >= MENU.x && p.x <= MENU.x + MENU.w && p.y >= MENU.y && p.y <= MENU.y + MENU.h) return 'menu';
   for (let i = 0; i < ui.shop.length; i++) {
-    const r = slotRect(i);
+    const r = slotRect(i, ui.shop.length);
     if (p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) return i;
   }
   return null;
@@ -581,7 +582,7 @@ canvas.addEventListener('pointermove', (e) => {
   canvas.classList.toggle('is-pointer', slot !== null);
   if (typeof slot === 'number' && ui.shop[slot]) {
     const [title, body] = describe(ui.shop[slot].id);
-    const r = slotRect(slot);
+    const r = slotRect(slot, ui.shop.length);
     ui.tip = { x: r.x + r.w / 2, y: BAR.h + 6, title, body };
   } else ui.tip = null;
 });
@@ -595,7 +596,7 @@ addEventListener('keydown', (e) => {
   if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
     if (screen === 'play') pause(true);
     else if (screen === 'pause') pause(false);
-    else if (['help', 'levels', 'modes'].includes(screen)) show('title');
+    else if (['help', 'levels', 'modes', 'original'].includes(screen)) show('title');
     e.preventDefault();
   } else if (e.key === 'm' || e.key === 'M') {
     toggleMute();
@@ -705,6 +706,39 @@ $('btnMusic').addEventListener('click', () => {
   syncSound();
 });
 
+/* ---------- Original art ---------- */
+
+function syncOriginal() {
+  for (const k of Object.keys(iconCache)) delete iconCache[k];
+  audio.useSamples(original.ready ? SOUNDS : null, original.sound);
+  $('btnOriginal').textContent = original.ready ? 'Original art: on' : 'Original art';
+  $('btnOriginalOff').hidden = !original.ready;
+  $('originalStatus').textContent = original.ready ? 'Using the original art and sounds.' : '';
+}
+original.onChange(syncOriginal);
+
+async function takeOriginal(files) {
+  if (!files?.length) return;
+  $('originalStatus').textContent = 'Reading the game files…';
+  try {
+    await importOriginal(files);
+  } catch (err) {
+    $('originalStatus').textContent = err.message || 'Those files could not be read.';
+  }
+}
+
+$('btnOriginal').addEventListener('click', () => {
+  syncOriginal();
+  show('original');
+});
+$('originalBack').addEventListener('click', () => show('title'));
+$('btnOriginalZip').addEventListener('click', () => $('originalZip').click());
+$('btnOriginalFolder').addEventListener('click', () => $('originalFolder').click());
+$('originalZip').addEventListener('change', (e) => takeOriginal(e.target.files).finally(() => (e.target.value = '')));
+$('originalFolder').addEventListener('change', (e) => takeOriginal(e.target.files).finally(() => (e.target.value = '')));
+$('btnOriginalOff').addEventListener('click', () => forgetOriginal());
+loadOriginal();
+
 /* ---------- Loop ---------- */
 
 // Behind the menus a tank plays itself.
@@ -733,7 +767,7 @@ const loop = createLoop({
     if (Math.abs(world.money - ui.money) < 0.5) ui.money = world.money;
     if (screen === 'pause' || screen === 'new') return;
     if (!playing) {
-      if (['title', 'levels', 'help', 'modes', 'pets'].includes(screen)) attract();
+      if (['title', 'levels', 'help', 'modes', 'pets', 'original'].includes(screen)) attract();
       ui.shop = visibleShop(world.shop());
       return;
     }

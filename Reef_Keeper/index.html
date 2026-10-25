@@ -43,7 +43,10 @@
           <button class="btn" id="btnLevels" type="button">Levels</button>
           <button class="btn" id="btnModes" type="button">More modes</button>
         </div>
-        <button class="btn btn--quiet" id="btnHelp" type="button">How to play</button>
+        <div class="menu-row">
+          <button class="btn btn--quiet" id="btnHelp" type="button">How to play</button>
+          <button class="btn btn--quiet" id="btnOriginal" type="button">Original art</button>
+        </div>
       </div>
       <p class="best-line" id="titleBest"></p>
     </div>
@@ -110,6 +113,24 @@
       </div>
       <h3 class="help-sub">Everything you can meet</h3>
       <div class="codex" id="codex"></div>
+    </div>
+  </section>
+
+  <section class="screen" id="screenOriginal" aria-labelledby="originalHeading" hidden>
+    <div class="panel panel--narrow">
+      <header class="panel-head">
+        <h2 id="originalHeading">Original art</h2>
+        <button class="btn btn--quiet btn--small" id="originalBack" type="button">Back</button>
+      </header>
+      <p class="mode-note">If you own <i>Insaniquarium Deluxe</i>, Reef Keeper can use its art and sounds. Pick the game's install folder, or a .zip of it. The files stay on this device: they are kept in this browser and never uploaded.</p>
+      <div class="menu">
+        <button class="btn btn--primary" id="btnOriginalZip" type="button">Choose .zip</button>
+        <button class="btn" id="btnOriginalFolder" type="button">Choose game folder</button>
+        <button class="btn btn--quiet" id="btnOriginalOff" type="button">Use Reef Keeper's own art</button>
+      </div>
+      <p class="best-line" id="originalStatus" role="status"></p>
+      <input type="file" id="originalZip" accept=".zip,application/zip" hidden>
+      <input type="file" id="originalFolder" webkitdirectory multiple hidden>
     </div>
   </section>
 

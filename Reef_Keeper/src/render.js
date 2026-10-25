@@ -6,6 +6,8 @@
  */
 import { FRAME, BAR, TANK, FISH, COINS, ALIENS, FOOD, PETS } from './config.js';
 import { loadSprites, sprite, STRIPS } from './sprites.js';
+import { original } from './original.js';
+import { createOriginalArt, artSlotRect, ART_MENU, ART_MONEY } from './render-original.js';
 
 const INK = '#1a2433';
 const FONT = '"Luckiest Guy", "Chakra Petch", system-ui, sans-serif';
@@ -40,9 +42,17 @@ function mix(c1, c2, t) {
 
 /** Shop bar layout, in frame pixels. */
 export const SLOT = { x: 7, y: 7, w: 62, h: 60, gap: 5 }; // eight fit before the money box
-export const slotRect = (i) => ({ x: SLOT.x + i * (SLOT.w + SLOT.gap), y: SLOT.y, w: SLOT.w, h: SLOT.h });
-export const MONEY = { x: 546, y: 7, w: 86, h: 36 };
-export const MENU = { x: 546, y: 47, w: 86, h: 21 };
+const OWN_MONEY = { x: 546, y: 7, w: 86, h: 36 };
+const OWN_MENU = { x: 546, y: 47, w: 86, h: 21 };
+/** Slot `i` of a bar holding `n` buttons (the original art's bar has its own slots). */
+export const slotRect = (i, n = 8) => (original.ready ? artSlotRect(i, n) : { x: SLOT.x + i * (SLOT.w + SLOT.gap), y: SLOT.y, w: SLOT.w, h: SLOT.h });
+// The money box and menu button move to match the original bar when it's loaded.
+export const MONEY = { ...OWN_MONEY };
+export const MENU = { ...OWN_MENU };
+original.onChange((on) => {
+  Object.assign(MONEY, on ? ART_MONEY : OWN_MONEY);
+  Object.assign(MENU, on ? ART_MENU : OWN_MENU);
+});
 
 export function createRenderer(canvas) {
   const main = canvas.getContext('2d');
@@ -52,6 +62,10 @@ export function createRenderer(canvas) {
     bgKey = ''; // rebuild the tank with its painted background
   });
   let ctx = main;
+  const orig = createOriginalArt(() => ctx);
+  original.onChange(() => {
+    bgKey = '';
+  });
   let view = { scale: 1, dpr: 1, ox: 0, oy: 0, cssW: FRAME.w, cssH: FRAME.h };
   let bgKey = '';
   let bg = null;
@@ -199,6 +213,13 @@ export function createRenderer(canvas) {
     g.fillRect(0, TANK.y, TANK.w, TANK.h);
     let seed = level * 131 + 7;
     const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    if (orig.ready() && orig.background(g, level)) {
+      g.restore();
+      plants = [];
+      bg = c;
+      bgKey = `${level}:${canvas.width}x${canvas.height}:${spritesReady}:${original.ready}`;
+      return;
+    }
     // The first tank uses Andrew Tidey's painted background.
     if (level === 0 && sprite('tank-shallows')) {
       const img = sprite('tank-shallows');
@@ -207,7 +228,7 @@ export function createRenderer(canvas) {
       g.restore();
       plants = [];
       bg = c;
-      bgKey = `${level}:${canvas.width}x${canvas.height}:${spritesReady}`;
+      bgKey = `${level}:${canvas.width}x${canvas.height}:${spritesReady}:${original.ready}`;
       return;
     }
     // Far rocks, hazy.
@@ -371,7 +392,7 @@ export function createRenderer(canvas) {
       plants.push({ x: 20 + rnd() * (TANK.w - 40), h: 50 + rnd() * 90, w: 9 + rnd() * 6, color: rnd() < 0.5 ? P.plant : P.plant2, phase: rnd() * 6, glow: level === 4 });
     }
     bg = c;
-    bgKey = `${level}:${canvas.width}x${canvas.height}:${spritesReady}`; // level here is the world index
+    bgKey = `${level}:${canvas.width}x${canvas.height}:${spritesReady}:${original.ready}`; // level here is the world index
   }
 
   function drawPlants(t) {
@@ -845,6 +866,16 @@ export function createRenderer(canvas) {
   }
 
   function drawFish(f, t, world) {
+    if (orig.ready()) {
+      ctx.save();
+      if (f.dead) ctx.globalAlpha = Math.max(0, 1 - Math.max(0, f.deadT - 150) / 90);
+      const drawn = orig.fish(f, t, world);
+      ctx.restore();
+      if (drawn) {
+        if (!f.dead && world.isHungry(f) && f.starveAt - world.time < 600 && Math.floor(t / 15) % 2) text('!', f.x, f.y - world.sizeOf(f) - 14, 18, '#ff5b5b', { lw: 4 });
+        return;
+      }
+    }
     ctx.save();
     let x = f.x;
     if (!f.dead && world.isHungry(f) && f.starveAt - world.time < 600) x += Math.sin(t * 1.3) * 1.2; // starving: trembles
@@ -868,6 +899,7 @@ export function createRenderer(canvas) {
   /* ---------- Coins, food, pets ---------- */
 
   function coin(type, x, y, spin = 0, scale = 1) {
+    if (orig.ready() && orig.coin(type, x, y, spin, scale)) return;
     const r = COINS[type].r * scale;
     const art = { silver: 'coin-silver', gold: 'coin-gold', diamond: 'diamond' }[type];
     if (art && sprite(art)) {
@@ -957,6 +989,7 @@ export function createRenderer(canvas) {
   }
 
   function foodPiece(p, t) {
+    if (orig.ready() && orig.food(p, t)) return;
     ctx.save();
     ctx.translate(p.x + Math.sin(t / 9 + p.id) * 1.5, p.y);
     if (p.kind === 'grub') {
@@ -1024,6 +1057,7 @@ export function createRenderer(canvas) {
   }
 
   function pet(p, t) {
+    if (orig.ready() && orig.pet(p, t)) return;
     ctx.save();
     ctx.translate(p.x, p.y);
     if (p.kind === 'snail') {
@@ -1282,6 +1316,7 @@ export function createRenderer(canvas) {
   function alien(a, t, iconOnly = false) {
     const spec = ALIENS[a.kind];
     const flash = a.hitT > 0 && a.hitT % 4 < 2;
+    if (!iconOnly && orig.ready() && orig.alien(a, t)) return alienBar(a, t, spec.r);
     ctx.save();
     ctx.translate(a.x, a.y);
     const r = spec.r;
@@ -1440,10 +1475,16 @@ export function createRenderer(canvas) {
     }
     ctx.restore();
     if (iconOnly) return;
-    // Health bar (for a glutton: how full it is).
+    alienBar(a, t, r);
+  }
+
+  /** Health bar (for a glutton: how full it is), and ink clouds. */
+  function alienBar(a, t, r) {
     const w = 74;
     const frac = Math.max(0, a.hp / a.maxHp);
-    const top = a.kind === 'bomber' ? a.y - r - 34 : a.y - r - 22;
+    const artTop = orig.ready() ? orig.alienTop(a) : null;
+    const top = artTop ?? (a.kind === 'bomber' ? a.y - r - 34 : a.y - r - 22);
+    if (artTop !== null && a.kind !== 'glutton' && orig.healthBar(a.x, top, frac, a.shield ? '#78dcff' : null)) return stunClouds(a, t, r);
     roundRect(a.x - w / 2, top, w, 9, 4);
     ink('#2a1a1a', 2);
     if (a.kind === 'glutton') {
@@ -1454,6 +1495,10 @@ export function createRenderer(canvas) {
       ctx.fillStyle = a.shield ? '#78dcff' : frac > 0.5 ? '#5ee06b' : frac > 0.25 ? '#ffd84a' : '#ff5b5b';
       ctx.fillRect(a.x - w / 2 + 2, top + 2, (w - 4) * frac, 5);
     }
+    stunClouds(a, t, r);
+  }
+
+  function stunClouds(a, t, r) {
     if (a.stun > 0) {
       ctx.fillStyle = 'rgba(30,20,50,0.55)';
       for (let i = 0; i < 5; i++) {
@@ -1465,6 +1510,7 @@ export function createRenderer(canvas) {
   }
 
   function bomb(b, t) {
+    if (orig.ready() && orig.bomb(b)) return;
     ctx.save();
     ctx.translate(b.x, b.y);
     ctx.beginPath();
@@ -1484,6 +1530,7 @@ export function createRenderer(canvas) {
   /* ---------- Shop bar ---------- */
 
   function icon(id, cx, cy, s = 1, level = 0) {
+    if (orig.ready() && orig.icon(id, cx, cy, s, level)) return;
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(s, s);
@@ -1582,6 +1629,7 @@ export function createRenderer(canvas) {
   }
 
   function drawBar(world, ui, t) {
+    if (orig.ready() && orig.bar(ui, t, text)) return;
     // Panel.
     const g = ctx.createLinearGradient(0, 0, 0, BAR.h);
     g.addColorStop(0, '#5e8a9c');
@@ -1654,7 +1702,7 @@ export function createRenderer(canvas) {
   /* ---------- Frame ---------- */
 
   function draw(world, ui, fx, t) {
-    if (bgKey !== `${world.world}:${canvas.width}x${canvas.height}:${spritesReady}`) buildBackground(world.world);
+    if (bgKey !== `${world.world}:${canvas.width}x${canvas.height}:${spritesReady}:${original.ready}`) buildBackground(world.world);
     ctx = main;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(bg, 0, 0);
@@ -1665,10 +1713,11 @@ export function createRenderer(canvas) {
     ctx.beginPath();
     ctx.rect(0, TANK.y, TANK.w, TANK.h);
     ctx.clip();
-    drawLight(t);
-    drawPlants(t);
+    const own = !orig.ready();
+    if (own) drawLight(t);
+    if (own) drawPlants(t);
     // Bubbles rising from the bubbler.
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < (own ? 14 : 0); i++) {
       const k = ((t * 0.8 + i * 61) % 470) / 470;
       const x = 590 + Math.sin(t / 18 + i) * 6 + (i % 3) * 4;
       const y = TANK.floor - 6 - k * (TANK.floor - TANK.surface);

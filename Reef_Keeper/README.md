@@ -25,6 +25,19 @@ An aquarium money game in the style of PopCap's *Insaniquarium* (2001), written 
 
 `sprites/LICENSE.txt` lists which file comes from which pack. If an image can't load, the game draws its own version instead.
 
+### Original art
+
+Players who own *Insaniquarium Deluxe* can use its art and sounds: **Original art** on the title screen takes the game's install folder or a .zip of it.
+
+- **Files:** none of the original's files are in this repo, and nothing is uploaded. `src/original.js` reads the player's copy in the browser and keeps it in IndexedDB.
+- **Loading:** it joins PopCap's colour images to their alpha masks and decodes the `.ogg` and `.au` sounds.
+- **Drawing:** `src/render-original.js` draws with it:
+  - the tanks, the brass shop bar (rebuilt with eight slots when a level needs them), coins, food and missiles;
+  - the fish's swim, turn, eat and death animations;
+  - the original aliens and pets.
+- **Characters:** our pets and aliens map to the nearest original character (snail to Stinky, gobbler to Sylvester, glutton to Gus, and so on); how they play is unchanged.
+- **Music:** the original's music is in a tracker format browsers can't play, so the music stays ours.
+
 ## Modes
 
 | Mode | What it is |
@@ -122,6 +135,8 @@ CI runs it from `.github/workflows/smoke.yml`.
 | `src/pars.js` | Target time per level (generated) |
 | `src/sim.js` | Game logic: fish AI, hunger and growth, coins, food, grubs and potions, pets, aliens, bombs, shop. Pure, no DOM |
 | `src/sprites.js` | Loads the sprite packs and makes the hungry, dead, flash and teal variants |
+| `src/original.js` | Optional: reads the player's own copy of Insaniquarium Deluxe (folder or .zip), keeps it in IndexedDB, builds the sprite sheets and sounds |
+| `src/render-original.js` | Draws everything with the original art when it's loaded |
 | `src/render.js` | The 640 × 480 frame: shop bar, money box, tank, every character, coins, effects, tooltips, tutorial hints |
 | `src/fx.js` | Ripples, bubbles, stars, floating text, coins flying to the money box, shake |
 | `src/audio.js` | WebAudio effects and an original calm loop that turns tense when an alien arrives |
