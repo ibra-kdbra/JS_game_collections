@@ -95,11 +95,14 @@ export const ALIENS = {
   ulysses: { name: 'Ulysses', hp: 220, speed: v(3.5), r: 50, bite: s(2.4), sheet: 'ulysses', missileEvery: s(3.5), deflect: true },
   // Psychosquid's shield: 2 s up, 4 s down. Shots while it's up heal him.
   psychosquid: { name: 'Psychosquid', hp: 260, speed: v(0.5), r: 50, bite: s(2.2), sheet: 'psychosquid', shield: [t(400), t(200)] },
+  // Bilaterus: a chain of bones with a head at each end. Only the heads can be
+  // hurt (100 each, as in the original); he swims whichever way his live head faces.
+  bilaterus: { name: 'Bilaterus', hp: 100, speed: v(1.2), r: 34, bite: s(2.2), sheet: 'bilaterus', bones: 8, heads: true },
   cyrax: { name: 'Cyrax', hp: 5000, speed: 0.7, r: 60, bite: 0, sheet: 'boss', boss: true },
   warning: t(275),
 };
 
-/** The original's alien codes for a level, as aliens. 8 (Bilaterus) is played as two Balrogs. */
+/** The original's alien codes for a level, as aliens. */
 export const ALIEN_CODES = {
   1: ['sylvester'],
   2: ['sylvester2'],
@@ -108,11 +111,11 @@ export const ALIEN_CODES = {
   5: ['destructor'],
   6: ['ulysses'],
   7: ['psychosquid'],
-  8: ['balrog', 'balrog'],
+  8: ['bilaterus'],
   9: ['sylvester', 'balrog'],
   10: ['psychosquid', 'balrog'],
   11: ['destructor', 'ulysses'],
-  12: ['balrog', 'balrog', 'balrog'],
+  12: ['balrog', 'bilaterus'],
   21: ['cyrax'],
 };
 /** Aliens come 30 s after the last one is beaten (17.5 s for the first in 1-2). */
@@ -141,8 +144,31 @@ export const PETS = {
   gash: { name: 'Gash' },
   angie: { name: 'Angie' },
   presto: { name: 'Presto' },
+  // The bonus pets, bought with Shells in the Fish Emporium.
+  brinkley: { name: 'Brinkley', bonus: true },
+  nostradamus: { name: 'Nostradamus', bonus: true },
+  stanley: { name: 'Stanley', bonus: true },
+  walter: { name: 'Walter', bonus: true },
 };
-export const PET_ORDER = Object.keys(PETS);
+/** The 20 pets hatched in Adventure, in order. */
+export const PET_ORDER = Object.keys(PETS).filter((id) => !PETS[id].bonus);
+export const BONUS_PETS = Object.keys(PETS).filter((id) => PETS[id].bonus);
+
+/*
+ * The bonus pets' abilities, from the original. Brinkley swims after food and
+ * eats it; every 3rd pellet he gives back a star, every 15th a diamond, every
+ * 45th a pearl and every 135th a chest. Nostradamus makes a food pellet every
+ * 3-6 s. Stanley shoots down alien missiles with balls and throws one at an
+ * alien every second. Walter punches whatever fish or pet is in front of him
+ * when you click him, and it drops its coin or uses its power at once.
+ */
+export const BONUS = {
+  brinkley: { rest: t(108), every: 3, prizes: [[135, 'chest'], [45, 'pearl'], [15, 'diamond'], [1, 'star']] },
+  nostradamus: { every: [t(300), t(600)] },
+  stanley: { every: t(100), ballDamage: 8, ballSpeed: 4.5, rest: [t(30), t(60), t(90)] },
+  walter: { punch: t(30), rest: t(40), reach: 40 },
+  price: 2000,
+};
 export const MAX_PETS = 3;
 
 /* ---------- Adventure (shops, prices and eggs from the original) ---------- */

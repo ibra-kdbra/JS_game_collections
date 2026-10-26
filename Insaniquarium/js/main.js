@@ -5,7 +5,7 @@ import { createTank } from './tank.js';
 import { createView, slotRect, MENU_BTN, MONEY_BOX } from './view.js';
 import { uiFont } from './polish.js';
 import { createFx } from './fx.js';
-import { LEVELS, BOSS, TIME_TRIAL, CHALLENGE, VIRTUAL, PETS, PET_ORDER, MAX_PETS, ALIENS, FISH, TANK, SHELLS, BAR } from './data.js';
+import { LEVELS, BOSS, TIME_TRIAL, CHALLENGE, VIRTUAL, PETS, PET_ORDER, BONUS_PETS, BONUS, MAX_PETS, ALIENS, FISH, TANK, SHELLS, BAR } from './data.js';
 import { HELP as HELP_SECTIONS, say } from './text.js';
 
 // Help sections split into pages of three paragraphs.
@@ -193,7 +193,7 @@ const menu = {
       const hover = inside(mouse.x, mouse.y, rectOf(b));
       // A soft pulsing light behind the hovered button.
       if (hover) view.polish.glow(b.cx, b.cy, 120, 'rgba(150,200,255,A)', 0.28 + 0.08 * Math.sin(t / 8));
-      const locked = b.id !== 'adventure' && !save.pets.length && b.id !== 'virtual';
+      const locked = b.id !== 'adventure' && !hatched() && b.id !== 'virtual';
       gfx.text('junglefever17outline', b.label, b.cx, b.cy - 14, { align: 'center', color: locked ? '#9a90c0' : hover ? '#ffff9a' : null });
     }
     for (const b of LOW_BTNS) {
@@ -216,10 +216,10 @@ const menu = {
     sound.play('buttonclick');
     if (b.id === 'adventure') startAdventure();
     else if (b.id === 'timetrial') {
-      if (!save.pets.length) return note('Not Yet!', say('note.locked'));
+      if (!hatched()) return note('Not Yet!', say('note.locked'));
       play(TIME_TRIAL, save.choice.length ? save.choice : save.pets.slice(-3));
     } else if (b.id === 'challenge') {
-      if (!save.pets.length) return note('Not Yet!', say('note.locked'));
+      if (!hatched()) return note('Not Yet!', say('note.locked'));
       play(CHALLENGE, save.choice.length ? save.choice : save.pets.slice(-3));
     } else if (b.id === 'virtual') play(VIRTUAL, save.pets.slice(0, 3));
     else if (b.id === 'help') setScene(help);
@@ -230,6 +230,9 @@ const menu = {
 };
 
 /* A message box over the current scene. */
+/** How many pets have hatched in Adventure (bonus pets don't count). */
+const hatched = () => save.pets.filter((p) => !PETS[p].bonus).length;
+
 let noteBox = null;
 function note(head, text, onClose = null) {
   noteBox = { head, text, onClose };
@@ -260,7 +263,11 @@ const petPick = {
     this.chosen = save.choice.filter((p) => save.pets.includes(p)).slice(0, MAX_PETS);
   },
   layout() {
-    return save.pets.map((p, i) => ({ p, x: 48 + (i % 6) * 92, y: 92 + Math.floor(i / 6) * 100, w: 90, h: 83 }));
+    // Six to a row, or eight smaller ones when there are more than 18 pets.
+    const cols = save.pets.length > 18 ? 8 : 6;
+    const k = cols === 8 ? 0.76 : 1;
+    const x0 = (W - cols * 92 * k) / 2;
+    return save.pets.map((p, i) => ({ p, k, x: x0 + (i % cols) * 92 * k, y: 86 + Math.floor(i / cols) * (cols === 8 ? 82 : 100), w: 90 * k, h: 83 * k }));
   },
   draw() {
     gfx.image(this.def.aquarium);
@@ -270,15 +277,17 @@ const petPick = {
     gfx.text('continuumbold12outline', 'to take to the next level', W / 2, 62, { align: 'center' });
     for (const b of this.layout()) {
       const on = this.chosen.includes(b.p);
-      gfx.image('petbuttonring', b.x, b.y);
-      gfx.frame(`scl_${b.p}`, on ? t / 3 : 0, 0, b.x + 45, b.y + 41);
+      const cx = b.x + 45 * b.k;
+      const cy = b.y + 41 * b.k;
+      gfx.image('petbuttonring', b.x, b.y, { scale: b.k });
+      gfx.frame(`scl_${b.p}`, on ? t / 3 : 0, 0, cx, cy, { scale: b.k });
       if (!on) {
         gfx.ctx.fillStyle = 'rgba(0,0,0,0.35)';
         gfx.ctx.beginPath();
-        gfx.ctx.arc(b.x + 45, b.y + 41, 34, 0, Math.PI * 2);
+        gfx.ctx.arc(cx, cy, 34 * b.k, 0, Math.PI * 2);
         gfx.ctx.fill();
       }
-      gfx.text('continuumbold12outline', PETS[b.p].name, b.x + 45, b.y + 80, { align: 'center', color: on ? '#ffff9a' : null });
+      gfx.text('continuumbold12outline', PETS[b.p].name, cx, b.y + 80 * b.k, { align: 'center', color: on ? '#ffff9a' : null, maxWidth: 88 * b.k });
     }
     const hov = this.layout().find((b) => inside(mouse.x, mouse.y, b));
     if (hov) {
@@ -324,7 +333,7 @@ const ITEM_INFO = {
   weapon: ['Laser Upgrade', 'More powerful lasers kill aliens in fewer clicks.'],
   egg: ['Egg Piece', 'Buy all three pieces to finish the level and hatch a new pet.'],
 };
-const SIGNATURE = { ...Object.fromEntries(['gus', 'destructor', 'ulysses', 'psychosquid'].map((k) => [k, say(`sig.${k}`)])), cyrax: 'FINAL BOSS' };
+const SIGNATURE = { ...Object.fromEntries(['gus', 'destructor', 'ulysses', 'psychosquid', 'bilaterus'].map((k) => [k, say(`sig.${k}`)])), cyrax: 'FINAL BOSS' };
 
 const game = {
   enter(def, pets) {
@@ -371,7 +380,7 @@ const game = {
         this.events(tank.events.slice());
       }
     } else this.holdT = 0;
-    for (const list of [tank.fish, tank.coins, tank.food, tank.pets, tank.aliens, tank.missiles]) for (const o of list) {
+    for (const list of [tank.fish, tank.coins, tank.food, tank.pets, tank.aliens, tank.missiles, tank.balls, tank.aliens.flatMap((o) => o.body ?? [])]) for (const o of list) {
       o.px = o.x;
       o.py = o.y;
     }
@@ -484,6 +493,7 @@ const game = {
           break;
         case 'pop':
           sound.play('punch');
+          view.polish.shake(2, 8);
           fx.boom(e.x, e.y, true);
           break;
         case 'boom':
@@ -505,6 +515,21 @@ const game = {
           break;
         case 'amp':
           sound.play('eel1');
+          break;
+        case 'punch':
+          sound.play('punch');
+          view.polish.shake(2, 8);
+          fx.shot(e.x, e.y, 2);
+          break;
+        case 'slurp':
+          sound.play(['slurp', 'slurp2', 'slurp3'][Math.floor(Math.random() * 3)], { volume: 0.6 });
+          break;
+        case 'sneeze':
+          sound.play('sneeze', { volume: 0.6 });
+          break;
+        case 'bonk':
+          sound.play('ricochet', { volume: 0.5 });
+          fx.sparkle(e.x, e.y);
           break;
         case 'stab':
         case 'pinch':
@@ -610,7 +635,7 @@ const game = {
     // Draw where things are between game steps, for smooth motion on any screen.
     const a = Math.max(0, Math.min(1, this.alpha ?? 1));
     const moved = [];
-    for (const list of [tank.fish, tank.coins, tank.food, tank.pets, tank.aliens, tank.missiles]) for (const o of list) {
+    for (const list of [tank.fish, tank.coins, tank.food, tank.pets, tank.aliens, tank.missiles, tank.balls, tank.aliens.flatMap((o) => o.body ?? [])]) for (const o of list) {
       if (o.px === undefined || Math.abs(o.px - o.x) > 40 || Math.abs(o.py - o.y) > 40) continue;
       moved.push([o, o.x, o.y]);
       o.x = o.px + (o.x - o.px) * a;
@@ -899,23 +924,53 @@ function saveVirtual(tank) {
   store();
 }
 
-/** The Fish Emporium: turn Shells into money for the Virtual Tank. */
+/** The Fish Emporium: turn Shells into money for the Virtual Tank, or buy the bonus pets. */
+const EGG_ART = { brinkley: 'eggbrink', nostradamus: 'eggnostradamus', stanley: 'eggstanley', walter: 'eggwalter' };
 const storeScene = {
   enter(from) {
     this.from = from;
   },
+  eggs() {
+    return BONUS_PETS.map((p, i) => ({ p, x: 130 + i * 100, y: 62, w: 90, h: 180 }));
+  },
   draw() {
     gfx.image('store');
     gfx.text('junglefever15outline', say('store.thanks'), 320, 20, { align: 'center' });
-    panel(170, 300, 300, 150);
-    gfx.text('continuumbold14', `${save.shells.toLocaleString('en-US')} Shells`, 320, 318, { align: 'center', color: '#3a2a10' });
-    this.buy = button('Trade 100 Shells for $1,000', 320, 350, 260);
-    this.back = button('Back to Tank', 320, 395, 260);
+    panel(100, 52, 440, 252);
+    gfx.text('continuumbold14', 'Bonus Pets', 320, 64, { align: 'center', color: '#3a2a10' });
+    for (const e of this.eggs()) {
+      const got = save.pets.includes(e.p);
+      const hover = inside(mouse.x, mouse.y, e);
+      if (got) gfx.frame(`scl_${e.p}`, t / 3, 0, e.x + 45, e.y + 88, { scale: 1.2 });
+      else gfx.frame(EGG_ART[e.p], 0, 0, e.x + 45, e.y + 88, { scale: hover ? 0.72 : 0.66 });
+      gfx.text('continuumbold12', PETS[e.p].name, e.x + 45, e.y + 138, { align: 'center', color: '#3a2a10' });
+      gfx.text('continuumbold12', got ? 'Owned' : `${BONUS.price.toLocaleString('en-US')} Shells`, e.x + 45, e.y + 156, { align: 'center', color: got ? '#2a7a2a' : '#3a2a10' });
+    }
+    const hov = this.eggs().find((e) => inside(mouse.x, mouse.y, e));
+    if (hov) body(say(`pet.${hov.p}`), 120, 244, 400, { align: 'center' });
+    panel(170, 312, 300, 150);
+    gfx.text('continuumbold14', `${save.shells.toLocaleString('en-US')} Shells`, 320, 328, { align: 'center', color: '#3a2a10' });
+    this.buy = button('Trade 100 Shells for $1,000', 320, 362, 260);
+    this.back = button('Back to Tank', 320, 407, 260);
   },
   hand() {
-    return inside(mouse.x, mouse.y, this.buy ?? {}) || inside(mouse.x, mouse.y, this.back ?? {});
+    return inside(mouse.x, mouse.y, this.buy ?? {}) || inside(mouse.x, mouse.y, this.back ?? {}) || this.eggs().some((e) => !save.pets.includes(e.p) && inside(mouse.x, mouse.y, e));
   },
   click(x, y) {
+    const egg = this.eggs().find((e) => inside(x, y, e));
+    if (egg && !save.pets.includes(egg.p)) {
+      if (save.shells >= BONUS.price) {
+        save.shells -= BONUS.price;
+        save.pets.push(egg.p);
+        store();
+        sound.play('hatch');
+        note(say('store.bought'), `${say(`title.${egg.p}`)}  ${say(`bought.${egg.p}`)}`);
+      } else {
+        sound.play('buzzer');
+        note('Not Enough Shells', say('note.shells'));
+      }
+      return;
+    }
     if (this.buy && inside(x, y, this.buy)) {
       if (save.shells >= 100) {
         save.shells -= 100;
@@ -1019,7 +1074,7 @@ const fame = {
     gfx.text('junglefever15outline', 'Hall of Fame', 320, 56, { align: 'center' });
     gfx.text('continuumbold14', 'Personal Records', 320, 92, { align: 'center', color: '#3a2a10' });
     const rows = [
-      ['Pets', `${save.pets.length} / 20`],
+      ['Pets', `${save.pets.length} / ${PET_ORDER.length + BONUS_PETS.length}`],
       ['Adventure', save.beaten ? 'Final Boss beaten!' : save.level ? LEVELS[Math.min(save.level, LEVELS.length - 1)].name : 'Not started'],
       ['Time Trial', save.timeTrial ? `$${save.timeTrial.toLocaleString('en-US')}` : '-'],
       ['Challenge', save.challenge ? `${save.challenge} waves` : '-'],
@@ -1029,14 +1084,13 @@ const fame = {
       gfx.text('liddie15', k, 150, 130 + i * 26, { color: '#3a2a10' });
       gfx.text('liddie15', v, 490, 130 + i * 26, { align: 'right', color: '#3a2a10' });
     });
-    for (let i = 0; i < 20; i++) {
-      const id = PET_ORDER[i];
+    [...PET_ORDER, ...BONUS_PETS].forEach((id, i) => {
       const got = save.pets.includes(id);
       gfx.ctx.save();
       gfx.ctx.globalAlpha = got ? 1 : 0.25;
-      gfx.frame(`scl_${id}`, 0, 0, 160 + (i % 10) * 36, 290 + Math.floor(i / 10) * 44, { scale: 0.55 });
+      gfx.frame(`scl_${id}`, 0, 0, 155 + (i % 12) * 30, 290 + Math.floor(i / 12) * 44, { scale: 0.48 });
       gfx.ctx.restore();
-    }
+    });
     this.back = button('Back To Main Menu', 320, 390, 220);
   },
   hand() {

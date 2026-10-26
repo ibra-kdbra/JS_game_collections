@@ -8,7 +8,7 @@
  *   tank.events         // what happened this step (for sound and effects)
  *   tank.outcome        // null | 'clear' | 'lost' | 'time'
  */
-import { TANK, FISH, POTION, COINS, COIN, FOOD, WEAPON, ALIENS, ALIEN_CODES, COIN_EVERY, LIMITS, CHALLENGE, STEP, t } from './data.js';
+import { TANK, FISH, POTION, COINS, COIN, FOOD, WEAPON, ALIENS, ALIEN_CODES, COIN_EVERY, LIMITS, CHALLENGE, STEP, BONUS, t } from './data.js';
 
 export function rng(seed) {
   let a = seed >>> 0;
@@ -43,6 +43,7 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
     pets: [],
     aliens: [],
     missiles: [],
+    balls: [],
     warning: 0,
     incoming: null,
     wave: 0,
@@ -419,8 +420,11 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
 
   pets.forEach((kind, i) => {
     const p = { kind, as: null, x: 120 + i * 180, y: FLOOR - 6, face: 1, t: 0, timer: 0, state: 0, vx: 0, vy: 0, target: null };
-    if (['itchy', 'prego', 'zorf', 'clyde', 'vert', 'meryl', 'wadsworth', 'shrapnel', 'gumbo', 'blip', 'nimbus', 'amp', 'gash', 'angie', 'presto'].includes(kind)) p.y = TOP + 40 + i * 50;
-    p.timer = { niko: 1800, prego: 1500, zorf: 600, vert: 540, meryl: 1800, shrapnel: 900, amp: 3600, angie: 600, presto: 1200 }[kind] ?? 0;
+    if (['itchy', 'prego', 'zorf', 'clyde', 'vert', 'meryl', 'wadsworth', 'shrapnel', 'gumbo', 'blip', 'nimbus', 'amp', 'gash', 'angie', 'presto', 'brinkley', 'nostradamus', 'stanley', 'walter'].includes(kind)) p.y = TOP + 40 + i * 50;
+    p.timer = { niko: 1800, prego: 1500, zorf: 600, vert: 540, meryl: 1800, shrapnel: 900, amp: 3600, angie: 600, presto: 1200, nostradamus: BONUS.nostradamus.every[0], stanley: BONUS.stanley.every }[kind] ?? 0;
+    p.rest = 0;
+    p.eaten = 0;
+    p.punch = 0;
     tank.pets.push(p);
   });
 
@@ -434,6 +438,41 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
 
   function hurt(a, amount, by) {
     damage(a, amount, by);
+  }
+
+  /** Stanley throws a ball at an alien or an alien's missile. */
+  function throwBall(p, target) {
+    tank.balls.push({ id: nextId++, x: p.x, y: p.y - 10, vx: p.face * 2, vy: -2, t: 0, kind: Math.floor(rand() * 4), ...target });
+    emit('throw', { x: p.x, y: p.y });
+  }
+
+  function stepBalls() {
+    const S = BONUS.stanley;
+    for (const b of tank.balls) {
+      b.t++;
+      const target = b.alien ? tank.aliens.find((a) => a.id === b.alien) : tank.missiles.find((m) => m.id === b.missile && !m.dead);
+      if (!target) {
+        b.vy += 0.15;
+        b.dead = b.t > 120;
+      } else {
+        const aim = b.alien ? weakSpot(target, b) : target;
+        steer(b, aim.x, aim.y, S.ballSpeed, 0.2);
+        if (Math.hypot(aim.x - b.x, aim.y - b.y) < (b.alien ? 30 : 16)) {
+          b.dead = true;
+          if (b.alien) damage(target, S.ballDamage, 'pet', aim.head);
+          else {
+            target.dead = true;
+            emit('pop', { x: target.x, y: target.y });
+          }
+          emit('bonk', { x: b.x, y: b.y });
+        }
+      }
+      b.x += b.vx;
+      b.y += b.vy;
+      if (b.t > 400 || b.y > FLOOR) b.dead = true;
+    }
+    tank.balls = tank.balls.filter((b) => !b.dead);
+    tank.missiles = tank.missiles.filter((m) => !m.dead);
   }
 
   function stepPet(p) {
@@ -602,6 +641,84 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
           } else p.timer = 30;
         }
         break;
+      case 'brinkley': {
+        // Swims after food (while no aliens are about) and eats it; some of it comes back as treasure.
+        const B = BONUS.brinkley;
+        if (p.rest > 0) p.rest--;
+        const [pellet, d] = tank.aliens.length ? [null, Infinity] : nearest(tank.food, p, (o) => o.kind === 'food');
+        if (pellet && p.rest === 0) {
+          steer(p, pellet.x, pellet.y - 10, 2.2, 0.08);
+          p.x += p.vx;
+          p.y += p.vy;
+          if (Math.abs(p.vx) > 0.2) p.face = p.vx > 0 ? 1 : -1;
+          if (d < 26) {
+            tank.food = tank.food.filter((o) => o !== pellet);
+            p.rest = B.rest;
+            p.eaten++;
+            p.state = 20;
+            emit('slurp', { x: p.x, y: p.y });
+            if (p.eaten % B.every === 0) dropCoin(B.prizes.find(([n]) => p.eaten % n === 0)[1], p.x + 5, p.y - 10);
+          }
+        } else drift(p, 300, 170);
+        if (p.state > 0) p.state--;
+        break;
+      }
+      case 'nostradamus':
+        drift(p, 280, 150);
+        if (p.timer === 0) {
+          const [lo, hi] = BONUS.nostradamus.every;
+          p.timer = Math.round(lo + rand() * (hi - lo));
+          addFood(p.x + 15, p.y + 10, { free: true, quality: 0 });
+          emit('sneeze', { x: p.x, y: p.y });
+        }
+        break;
+      case 'stanley': {
+        // Turns fierce while aliens are about: knocks their missiles out of the water and pelts them with balls.
+        const S = BONUS.stanley;
+        drift(p, 260, 150);
+        p.state = clamp(p.state + (tank.aliens.length ? 1 : -1), 0, 10);
+        if (p.rest > 0) p.rest--;
+        const taken = new Set(tank.balls.map((b) => b.missile));
+        const [m] = nearest(tank.missiles, p, (o) => !o.deflected && !taken.has(o.id));
+        if (m && p.rest === 0) {
+          throwBall(p, { missile: m.id });
+          p.rest = S.rest[Math.floor(rand() * S.rest.length)];
+        }
+        if (p.timer === 0) {
+          p.timer = S.every;
+          const [a] = nearest(tank.aliens, p);
+          if (a) throwBall(p, { alien: a.id });
+        }
+        break;
+      }
+      case 'walter':
+        drift(p, 300, 160);
+        if (p.rest > 0) p.rest--;
+        if (p.punch > 0) {
+          p.punch--;
+          // The glove is out from about a third of the way through the punch.
+          const out = BONUS.walter.punch - p.punch;
+          if (out > BONUS.walter.punch / 3 && !p.landed) {
+            const gx = p.x + p.face * 70;
+            const hit = (o) => Math.hypot(o.x - gx, o.y - p.y) < BONUS.walter.reach;
+            for (const f of tank.fish) {
+              if (f.dead || f.hidden || !hit(f)) continue;
+              f.vx += p.face * 4;
+              f.coinT = Math.min(f.coinT, t(5));
+              if (f.kind === 'breeder') f.breedT = 1;
+              p.landed = true;
+            }
+            for (const q of tank.pets) {
+              if (q === p || (q.as ?? q.kind) === 'prego' || !hit(q)) continue;
+              q.x += p.face * 20;
+              if (q.timer > 0) q.timer = Math.min(q.timer, t(5));
+              p.landed = true;
+            }
+            if (p.landed) emit('punch', { x: gx, y: p.y });
+          }
+          if (p.punch === 0) p.rest = BONUS.walter.rest;
+        }
+        break;
       case 'presto':
         drift(p, 260, 150);
         if (p.timer === 0) {
@@ -649,9 +766,70 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
       shield: false,
       spawnT: 0,
     };
+    if (spec.heads) {
+      // Bilaterus: a head at each end of a chain of bones.
+      a.heads = [{ hp }, { hp }];
+      a.hp = a.maxHp = hp * 2;
+      a.lead = 0;
+      a.flipT = 0;
+      a.body = Array.from({ length: spec.bones + 2 }, (_, i) => ({ x: a.x - a.face * i * SEGMENT, y: a.y }));
+    }
     tank.aliens.push(a);
     emit('portal', { x: a.x, y: a.y });
     return a;
+  }
+
+  const SEGMENT = 22;
+
+  /** Where an alien can be hit: its live heads for Bilaterus, its middle for the rest. */
+  function hitSpots(a) {
+    const r = ALIENS[a.kind].r;
+    if (!a.heads) return [{ x: a.x, y: a.y, r }];
+    const ends = [a.body[0], a.body[a.body.length - 1]];
+    return ends.map((e, head) => ({ x: e.x, y: e.y, r, head })).filter((h) => a.heads[h.head].hp > 0);
+  }
+
+  /** The nearest place on an alien to aim at. */
+  function weakSpot(a, from) {
+    return hitSpots(a).sort((p, q) => Math.hypot(p.x - from.x, p.y - from.y) - Math.hypot(q.x - from.x, q.y - from.y))[0] ?? { x: a.x, y: a.y };
+  }
+
+  function stepBilaterus(a, spec) {
+    const order = a.lead === 0 ? a.body : a.body.slice().reverse();
+    const head = order[0];
+    const [prey, d] = nearest(tank.fish, head, (f) => !f.dead && !f.hidden);
+    const tx = prey ? prey.x : 320 + Math.sin(a.t / 90) * 220;
+    const ty = prey ? prey.y : TOP + 120 + Math.cos(a.t / 70) * 80;
+    const dx = tx - head.x;
+    const dy = ty - head.y;
+    const dd = Math.hypot(dx, dy) || 1;
+    const speed = spec.speed * (a.hitT > 0 ? 0.35 : 1);
+    head.x = clamp(head.x + (dx / dd) * speed, LEFT + 20, RIGHT - 20);
+    head.y = clamp(head.y + (dy / dd) * speed, TOP, BOTTOM);
+    if (Math.abs(dx) > 3) a.face = dx > 0 ? 1 : -1;
+    // The rest of the body follows the leading head.
+    for (let i = 1; i < order.length; i++) {
+      const o = order[i];
+      const p = order[i - 1];
+      const l = Math.hypot(o.x - p.x, o.y - p.y);
+      if (l > SEGMENT) {
+        o.x = p.x + ((o.x - p.x) / l) * SEGMENT;
+        o.y = p.y + ((o.y - p.y) / l) * SEGMENT;
+      }
+    }
+    a.x = head.x;
+    a.y = head.y;
+    // Now and then (or when cornered) the other head takes over and he swims the other way.
+    const other = a.heads[1 - a.lead].hp > 0;
+    if (other && ++a.flipT > 120 && (head.x < LEFT + 40 || head.x > RIGHT - 40 || a.flipT > 600)) {
+      a.lead = 1 - a.lead;
+      a.flipT = 0;
+    }
+    if (prey && d < spec.r && a.biteT === 0) {
+      kill(prey, 'alien');
+      a.biteT = spec.bite;
+      a.chomp = 20;
+    }
   }
 
   function stepAliens() {
@@ -684,6 +862,10 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
       a.y += a.vy;
       a.vx *= 0.88;
       a.vy *= 0.88;
+      if (spec.heads) {
+        stepBilaterus(a, spec);
+        continue;
+      }
       if (spec.boss) {
         // Cyrax floats about and calls in Minisylvesters.
         a.x = 320 + Math.sin(a.t / 180) * 200;
@@ -770,14 +952,26 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
     tank.missiles = tank.missiles.filter((m) => !m.dead);
   }
 
-  function damage(a, amount, by = 'click') {
+  function damage(a, amount, by = 'click', head = null) {
     const spec = ALIENS[a.kind];
     if (a.shield && by === 'click') {
       a.hp = Math.min(a.maxHp, a.hp + amount);
       emit('heal', { x: a.x, y: a.y });
       return;
     }
-    a.hp -= amount;
+    if (a.heads) {
+      // Only a head can be hurt: the one hit, or else the leading one.
+      const i = head ?? (a.heads[a.lead].hp > 0 ? a.lead : 1 - a.lead);
+      const h = a.heads[i];
+      if (h.hp <= 0) return;
+      h.hp = Math.max(0, h.hp - amount);
+      if (h.hp === 0) {
+        const end = i === 0 ? a.body[0] : a.body[a.body.length - 1];
+        emit('boom', { x: end.x, y: end.y });
+        if (i === a.lead) a.lead = 1 - i;
+      }
+      a.hp = a.heads[0].hp + a.heads[1].hp;
+    } else a.hp -= amount;
     a.hitT = 8;
     if (a.hp <= 0) {
       tank.aliens = tank.aliens.filter((o) => o !== a);
@@ -790,6 +984,7 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
       }
       if (!tank.aliens.length) {
         tank.missiles = [];
+        tank.balls = [];
         tank.nextAlien = tank.time + (challenge ? CHALLENGE.every(tank.wave + 1) : def.aliens ? def.aliens.every : Infinity) - ALIENS.warning;
         if (challenge) {
           tank.wave++;
@@ -802,7 +997,7 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
   /* ---------- The player ---------- */
 
   /**
-   * A click in the tank. Returns 'coin' | 'pearl' | 'missile' | 'hit' | 'heal'
+   * A click in the tank. Returns 'coin' | 'pearl' | 'punch' | 'missile' | 'hit' | 'heal'
    * | 'amp' | 'feed' | 'full' | 'broke' | 'miss' | 'none'.
    */
   function click(x, y) {
@@ -823,6 +1018,12 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
         tank.stats.earned += COINS.nikoPearl.value;
         emit('coin', { x: p.x, y: p.y - 20, value: COINS.nikoPearl.value, coin: 'pearl', by: 'click' });
         return 'pearl';
+      }
+      if ((p.as ?? p.kind) === 'walter' && !p.punch && !p.rest) {
+        p.punch = BONUS.walter.punch;
+        p.landed = false;
+        emit('swing', { x: p.x, y: p.y });
+        return 'punch';
       }
       if ((p.as ?? p.kind) === 'amp' && p.charged) {
         // Every fish in the tank becomes a diamond.
@@ -854,19 +1055,23 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
     // Aliens: each shot hurts and knocks the alien away from the click.
     if (tank.aliens.length) {
       let target = null;
+      let part = null;
       let bd = Infinity;
       for (const a of tank.aliens) {
-        const d = Math.hypot(a.x - x, a.y - y);
-        if (d < ALIENS[a.kind].r + 14 && d < bd) {
-          bd = d;
-          target = a;
+        for (const h of hitSpots(a)) {
+          const d = Math.hypot(h.x - x, h.y - y);
+          if (d < h.r + 14 && d < bd) {
+            bd = d;
+            target = a;
+            part = h.head ?? null;
+          }
         }
       }
       if (target && ALIENS[target.kind].eatsFood) target = null; // Gus only takes food
       if (target) {
         const shield = target.shield;
-        damage(target, WEAPON.damage(tank.up.weapon + 1));
-        if (!shield && !ALIENS[target.kind].floor && !ALIENS[target.kind].boss) {
+        damage(target, WEAPON.damage(tank.up.weapon + 1), 'click', part);
+        if (!shield && !ALIENS[target.kind].floor && !ALIENS[target.kind].boss && !target.heads) {
           const d = bd || 1;
           target.vx += ((target.x - x) / d) * 2.2;
           target.vy += ((target.y - y) / d) * 2.2;
@@ -959,6 +1164,7 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
     stepFood();
     stepCoins();
     for (const p of tank.pets) stepPet(p);
+    stepBalls();
     stepAliens();
     if (tank.timeLeft !== null && --tank.timeLeft <= 0) {
       tank.outcome = 'time';

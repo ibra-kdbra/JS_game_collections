@@ -11,6 +11,10 @@ const OWN = {
   'mode.virtual': 'A tank of your own to stock and look after.',
   'welcome.boss': 'The final battle!',
   'note.shells': 'You need more Shells for that. Play the other modes to earn them!',
+  'pet.brinkley': 'BRINKLEY swims after your food and eats it, but every third pellet comes back as treasure.',
+  'pet.nostradamus': 'NOSTRADAMUS sneezes out a food pellet every few seconds.',
+  'pet.stanley': 'STANLEY knocks alien missiles out of the water and pelts aliens with balls.',
+  'pet.walter': 'Click WALTER and he punches the fish or pet in front of him into dropping its coin or using its power.',
 };
 
 /** A piece of game text by key, or '' if it hasn't been converted. */
