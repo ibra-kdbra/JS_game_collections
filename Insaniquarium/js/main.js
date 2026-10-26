@@ -5,7 +5,7 @@ import { createTank } from './tank.js';
 import { createView, slotRect, MENU_BTN, MONEY_BOX } from './view.js';
 import { uiFont } from './polish.js';
 import { createFx } from './fx.js';
-import { LEVELS, BOSS, TIME_TRIAL, CHALLENGE, VIRTUAL, PETS, PET_ORDER, BONUS_PETS, BONUS, MAX_PETS, ALIENS, FISH, TANK, SHELLS, BAR } from './data.js';
+import { LEVELS, BOSS, TIME_TRIAL, CHALLENGE, VIRTUAL, PETS, PET_ORDER, BONUS_PETS, BONUS_REWARD, MAX_PETS, ALIENS, FISH, TANK, SHELLS, BAR } from './data.js';
 import { HELP as HELP_SECTIONS, say } from './text.js';
 
 // Help sections split into pages of three paragraphs.
@@ -20,10 +20,14 @@ let view = null;
 /* ---------- Save data ---------- */
 
 const KEY = 'insaniquarium-web';
-const fresh = () => ({ level: 0, pets: [], choice: [], shells: 0, best: {}, timeTrial: 0, challenge: 0, beaten: false, virtual: null, sfx: 0.8, music: 0.6 });
+const fresh = () => ({ level: 0, pets: [], choice: [], shells: 0, best: {}, timeTrial: 0, challenge: 0, beaten: false, wins: 0, bonusBought: 0, maxPets: MAX_PETS, virtual: null, sfx: 0.8, music: 0.6 });
 let save = (() => {
   try {
-    return { ...fresh(), ...JSON.parse(localStorage.getItem(KEY) || '{}') };
+    const s = { ...fresh(), ...JSON.parse(localStorage.getItem(KEY) || '{}') };
+    // Saves from before the Bonus Reward: count what's already owned as bought.
+    const owned = BONUS_REWARD.items.filter((id) => (PETS[id] ? s.pets.includes(id) : s.maxPets >= (id === 'pets4' ? 4 : 7))).length;
+    s.bonusBought = Math.max(s.bonusBought, owned);
+    return s;
   } catch {
     return fresh();
   }
@@ -221,7 +225,7 @@ const menu = {
     } else if (b.id === 'challenge') {
       if (!hatched()) return note('Not Yet!', say('note.locked'));
       play(CHALLENGE, save.choice.length ? save.choice : save.pets.slice(-3));
-    } else if (b.id === 'virtual') play(VIRTUAL, save.pets.slice(0, 3));
+    } else if (b.id === 'virtual') play(VIRTUAL, save.pets.slice(0, petLimit(true)));
     else if (b.id === 'help') setScene(help);
     else if (b.id === 'options') setScene(options);
     else if (b.id === 'fame') setScene(fame);
@@ -232,6 +236,9 @@ const menu = {
 /* A message box over the current scene. */
 /** How many pets have hatched in Adventure (bonus pets don't count). */
 const hatched = () => save.pets.filter((p) => !PETS[p].bonus).length;
+
+/** How many pets go into a tank: 3, or 4 once bought. Seven only ever counts in the Virtual Tank, as in the original. */
+const petLimit = (virtual = false) => (virtual ? save.maxPets : Math.min(4, save.maxPets));
 
 let noteBox = null;
 function note(head, text, onClose = null) {
@@ -250,9 +257,9 @@ function drawNote() {
 /* ---------- Adventure ---------- */
 
 function startAdventure() {
-  if (save.level >= LEVELS.length) return play(BOSS, save.pets.slice(-MAX_PETS));
+  if (save.level >= LEVELS.length) return play(BOSS, save.pets.slice(-petLimit()));
   const def = LEVELS[save.level];
-  if (save.pets.length > MAX_PETS) setScene(petPick, def);
+  if (save.pets.length > petLimit()) setScene(petPick, def);
   else play(def, save.pets.slice());
 }
 
@@ -260,7 +267,7 @@ function startAdventure() {
 const petPick = {
   enter(def) {
     this.def = def;
-    this.chosen = save.choice.filter((p) => save.pets.includes(p)).slice(0, MAX_PETS);
+    this.chosen = save.choice.filter((p) => save.pets.includes(p)).slice(0, petLimit());
   },
   layout() {
     // Six to a row, or eight smaller ones when there are more than 18 pets.
@@ -294,7 +301,7 @@ const petPick = {
       panel(110, 335, 420, 76);
       body(say(`pet.${hov.p}`), 140, 352, 360, { align: 'center' });
     }
-    const left = MAX_PETS - this.chosen.length;
+    const left = petLimit() - this.chosen.length;
     this.go = button(left > 0 ? `Choose ${left} more pet${left > 1 ? 's' : ''}` : 'Play!', 320, 425, 260);
   },
   hand() {
@@ -305,7 +312,7 @@ const petPick = {
     if (b) {
       sound.play('buttonclick');
       if (this.chosen.includes(b.p)) this.chosen = this.chosen.filter((p) => p !== b.p);
-      else if (this.chosen.length < MAX_PETS) this.chosen.push(b.p);
+      else if (this.chosen.length < petLimit()) this.chosen.push(b.p);
       return;
     }
     if (this.go && inside(x, y, this.go) && this.chosen.length) {
@@ -428,8 +435,13 @@ const game = {
           fx.sparkle(e.x, e.y);
           break;
         case 'coin':
-          sound.play({ silver: 'points', gold: 'points2', star: 'points3', diamond: 'diamond', chest: 'treasure', beetle: 'points4', pearl: 'pearl', bomb: 'points4' }[e.coin] ?? 'points');
           fx.sparkle(e.x, e.y);
+          if (e.shell) {
+            sound.play('bonuscollect');
+            view.polish.floatText(`+${e.value} Shells`, e.x, e.y - 14, '#a8ecff', 20);
+            break;
+          }
+          sound.play({ silver: 'points', gold: 'points2', star: 'points3', diamond: 'diamond', chest: 'treasure', beetle: 'points4', pearl: 'pearl', bomb: 'points4' }[e.coin] ?? 'points');
           // The coin flies to the money counter, and its value pops up.
           view.polish.coinFly(e.coin, e.x, e.y, MONEY_BOX.x + 40, MONEY_BOX.y + 10, (type, x, y, k, tt) => view.coin({ type, x, y, id: 0, spin: 0, floorT: 0 }, tt, k));
           view.polish.floatText(`+$${e.value}`, e.x, e.y - 14, e.value >= 200 ? '#8ff0ff' : '#ffe45c', e.value >= 200 ? 22 : 18);
@@ -777,42 +789,52 @@ const game = {
     const tank = this.tank;
     const def = this.def;
     if (def.id === 'timetrial') {
-      const shells = Math.floor(tank.stats.earned / 1000) * SHELLS.timeTrialPer1000;
+      // The original's award: 5% of the money earned, in Shells.
+      const shells = Math.floor((tank.stats.earned * SHELLS.timeTrialPercent) / 100) + tank.shells;
       save.shells += shells;
       const best = tank.stats.earned > save.timeTrial;
       if (best) save.timeTrial = tank.stats.earned;
       store();
-      return setScene(results, { head: "TIME'S UP!", lines: [`Your Score: $${tank.stats.earned.toLocaleString('en-US')}`, `Your Best Score: $${save.timeTrial.toLocaleString('en-US')}${best ? '  (new!)' : ''}`, `${shells} Shells`], again: () => play(TIME_TRIAL, this.pets) });
+      return setScene(results, { head: say('results.timetrial'), lines: [`Your Score: $${tank.stats.earned.toLocaleString('en-US')}`, `Your Best Score: $${save.timeTrial.toLocaleString('en-US')}${best ? '  (new!)' : ''}`, `${say('award').replace('%d%%', `${SHELLS.timeTrialPercent}%`)}: ${shells.toLocaleString('en-US')} Shells`], bonus: true, again: () => play(TIME_TRIAL, this.pets) });
     }
     if (def.id === 'challenge') {
       const best = tank.wave > save.challenge;
       if (best) save.challenge = tank.wave;
-      save.shells += tank.wave * 10;
+      // A Challenge "tank" is five waves; each one cleared pays like the original's tanks.
+      const tanks = Math.min(SHELLS.challenge.length, Math.floor(tank.wave / SHELLS.challengeTank));
+      const shells = SHELLS.challenge.slice(0, tanks).reduce((a, b) => a + b, 0) + tank.shells;
+      save.shells += shells;
       store();
-      return setScene(results, { head: 'CHALLENGE RESULTS', lines: [`Waves survived: ${tank.wave}`, `Your Best: ${save.challenge} waves${best ? '  (new!)' : ''}`, `${tank.wave * 10} Shells`], again: () => play(CHALLENGE, this.pets) });
+      return setScene(results, { head: say('results.challenge'), lines: [`Waves survived: ${tank.wave}`, `Your Best: ${save.challenge} waves${best ? '  (new!)' : ''}`, `${shells.toLocaleString('en-US')} Shells`], bonus: tanks > 0, again: () => play(CHALLENGE, this.pets) });
     }
     if (tank.outcome === 'lost') {
       return setScene(results, { head: 'GAME OVER', lines: [say('end.died')], again: () => setScene(game, def, this.pets) });
     }
     if (def.boss) {
       save.beaten = true;
-      save.shells += SHELLS.boss;
+      save.wins++;
+      const ending = () => setScene(results, { head: say('results.bonus'), lines: [say('end.boss1'), say('end.boss2'), save.wins === 1 ? say('end.boss3') : `${SHELLS.boss(save.wins).toLocaleString('en-US')} Shells`], bonus: true });
+      if (!save.pets.includes(def.pet)) {
+        // The first win hatches Presto and pays 5,000 Shells.
+        save.pets.push(def.pet);
+        save.shells += SHELLS.presto + tank.shells;
+        store();
+        return setScene(hatch, { pet: def.pet, def, time: tank.time / 3600, next: ending });
+      }
+      save.shells += SHELLS.boss(save.wins) + tank.shells;
       store();
-      return setScene(results, {
-        head: 'Congratulations!',
-        lines: [say('end.boss1'), say('end.boss2'), say('end.boss3')],
-      });
+      return ending();
     }
     // A level: record the time, hatch the egg's pet.
     const min = tank.time / 3600;
     const prev = save.best[def.id];
     save.best[def.id] = prev ? Math.min(prev, min) : min;
-    save.shells += SHELLS.level;
+    save.shells += tank.shells;
     const newPet = def.pet && !save.pets.includes(def.pet) ? def.pet : null;
     if (newPet) save.pets.push(newPet);
     save.level = Math.max(save.level, def.index + 1);
     store();
-    setScene(hatch, { pet: newPet ?? def.pet, def, time: min });
+    setScene(hatch, { pet: newPet ?? def.pet, def, time: min, extra: tank.shells ? `${tank.shells.toLocaleString('en-US')} Shells` : null });
   },
 };
 
@@ -837,7 +859,7 @@ function arrange(items) {
 }
 
 function play(def, pets) {
-  setScene(game, def, pets.slice(0, MAX_PETS));
+  setScene(game, def, pets.slice(0, petLimit(def.id === 'virtual')));
 }
 
 /* ---------- Egg hatching ---------- */
@@ -855,8 +877,14 @@ const hatch = {
     if (this.t === 60) sound.play('hatch');
     const cx = 320;
     const cy = 150;
-    if (!crack) gfx.frame('eggcrack1', 0, 0, cx, cy, {});
-    else if (crack === 'eggcrack1') {
+    if (!this.info.pet) {
+      // 4-5 has no egg of its own: on to the final battle.
+      gfx.text('junglefever15outline', 'On to the alien homeworld!', cx, cy, { align: 'center' });
+      this.t = Math.max(this.t, 140);
+    } else if (!crack) {
+      gfx.define('eggcrack1s', 'eggcrack1', 13, 1);
+      gfx.frame('eggcrack1s', 0, 0, cx, cy);
+    } else if (crack === 'eggcrack1') {
       gfx.define('eggcrack1s', 'eggcrack1', 13, 1);
       gfx.frame('eggcrack1s', (this.t - 60) / 3, 0, cx, cy);
     } else if (crack === 'eggcrack2') {
@@ -868,6 +896,7 @@ const hatch = {
       gfx.text('junglefever15outline', `This is ${PETS[this.info.pet].name}!`, cx, 222, { align: 'center' });
       body(say(`pet.${this.info.pet}`), 190, 262, 260, { align: 'center', color: '#ffffff' });
     }
+    if (this.info.extra) gfx.text('continuumbold12outline', this.info.extra, cx, 372, { align: 'center', color: '#a8ecff' });
     gfx.text('continuumbold12outline', `${this.info.def.name} complete!  Level Time: ${this.info.time.toFixed(1)} min`, cx, 395, { align: 'center' });
     this.btn = this.t > 140 ? button('Click Here to Continue', 320, 430, 260) : null;
   },
@@ -881,7 +910,7 @@ const hatch = {
     }
     if (this.btn && inside(x, y, this.btn)) {
       sound.play('buttonclick');
-      startAdventure();
+      (this.info.next ?? startAdventure)();
     }
   },
 };
@@ -896,17 +925,35 @@ const results = {
     gfx.image('selectorback');
     gfx.ctx.fillStyle = 'rgba(0,0,30,0.35)';
     gfx.ctx.fillRect(0, 0, W, H);
-    panel(120, 100, 400, 280);
-    gfx.text('junglefever17outline', this.info.head, 320, 118, { align: 'center' });
-    let y = 170;
+    const reward = this.info.bonus ? nextReward() : null;
+    const top = reward ? 20 : 100;
+    panel(120, top, 400, reward ? 440 : 280);
+    gfx.text('junglefever17outline', this.info.head, 320, top + 18, { align: 'center' });
+    let y = top + 64;
     for (const l of this.info.lines) y += body(l, 150, y, 340, { align: 'center' }) + 4;
-    this.again = this.info.again ? button('Play Again', 320, 290, 220) : null;
-    this.back = button('Back to Main Menu', 320, 330, 220);
+    this.buy = null;
+    if (reward) {
+      // The Bonus Reward: the next item, for Shells.
+      y += 6;
+      gfx.text('continuumbold14', say('bonus.reward'), 320, y, { align: 'center', color: '#3a2a10' });
+      gfx.frame(reward.art, PETS[reward.id] ? 0 : t / 3, 0, 250, y + 62, { scale: PETS[reward.id] ? 0.6 : 0.8 });
+      gfx.text('continuumbold12', reward.name, 380, y + 34, { align: 'center', color: '#3a2a10', maxWidth: 220 });
+      gfx.text('continuumbold12', `${reward.price.toLocaleString('en-US')} Shells`, 380, y + 54, { align: 'center', color: '#3a2a10' });
+      gfx.text('continuumbold12', `You have ${save.shells.toLocaleString('en-US')}`, 380, y + 72, { align: 'center', color: save.shells >= reward.price ? '#2a7a2a' : '#8a2a2a' });
+      this.buy = save.shells >= reward.price ? button('Buy', 380, y + 100, 120) : null;
+    }
+    const by = reward ? 395 : 290;
+    this.again = this.info.again ? button('Play Again', 320, by, 220) : null;
+    this.back = button('Back to Main Menu', 320, by + 40, 220);
   },
   hand() {
-    return (this.again && inside(mouse.x, mouse.y, this.again)) || (this.back && inside(mouse.x, mouse.y, this.back));
+    return [this.again, this.back, this.buy].some((r) => r && inside(mouse.x, mouse.y, r));
   },
   click(x, y) {
+    if (this.buy && inside(x, y, this.buy)) {
+      buyReward();
+      return;
+    }
     if (this.again && inside(x, y, this.again)) {
       sound.play('buttonclick');
       this.info.again();
@@ -917,6 +964,33 @@ const results = {
   },
 };
 
+results.drawOver = drawNote;
+
+/** The next Bonus Reward on offer, or null once everything is bought. */
+const EGG_ART = { brinkley: 'eggbrink', nostradamus: 'eggnostradamus', stanley: 'eggstanley', walter: 'eggwalter' };
+function nextReward() {
+  const id = BONUS_REWARD.items[save.bonusBought];
+  if (!id) return null;
+  const pet = PETS[id];
+  return { id, price: BONUS_REWARD.price(save.bonusBought), art: pet ? EGG_ART[id] : 'petlimitegg', name: pet ? PETS[id].name : `${say('limit.now')} ${say(id === 'pets4' ? 'limit.four' : 'limit.seven')} ${say('limit.pets')}` };
+}
+
+function buyReward() {
+  const r = nextReward();
+  if (!r || save.shells < r.price) return;
+  save.shells -= r.price;
+  save.bonusBought++;
+  if (PETS[r.id]) {
+    if (!save.pets.includes(r.id)) save.pets.push(r.id);
+    note(say('store.bought'), `${say(`title.${r.id}`)}  ${say(`bought.${r.id}`)}`);
+  } else {
+    save.maxPets = r.id === 'pets4' ? 4 : 7;
+    note(say('limit.congrats'), `${r.name}  ${say(r.id === 'pets4' ? 'limit.insane' : 'limit.void')}`);
+  }
+  store();
+  sound.play('hatch');
+}
+
 /* ---------- Virtual Tank ---------- */
 
 function saveVirtual(tank) {
@@ -924,53 +998,23 @@ function saveVirtual(tank) {
   store();
 }
 
-/** The Fish Emporium: turn Shells into money for the Virtual Tank, or buy the bonus pets. */
-const EGG_ART = { brinkley: 'eggbrink', nostradamus: 'eggnostradamus', stanley: 'eggstanley', walter: 'eggwalter' };
+/** The Fish Emporium: turn Shells into money for the Virtual Tank. */
 const storeScene = {
   enter(from) {
     this.from = from;
   },
-  eggs() {
-    return BONUS_PETS.map((p, i) => ({ p, x: 130 + i * 100, y: 62, w: 90, h: 180 }));
-  },
   draw() {
     gfx.image('store');
     gfx.text('junglefever15outline', say('store.thanks'), 320, 20, { align: 'center' });
-    panel(100, 52, 440, 252);
-    gfx.text('continuumbold14', 'Bonus Pets', 320, 64, { align: 'center', color: '#3a2a10' });
-    for (const e of this.eggs()) {
-      const got = save.pets.includes(e.p);
-      const hover = inside(mouse.x, mouse.y, e);
-      if (got) gfx.frame(`scl_${e.p}`, t / 3, 0, e.x + 45, e.y + 88, { scale: 1.2 });
-      else gfx.frame(EGG_ART[e.p], 0, 0, e.x + 45, e.y + 88, { scale: hover ? 0.72 : 0.66 });
-      gfx.text('continuumbold12', PETS[e.p].name, e.x + 45, e.y + 138, { align: 'center', color: '#3a2a10' });
-      gfx.text('continuumbold12', got ? 'Owned' : `${BONUS.price.toLocaleString('en-US')} Shells`, e.x + 45, e.y + 156, { align: 'center', color: got ? '#2a7a2a' : '#3a2a10' });
-    }
-    const hov = this.eggs().find((e) => inside(mouse.x, mouse.y, e));
-    if (hov) body(say(`pet.${hov.p}`), 120, 244, 400, { align: 'center' });
     panel(170, 312, 300, 150);
     gfx.text('continuumbold14', `${save.shells.toLocaleString('en-US')} Shells`, 320, 328, { align: 'center', color: '#3a2a10' });
     this.buy = button('Trade 100 Shells for $1,000', 320, 362, 260);
     this.back = button('Back to Tank', 320, 407, 260);
   },
   hand() {
-    return inside(mouse.x, mouse.y, this.buy ?? {}) || inside(mouse.x, mouse.y, this.back ?? {}) || this.eggs().some((e) => !save.pets.includes(e.p) && inside(mouse.x, mouse.y, e));
+    return inside(mouse.x, mouse.y, this.buy ?? {}) || inside(mouse.x, mouse.y, this.back ?? {});
   },
   click(x, y) {
-    const egg = this.eggs().find((e) => inside(x, y, e));
-    if (egg && !save.pets.includes(egg.p)) {
-      if (save.shells >= BONUS.price) {
-        save.shells -= BONUS.price;
-        save.pets.push(egg.p);
-        store();
-        sound.play('hatch');
-        note(say('store.bought'), `${say(`title.${egg.p}`)}  ${say(`bought.${egg.p}`)}`);
-      } else {
-        sound.play('buzzer');
-        note('Not Enough Shells', say('note.shells'));
-      }
-      return;
-    }
     if (this.buy && inside(x, y, this.buy)) {
       if (save.shells >= 100) {
         save.shells -= 100;
@@ -984,7 +1028,7 @@ const storeScene = {
       }
     } else if (this.back && inside(x, y, this.back)) {
       sound.play('buttonclick');
-      play(VIRTUAL, save.pets.slice(0, 3));
+      play(VIRTUAL, save.pets.slice(0, petLimit(true)));
     }
   },
 };

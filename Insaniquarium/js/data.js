@@ -156,8 +156,9 @@ export const BONUS_PETS = Object.keys(PETS).filter((id) => PETS[id].bonus);
 
 /*
  * The bonus pets' abilities, from the original. Brinkley swims after food and
- * eats it; every 3rd pellet he gives back a star, every 15th a diamond, every
- * 45th a pearl and every 135th a chest. Nostradamus makes a food pellet every
+ * eats it; every 3rd pellet he gives back a shell coin worth a star, every 15th
+ * one worth a diamond, every 45th a pearl and every 135th a chest. Shell coins
+ * pay Shells, not money. Nostradamus makes a food pellet every
  * 3-6 s. Stanley shoots down alien missiles with balls and throws one at an
  * alien every second. Walter punches whatever fish or pet is in front of him
  * when you click him, and it drops its coin or uses its power at once.
@@ -167,7 +168,16 @@ export const BONUS = {
   nostradamus: { every: [t(300), t(600)] },
   stanley: { every: t(100), ballDamage: 8, ballSpeed: 4.5, rest: [t(30), t(60), t(90)] },
   walter: { punch: t(30), rest: t(40), reach: 40 },
-  price: 2000,
+};
+
+/*
+ * The Bonus Reward, as in the original: offered on the results screen after a
+ * Time Trial, a Challenge tank or the final battle. Each buy gets the next item
+ * in this order, at (items bought + 4) x 5,000 Shells, up to 50,000.
+ */
+export const BONUS_REWARD = {
+  items: ['brinkley', 'nostradamus', 'stanley', 'walter', 'pets4', 'pets7'],
+  price: (bought) => Math.min(50000, (bought + 4) * 5000),
 };
 export const MAX_PETS = 3;
 
@@ -229,7 +239,8 @@ TANKS.forEach((T, ti) => {
       shop,
       // The original picks one of the level's alien codes at random for each attack.
       aliens: codes ? { codes, first: first ?? ALIEN_EVERY, every: ALIEN_EVERY } : null,
-      pet: PET_ORDER[ti * 5 + n],
+      // Level L of tank T hatches pet 5T + L - 6; 4-5 leads to the final battle with no egg of its own.
+      pet: PET_ORDER[ti * 5 + n] && !(ti === 3 && n === 4) ? PET_ORDER[ti * 5 + n] : null,
       start: { money: 200, guppies: 2, fish: T.first },
     });
   });
@@ -245,6 +256,7 @@ export const BOSS = {
   shop: ['guppy', 'quality', 'count', 'carnivore', 'breeder', 'weapon'],
   aliens: { codes: [21], first: s(30), every: s(9999) },
   boss: true,
+  pet: 'presto',
   start: { money: 2000, guppies: 4 },
 };
 
@@ -287,4 +299,15 @@ export const VIRTUAL = {
 };
 
 /** Shells: the Virtual Tank currency, earned in the other modes. */
-export const SHELLS = { level: 20, boss: 5000, timeTrialPer1000: 1 };
+export const SHELLS = {
+  // Hatching Presto, by beating the final boss the first time.
+  presto: 5000,
+  // Beating the boss again: 5,000 for the second win, 5,000 more for each after, up to 25,000.
+  boss: (wins) => Math.min(25000, Math.max(1, wins - 1) * 5000),
+  // Time Trial: 5% of the money earned.
+  timeTrialPercent: 5,
+  // Challenge: the original pays 2,000 / 5,000 / 10,000 / 20,000 for its four tanks.
+  // Here a tank is five waves.
+  challenge: [2000, 5000, 10000, 20000],
+  challengeTank: 5,
+};

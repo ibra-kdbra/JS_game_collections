@@ -58,12 +58,23 @@ The art is the original's, remastered, and the gameplay is unchanged.
 
 | Mode | |
 | --- | --- |
-| Adventure | Tanks 1–4, five levels each. Every level hatches the next pet: Stinky, Niko, Itchy, Prego, Zorf, Clyde, Vert, Rufus, Meryl, Wadsworth, Seymour, Shrapnel, Gumbo, Blip, Rhubarb, Nimbus, Amp, Gash, Angie, Presto. Then the final battle with Cyrax. Take three pets into each level. |
+| Adventure | Tanks 1–4, five levels each. Every level up to 4-4 hatches the next pet: Stinky, Niko, Itchy, Prego, Zorf, Clyde, Vert, Rufus, Meryl, Wadsworth, Seymour, Shrapnel, Gumbo, Blip, Rhubarb, Nimbus, Amp, Gash, Angie. 4-5 leads to the final battle with Cyrax, and beating him hatches Presto. Take three pets into each level. |
 | Time Trial | Earn as much money as you can in 5 minutes. |
 | Challenge | Waves of aliens that get harder, with prices that rise each wave. |
-| Virtual Tank | A tank you keep: fish never die, and it saves when you leave. In the Fish Emporium (Menu > Visit Store), trade Shells for money or buy the four bonus pets. |
+| Virtual Tank | A tank you keep: fish never die, and it saves when you leave. Trade Shells for money in the Fish Emporium (Menu > Visit Store). |
 
-You earn **Shells** in every mode.
+**Shells and the Bonus Reward**, as in the original:
+
+- **Earning Shells:**
+  - Time Trial pays 5% of the money you earn.
+  - Challenge pays 2,000, 5,000, 10,000 and 20,000 for its first four "tanks"; here a tank is five waves.
+  - The first win over Cyrax pays 5,000 (with Presto). Later wins pay 5,000, 10,000 and so on, up to 25,000.
+  - In Adventure, Shells come from the shell coins Brinkley makes.
+- **The Bonus Reward:** the results screen after a Time Trial, a Challenge or the final battle offers the next one, in this order:
+  - Brinkley, Nostradamus, Stanley and Walter;
+  - then four pets at once;
+  - then seven pets at once, which only counts in the Virtual Tank.
+  - Prices run 20,000, 25,000 and so on, rising 5,000 each time.
 
 **Characters:**
 
@@ -84,8 +95,8 @@ You earn **Shells** in every mode.
   - Bilaterus: a chain of bones with a head at each end. Only the heads can be hurt; when one dies, the other takes the lead.
   - Minisylvester, and Cyrax the final boss.
 - **Pets:** each of the 20 Adventure pets does what the original's help screen says.
-- **Bonus pets:** bought for 2,000 Shells each in the Fish Emporium, then picked like any other pet. What they do is read from the original program:
-  - **Brinkley** swims after your food and eats it. Every 3rd pellet comes back as a star, every 15th as a diamond, every 45th as a pearl and every 135th as a treasure chest.
+- **Bonus pets:** bought as Bonus Rewards (above), then picked like any other pet. What they do is read from the original program:
+  - **Brinkley** swims after your food and eats it. Every 3rd pellet comes back as a shell coin worth a star's value in Shells. Every 15th is worth a diamond, every 45th a pearl and every 135th a treasure chest.
   - **Nostradamus** sneezes out a food pellet every 3–6 s.
   - **Stanley** knocks alien missiles out of the water with balls, and throws a ball at an alien every second.
   - **Walter:** click him and he punches whatever fish or pet is in front of him. A fish drops its coin at once, and a pet uses its power at once.
@@ -144,5 +155,6 @@ Most numbers in `data.js` are read from the original program, `Insaniquarium.exe
   - Cyrax's attacks;
   - Bilaterus's speed, and how often he turns around;
   - the damage of Stanley's balls (8 a hit).
-- **Bonus pets:** the original's way of getting them isn't decoded yet. Here they're sold in the Fish Emporium, and the 2,000-Shell price is this version's own.
+- **Challenge:** it plays as endless waves rather than the original's four tanks, so its Shell awards come every five waves.
+- **Shell coins:** which shell picture goes with which coin is this version's guess.
 - **Virtual Tank:** much simpler than the original's (no fish naming, backdrops or screensaver).

@@ -5,6 +5,8 @@
   "sha1": "329d46cca505529f08848132382d7f7b185b5985"
  },
  "text": {
+  "award": [[1712988, 16]],
+  "bonus.reward": [[1713120, 12]],
   "bought.brinkley": [[1713696, 67]],
   "bought.nostradamus": [[1713576, 90]],
   "bought.stanley": [[1713448, 83]],
@@ -39,6 +41,13 @@
   "help.5.1": [[1675224, 37], [1675264, 45]],
   "help.5.2": [[1674860, 44], [1675410, 38]],
   "help.5.3": [[1675020, 50], [1675072, 53]],
+  "limit.congrats": [[1713292, 16]],
+  "limit.four": [[1713260, 4]],
+  "limit.insane": [[1713228, 28]],
+  "limit.now": [[1713276, 15]],
+  "limit.pets": [[1713204, 22]],
+  "limit.seven": [[1713268, 5]],
+  "limit.void": [[1713148, 52]],
   "mode.adventure": [[1714560, 27]],
   "mode.challenge": [[1714452, 51]],
   "mode.timetrial": [[1714504, 49]],
@@ -146,6 +155,9 @@
     19
    ]],
   "pet.zorf": [[1716972, 24], [1716948, 22]],
+  "results.bonus": [[1713896, 13]],
+  "results.challenge": [[1713876, 17]],
+  "results.timetrial": [[1713856, 18]],
   "sig.bilaterus": [[1738768, 32]],
   "sig.destructor": [[1738868, 31]],
   "sig.gus": [[1738900, 31]],
