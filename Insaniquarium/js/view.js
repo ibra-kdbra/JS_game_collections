@@ -21,6 +21,7 @@ const SHEETS = {
   gekko: ['gekko', 10, 7],
   starcatcher: ['starcatcher', 10, 3],
   money: ['money', 10, 6],
+  shells: ['shells', 20, 4],
   food: ['food', 10, 5],
   misc: ['miscitems', 3, 1],
   sylv: ['sylv', 10, 2],
@@ -208,7 +209,14 @@ export function createView(gfx) {
   /* ---------- Coins, food ---------- */
 
   const GLOW = { diamond: 'rgba(120,230,255,A)', star: 'rgba(255,240,120,A)', chest: 'rgba(255,200,90,A)', pearl: 'rgba(255,230,255,A)', gold: 'rgba(255,210,80,A)' };
+  // Shell coins: one row of the shells sheet per kind of treasure.
+  const SHELL_ROW = { star: 0, diamond: 1, pearl: 2, chest: 3 };
+
   function coin(c, t, scale = 1) {
+    if (c.shell) {
+      polish.glow(c.x, c.y, 24 * scale, 'rgba(160,230,255,A)', 0.3 + 0.1 * Math.sin(t / 8 + c.id));
+      return gfx.frame('shells', t / 2 + c.spin, SHELL_ROW[c.type] ?? 0, c.x, c.y, { scale: 1.1 * scale });
+    }
     if (GLOW[c.type]) polish.glow(c.x, c.y, (c.type === 'gold' ? 18 : 30) * scale, GLOW[c.type], (c.type === 'gold' ? 0.22 : 0.4) + 0.12 * Math.sin(t / 8 + c.id));
     if (c.type === 'pearl') return gfx.frame('pearl', 0, 0, c.x, c.y, { scale: 0.5 * scale });
     if (c.type === 'bomb') return gfx.frame('misc', 0, 0, c.x, c.y, { scale });

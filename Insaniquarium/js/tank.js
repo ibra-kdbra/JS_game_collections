@@ -36,6 +36,8 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
     def,
     time: 0,
     money: def.start.money,
+    // Shells picked up in this tank (from Brinkley's treasure), paid out at the end.
+    shells: 0,
     eggs: 0,
     fish: [],
     food: [],
@@ -334,8 +336,8 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
 
   /* ---------- Coins and food ---------- */
 
-  function dropCoin(type, x, y) {
-    tank.coins.push({ id: nextId++, x, y, type, vy: type === 'beetle' ? 0.4 : 0.2, floorT: 0, spin: rand() * 10, bounce: 0 });
+  function dropCoin(type, x, y, extra = {}) {
+    tank.coins.push({ id: nextId++, x, y, type, vy: type === 'beetle' ? 0.4 : 0.2, floorT: 0, spin: rand() * 10, bounce: 0, ...extra });
     emit('drop', { x, y, coin: type });
   }
 
@@ -364,8 +366,14 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
   function collect(c, by = 'click') {
     tank.coins = tank.coins.filter((k) => k !== c);
     const v = COINS[c.type].value;
-    tank.money += v;
     tank.stats.coins++;
+    if (c.shell) {
+      // A shell coin is worth its value in Shells instead of money.
+      tank.shells += v;
+      emit('coin', { x: c.x, y: c.y, value: v, coin: c.type, by, shell: true });
+      return;
+    }
+    tank.money += v;
     tank.stats.earned += v;
     emit('coin', { x: c.x, y: c.y, value: v, coin: c.type, by });
   }
@@ -657,7 +665,7 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
             p.eaten++;
             p.state = 20;
             emit('slurp', { x: p.x, y: p.y });
-            if (p.eaten % B.every === 0) dropCoin(B.prizes.find(([n]) => p.eaten % n === 0)[1], p.x + 5, p.y - 10);
+            if (p.eaten % B.every === 0) dropCoin(B.prizes.find(([n]) => p.eaten % n === 0)[1], p.x + 5, p.y - 10, { shell: true });
           }
         } else drift(p, 300, 170);
         if (p.state > 0) p.state--;
