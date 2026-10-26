@@ -1,11 +1,14 @@
 // A reasonable player: feeds hungry fish, grabs coins, shoots aliens, buys sensibly.
-// `node tools/bot.mjs` plays every Adventure level and the boss, and fails if any isn't cleared.
+// `node tools/bot.mjs` plays every Adventure level, the boss and the four Challenge tanks.
+// It fails unless it clears all of Adventure, the boss and Challenge tanks 1-2. Tanks 3-4
+// are only reported: like the original's, they're for experts, and this bot isn't one.
 import { createTank } from '../js/tank.js';
-import { LEVELS, FISH, ALIENS, BOSS, TANK } from '../js/data.js';
+import { LEVELS, FISH, ALIENS, BOSS, CHALLENGE, TANK } from '../js/data.js';
 
 export function act(t, step, rand) {
   // Five clicks a second, ten while fighting.
-  if (step % (t.aliens.length || t.warning ? 6 : 12)) return;
+  // Challenge is for experts: click faster there.
+  if (step % (t.aliens.length || t.warning ? 6 : t.def.challenge ? 8 : 12)) return;
   // Keep clear of a charged Amp unless that's the plan.
   const amp = t.pets.find((p) => p.kind === 'amp' && p.charged);
   const click0 = t.click;
@@ -42,10 +45,12 @@ export function act(t, step, rand) {
   // Keep enough to feed Gus to death when he may come.
   const gusLevel = t.def.aliens?.codes.some((c) => c === 4);
   const reserve = t.warning || t.aliens.length ? 1e9 : gusLevel ? 150 : 40;
+  // In Challenge prices keep rising, so egg pieces come first and the tank fills up with guppies.
+  if (t.def.challenge && get('egg')?.affordable) return t.buy('egg');
   if (guppies < 3) order.push(first);
   if (t.def.aliens && t.up.weapon < 2) order.push('weapon');
   order.push('quality');
-  if (guppies < 7) order.push(first);
+  if (guppies < (t.def.challenge ? 16 : 7)) order.push(first);
   if (t.def.aliens && t.up.weapon < 2 + (t.def.tank ?? 2)) order.push('weapon');
   const count = (k) => t.fish.filter((f) => f.kind === k && !f.dead).length;
   const babies = t.fish.filter((f) => f.kind === 'guppy' && f.stage === 0 && !f.dead).length;
@@ -83,10 +88,10 @@ export function play(def, seed = 1, pets = []) {
 if (typeof process !== 'undefined' && process.argv[1]?.endsWith('bot.mjs')) {
   const owned = [];
   let failed = 0;
-  for (const def of [...LEVELS, BOSS]) {
+  for (const def of [...LEVELS, BOSS, ...CHALLENGE]) {
     const r = play(def, 3, owned.slice(-3));
     console.log(def.id, r.outcome, `${r.min} min`, `lost ${r.lost}`, `aliens ${r.aliens}`, `pets ${owned.slice(-3).join(',')}`);
-    if (r.outcome !== 'clear') failed++;
+    if (r.outcome !== 'clear' && !(def.challenge > 2)) failed++;
     if (def.pet) owned.push(def.pet);
   }
   if (failed) {

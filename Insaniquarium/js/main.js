@@ -20,7 +20,7 @@ let view = null;
 /* ---------- Save data ---------- */
 
 const KEY = 'insaniquarium-web';
-const fresh = () => ({ level: 0, pets: [], choice: [], shells: 0, best: {}, timeTrial: 0, challenge: 0, beaten: false, wins: 0, bonusBought: 0, maxPets: MAX_PETS, virtual: null, sfx: 0.8, music: 0.6 });
+const fresh = () => ({ level: 0, pets: [], choice: [], shells: 0, best: {}, timeTrial: 0, challenge: 0, beaten: false, challengeBeaten: {}, challengeBest: {}, wins: 0, bonusBought: 0, maxPets: MAX_PETS, virtual: null, sfx: 0.8, music: 0.6 });
 let save = (() => {
   try {
     const s = { ...fresh(), ...JSON.parse(localStorage.getItem(KEY) || '{}') };
@@ -223,8 +223,8 @@ const menu = {
       if (!hatched()) return note('Not Yet!', say('note.locked'));
       play(TIME_TRIAL, save.choice.length ? save.choice : save.pets.slice(-3));
     } else if (b.id === 'challenge') {
-      if (!hatched()) return note('Not Yet!', say('note.locked'));
-      play(CHALLENGE, save.choice.length ? save.choice : save.pets.slice(-3));
+      if (!save.beaten) return note('Not Yet!', say('note.beatAdventure'));
+      setScene(challengePick);
     } else if (b.id === 'virtual') play(VIRTUAL, save.pets.slice(0, petLimit(true)));
     else if (b.id === 'help') setScene(help);
     else if (b.id === 'options') setScene(options);
@@ -568,8 +568,8 @@ const game = {
           if (e.x !== undefined) sound.play(['splash', 'splash2', 'splash3'][Math.floor(Math.random() * 3)]);
           if (e.id === 'egg' && tank.eggs < 3) this.say(`Collect ${3 - tank.eggs} more egg piece${3 - tank.eggs > 1 ? 's' : ''} to finish level!`, 150);
           break;
-        case 'wave':
-          fx.text('WARNING! ALIEN DIFFICULTY INCREASED!', 320, 200, { font: 'junglefever15outline', dur: 150, rise: 0.2 });
+        case 'pricesReset':
+          this.say(say('msg.pricesReset'), 180);
           break;
         case 'clear':
           sound.play('zzam');
@@ -685,7 +685,6 @@ const game = {
       const s = Math.ceil(tank.timeLeft / 60);
       gfx.text('continuumbold14', `Time Remaining: ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`, 320, 82, { align: 'center', color: s < 30 && Math.floor(t / 15) % 2 ? '#ff6060' : '#ffffff' });
     }
-    if (this.def.id === 'challenge') gfx.text('continuumbold12outline', `Wave ${tank.wave + 1}`, 320, 82, { align: 'center' });
     if (this.paused) {
       gfx.ctx.fillStyle = 'rgba(0,0,0,0.45)';
       gfx.ctx.fillRect(0, 0, W, H);
@@ -797,18 +796,20 @@ const game = {
       store();
       return setScene(results, { head: say('results.timetrial'), lines: [`Your Score: $${tank.stats.earned.toLocaleString('en-US')}`, `Your Best Score: $${save.timeTrial.toLocaleString('en-US')}${best ? '  (new!)' : ''}`, `${say('award').replace('%d%%', `${SHELLS.timeTrialPercent}%`)}: ${shells.toLocaleString('en-US')} Shells`], bonus: true, again: () => play(TIME_TRIAL, this.pets) });
     }
-    if (def.id === 'challenge') {
-      const best = tank.wave > save.challenge;
-      if (best) save.challenge = tank.wave;
-      // A Challenge "tank" is five waves; each one cleared pays like the original's tanks.
-      const tanks = Math.min(SHELLS.challenge.length, Math.floor(tank.wave / SHELLS.challengeTank));
-      const shells = SHELLS.challenge.slice(0, tanks).reduce((a, b) => a + b, 0) + tank.shells;
-      save.shells += shells;
-      store();
-      return setScene(results, { head: say('results.challenge'), lines: [`Waves survived: ${tank.wave}`, `Your Best: ${save.challenge} waves${best ? '  (new!)' : ''}`, `${shells.toLocaleString('en-US')} Shells`], bonus: tanks > 0, again: () => play(CHALLENGE, this.pets) });
-    }
     if (tank.outcome === 'lost') {
       return setScene(results, { head: 'GAME OVER', lines: [say('end.died')], again: () => setScene(game, def, this.pets) });
+    }
+    if (def.challenge) {
+      const n = def.challenge;
+      const min = tank.time / 3600;
+      const prev = save.challengeBest[n];
+      const best = !prev || min < prev;
+      if (best) save.challengeBest[n] = min;
+      save.challengeBeaten[n] = true;
+      const shells = SHELLS.challenge[n - 1] + tank.shells;
+      save.shells += shells;
+      store();
+      return setScene(results, { head: say('results.challenge'), lines: [`${def.name} complete!`, `Level Time: ${min.toFixed(1)} min${best ? '  (new best!)' : ''}`, `${shells.toLocaleString('en-US')} Shells`], bonus: true, again: () => play(def, this.pets) });
     }
     if (def.boss) {
       save.beaten = true;
@@ -964,7 +965,6 @@ const results = {
   },
 };
 
-results.drawOver = drawNote;
 
 /** The next Bonus Reward on offer, or null once everything is bought. */
 const EGG_ART = { brinkley: 'eggbrink', nostradamus: 'eggnostradamus', stanley: 'eggstanley', walter: 'eggwalter' };
@@ -990,6 +990,50 @@ function buyReward() {
   store();
   sound.play('hatch');
 }
+
+/* ---------- Challenge ---------- */
+
+/** Pick a Challenge tank: tank 1, then each one after the last you've beaten. */
+const challengePick = {
+  layout() {
+    return CHALLENGE.map((def, i) => ({ def, x: 125 + (i % 2) * 210, y: 88 + Math.floor(i / 2) * 170, w: 180, h: 135, open: i === 0 || save.challengeBeaten[i] }));
+  },
+  draw() {
+    gfx.image('selectorback');
+    gfx.ctx.fillStyle = 'rgba(0,0,30,0.35)';
+    gfx.ctx.fillRect(0, 0, W, H);
+    title('Challenge', 40);
+    for (const b of this.layout()) {
+      const hover = b.open && inside(mouse.x, mouse.y, b);
+      gfx.ctx.save();
+      gfx.ctx.globalAlpha = b.open ? 1 : 0.35;
+      gfx.image(b.def.aquarium, b.x, b.y, { scale: b.w / 640 });
+      gfx.ctx.restore();
+      gfx.ctx.strokeStyle = hover ? '#ffff9a' : 'rgba(255,214,110,0.7)';
+      gfx.ctx.lineWidth = hover ? 3 : 2;
+      gfx.ctx.strokeRect(b.x, b.y, b.w, b.h);
+      gfx.text('junglefever12outline', `Tank ${b.def.challenge}`, b.x + b.w / 2, b.y + b.h + 2, { align: 'center', color: hover ? '#ffff9a' : null });
+      const best = save.challengeBest[b.def.challenge];
+      const note = !b.open ? 'Locked' : best ? `Best: ${best.toFixed(1)} min` : `Egg pieces: $${b.def.egg.toLocaleString('en-US')}`;
+      gfx.text('continuumbold12outline', note, b.x + b.w / 2, b.y + 58, { align: 'center' });
+    }
+    this.back = button('Back to Main Menu', 320, 448, 220);
+  },
+  hand() {
+    return this.layout().some((b) => b.open && inside(mouse.x, mouse.y, b)) || (this.back && inside(mouse.x, mouse.y, this.back));
+  },
+  click(x, y) {
+    const b = this.layout().find((o) => o.open && inside(x, y, o));
+    if (b) {
+      sound.play('buttonclick');
+      if (save.pets.length > petLimit()) setScene(petPick, b.def);
+      else play(b.def, save.pets.slice());
+    } else if (this.back && inside(x, y, this.back)) {
+      sound.play('buttonclick');
+      setScene(menu);
+    }
+  },
+};
 
 /* ---------- Virtual Tank ---------- */
 
@@ -1121,7 +1165,7 @@ const fame = {
       ['Pets', `${save.pets.length} / ${PET_ORDER.length + BONUS_PETS.length}`],
       ['Adventure', save.beaten ? 'Final Boss beaten!' : save.level ? LEVELS[Math.min(save.level, LEVELS.length - 1)].name : 'Not started'],
       ['Time Trial', save.timeTrial ? `$${save.timeTrial.toLocaleString('en-US')}` : '-'],
-      ['Challenge', save.challenge ? `${save.challenge} waves` : '-'],
+      ['Challenge', `${Object.keys(save.challengeBeaten).length} / ${CHALLENGE.length} tanks`],
       ['Shells', save.shells.toLocaleString('en-US')],
     ];
     rows.forEach(([k, v], i) => {
@@ -1171,7 +1215,7 @@ const credits = {
 };
 
 /* Menus that can show a message box. */
-for (const s of [menu, petPick, results, help, fame, credits]) {
+for (const s of [menu, petPick, results, help, fame, credits, challengePick]) {
   const d = s.draw;
   s.draw = function () {
     d.call(this);
@@ -1251,4 +1295,4 @@ loadAll({ hd: true, first: ['titlescreen', 'loaderbar', 'loaderbarover', 'loader
 });
 
 // For testing from the console.
-window.__game = { get scene() { return scene; }, game, setScene, play, LEVELS, save: () => save, scenes: { hatch, petPick, results, help, fame, options, menu, storeScene, credits } };
+window.__game = { get scene() { return scene; }, game, setScene, play, LEVELS, CHALLENGE, save: () => save, scenes: { challengePick, hatch, petPick, results, help, fame, options, menu, storeScene, credits } };
