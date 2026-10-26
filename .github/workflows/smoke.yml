@@ -40,6 +40,8 @@ jobs:
         run: node Raven/tools/verify-levels.mjs
       - name: Tower Defense campaign maps
         run: node TowerDefense/tools/verify-maps.mjs
+      - name: Insaniquarium levels
+        run: node Insaniquarium/tools/bot.mjs
 
   smoke:
     name: Browser smoke test

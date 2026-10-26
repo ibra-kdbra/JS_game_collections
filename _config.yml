@@ -18,3 +18,5 @@ exclude:
   - TowerDefense/tools
   - PacMan/src
   - Wahdatio/src
+  # Needs files converted from the player's own copy of the game, so it isn't published.
+  - Insaniquarium
