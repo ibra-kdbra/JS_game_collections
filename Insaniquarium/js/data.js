@@ -76,8 +76,12 @@ export const FOOD = {
   countCost: 300,
 };
 
-/** Each click does 3 damage per laser level (1-10). Upgrades cost the same all through a tank. */
-export const WEAPON = { damage: (level) => 3 * level, max: 10 };
+/**
+ * The laser, as in the original: its power starts at 2 and each upgrade adds 1,
+ * up to 12. A click does 3 damage per point of power (2 per point + 2 to
+ * Destructor). Upgrades cost the same all through a tank.
+ */
+export const WEAPON = { start: 2, max: 12, damage: (power, kind) => (kind === 'destructor' ? 2 * power + 2 : 3 * power) };
 
 /* ---------- Aliens (health and speed from the original) ---------- */
 
@@ -120,6 +124,29 @@ export const ALIEN_CODES = {
 };
 /** Aliens come 30 s after the last one is beaten (17.5 s for the first in 1-2). */
 export const ALIEN_EVERY = t(3000);
+
+/**
+ * After each attack, some levels change which aliens come next, as in the
+ * original. `code` is the attack just sent; returns the next one.
+ */
+const NEXT_ATTACK = {
+  '1-5': (code, r) => (r() < 0.5 ? 3 : 9),
+  '2-5': (code, r) => {
+    if (code === 9) code = r() < 0.5 ? 4 : 5;
+    if (r() < 0.1) return code === 5 ? 4 : 5;
+    return r() < 0.05 ? 9 : code;
+  },
+  '3-2': (code, r) => (r() < 0.1 ? (code === 5 ? 4 : 5) : code),
+  '3-5': (code, r) => (r() < 0.5 ? 6 : 7),
+  '4-3': (code, r) => (r() < 0.5 ? 4 : 10),
+  '4-4': (code, r) => (r() < 0.5 ? 8 : 11),
+  '4-5': (code, r) => [10, 10, 8, 8, 11][Math.floor(r() * 5)],
+};
+export function nextAttack(def, code, r, attacks) {
+  const next = NEXT_ATTACK[def.levelId ?? def.id]?.(code, r) ?? code;
+  // In Challenge, Bilaterus brings a Balrog along from the sixth attack on.
+  return def.challenge && attacks >= 5 && next === 8 ? 12 : next;
+}
 
 /* ---------- Pets (what each does is in the game text: say('pet.<id>')) ---------- */
 
@@ -273,20 +300,22 @@ export const TIME_TRIAL = {
   start: { money: 300, guppies: 2 },
 };
 
-export const CHALLENGE = {
-  id: 'challenge',
-  name: 'Challenge',
-  aquarium: 'aquarium5',
-  shop: ['guppy', 'quality', 'count', 'carnivore', 'breeder', 'ultravore', 'weapon'],
-  weaponCost: 2000,
-  start: { money: 400, guppies: 3 },
-  first: s(45),
-  every: (wave) => s(Math.max(18, 55 - wave * 3)),
-  count: (wave) => 1 + Math.floor(wave / 3),
-  hp: (wave) => 1 + wave * 0.35,
-  inflation: (wave) => 1 + wave * 0.08,
-  kinds: (wave) => ['sylvester', 'sylvester2', 'balrog', 'gus', 'minisylvester', 'destructor', 'psychosquid', 'ulysses'].slice(0, Math.min(8, 2 + wave)),
-};
+/*
+ * Challenge, as in the original: tanks 1-4 played with their level-5 shop and
+ * aliens, after Adventure is beaten. Egg pieces cost more, and every price
+ * creeps up by 1% of its starting value every 1.5-2 s. Buying an egg piece puts
+ * the other prices back and pauses the rises for 5 s. Every few attacks, one more
+ * copy of the attacking aliens comes along.
+ */
+export const CHALLENGE = [
+  { egg: 5000, inflateEvery: t(150), extraEvery: 4 },
+  { egg: 5000, inflateEvery: t(150), extraEvery: 5 },
+  { egg: 15000, inflateEvery: t(175), extraEvery: 5 },
+  { egg: 25000, inflateEvery: t(200), extraEvery: 6 },
+].map((c, i) => {
+  const base = LEVELS[i * 5 + 4];
+  return { ...base, ...c, id: `challenge${i + 1}`, levelId: base.id, challenge: i + 1, name: `Challenge Tank ${i + 1}`, pet: null };
+});
 
 export const VIRTUAL = {
   id: 'virtual',
@@ -306,8 +335,6 @@ export const SHELLS = {
   boss: (wins) => Math.min(25000, Math.max(1, wins - 1) * 5000),
   // Time Trial: 5% of the money earned.
   timeTrialPercent: 5,
-  // Challenge: the original pays 2,000 / 5,000 / 10,000 / 20,000 for its four tanks.
-  // Here a tank is five waves.
+  // Challenge: 2,000 / 5,000 / 10,000 / 20,000 for clearing tanks 1-4.
   challenge: [2000, 5000, 10000, 20000],
-  challengeTank: 5,
 };

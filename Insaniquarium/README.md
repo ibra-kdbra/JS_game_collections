@@ -60,14 +60,14 @@ The art is the original's, remastered, and the gameplay is unchanged.
 | --- | --- |
 | Adventure | Tanks 1–4, five levels each. Every level up to 4-4 hatches the next pet: Stinky, Niko, Itchy, Prego, Zorf, Clyde, Vert, Rufus, Meryl, Wadsworth, Seymour, Shrapnel, Gumbo, Blip, Rhubarb, Nimbus, Amp, Gash, Angie. 4-5 leads to the final battle with Cyrax, and beating him hatches Presto. Take three pets into each level. |
 | Time Trial | Earn as much money as you can in 5 minutes. |
-| Challenge | Waves of aliens that get harder, with prices that rise each wave. |
+| Challenge | Opens once Adventure is beaten. Four tanks, each played with its level-5 shop and aliens; clearing one opens the next. Egg pieces cost 5,000, 5,000, 15,000 and 25,000. Prices creep up as you play, and buying an egg piece resets all but the egg's. Every few attacks bring one more copy of the aliens. |
 | Virtual Tank | A tank you keep: fish never die, and it saves when you leave. Trade Shells for money in the Fish Emporium (Menu > Visit Store). |
 
 **Shells and the Bonus Reward**, as in the original:
 
 - **Earning Shells:**
   - Time Trial pays 5% of the money you earn.
-  - Challenge pays 2,000, 5,000, 10,000 and 20,000 for its first four "tanks"; here a tank is five waves.
+  - Challenge pays 2,000, 5,000, 10,000 and 20,000 for tanks 1–4.
   - The first win over Cyrax pays 5,000 (with Presto). Later wins pay 5,000, 10,000 and so on, up to 25,000.
   - In Adventure, Shells come from the shell coins Brinkley makes.
 - **The Bonus Reward:** the results screen after a Time Trial, a Challenge or the final battle offers the next one, in this order:
@@ -124,7 +124,9 @@ The art is the original's, remastered, and the gameplay is unchanged.
   - `sound.js`: audio;
   - `assets.js`: loading.
 - `game.js` and `assets/data.js` are built from `js/` by `node tools/build.mjs`. Rebuild after editing anything in `js/`.
-- `tools/bot.mjs` plays every level with a simple player and prints the times. Run it with `node tools/bot.mjs` after changing numbers in `data.js`. It clears all 20 levels and the boss, in 1–10 minutes a level.
+- `tools/bot.mjs` plays every level with a simple player and prints the times. Run it with `node tools/bot.mjs` after changing numbers in `data.js`.
+  - It clears all 20 Adventure levels and the boss, mostly in 1–10 minutes a level, and Challenge tanks 1–2.
+  - Challenge tanks 3–4 are for experts, and the bot can't clear them.
 
 ## Numbers from the original
 
@@ -132,11 +134,16 @@ Most numbers in `data.js` are read from the original program, `Insaniquarium.exe
 
 - **Shops:** what each level sells, and the price of every item, egg piece and laser upgrade.
 - **Aliens:**
-  - which aliens each level sends;
+  - which aliens each level sends, and how some levels change their next attack after each one;
   - their health and speed;
   - 30 s between attacks, and the clock only runs while no aliens are in the tank;
   - the warning time.
-- **Laser:** each click does 3 damage per laser level (levels 1–10). Shooting Psychosquid while his shield is up heals him by as much.
+- **Laser:** its power starts at 2 and each of the 10 upgrades adds 1. A click does 3 damage per point; Destructor takes 2 per point plus 2. Shooting Psychosquid while his shield is up heals him by as much as it would hurt.
+- **Challenge:**
+  - which tanks it uses and their egg prices;
+  - prices rise by 1% of their starting value every 1.5 s (tanks 1–2), 1.75 s (tank 3) or 2 s (tank 4);
+  - buying an egg piece resets the other prices and pauses the rises for 5 s;
+  - one more copy of each attack every 4, 5, 5 or 6 attacks.
 - **Gus:** a pellet does 4, 6 or 8 damage by food quality.
 - **Hunger:**
   - each fish's fullness counter, and when it gets hungry and starves;
@@ -155,6 +162,5 @@ Most numbers in `data.js` are read from the original program, `Insaniquarium.exe
   - Cyrax's attacks;
   - Bilaterus's speed, and how often he turns around;
   - the damage of Stanley's balls (8 a hit).
-- **Challenge:** it plays as endless waves rather than the original's four tanks, so its Shell awards come every five waves.
 - **Shell coins:** which shell picture goes with which coin is this version's guess.
 - **Virtual Tank:** much simpler than the original's (no fish naming, backdrops or screensaver).

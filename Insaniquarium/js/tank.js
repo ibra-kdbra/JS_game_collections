@@ -8,7 +8,7 @@
  *   tank.events         // what happened this step (for sound and effects)
  *   tank.outcome        // null | 'clear' | 'lost' | 'time'
  */
-import { TANK, FISH, POTION, COINS, COIN, FOOD, WEAPON, ALIENS, ALIEN_CODES, COIN_EVERY, LIMITS, CHALLENGE, STEP, BONUS, t } from './data.js';
+import { TANK, FISH, POTION, COINS, COIN, FOOD, WEAPON, ALIENS, ALIEN_CODES, COIN_EVERY, LIMITS, STEP, BONUS, nextAttack, t } from './data.js';
 
 export function rng(seed) {
   let a = seed >>> 0;
@@ -30,7 +30,7 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
   const emit = (type, data = {}) => events.push({ type, ...data });
   let nextId = 1;
   const has = (p) => tank.pets.some((q) => q.kind === p || q.as === p);
-  const challenge = def.id === 'challenge';
+  const challenge = def.challenge ?? 0;
 
   const tank = {
     def,
@@ -48,10 +48,18 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
     balls: [],
     warning: 0,
     incoming: null,
-    wave: 0,
+    // The attack code coming next, and how many attacks so far.
+    code: null,
+    attacks: 0,
+    // Challenge price rises so far, per item (each adds 1% of its starting price),
+    // and a pause after an egg piece is bought.
+    inflation: {},
+    inflationPause: 0,
     // When the next warning sounds. The attack comes `ALIENS.warning` later.
-    nextAlien: (challenge ? CHALLENGE.first : def.aliens ? def.aliens.first : Infinity) - ALIENS.warning,
+    nextAlien: (def.aliens ? def.aliens.first : Infinity) - ALIENS.warning,
     up: { quality: 0, count: 0, weapon: 0 },
+    /** The laser's power: 2 to start, as in the original, plus one per upgrade. */
+    laser: () => WEAPON.start + tank.up.weapon,
     outcome: null,
     events,
     stats: { earned: 0, coins: 0, aliens: 0, lost: 0 },
@@ -754,7 +762,7 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
 
   function spawnAlien(kind, at = null) {
     const spec = ALIENS[kind];
-    const hp = Math.round(spec.hp * (challenge ? CHALLENGE.hp(tank.wave) : 1));
+    const hp = spec.hp;
     const side = rand() < 0.5 ? -1 : 1;
     const a = {
       id: nextId++,
@@ -849,7 +857,13 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
         tank.warning = ALIENS.warning;
         tank.nextAlien = Infinity;
         // Like the original, each attack is one of the level's alien codes, at random.
-        tank.incoming = challenge ? Array.from({ length: CHALLENGE.count(tank.wave) }, () => pick(CHALLENGE.kinds(tank.wave))) : ALIEN_CODES[pick(def.aliens.codes)];
+        tank.code ??= pick(def.aliens.codes);
+        tank.incoming = ALIEN_CODES[tank.code].slice();
+        // Challenge: one more copy of the attack every few attacks (one fewer for Balrog + Bilaterus).
+        const extra = challenge ? Math.floor(tank.attacks / def.extraEvery) - (tank.code === 12 ? 1 : 0) : 0;
+        for (let i = 0; i < extra; i++) tank.incoming.push(...ALIEN_CODES[tank.code]);
+        tank.code = nextAttack(def, tank.code, rand, tank.attacks);
+        tank.attacks++;
         emit('warning');
       }
     }
@@ -993,11 +1007,7 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
       if (!tank.aliens.length) {
         tank.missiles = [];
         tank.balls = [];
-        tank.nextAlien = tank.time + (challenge ? CHALLENGE.every(tank.wave + 1) : def.aliens ? def.aliens.every : Infinity) - ALIENS.warning;
-        if (challenge) {
-          tank.wave++;
-          emit('wave', { wave: tank.wave });
-        }
+        tank.nextAlien = tank.time + (def.aliens ? def.aliens.every : Infinity) - ALIENS.warning;
       }
     }
   }
@@ -1078,7 +1088,7 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
       if (target && ALIENS[target.kind].eatsFood) target = null; // Gus only takes food
       if (target) {
         const shield = target.shield;
-        damage(target, WEAPON.damage(tank.up.weapon + 1), 'click', part);
+        damage(target, WEAPON.damage(tank.laser(), target.kind), 'click', part);
         if (!shield && !ALIENS[target.kind].floor && !ALIENS[target.kind].boss && !target.heads) {
           const d = bd || 1;
           target.vx += ((target.x - x) / d) * 2.2;
@@ -1109,27 +1119,27 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
   }
 
   const live = () => tank.fish.filter((f) => !f.dead).length;
-  const inflation = () => (challenge ? CHALLENGE.inflation(tank.wave) : 1);
-  const price = (v) => Math.round((v * inflation()) / 5) * 5;
+  // Challenge prices rise by 1% of their starting value per step, up to 99,999.
+  const price = (v, id) => Math.min(99999, v + Math.floor(v / 100) * (tank.inflation[id] ?? 0));
 
   function shop() {
     return def.shop.map((id) => {
       let cost = null;
       let level = null;
-      if (FISH[id]) cost = price(FISH[id].cost);
-      else if (id === 'potion') cost = tank.food.some((p) => p.kind === 'potion') ? null : price(POTION.cost);
+      if (FISH[id]) cost = price(FISH[id].cost, id);
+      else if (id === 'potion') cost = tank.food.some((p) => p.kind === 'potion') ? null : price(POTION.cost, id);
       else if (id === 'quality') {
         level = tank.up.quality;
-        cost = level + 1 < FOOD.quality.length ? price(FOOD.qualityCost[level + 1]) : null;
+        cost = level + 1 < FOOD.quality.length ? price(FOOD.qualityCost[level + 1], id) : null;
       } else if (id === 'count') {
         level = maxFood();
-        cost = level < FOOD.max ? price(FOOD.countCost) : null;
+        cost = level < FOOD.max ? price(FOOD.countCost, id) : null;
       } else if (id === 'weapon') {
         level = tank.up.weapon;
-        cost = level + 1 < WEAPON.max ? price(def.weaponCost) : null;
+        cost = tank.laser() < WEAPON.max ? price(def.weaponCost, id) : null;
       } else if (id === 'egg') {
         level = tank.eggs;
-        cost = def.egg;
+        cost = price(def.egg, id);
       }
       const full = FISH[id] && live() >= LIMITS.fish;
       return { id, cost, level, maxed: cost === null, affordable: cost !== null && !full && tank.money >= cost };
@@ -1152,6 +1162,12 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
     else if (id === 'weapon') tank.up.weapon++;
     else if (id === 'egg') {
       tank.eggs++;
+      if (challenge) {
+        // As in the original: every price but the egg's goes back to the start, and rises pause for 5 s.
+        tank.inflation = { egg: tank.inflation.egg ?? 0 };
+        tank.inflationPause = t(500);
+        if (tank.eggs < 3) emit('pricesReset');
+      }
       if (tank.eggs >= 3) {
         tank.outcome = 'clear';
         emit('clear', {});
@@ -1167,6 +1183,8 @@ export function createTank({ def, pets = [], seed = 1, saved = null }) {
     events.length = 0;
     if (tank.outcome) return;
     tank.time++;
+    if (challenge && tank.inflationPause > 0) tank.inflationPause--;
+    else if (challenge && tank.time % def.inflateEvery === 0) for (const id of def.shop) tank.inflation[id] = (tank.inflation[id] ?? 0) + 1;
     for (const f of tank.fish) stepFish(f);
     tank.fish = tank.fish.filter((f) => !f.dead || f.deadT < 240);
     stepFood();
