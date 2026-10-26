@@ -73,7 +73,7 @@ export function play(def, seed = 1, pets = []) {
   const t = createTank({ def, pets, seed });
   let s = seed;
   const rand = () => ((s = (s * 16807) % 2147483647) / 2147483647);
-  for (let i = 0; i < 60 * 60 * 20 && !t.outcome; i++) {
+  for (let i = 0; i < 60 * 60 * 30 && !t.outcome; i++) {
     act(t, i, rand);
     t.step();
   }

@@ -65,10 +65,17 @@ const SHEETS = {
   gash: ['gash', 10, 3],
   angie: ['angie', 10, 2],
   presto: ['presto', 10, 3],
+  brinkley: ['brink', 10, 2],
+  nostradamus: ['nostradamus', 10, 2],
+  stanley: ['stanley', 10, 6],
+  walter: ['walter', 10, 3],
+  balls: ['balls', 10, 4],
+  bilaterus: ['bilaterus', 10, 8],
 };
 for (const id of ['stinky', 'niko', 'itchy', 'prego', 'zorf', 'clyde', 'vert', 'rufus', 'meryl', 'wadsworth', 'seymour', 'shrapnel', 'gumbo', 'blip', 'rhubarb', 'nimbus', 'amp', 'gash', 'angie', 'presto', 'breeder', 'starcatcher', 'grubber', 'gekko', 'ultra']) {
   SHEETS[`scl_${id}`] = [`scl_${id}`, 10, 1];
 }
+for (const [id, file] of [['brinkley', 'brink'], ['nostradamus', 'nostradamus'], ['stanley', 'stanley'], ['walter', 'walter']]) SHEETS[`scl_${id}`] = [`scl_${file}`, 10, 1];
 
 /** Rows each fish uses per pose: [sheet, row]. */
 function fishArt(f) {
@@ -114,6 +121,10 @@ const PET_ART = {
   gash: { swim: 0, turn: 1, act: 2 },
   angie: { swim: 0, turn: 1 },
   presto: { swim: 0, turn: 1 },
+  brinkley: { swim: 0, turn: 1 },
+  nostradamus: { swim: 0, turn: 1 },
+  stanley: { swim: 0, turn: 1 },
+  walter: { swim: 0, turn: 1 },
 };
 
 const ALIEN_ROWS = { psychosquid: { swim: 0, turn: 1, shieldSwim: 2, shieldTurn: 3 }, gus: { eat: 2 }, ulysses: { act: 2 } };
@@ -226,11 +237,15 @@ export function createView(gfx) {
       return;
     }
     if (art.still) return gfx.frame(kind, anim, 0, p.x, y);
+    if (kind === 'stanley' && p.state > 0 && p.state < 10) return gfx.frame('stanley', p.state, 5, p.x, y, { flip: p.face > 0 });
+    if (kind === 'walter' && p.punch > 0) return walterPunch(p, y);
     if (kind === 'stinky' && !p.walking) return gfx.frame('stinky', 0, 0, p.x, y, { flip: p.face > 0 });
     const k = turning(p, p.face);
-    if (k !== null && art.turn !== undefined) gfx.frame(kind, k, art.turn, p.x, y);
+    // Stanley's fierce form uses the lower rows.
+    const fierce = kind === 'stanley' && p.state >= 10 ? 2 : 0;
+    if (k !== null && art.turn !== undefined) gfx.frame(kind, k, art.turn + fierce, p.x, y);
     else {
-      let row = art.swim;
+      let row = art.swim + fierce;
       if (art.act !== undefined && ((kind === 'itchy' || kind === 'gash') && p.state)) row = art.act;
       if (kind === 'zorf' && p.state > 0) row = art.act;
       if (kind === 'meryl' && tank.singing > 0) row = art.act;
@@ -246,10 +261,56 @@ export function createView(gfx) {
     if (kind === 'presto' && p.morphT > 0) gfx.frame('presto', 9 - p.morphT / 3, 2, p.x, y);
   }
 
+  /** Walter's punch: the wind-up, then the glove out on its spring and back. */
+  function walterPunch(p, y) {
+    const k = 1 - p.punch / 18;
+    const flip = p.face > 0;
+    gfx.frame('walter', Math.min(4, k * 8), 2, p.x, y, { flip });
+    const ext = Math.max(0, Math.sin(Math.min(1, k * 1.3) * Math.PI)) * 60;
+    if (ext < 4) return;
+    gfx.frame('walter', 6 + Math.min(3, Math.floor(ext / 16)), 2, p.x + p.face * (20 + ext * 0.45), y + 4, { flip });
+    gfx.frame('walter', 5, 2, p.x + p.face * (30 + ext), y + 4, { flip });
+  }
+
+  function ball(b, t) {
+    gfx.frame('balls', t / 2 + b.id, b.kind, b.x, b.y, { scale: 0.5 });
+  }
+
   /* ---------- Aliens ---------- */
+
+  /** Bilaterus: bones from tail to head, a pointy head at one end and a round one at the other. */
+  function bilaterus(a, t) {
+    const body = a.body;
+    const n = body.length;
+    const half = a.maxHp / 2;
+    for (let i = 1; i < n - 1; i++) {
+      const dx = body[i - 1].x - body[i + 1].x;
+      const l = Math.hypot(dx, body[i - 1].y - body[i + 1].y) || 1;
+      gfx.frame('bilaterus', Math.round(((dx / l + 1) / 2) * 9), 6 + (i % 2), body[i].x, body[i].y, { scale: 0.8 });
+    }
+    [0, n - 1].forEach((at, head) => {
+      const e = body[at];
+      const next = body[head === 0 ? 1 : n - 2];
+      const alive = a.heads[head].hp > 0;
+      const base = head === 0 ? 0 : 3;
+      const flip = e.x > next.x;
+      const leading = head === a.lead;
+      if (!alive) return gfx.frame('bilaterus', 0, 6, e.x, e.y, { alpha: 0.6 });
+      const row = leading && a.chomp > 0 ? base + 2 : base;
+      gfx.frame('bilaterus', t / 3 + head * 5, row, e.x, e.y, { flip });
+      if (a.hitT > 0 && a.hitT % 4 < 2) {
+        ctx.save();
+        ctx.globalAlpha = 0.6;
+        gfx.frame('bilaterus', t / 3 + head * 5, row, e.x, e.y, { flip, add: true });
+        ctx.restore();
+      }
+      healthBar(e.x, e.y - 60, a.heads[head].hp / half);
+    });
+  }
 
   function alien(a, t) {
     const spec = ALIENS[a.kind];
+    if (spec.heads) return bilaterus(a, t);
     const sheet = spec.sheet;
     const rows = ALIEN_ROWS[a.kind] ?? {};
     const base = a.kind === 'psychosquid' && a.shield ? 2 : 0;
@@ -401,7 +462,7 @@ export function createView(gfx) {
     polish.rays(t);
     // Soft shadows on the sand.
     for (const f of tank.fish) if (!f.dead && !f.hidden) polish.shadow(f.x, f.y, (tank.sizeOf(f) || 20) * 1.1);
-    for (const a of tank.aliens) polish.shadow(a.x, a.y, 50);
+    for (const a of tank.aliens) for (const e of a.body ?? [a]) polish.shadow(e.x, e.y, a.body ? 26 : 50);
     for (const p of tank.pets) polish.shadow(p.x, p.y, 26);
     for (const p of tank.pets) if (['stinky', 'niko', 'rufus', 'rhubarb'].includes(p.as ?? p.kind)) pet(p, t, tank);
     for (const p of tank.food) {
@@ -414,6 +475,7 @@ export function createView(gfx) {
     for (const c of tank.coins) coin(c, t);
     for (const a of tank.aliens) alien(a, t);
     for (const m of tank.missiles) missile(m);
+    for (const b of tank.balls) ball(b, t);
     polish.ambient(t);
     fx.draw(gfx, t);
     polish.vignette();
