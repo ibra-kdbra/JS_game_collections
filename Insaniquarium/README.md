@@ -125,8 +125,9 @@ The art is the original's, remastered, and the gameplay is unchanged.
   - `assets.js`: loading.
 - `game.js` and `assets/data.js` are built from `js/` by `node tools/build.mjs`. Rebuild after editing anything in `js/`.
 - `tools/bot.mjs` plays every level with a simple player and prints the times. Run it with `node tools/bot.mjs` after changing numbers in `data.js`.
-  - It clears all 20 Adventure levels and the boss, mostly in 1–10 minutes a level, and Challenge tanks 1–2.
-  - Challenge tanks 3–4 are for experts, and the bot can't clear them.
+  - It clears all 20 Adventure levels and the boss, mostly in 1–10 minutes a level.
+  - It clears all four Challenge tanks, in about 3, 4, 10 and 15–22 minutes. It takes Clyde, Stinky and Zorf.
+  - In Challenge it plays like a fast expert: about 10 clicks a second. It buys egg pieces the moment it can, and fills the tank with guppies (breeders in tank 4).
 
 ## Numbers from the original
 
