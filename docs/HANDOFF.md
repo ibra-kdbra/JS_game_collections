@@ -35,7 +35,12 @@ State of the Game Lab upgrade, for continuing in a new session.
 - Volt Flip: difficulty is checked by bots only (a perfect look-ahead bot and a casual one with
   0.2–0.4 s reactions, median about 1700 m). Real players may find the late margin (0.17 s) tight;
   the levers are `SPEED` and `MARGIN` in `Volt_Flip/js/config.js`.
-- Brainy Warrior's last six levels are very hard (bot success near 0%); needs playtesting.
+- Brainy Warrior: the last six levels (29-34) were retuned from their own maps so the bot can win
+  them. One-attempt bot success, before -> after: Tower of Tricks 0.9% -> 7.2%, The Labyrinth
+  0.0% -> 4.7%, The Long March 0.1% -> 3.7%, Spell Lattice 0.0% -> 3.4%, The Archmage's Trial
+  0.0% -> 3.2%, The Last Stand 0.0% -> 2.7% (53% down to 24% within ten restarts; level 28 is
+  7.8%, 56%). Pars are now 17, 22, 24, 21, 24, 23 (were 17, 24, 27, 23, 28, 30). The checker
+  now fails any level the bot wins less than 2% of the time. Still needs playtesting by people.
 - Tower Defense balance changed in phase 5 (wave bonus, extra gold per portal, Hive portals close
   after the wave, per-map enemy health) so a fair bot wins all 18 maps; existing maps are easier
   than before. Owner to confirm.

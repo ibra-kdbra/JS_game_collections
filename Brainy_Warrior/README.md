@@ -45,7 +45,9 @@ The order follows a measured difficulty score, not just the optimal move count. 
 
 The score adds these with weights calibrated on the levels (see `SCORE` in the file): about 4 points per optimal move, 16 per factor-of-e drop in the bot's success rate, 20 for a level where every safe-looking move is a dead end, up to 9 for a unique solution, 3 per required spell and 2 per doubling of the state space. Short levels get less credit for a unique or narrow solution, because with one or two moves that is unavoidable.
 
-The ramp: levels 1-3 are easy (score 20 or less) and teach sliding, defeating and the sea; 4-8 are medium and bring in rock walls, more enemies and, at level 8, the wizard; from level 9 on the score only rises (a 2-point tolerance is allowed), through the hard C++ levels and the wizard puzzles to six generated finales of 23 to 30 moves. `verify-levels.mjs` prints this table and fails if the ramp breaks.
+The ramp: levels 1-3 are easy (score 20 or less) and teach sliding, defeating and the sea; 4-8 are medium and bring in rock walls, more enemies and, at level 8, the wizard; from level 9 on the score only rises (a 2-point tolerance is allowed), through the hard C++ levels and the wizard puzzles to six generated finales of 17 to 24 moves. `verify-levels.mjs` prints this table and fails if the ramp breaks.
+
+Every level must also be fair: the bot has to win at least 2% of its single attempts (`FAIR` in `tools/difficulty.mjs`). The bot learns nothing between attempts, so a player who restarts ten times wins at least once with probability 1 - (1 - rate)^10; the floor is 18% over ten tries, and the hardest level, The Last Stand, sits at about 25%. The six finales were first generated for length (23 to 30 moves) and the bot won almost none of them (0.9% on Tower of Tricks, 0.0-0.1% on the other five). v4 retuned each one from its own map with `generate-levels.mjs --from <id> --bot <rate>`, changing 6 to 20 tiles, so the rate keeps falling after The Wizard's Isle (7.8%) instead of dropping to zero: 7.2%, 4.7%, 3.7%, 3.4%, 3.2% and 2.7% one-attempt, 53% to 24% within ten tries.
 
 | # | Level | Par | Score | Band | Bot wins | Magic | Source |
 | ---: | --- | ---: | ---: | --- | ---: | ---: | --- |
@@ -77,14 +79,14 @@ The ramp: levels 1-3 are easy (score 20 or less) and teach sliding, defeating an
 | 26 | The Horde | 13 | 96.1 | hard | 32.0% | 0 | C++ 15 |
 | 27 | Spellbound | 12 | 101.2 | hard | 8.8% | 2 | 3D v1 |
 | 28 | The Wizard's Isle | 14 | 113.5 | hard | 7.8% | 6 | C++ 17 |
-| 29 | Tower of Tricks | 17 | 144.2 | expert | 0.9% | 4 | v2 generator |
-| 30 | The Labyrinth | 24 | 157.0 | expert | 0.0% | 0 | v3 generator |
-| 31 | The Long March | 27 | 161.0 | expert | 0.1% | 0 | v3 generator |
-| 32 | Spell Lattice | 23 | 170.2 | expert | 0.0% | 5 | v3 generator |
-| 33 | The Archmage's Trial | 28 | 178.8 | expert | 0.0% | 5 | v3 generator |
-| 34 | The Last Stand | 30 | 183.0 | expert | 0.0% | 4 | v3 generator |
+| 29 | Tower of Tricks | 17 | 125.7 | expert | 7.2% | 4 | v2 generator, retuned in v4 |
+| 30 | The Labyrinth | 22 | 133.5 | expert | 4.7% | 0 | v3 generator, retuned in v4 |
+| 31 | The Long March | 24 | 140.9 | expert | 3.7% | 0 | v3 generator, retuned in v4 |
+| 32 | Spell Lattice | 21 | 150.1 | expert | 3.4% | 5 | v3 generator, retuned in v4 |
+| 33 | The Archmage's Trial | 24 | 155.4 | expert | 3.2% | 7 | v3 generator, retuned in v4 |
+| 34 | The Last Stand | 23 | 160.7 | expert | 2.7% | 4 | v3 generator, retuned in v4 |
 
-New levels come from `tools/generate-levels.mjs`: it grows island-shaped layouts, hill-climbs them (moving rocks, enemies, the warrior and wizard circles, growing or eroding the coast) towards a higher score or a target score, and keeps the ones with few optimal solutions, required magic and long solutions. Every candidate is one connected island.
+New levels come from `tools/generate-levels.mjs`: it grows island-shaped layouts, hill-climbs them (moving rocks, enemies, the warrior and wizard circles, growing or eroding the coast) towards a higher score or a target score, and keeps the ones with few optimal solutions, required magic and long solutions. Every candidate is one connected island. With `--from <level id> --bot <rate>` it starts from an existing level instead and climbs towards a target bot success rate, with a cost for every tile it changes (`--edit`), so a retuned level keeps its layout.
 
 Levels are text maps in `js/levels.js` (`~` sea, `.` grass, `#` rock, `P` warrior, `E` enemy, `W` wizard, `w` another wizard circle). Progress is saved by level id, so stars survive the reordering.
 
@@ -115,7 +117,7 @@ If WebAssembly can't load, `js/solver.js` (a JavaScript BFS over the same rules)
 node Brainy_Warrior/tools/verify-levels.mjs
 ```
 
-This runs the WASM BFS and A\* and the independent JavaScript BFS on every level, and checks that all three agree with `par`. It replays every WASM solution through `js/rules.js`, so the C++ and JavaScript rules can't drift apart. It also checks A\* hints against BFS from about 1,500 mid-game positions, spot-checks individual rules, prints the difficulty table and checks the ramp. It exits non-zero on any failure.
+This runs the WASM BFS and A\* and the independent JavaScript BFS on every level, and checks that all three agree with `par`. It replays every WASM solution through `js/rules.js`, so the C++ and JavaScript rules can't drift apart. It also checks A\* hints against BFS from about 1,500 mid-game positions, spot-checks individual rules, prints the difficulty table, checks the ramp and checks that the bot can win every level (the fairness floor). It exits non-zero on any failure.
 
 ## Controls
 
