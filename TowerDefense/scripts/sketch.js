@@ -160,8 +160,15 @@ const typeColors = {
 };
 
 function onEnemyHit(e, dealt, type) {
+    // Only hits that matter, and at most one number per enemy every half second at 1x,
+    // so a crowd under fire stays readable
     if (!damageNumbers || dealt < 25) return;
-    addFloater(e.pos.x + (Math.random() - 0.5) * ts * 0.4, e.pos.y - ts * 0.35,
+    // (the jitter is drawn first so the game uses the same random numbers as before)
+    const jx = (Math.random() - 0.5) * ts * 0.4;
+    if (dealt < e.maxHealth * 0.08) return;
+    if (e._numAt !== undefined && FX.ticks - e._numAt < 30) return;
+    e._numAt = FX.ticks;
+    addFloater(e.pos.x + jx, e.pos.y - ts * 0.35,
         String(Math.round(dealt)), typeColors[type] || typeColors.physical, 0.9);
 }
 
@@ -169,7 +176,8 @@ function onEnemyKilled(e) {
     FX.death(e);
     stats.kills++;
     stats.earned += e.cash;
-    if (e.cash > 0) addFloater(e.pos.x, e.pos.y, `+$${e.cash}`, [250, 204, 21], 0.8);
+    // Bounties of a few gold just go to the counter; bigger ones float up
+    if (e.cash >= 5) addFloater(e.pos.x, e.pos.y, `+$${e.cash}`, [250, 204, 21], 0.9);
 }
 
 function onEnemyLeaked(e) {

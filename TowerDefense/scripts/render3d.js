@@ -219,6 +219,8 @@ const Renderer3D = (() => {
         gl.toneMapping = T3.NoToneMapping;
         gl.shadowMap.enabled = true;
         gl.shadowMap.type = T3.PCFSoftShadowMap;
+        // Shadows only change when the map or the towers do; enemies get blob shadows
+        gl.shadowMap.autoUpdate = false;
         scene = new T3.Scene();
         camera = new T3.PerspectiveCamera(FOV, 1, 0.1, 400);
         hemi = new T3.HemisphereLight(0xf2f6ff, 0x50566a, 1.25);
@@ -233,6 +235,7 @@ const Renderer3D = (() => {
         dyn = new T3.Group();
         scene.add(dyn);
         buildDynamic();
+        buildBlasts();
         loadKit();
         bindInput();
         buildZoomControls();
@@ -284,6 +287,7 @@ const Renderer3D = (() => {
             sun.shadow.map = null;
         }
         gl.shadowMap.enabled = q > 0;
+        gl.shadowMap.needsUpdate = true;
         vignette = null;
         camera.aspect = w / Math.max(1, h);
         camera.updateProjectionMatrix();
@@ -631,26 +635,33 @@ const Renderer3D = (() => {
     const KIT_DIR = 'models/kenney-tower-defense/';
     const KIT_MODELS = [
         'tile', 'tile-dirt', 'tile-straight', 'tile-corner-round', 'tile-end-round', 'tile-split', 'tile-crossing',
-        'tile-spawn', 'tile-spawn-end', 'tile-hill', 'tile-rock', 'tile-crystal',
+        'tile-spawn', 'tile-spawn-end', 'tile-hill',
         'snow-tile', 'snow-tile-dirt', 'snow-tile-straight', 'snow-tile-corner-round', 'snow-tile-end-round', 'snow-tile-split',
         'snow-tile-crossing', 'snow-tile-spawn', 'snow-tile-spawn-end', 'snow-tile-hill',
-        'detail-tree', 'detail-tree-large', 'detail-rocks', 'detail-rocks-large', 'detail-crystal', 'detail-crystal-large',
-        'detail-dirt', 'detail-dirt-large', 'snow-detail-tree', 'snow-detail-tree-large', 'snow-detail-rocks',
-        'snow-detail-rocks-large', 'snow-detail-crystal', 'snow-detail-crystal-large', 'wood-structure', 'wood-structure-high',
-        'tower-square-bottom-a', 'tower-square-bottom-b', 'tower-square-bottom-c', 'tower-square-middle-a', 'tower-square-middle-b',
-        'tower-square-middle-c', 'tower-square-top-a', 'tower-square-top-b', 'tower-square-top-c', 'tower-square-roof-a',
-        'tower-round-bottom-a', 'tower-round-bottom-b', 'tower-round-bottom-c', 'tower-round-middle-a', 'tower-round-middle-b',
-        'tower-round-middle-c', 'tower-round-top-a', 'tower-round-top-b', 'tower-round-top-c', 'tower-round-roof-a',
-        'tower-round-roof-b', 'tower-round-roof-c', 'tower-round-crystals',
-        'weapon-ballista', 'weapon-cannon', 'weapon-catapult', 'weapon-turret', 'weapon-ammo-bullet', 'weapon-ammo-cannonball',
-        'enemy-ufo-a', 'enemy-ufo-b', 'enemy-ufo-c', 'enemy-ufo-d', 'enemy-ufo-a-weapon', 'enemy-ufo-b-weapon',
-        'enemy-ufo-c-weapon', 'enemy-ufo-d-weapon', 'selection-a', 'spawn-round'
+        'detail-tree', 'detail-tree-large', 'detail-rocks', 'detail-rocks-large', 'detail-crystal', 'detail-crystal-large', 'detail-dirt', 'detail-dirt-large',
+        'snow-detail-tree', 'snow-detail-tree-large', 'snow-detail-rocks', 'snow-detail-rocks-large', 'snow-detail-crystal',
+        'tower-square-bottom-a', 'tower-square-bottom-b', 'tower-square-middle-a', 'tower-square-top-a', 'tower-round-bottom-a',
+        'weapon-ammo-bullet', 'weapon-ammo-cannonball', 'selection-a'
     ];
     let kit = null;             // name -> [{ geo, m: Matrix4 (part in the model), name }]
     let kitRoots = null;        // name -> loaded scene (for towers, which keep their parts)
     let kitImage = null;        // the palette picture
     let kitLoading = false;
     let kitFailed = false;
+
+    // Quaternius (CC0): turrets, animated monsters, and nature in models/quaternius
+    const QT_DIR = 'models/quaternius/';
+    const QT_MODELS = {
+        turrets: ['Gun_2', 'Gun_10', 'Laser_1', 'Laser_Doble', 'Teleporter1', 'Teleporter2', 'Gun', 'Gun_3',
+            'Bomber_1', 'Bomber_2', 'Cannon_1', 'GearCannon_2', 'Upwards_1', 'Upwards_3'],
+        monsters: ['Slime', 'Crab', 'Bat', 'Ghost', 'Mushroom', 'Yeti', 'Skeleton', 'Cyclops', 'Dragon', 'Bee'],
+        nature: ['Rock_Medium_1', 'Flower_3_Group']
+    };
+    // Height of each nature model in tiles
+    const NATURE_SIZE = {
+        Rock_Medium_1: 0.36, Flower_3_Group: 0.26
+    };
+    let qt = null;
 
     function loadKit() {
         if (kitLoading || kit) return;
@@ -662,9 +673,20 @@ const Renderer3D = (() => {
         img.crossOrigin = 'anonymous';
         const imgReady = new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
         img.src = KIT_DIR + 'Textures/colormap.png';
-        Promise.all([imgReady].concat(KIT_MODELS.map(n => loader.loadAsync(KIT_DIR + n + '.glb').then(g => [n, g.scene]))))
+        const qtLoads = [];
+        Object.entries(QT_MODELS).forEach(([kind, names]) => names.forEach(n => {
+            qtLoads.push(loader.loadAsync(`${QT_DIR}${kind}/${n}.glb`).then(g => [kind, n, g]));
+        }));
+        Promise.all([imgReady, Promise.all(qtLoads)].concat(KIT_MODELS.map(n => loader.loadAsync(KIT_DIR + n + '.glb').then(g => [n, g.scene]))))
             .then(list => {
                 kitImage = img;
+                qt = { turrets: {}, turret: {}, monster: {}, nature: {} };
+                list[1].forEach(([kind, n, g]) => {
+                    if (kind === 'turrets') qt.turret[n] = g.scene;
+                    else if (kind === 'monsters') qt.monster[n] = g;
+                    else qt.nature[n] = g.scene;
+                });
+                list.splice(1, 1);
                 kit = {};
                 kitRoots = {};
                 list.slice(1).forEach(([n, root]) => {
@@ -678,17 +700,49 @@ const Renderer3D = (() => {
                     });
                     kit[n] = parts;
                 });
+                // Nature models keep their own textured materials, scaled to tiles
+                Object.entries(qt.nature).forEach(([n, root]) => {
+                    root.updateMatrixWorld(true);
+                    const box = new T3.Box3().setFromObject(root);
+                    const k = NATURE_SIZE[n] / Math.max(0.01, box.max.y - box.min.y);
+                    const fix = new T3.Matrix4().makeScale(k, k, k).multiply(new T3.Matrix4().makeTranslation(0, -box.min.y, 0));
+                    const parts = [];
+                    root.traverse(o => {
+                        if (!o.isMesh) return;
+                        o.geometry._shared = true;
+                        const mats = [].concat(o.material);
+                        mats.forEach(mm => {
+                            mm.roughness = 0.9;
+                            mm.metalness = 0;
+                            if (mm.map) mm.map.anisotropy = 4;
+                            if (mm.transparent || mm.alphaTest) {
+                                // Leaves: soft edges with the anti-aliasing instead of a hard cut-out
+                                mm.transparent = false;
+                                mm.alphaTest = 0.35;
+                                mm.alphaToCoverage = true;
+                                mm.side = T3.DoubleSide;
+                            }
+                        });
+                        parts.push({ geo: o.geometry, m: fix.clone().multiply(o.matrixWorld), name: o.name, mat: o.material });
+                    });
+                    kit['n:' + n] = parts;
+                });
                 mapKey = '';
                 try {
                     makePortraits();
                 } catch (e) { /* the flat pictures stay */ }
             })
-            .catch(() => { kitFailed = true; })
+            .catch((e) => {
+                console.warn('3D models failed to load, using Flat:', e);
+                kitFailed = true;
+            })
             .finally(() => { kitLoading = false; });
     }
 
-    // Pictures of each tower's model for the build menu and the tower panel
+    // Pictures of each tower's and enemy's model for the build menu, the tower panel
+    // and the wave preview
     const portraits = {};
+    const enemyPortraits = {};
     function makePortraits() {
         const S = 160;
         const rt = new T3.WebGLRenderTarget(S, S, { samples: 4 });
@@ -704,16 +758,13 @@ const Renderer3D = (() => {
         c.width = c.height = S;
         const g = c.getContext('2d');
         const img = g.createImageData(S, S);
-        const dir = new T3.Vector3(0.9, 1.05, 1.5).normalize();
         const box = new T3.Box3();
         const sph = new T3.Sphere();
-        Object.keys(Art.TOWER_ART).forEach(name => {
-            const b = buildTowerModel(name, false);
-            if (!b.still) b.turret.rotation.y = yawFor(Math.PI * 0.3);
-            sc.add(b.root);
-            b.root.updateMatrixWorld(true);
-            box.setFromObject(b.root).getBoundingSphere(sph);
-            cam.position.copy(sph.center).addScaledVector(dir, sph.radius / Math.sin(13 * Math.PI / 180) * 0.98);
+        const shoot = (root, dir, fill) => {
+            sc.add(root);
+            root.updateMatrixWorld(true);
+            box.setFromObject(root).getBoundingSphere(sph);
+            cam.position.copy(sph.center).addScaledVector(dir, sph.radius / Math.sin(13 * Math.PI / 180) * fill);
             cam.lookAt(sph.center);
             gl.setRenderTarget(rt);
             gl.setClearColor(0x000000, 0);
@@ -733,8 +784,30 @@ const Renderer3D = (() => {
                 }
             }
             g.putImageData(img, 0, 0);
-            portraits[name] = c.toDataURL();
-            sc.remove(b.root);
+            sc.remove(root);
+            return c.toDataURL();
+        };
+        const towerDir = new T3.Vector3(0.9, 1.05, 1.5).normalize();
+        Object.keys(Art.TOWER_ART).forEach(name => {
+            const b = buildTowerModel(name, false);
+            const m = { gun: b.gun, aim: b.aim };
+            if (b.aim) aimGun(m, Math.PI * 0.3, 0);
+            portraits[name] = shoot(b.root, towerDir, 0.98);
+        });
+        // Enemies a little from the front, mid-stride
+        const enemyDir = new T3.Vector3(0.5, 0.55, 1.5).normalize();
+        Object.keys(Art.ENEMY_ART).forEach(name => {
+            const p = enemyProto(name);
+            const body = window.SkeletonUtils.clone(p.scene);
+            const mixer = new T3.AnimationMixer(body);
+            if (p.move) {
+                mixer.clipAction(p.move).play();
+                mixer.update(p.move.duration * 0.3);
+            }
+            const root = new T3.Group();
+            root.add(body);
+            enemyPortraits[name] = shoot(root, enemyDir, 0.9);
+            mixer.stopAllAction();
         });
         gl.setRenderTarget(null);
         rt.dispose();
@@ -864,7 +937,7 @@ const Renderer3D = (() => {
         const parts = kit[name];
         if (!parts || !mats.length) return [];
         return parts.map(p => {
-            const mesh = new T3.InstancedMesh(p.geo, material, mats.length);
+            const mesh = new T3.InstancedMesh(p.geo, material || p.mat, mats.length);
             mats.forEach((m, i) => mesh.setMatrixAt(i, tmpM.multiplyMatrices(m, p.m)));
             mesh.castShadow = opts.cast !== false;
             mesh.receiveShadow = true;
@@ -1009,9 +1082,13 @@ const Renderer3D = (() => {
                     (byModel.__pad = byModel.__pad || []).push(M(x + 0.5, 0.0, y + 0.5));
                 } else {
                     put(pre + 'tile', x, y, Math.floor(hashT(x, y, 19) * 4), -0.2);
-                    // A few small details on open ground
-                    if (r < 0.07) {
-                        const list = snow ? ['snow-detail-rocks', 'snow-detail-dirt'] : theme === 'void' ? ['detail-crystal', 'detail-rocks'] : ['detail-rocks', 'detail-dirt'];
+                    // Grass tufts and flowers, or a few small details, on open ground
+                    const lush = theme === 'meadow' || theme === 'city';
+                    if (lush && r < 0.05) {
+                        put('n:Flower_3_Group', x, y, 0, 0, 0.8 + hashT(x, y, 16) * 0.5,
+                            (hashT(x, y, 13) - 0.5) * 0.6, (hashT(x, y, 14) - 0.5) * 0.6, hashT(x, y, 17) * TAU);
+                    } else if (!lush && r < 0.07) {
+                        const list = snow ? ['snow-detail-rocks', 'snow-detail-crystal'] : theme === 'void' ? ['detail-crystal', 'detail-rocks'] : ['detail-rocks', 'detail-dirt'];
                         const name = list[Math.floor(hashT(x, y, 12) * list.length)];
                         put(name, x, y, 0, 0, 0.6 + hashT(x, y, 16) * 0.3, (hashT(x, y, 13) - 0.5) * 0.5, (hashT(x, y, 14) - 0.5) * 0.5, hashT(x, y, 17) * TAU);
                     }
@@ -1023,14 +1100,14 @@ const Renderer3D = (() => {
             if (name === '__pad') {
                 const g = new T3.CylinderGeometry(0.6, 0.64, 0.06, 4).rotateY(Math.PI / 4);
                 g.translate(0, 0.03, 0);
-                const mesh = new T3.InstancedMesh(g, mat('#c9cbe3', { rough: 0.85 }), list.length);
+                const mesh = new T3.InstancedMesh(g, mat('#b7b4a8', { rough: 0.9 }), list.length);
                 list.forEach((m, i) => mesh.setMatrixAt(i, m));
                 mesh.receiveShadow = true;
                 mesh.frustumCulled = false;
                 world.add(mesh);
                 const g2 = new T3.CylinderGeometry(0.5, 0.52, 0.02, 4).rotateY(Math.PI / 4);
                 g2.translate(0, 0.07, 0);
-                const inset = new T3.InstancedMesh(g2, mat('#b4b7d4', { rough: 0.9 }), list.length);
+                const inset = new T3.InstancedMesh(g2, mat('#a39f92', { rough: 0.95 }), list.length);
                 list.forEach((m, i) => inset.setMatrixAt(i, m));
                 inset.receiveShadow = true;
                 inset.frustumCulled = false;
@@ -1038,9 +1115,11 @@ const Renderer3D = (() => {
                 return;
             }
             const isTile = name.includes('tile');
-            const material = isTile ? gm : dm;
+            const own = name.startsWith('n:');
+            const material = own ? null : isTile ? gm : dm;
             const meshes = instances(name, list, material, world, { cast: !isTile || name.includes('hill') });
-            if (/tree/.test(name)) meshes.forEach(mesh => props.push({ mesh, base: list.map((m, i) => { mesh.getMatrixAt(i, tmpM); return tmpM.clone(); }), amp: name.includes('large') ? 0.7 : 1, phase: list.map((m, i) => i * 1.7 + m.elements[12] * 0.9 + m.elements[14] * 0.4) }));
+            if (own && /Grass|Flower/.test(name)) meshes.forEach(mesh => (mesh.castShadow = false));
+            if (/tree|Tree|Pine|Bush/.test(name)) meshes.forEach(mesh => props.push({ mesh, base: list.map((m, i) => { mesh.getMatrixAt(i, tmpM); return tmpM.clone(); }), amp: name.includes('large') ? 0.7 : 1, phase: list.map((m, i) => i * 1.7 + m.elements[12] * 0.9 + m.elements[14] * 0.4) }));
         });
 
         // Sun over the map's upper left, its shadow box around the map
@@ -1055,6 +1134,7 @@ const Renderer3D = (() => {
         hemi.groundColor.set(shadeHex(th.frame, 1.6));
 
         buildGate();
+        gl.shadowMap.needsUpdate = true;
         mapKey = `${theme}|${cols}x${rows}`;
     }
 
@@ -1065,18 +1145,18 @@ const Renderer3D = (() => {
         const pick = (list) => list[Math.floor(r(31) * list.length)];
         let set;
         if (snow) set = [['snow-detail-tree-large'], ['snow-detail-tree', 'snow-detail-tree'], ['snow-detail-rocks-large'], ['snow-detail-tree', 'snow-detail-crystal']];
-        else if (t === 'desert') set = [['detail-rocks-large'], ['detail-rocks', 'detail-dirt-large'], ['detail-dirt-large', 'detail-rocks'], ['detail-crystal']];
+        else if (t === 'desert') set = [['n:Rock_Medium_1'], ['detail-rocks', 'n:Rock_Medium_1'], ['detail-rocks-large'], ['n:Rock_Medium_1', 'detail-rocks'], ['detail-crystal']];
         else if (t === 'void') set = [['detail-crystal-large'], ['detail-crystal', 'detail-crystal'], ['detail-crystal-large', 'detail-rocks'], ['detail-rocks-large']];
-        else if (t === 'ash') set = [['detail-rocks-large'], ['detail-rocks', 'detail-rocks'], ['detail-rocks-large', 'detail-dirt'], ['detail-crystal']];
-        else if (t === 'city') set = [['detail-tree-large'], ['detail-tree', 'detail-tree'], ['detail-tree-large', 'detail-rocks'], ['detail-tree', 'detail-tree', 'detail-tree'], ['detail-rocks-large', 'detail-tree'], ['detail-tree-large'], ['detail-tree-large']];
-        else set = [['detail-tree-large'], ['detail-tree', 'detail-tree', 'detail-tree'], ['detail-tree-large', 'detail-rocks'], ['detail-rocks-large', 'detail-tree']];
+        else if (t === 'ash') set = [['n:Rock_Medium_1'], ['n:Rock_Medium_1', 'detail-rocks'], ['detail-rocks-large', 'detail-dirt'], ['detail-rocks-large']];
+        else set = [['detail-tree-large'], ['detail-tree', 'detail-tree', 'detail-tree'], ['detail-tree-large', 'n:Rock_Medium_1'],
+            ['n:Rock_Medium_1', 'detail-tree'], ['detail-tree-large', 'n:Flower_3_Group'], ['detail-tree', 'detail-tree', 'n:Flower_3_Group']];
         const group = pick(set);
         const spots = group.length === 1 ? [[0, 0]] : group.length === 2 ? [[-0.2, -0.12], [0.18, 0.16]] : [[-0.22, -0.16], [0.2, -0.1], [-0.02, 0.22]];
         group.forEach((name, i) => {
             const [sx, sz] = spots[i];
             const jx = sx + (r(40 + i) - 0.5) * 0.12;
             const jz = sz + (r(50 + i) - 0.5) * 0.12;
-            const s = (name.includes('wood') ? 0.9 : 1) * (0.85 + r(60 + i) * 0.35) * (inner ? 1.1 : 1);
+            const s = (0.85 + r(60 + i) * 0.35) * (inner ? 1.1 : 1);
             put(name, x, y, 0, top, s, jx, jz, r(70 + i) * TAU);
         });
     }
@@ -1103,93 +1183,145 @@ const Renderer3D = (() => {
         }
     }
 
-    // ---------- Towers: stacked kit parts, a weapon on top ----------
+    // ---------- Towers: Quaternius's turrets (CC0), one model per tower and upgrade ----------
 
     const towerModels = new Map();      // tower -> model
-    // Parts from the ground up, then the weapon (null: a roof or crystals instead)
-    const TOWER_PARTS = {
-        gun: [['tower-square-bottom-a', 'tower-square-top-a'], 'weapon-turret'],
-        machineGun: [['tower-square-bottom-a', 'tower-square-middle-a', 'tower-square-top-a'], 'weapon-turret'],
-        laser: [['tower-round-bottom-c', 'tower-round-crystals'], null],
-        beamEmitter: [['tower-round-bottom-c', 'tower-round-middle-c', 'tower-round-crystals'], null],
-        slow: [['tower-round-bottom-b', 'tower-round-roof-b'], null],
-        poison: [['tower-round-bottom-b', 'tower-round-middle-b', 'tower-round-roof-b'], null],
-        sniper: [['tower-square-bottom-c', 'tower-square-top-b'], 'weapon-ballista'],
-        railgun: [['tower-square-bottom-c', 'tower-square-middle-b', 'tower-square-top-b'], 'weapon-ballista'],
-        rocket: [['tower-square-bottom-b', 'tower-square-top-c'], 'weapon-cannon'],
-        missileSilo: [['tower-square-bottom-b', 'tower-square-middle-c', 'tower-square-top-c'], 'weapon-cannon'],
-        bomb: [['tower-round-bottom-a', 'tower-round-top-c'], 'weapon-catapult'],
-        clusterBomb: [['tower-round-bottom-a', 'tower-round-middle-a', 'tower-round-top-c'], 'weapon-catapult'],
-        tesla: [['tower-round-bottom-c', 'tower-round-roof-c'], null],
-        lightningStrike: [['tower-round-bottom-c', 'tower-round-middle-c', 'tower-round-roof-c'], null]
+    let shadowsAt = 0;
+    const TURRET = {
+        gun: 'Gun_2', machineGun: 'Gun_10', laser: 'Laser_1', beamEmitter: 'Laser_Doble',
+        slow: 'Teleporter1', poison: 'Teleporter2', sniper: 'Gun', railgun: 'Gun_3',
+        rocket: 'Bomber_1', missileSilo: 'Bomber_2', bomb: 'Cannon_1', clusterBomb: 'GearCannon_2',
+        tesla: 'Upwards_1', lightningStrike: 'Upwards_3'
     };
-    const TOWER_SCALE = 0.74;           // a tower's footprint is a little under a tile
-    const TOWER_SQUASH = 0.8;           // and it is a little lower than the kit's
-    const kitHeights = {};
-    function partHeight(name) {
-        if (kitHeights[name] === undefined) {
-            const box = new T3.Box3().setFromObject(kitRoots[name]);
-            // Tops and roofs hold the weapon at their floor, not their battlements
-            kitHeights[name] = /top|crystals/.test(name) ? 0.2 : /roof/.test(name) ? box.max.y : box.max.y;
+    const TURRET_W = 0.62;              // the turret's base across, in tiles (it sits on a plinth)
+    const PLINTH_H = 0.3;               // height of the stone plinth under it
+    // The parts that glow: crystals on Slow and Poison, the coil on Tesla towers
+    const GLOW_PART = { slow: '#9fdcff', poison: '#9cff3a', tesla: '#ffe066', lightningStrike: '#6ff3ff', laser: '#60b8ff', beamEmitter: '#5ff0e0' };
+
+    const turretProtos = {};
+    function turretProto(file) {
+        if (turretProtos[file]) return turretProtos[file];
+        const src = qt.turret[file];
+        src.updateMatrixWorld(true);
+        const box = new T3.Box3().setFromObject(src);
+        const size = box.getSize(new T3.Vector3());
+        // Size by the base (barrels may stick out past the tile)
+        const bbox = new T3.Box3();
+        src.traverse(o => { if (o.isMesh && !/_Gun$|Top$/.test(o.name)) bbox.expandByObject(o); });
+        const bb = bbox.isEmpty() ? size : bbox.getSize(new T3.Vector3());
+        // ...but never wider than about a tile, barrels included
+        const scale = Math.min(TURRET_W / Math.max(bb.x, bb.z), 1.05 / Math.max(size.x, size.z));
+        turretProtos[file] = { src, scale, minY: box.min.y, height: size.y * scale };
+        return turretProtos[file];
+    }
+
+    const towerMats = new Map();
+    function towerMat(name, kind, ghost) {
+        const key = `${name}|${kind}|${ghost ? 1 : 0}`;
+        let m = towerMats.get(key);
+        if (m) return m;
+        const a = Art.TOWER_ART[name];
+        if (kind === 'light') m = new T3.MeshStandardMaterial({ color: a.main, roughness: 0.45, metalness: 0.35 });
+        else if (kind === 'stone') m = new T3.MeshStandardMaterial({ color: '#b9bcd6', roughness: 0.85 });
+        else if (kind === 'glow') m = new T3.MeshStandardMaterial({ color: GLOW_PART[name], emissive: GLOW_PART[name], emissiveIntensity: 1.3, roughness: 0.25 });
+        else m = new T3.MeshStandardMaterial({ color: new T3.Color(a.dark).lerp(new T3.Color('#2f3540'), 0.55), roughness: 0.5, metalness: 0.55 });
+        if (ghost) {
+            m.transparent = true;
+            m.opacity = 0.62;
+            m.depthWrite = false;
         }
-        return kitHeights[name];
+        towerMats.set(key, m);
+        return m;
+    }
+
+    // A tower's model, built once per kind and drawn with few meshes: the plinth and
+    // the turret's fixed parts merged by material, the gun merged by material too
+    const towerProtos = new Map();
+    function towerProto(name, ghost) {
+        const key = `${name}|${ghost ? 1 : 0}`;
+        if (towerProtos.has(key)) return towerProtos.get(key);
+        const p = turretProto(TURRET[name] || 'Gun_2');
+        const root = new T3.Group();
+        const plinth = kitClone(/sniper|railgun|rocket|missile|gun$|machine/i.test(name) ? 'tower-square-bottom-a' : 'tower-round-bottom-a',
+            ghost ? towerMat(name, 'stone', true) : accentMat(Art.TOWER_ART[name].main));
+        plinth.scale.set(0.78, PLINTH_H / 0.5, 0.78);
+        root.add(plinth);
+        const body = p.src.clone(true);
+        body.scale.multiplyScalar(p.scale);
+        body.position.y = PLINTH_H - p.minY * p.scale;
+        root.add(body);
+        const glows = GLOW_PART[name] && /slow|poison|tesla|lightning/.test(name);
+        const still = /slow|poison|tesla|lightning/.test(name);
+        root.updateMatrixWorld(true);
+        // Collect geometry per (moving or not, material), baked into the tower's frame
+        const groups = new Map();
+        let gunNode = null;
+        root.traverse(o => {
+            if (!o.isMesh) return;
+            const isGun = !still && /_Gun$/.test(o.name);
+            if (isGun) gunNode = o;
+            const light = /light/i.test(o.material.name);
+            const isPlinth = !o.material.name || o.material.name === '' || o.material === plinth.children[0]?.material;
+            const mat = o.material.isMeshStandardMaterial && o.material.map ? o.material
+                : towerMat(name, glows && /Top$|_Gun$/.test(o.name) && light ? 'glow' : light ? 'light' : 'dark', ghost);
+            void isPlinth;
+            const g = o.geometry.clone();
+            for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'uv') g.deleteAttribute(k);
+            if (!g.attributes.uv) g.setAttribute('uv', new T3.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+            g.applyMatrix4(o.matrixWorld);
+            const gk = `${isGun ? 'gun' : 'fixed'}|${mat.uuid}`;
+            if (!groups.has(gk)) groups.set(gk, { isGun, mat, geos: [] });
+            groups.get(gk).geos.push(g.index ? g.toNonIndexed() : g);
+        });
+        const fixed = [];
+        const gun = [];
+        groups.forEach(v => {
+            const merged = window.BufferGeometryUtils.mergeGeometries(v.geos, false);
+            merged._shared = true;
+            (v.isGun ? gun : fixed).push({ geo: merged, mat: v.mat });
+        });
+        // The gun turns about the tower's upright axis (through x = z = 0); which way
+        // its barrel points at rest decides the turn
+        let f0 = 0;
+        if (gun.length) {
+            const box = new T3.Box3();
+            gun.forEach(gp => { gp.geo.computeBoundingBox(); box.union(gp.geo.boundingBox); });
+            const ext = [box.max.x, -box.min.x, box.max.z, -box.min.z];
+            f0 = [0, Math.PI, Math.PI / 2, -Math.PI / 2][ext.indexOf(Math.max(...ext))];
+        }
+        void gunNode;
+        const proto = { fixed, gun, f0, still: !gun.length, top: p.height + PLINTH_H };
+        towerProtos.set(key, proto);
+        return proto;
     }
 
     function buildTowerModel(name, ghost) {
-        const a = Art.TOWER_ART[name];
-        const spec = TOWER_PARTS[name] || TOWER_PARTS.gun;
-        const material = ghost ? ghostMat(accentMat(a.main)) : accentMat(a.main);
+        const proto = towerProto(name, ghost);
         const root = new T3.Group();
-        const body = new T3.Group();
-        body.scale.set(TOWER_SCALE, TOWER_SCALE * TOWER_SQUASH, TOWER_SCALE);
-        root.add(body);
-        let y = 0;
-        let crown = 0;
-        spec[0].forEach(part => {
-            const o = kitClone(part, material);
-            o.position.y = y;
-            body.add(o);
-            const box = new T3.Box3().setFromObject(kitRoots[part]);
-            crown = y + box.max.y;
-            y += partHeight(part);
+        proto.fixed.forEach(({ geo, mat }) => {
+            const m = new T3.Mesh(geo, mat);
+            m.castShadow = !ghost;
+            m.receiveShadow = true;
+            root.add(m);
         });
-        const turret = new T3.Group();
-        turret.position.y = y * TOWER_SCALE * TOWER_SQUASH;
-        root.add(turret);
-        const inner = new T3.Group();
-        inner.scale.setScalar(TOWER_SCALE * 1.05);
-        turret.add(inner);
-        let barrel = null;
-        if (spec[1]) {
-            const w = kitClone(spec[1], material);
-            inner.add(w);
-            w.traverse(o => { if (o.name === 'barrel' || o.name === 'arrow' || o.name === 'catapult') barrel = o; });
-            if (barrel) barrel.userData.z0 = barrel.position.z;
+        let gun = null;
+        if (proto.gun.length) {
+            gun = new T3.Group();
+            proto.gun.forEach(({ geo, mat }) => {
+                const m = new T3.Mesh(geo, mat);
+                m.castShadow = !ghost;
+                gun.add(m);
+            });
+            root.add(gun);
         }
-        // Crystal and roof towers glow: an orb or the crystals
         let glow = null;
-        let orb = null;
-        const top = crown * TOWER_SCALE * TOWER_SQUASH;
-        if (name === 'tesla' || name === 'lightningStrike' || name === 'slow' || name === 'poison') {
-            const c = { tesla: '#fff07a', lightningStrike: '#7ff6ff', slow: '#bfe6ff', poison: '#a6f25a' }[name];
-            const om = new T3.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 2, roughness: 0.2 });
-            om._own = true;
-            if (ghost) {
-                om.transparent = true;
-                om.opacity = 0.6;
-            }
-            orb = new T3.Mesh(new T3.SphereGeometry(0.09, 16, 12), om);
-            orb.position.y = top + 0.05;
-            root.add(orb);
-            glow = glowSprite(name === 'tesla' ? 0xffe066 : name === 'poison' ? 0x9cff3a : 0x6ff3ff, 0.7, 0.75);
-            glow.position.y = top + 0.05;
-            root.add(glow);
-        } else if (name === 'laser' || name === 'beamEmitter') {
-            glow = glowSprite(name === 'laser' ? 0x60b8ff : 0x5ff0e0, 0.9, 0.55);
-            glow.position.y = top - 0.05;
+        if (GLOW_PART[name]) {
+            glow = glowSprite(new T3.Color(GLOW_PART[name]).getHex(), /laser|beam/i.test(name) ? 0.6 : 0.8, 0.6);
+            glow.position.y = PLINTH_H + (proto.top - PLINTH_H) * (/laser|beam/i.test(name) ? 0.7 : 0.92);
             root.add(glow);
         }
-        return { root, turret, inner, barrel, glow, orb, top, still: !spec[1] };
+        const aim = gun ? { f0: proto.f0 } : null;
+        return { root, turret: root, inner: root, gun, aim, glow, orb: null, top: proto.top, still: proto.still };
     }
 
     // Invisible hit volume for picking a tower by its body
@@ -1197,7 +1329,7 @@ const Renderer3D = (() => {
     let hitMat = null;
     function makeModel(t, ghost) {
         const b = buildTowerModel(t.name, ghost);
-        const m = { name: t.name, root: b.root, turret: b.turret, inner: b.inner, barrel: b.barrel, glow: b.glow, orb: b.orb, top: b.top, still: b.still, hit: null, tower: t, spin: null };
+        const m = { name: t.name, root: b.root, turret: b.turret, inner: b.inner, gun: b.gun, aim: b.aim, glow: b.glow, orb: b.orb, top: b.top, still: b.still, hit: null, tower: t, spin: null };
         if (!ghost) {
             if (!hitGeo) {
                 hitGeo = new T3.CylinderGeometry(0.46, 0.46, 1, 10);
@@ -1213,21 +1345,14 @@ const Renderer3D = (() => {
         return m;
     }
 
-    const ghostMats = new Map();
-    function ghostMat(src) {
-        let g = ghostMats.get(src);
-        if (!g) {
-            g = src.clone();
-            g.transparent = true;
-            g.opacity = 0.62;
-            g.depthWrite = false;
-            ghostMats.set(src, g);
-        }
-        return g;
-    }
-
-    // Turn the weapon (it faces +Z) towards a game angle
+    // Turn something that faces +Z towards a game angle
     const yawFor = (a) => Math.atan2(Math.cos(a), Math.sin(a));
+
+    // Point a turret's gun at game angle a, pushed back by the recoil (0..1)
+    function aimGun(m, a, recoil) {
+        m.gun.rotation.y = m.aim.f0 - a;
+        m.gun.position.set(-Math.cos(a) * recoil * 0.05, 0, -Math.sin(a) * recoil * 0.05);
+    }
 
     function syncTowers(dt) {
         const seen = new Set();
@@ -1246,6 +1371,7 @@ const Renderer3D = (() => {
                 m = makeModel(t, false);
                 towerModels.set(t, m);
                 dyn.add(m.root);
+                shadowsAt = time + 0.35;
                 if (t._pop === undefined) t._pop = 1;
             }
             const X = t.pos.x / ts;
@@ -1256,8 +1382,7 @@ const Renderer3D = (() => {
             const gy = groundY && groundY[t.gridPos.x] ? groundY[t.gridPos.x][t.gridPos.y] : 0;
             m.root.position.set(X, gy, Z);
             m.root.scale.set(s, 1 + (s - 1) * 1.4, s);
-            if (!m.still) m.turret.rotation.y = yawFor(t.angle);
-            if (m.barrel) m.barrel.position.z = m.barrel.userData.z0 - (t._recoil || 0) * 0.12;
+            if (m.aim) aimGun(m, t.angle, t._recoil || 0);
             const hov = hover && Math.abs(hover.x - t.pos.x) < ts * 0.5 && Math.abs(hover.y - t.pos.y) < ts * 0.5 && !toPlace;
             if (m.glow) {
                 const k = 0.75 + 0.25 * Math.sin(time * 5 + i) + (t._flash || 0) * 0.08;
@@ -1268,51 +1393,91 @@ const Renderer3D = (() => {
             if (m.orb) m.orb.position.y = m.top + 0.06 + Math.sin(time * 2.4 + i) * 0.03;
             m.root.position.y += hov ? 0.03 : 0;
         }
+        // Redraw the shadows once a new tower has popped up, and when one goes
+        if (shadowsAt && time >= shadowsAt) {
+            shadowsAt = 0;
+            gl.shadowMap.needsUpdate = true;
+        }
         towerModels.forEach((m, t) => {
             if (seen.has(t)) return;
+            gl.shadowMap.needsUpdate = true;
             dyn.remove(m.root);
             if (m.glow) m.glow.material.dispose();
             towerModels.delete(t);
         });
     }
 
-    // ---------- Enemies: the kit's saucers, instanced per kind ----------
+    // ---------- Enemies: Quaternius's animated monsters (CC0) ----------
 
+    // Picked to match the flat view's enemies: a slime, a hard-shelled crawler, a fast
+    // flyer, a gliding ghost, the mushroom healer, a big furry golem, a running
+    // skeleton, a one-eyed brute for the tank, a dragon and a giant bee for the bosses
     const ENEMY_MODEL = {
-        weak: 'enemy-ufo-a', strong: 'enemy-ufo-b', fast: 'enemy-ufo-c', strongFast: 'enemy-ufo-c-weapon',
-        medic: 'enemy-ufo-a-weapon', stronger: 'enemy-ufo-b-weapon', faster: 'enemy-ufo-c', tank: 'enemy-ufo-d-weapon',
-        taunt: 'enemy-ufo-d', spawner: 'enemy-ufo-b'
+        weak: 'Slime', strong: 'Crab', fast: 'Bat', strongFast: 'Ghost', medic: 'Mushroom',
+        stronger: 'Yeti', faster: 'Skeleton', tank: 'Cyclops', taunt: 'Dragon', spawner: 'Bee'
     };
-    const enemyKinds = {};      // name -> { parts: [{ mesh, m }], cap, n }
-    function enemyKind(name) {
-        let k = enemyKinds[name];
-        if (k) return k;
-        k = { parts: [], cap: 0, n: 0, model: ENEMY_MODEL[name] || 'enemy-ufo-a' };
-        enemyKinds[name] = k;
-        grow(k, 32, name);
-        return k;
+    const FLYING = { Bat: 0.32, Ghost: 0.12, Dragon: 0.28, Bee: 0.3 };
+    const MONSTER_PAINT = {
+        Bat: { Main: '#2b9fc4', Black: '#16485a', Belly: '#c4f4ff', Nose: '#0b2a36' },
+        Dragon: { Main: '#7a45bd', Wings: '#4b2580', Claws: '#2a1645', Belly: '#d2aaff' },
+        Skeleton: { Skeleton: '#f0b27a' }
+    };
+    const enemyProtos = {};
+    function enemyProto(name) {
+        if (enemyProtos[name]) return enemyProtos[name];
+        const file = ENEMY_MODEL[name] || 'Slime';
+        const g = qt.monster[file];
+        const art = Art.ENEMY_ART[name];
+        // Colour the untextured monsters like their flat-view enemy
+        const paint = MONSTER_PAINT[file];
+        if (paint) g.scene.traverse(o => { if (o.isMesh) [].concat(o.material).forEach(m => { if (paint[m.name]) m.color.set(paint[m.name]); }); });
+        g.scene.updateMatrixWorld(true);
+        const box = new T3.Box3().setFromObject(g.scene);
+        const size = box.getSize(new T3.Vector3());
+        const across = art.r * 2 * (art.boss ? 1.25 : 1.0);
+        const scale = Math.min(across / Math.max(size.x, size.z), across * 1.25 / size.y);
+        const find = (re) => g.animations.find(a => re.test(a.name));
+        enemyProtos[name] = {
+            file, scene: g.scene, scale, minY: box.min.y, height: size.y * scale,
+            move: find(/walk|run|fly/i) || find(/idle/i), death: find(/death/i), hit: find(/hit/i),
+            fly: FLYING[file] || 0, bounce: !find(/walk|run|fly/i)
+        };
+        return enemyProtos[name];
     }
 
-    function grow(k, cap, name) {
-        k.parts.forEach(p => {
-            dyn.remove(p.mesh);
-            p.mesh.dispose();
+    const enemyModels = new Map();      // enemy -> model
+    const dying = [];                   // models playing their death
+    function makeEnemyModel(e) {
+        const p = enemyProto(e.name);
+        const root = new T3.Group();
+        const body = window.SkeletonUtils.clone(p.scene);
+        body.scale.multiplyScalar(p.scale);
+        body.position.y = -p.minY * p.scale;
+        root.add(body);
+        const mats = [];
+        body.traverse(o => {
+            if (!o.isMesh) return;
+            o.material = o.material.clone();
+            mats.push(o.material);
+            o.castShadow = false;
+            o.receiveShadow = false;
+            o.frustumCulled = false;
         });
-        const a = Art.ENEMY_ART[name];
-        const material = accentMat(a.color, a.boss ? { emissive: a.color, ei: 0.25 } : undefined);
-        k.parts = (kit[k.model] || []).map(p => {
-            const mesh = new T3.InstancedMesh(p.geo, material, cap);
-            mesh.instanceMatrix.setUsage(T3.DynamicDrawUsage);
-            mesh.castShadow = true;
-            mesh.frustumCulled = false;
-            const white = new T3.Color(1, 1, 1);
-            for (let i = 0; i < cap; i++) mesh.setColorAt(i, white);
-            mesh.count = 0;
-            dyn.add(mesh);
-            return { mesh, m: p.m, spin: /weapon|barrel/.test(p.name) };
-        });
-        k.cap = cap;
-        k.name = name;
+        const mixer = new T3.AnimationMixer(body);
+        let act = null;
+        if (p.move) {
+            act = mixer.clipAction(p.move);
+            act.play();
+            act.time = Math.random() * p.move.duration;
+        }
+        dyn.add(root);
+        return { root, body, mats, mixer, act, p, hitT: 0 };
+    }
+
+    function dropEnemyModel(m) {
+        dyn.remove(m.root);
+        m.mixer.stopAllAction();
+        m.mats.forEach(x => x.dispose());
     }
 
     let enemyId = 0;
@@ -1334,63 +1499,226 @@ const Renderer3D = (() => {
         const d = Math.abs(dx) + Math.abs(dy);
         if (d > 0.0001) {
             e._ph += d / ts * 10;
-            e._rot += angDiff(Math.atan2(dy, dx) - e._rot) * 0.25;
+            e._rot += angDiff(Math.atan2(dy, dx) - e._rot) * 0.2;
             e._lx = e.pos.x;
             e._ly = e.pos.y;
         }
     }
 
-    function syncEnemies(stepped) {
-        Object.values(enemyKinds).forEach(k => (k.n = 0));
-        const base = new T3.Matrix4();
-        const q = new T3.Quaternion();
-        const q2 = new T3.Quaternion();
-        const eul = new T3.Euler();
-        const pos = new T3.Vector3();
-        const scl = new T3.Vector3();
+    // Soft round shadows under enemies, one instanced mesh
+    let blobs = null;
+    function blobMesh() {
+        if (blobs) return blobs;
+        const c = document.createElement('canvas');
+        c.width = c.height = 64;
+        const g = c.getContext('2d');
+        const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+        gr.addColorStop(0, 'rgba(0,0,0,0.55)');
+        gr.addColorStop(0.6, 'rgba(0,0,0,0.3)');
+        gr.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = gr;
+        g.fillRect(0, 0, 64, 64);
+        const m = new T3.MeshBasicMaterial({ map: new T3.CanvasTexture(c), transparent: true, depthWrite: false, toneMapped: false });
+        blobs = new T3.InstancedMesh(new T3.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), m, 256);
+        blobs.instanceMatrix.setUsage(T3.DynamicDrawUsage);
+        blobs.frustumCulled = false;
+        blobs.renderOrder = 1;
+        blobs.count = 0;
+        dyn.add(blobs);
+        return blobs;
+    }
+
+    const seenEnemies = new Set();
+    function syncEnemies(stepped, dt) {
+        const bm = blobMesh();
+        let nb = 0;
+        // Animations follow the game clock: frozen while paused, faster at 2x and 3x
+        const adt = stepped ? dt * (typeof speed === 'number' ? speed : 1) : 0;
+        seenEnemies.clear();
         for (let i = 0; i < enemies.length; i++) {
             const e = enemies[i];
-            const art = Art.ENEMY_ART[e.name];
-            if (!art) continue;
+            if (!Art.ENEMY_ART[e.name]) continue;
             trackEnemy(e);
             if (stepped) FX.status(e);
-            const k = enemyKind(e.name);
-            if (k.n >= k.cap) grow(k, k.cap * 2, e.name);
-            const j = k.n++;
-            const size = art.r * 2.05 * (art.boss ? 1.1 : 1);
-            const hoverY = 0.16 + Math.sin(time * 3 + e._id * 1.3) * 0.04;
-            pos.set(e.pos.x / ts, hoverY, e.pos.y / ts);
-            // Lean into the way it flies, and spin slowly
-            const lean = 0.18;
-            eul.set(Math.sin(e._rot) * lean, time * (art.boss ? 0.6 : 1.4) + e._id, -Math.cos(e._rot) * lean, 'XYZ');
-            q.setFromEuler(eul);
-            scl.set(size, size * 0.9, size);
-            base.compose(pos, q, scl);
-            let tr = 1, tg = 1, tb = 1;
+            seenEnemies.add(e);
+            let m = enemyModels.get(e);
+            if (!m) {
+                m = makeEnemyModel(e);
+                enemyModels.set(e, m);
+            }
+            const p = m.p;
+            const hover = p.fly ? p.fly + Math.sin(time * 3 + e._id) * 0.05 : 0;
+            const hop = p.bounce ? Math.abs(Math.sin(e._ph * 0.5)) * 0.12 : 0;
+            m.root.position.set(e.pos.x / ts, hover + hop, e.pos.y / ts);
+            if (nb < 256) {
+                const art = Art.ENEMY_ART[e.name];
+                const bs = art.r * 2 * (p.fly ? 0.9 : 1.15) * (art.boss ? 1.25 : 1);
+                tmpV.set(e.pos.x / ts, 0.012, e.pos.y / ts);
+                tmpS.set(bs, 1, bs);
+                tmpM.compose(tmpV, tmpQ.identity(), tmpS);
+                bm.setMatrixAt(nb++, tmpM);
+            }
+            m.root.rotation.y = yawFor(e._rot);
+            m.mixer.update(adt);
+            // Slowed, poisoned, healing: a glow in that colour; a white flash when hit
+            let er = 0, eg = 0, eb = 0;
             const efx = e.effects;
             for (let n = 0; n < efx.length; n++) {
                 const nm = efx[n].name;
-                if (nm === 'slow') { tr *= 0.6; tg *= 0.82; tb *= 1.5; }
-                else if (nm === 'poison') { tr *= 0.7; tg *= 1.45; tb *= 0.55; }
-                else if (nm === 'regen') { const w = 1.15 + 0.15 * Math.sin(time * 8); tr *= w; tb *= w * 0.95; }
+                if (nm === 'slow') { er += 0.05; eg += 0.25; eb += 0.6; }
+                else if (nm === 'poison') { er += 0.1; eg += 0.5; eb += 0.05; }
+                else if (nm === 'regen') { const w = 0.25 + 0.2 * Math.sin(time * 8); er += w; eg += w * 0.3; eb += w * 0.6; }
             }
             const hit = e.hit > 0 ? Math.min(1, e.hit / 6) : 0;
-            tint.setRGB(tr, tg, tb);
-            if (hit) tint.lerp(tmpC.setRGB(3, 3, 3), hit * 0.7);
-            void q2;
-            for (const p of k.parts) {
-                tmpM2.multiplyMatrices(base, p.m);
-                p.mesh.setMatrixAt(j, tmpM2);
-                p.mesh.setColorAt(j, tint);
+            er += hit * 0.9; eg += hit * 0.9; eb += hit * 0.9;
+            for (let k = 0; k < m.mats.length; k++) m.mats[k].emissive.setRGB(er, eg, eb);
+        }
+        bm.count = nb;
+        bm.instanceMatrix.needsUpdate = true;
+        // Gone: killed ones play their death, ones that reached the gate just vanish
+        enemyModels.forEach((m, e) => {
+            if (seenEnemies.has(e)) return;
+            enemyModels.delete(e);
+            if (e.health <= 0 && m.p.death && dying.length < 40) {
+                m.mixer.stopAllAction();
+                const d = m.mixer.clipAction(m.p.death);
+                d.setLoop(T3.LoopOnce, 1);
+                d.clampWhenFinished = true;
+                d.play();
+                m.mats.forEach(x => x.emissive.setRGB(0, 0, 0));
+                m.dieT = 0;
+                dying.push(m);
+            } else {
+                dropEnemyModel(m);
+            }
+        });
+        for (let i = dying.length - 1; i >= 0; i--) {
+            const m = dying[i];
+            m.dieT += adt;
+            m.mixer.update(adt);
+            if (m.p.fly) m.root.position.y = Math.max(0, m.root.position.y - adt * 0.8);
+            if (m.dieT > 0.9) {
+                const s = Math.max(0, 1 - (m.dieT - 0.9) * 4);
+                m.root.scale.setScalar(s);
+                if (s <= 0) {
+                    dropEnemyModel(m);
+                    dying.splice(i, 1);
+                }
             }
         }
-        Object.values(enemyKinds).forEach(k => {
-            k.parts.forEach(p => {
-                p.mesh.count = k.n;
-                p.mesh.instanceMatrix.needsUpdate = true;
-                if (p.mesh.instanceColor) p.mesh.instanceColor.needsUpdate = true;
-            });
-        });
+    }
+
+    // ---------- Explosions: fireballs, shockwaves and light flashes ----------
+    //
+    // FX.blast and FX.death (the game's effect hooks) also start these. Pools of a
+    // fixed size, and a fixed number of lights, so nothing is created while playing.
+
+    const BLAST_COLORS = {
+        rocket: [0xffb347, 0xff5a1f], silo: [0x9ff3ff, 0x2a8cff], bomb: [0xe0b0ff, 0x8a3dff],
+        cluster: [0xffc46b, 0xff6a1a], sub: [0xffc46b, 0xff6a1a], rail: [0xf0b8ff, 0xa04dff]
+    };
+    const blastPool = [];
+    const lights = [];
+    let lightNext = 0;
+    function buildBlasts() {
+        const ballGeo = new T3.IcosahedronGeometry(1, 2);
+        const ringGeo = new T3.RingGeometry(0.82, 1, 48).rotateX(-Math.PI / 2);
+        const glowMat = (c) => new T3.MeshBasicMaterial({ color: c, transparent: true, blending: T3.AdditiveBlending, depthWrite: false, toneMapped: false, side: T3.DoubleSide });
+        for (let i = 0; i < 24; i++) {
+            const core = new T3.Mesh(ballGeo, glowMat(0xffffff));
+            const shell = new T3.Mesh(ballGeo, glowMat(0xff8a3a));
+            const ring = new T3.Mesh(ringGeo, glowMat(0xffd08a));
+            const smoke = new T3.Mesh(ballGeo, new T3.MeshLambertMaterial({ color: 0x3a3a40, transparent: true, depthWrite: false }));
+            [core, shell, ring, smoke].forEach(m => { m.visible = false; m.renderOrder = 4; dyn.add(m); });
+            blastPool.push({ core, shell, ring, smoke, t: 0, life: 1, r: 1, x: 0, z: 0, death: false, on: false });
+        }
+        for (let i = 0; i < 3; i++) {
+            const l = new T3.PointLight(0xff9a40, 0, 4, 1.6);
+            l.position.y = 0.8;
+            scene.add(l);
+            lights.push(l);
+        }
+        const blast = FX.blast;
+        FX.blast = (x, y, kind, radiusTiles = 1) => {
+            const out = blast(x, y, kind, radiusTiles);
+            if (Renderer.view === '3d') startBlast(x / ts, y / ts, kind, radiusTiles, false);
+            return out;
+        };
+        const death = FX.death;
+        FX.death = (e) => {
+            const out = death(e);
+            if (Renderer.view === '3d') {
+                const art = Art.ENEMY_ART[e.name];
+                startBlast(e.pos.x / ts, e.pos.y / ts, 'death', art ? art.r * (art.boss ? 2.4 : 1.4) : 0.4, true, art && art.color);
+            }
+            return out;
+        };
+    }
+
+    function startBlast(x, z, kind, radius, isDeath, color) {
+        let b = blastPool.find(q => !q.on);
+        if (!b) b = blastPool.reduce((a, q) => (q.t / q.life > a.t / a.life ? q : a));
+        b.on = true;
+        b.t = 0;
+        b.death = isDeath;
+        b.life = isDeath ? 0.45 : 0.7;
+        b.r = isDeath ? radius : Math.max(0.6, radius * 0.7);
+        b.x = x;
+        b.z = z;
+        const [c1, c2] = isDeath ? [0xffffff, new T3.Color(color || '#ffffff').getHex()] : (BLAST_COLORS[kind] || BLAST_COLORS.rocket);
+        b.core.material.color.setHex(c1);
+        b.shell.material.color.setHex(c2);
+        b.ring.material.color.setHex(isDeath ? c2 : c1);
+        [b.core, b.shell, b.ring].forEach(m => { m.visible = true; });
+        b.smoke.visible = !isDeath && FX.quality > 0;
+        if (!isDeath && FX.quality > 0) {
+            const l = lights[lightNext++ % lights.length];
+            l.color.setHex(c2);
+            l.position.set(x, 0.9, z);
+            l.userData.t = 0;
+            l.userData.peak = 5 + radius * 3;
+            l.distance = 2.5 + radius * 2.5;
+        }
+    }
+
+    function syncBlasts(dt) {
+        for (const b of blastPool) {
+            if (!b.on) continue;
+            b.t += dt;
+            const f = b.t / b.life;
+            if (f >= 1) {
+                b.on = false;
+                [b.core, b.shell, b.ring, b.smoke].forEach(m => { m.visible = false; });
+                continue;
+            }
+            const ease = 1 - (1 - f) * (1 - f);
+            const h = b.death ? 0.35 : 0.3;
+            // A hot core that shrinks fast, a coloured shell that swells and fades
+            const cs = b.r * 0.55 * Math.max(0, 1 - f * 2.2) + 0.02;
+            b.core.position.set(b.x, h, b.z);
+            b.core.scale.setScalar(cs);
+            b.core.material.opacity = Math.max(0, 1 - f * 2);
+            const ss = b.r * (0.35 + ease * 0.75);
+            b.shell.position.set(b.x, h + f * 0.25, b.z);
+            b.shell.scale.set(ss, ss * 0.8, ss);
+            b.shell.material.opacity = 0.75 * (1 - f) * (1 - f);
+            // The shockwave runs along the ground
+            const rs = b.r * (0.3 + ease * (b.death ? 0.9 : 1.3));
+            b.ring.position.set(b.x, 0.03, b.z);
+            b.ring.scale.set(rs, 1, rs);
+            b.ring.material.opacity = 0.85 * (1 - f);
+            if (b.smoke.visible) {
+                const sm = b.r * (0.4 + ease * 0.6);
+                b.smoke.position.set(b.x, h + 0.2 + f * 0.6, b.z);
+                b.smoke.scale.set(sm, sm * 0.7, sm);
+                b.smoke.material.opacity = 0.45 * Math.min(1, f * 3) * (1 - f);
+            }
+        }
+        for (const l of lights) {
+            if (l.userData.t === undefined) continue;
+            l.userData.t += dt;
+            l.intensity = Math.max(0, l.userData.peak * (1 - l.userData.t / 0.35));
+        }
     }
 
     // ---------- Missiles, route arrows, portals, gate, ranges ----------
@@ -1476,6 +1804,12 @@ const Renderer3D = (() => {
         cross.visible = false;
         placeCross = cross;
         dyn.add(cross);
+    }
+
+    // Height at which the next kit tower part sits on this one (tops hold at their floor)
+    function partHeight(name) {
+        const box = new T3.Box3().setFromObject(kitRoots[name]);
+        return /top/.test(name) ? 0.2 : box.max.y;
     }
 
     function buildGate() {
@@ -2218,6 +2552,7 @@ const Renderer3D = (() => {
                 buildWorld();
             } catch (e) {
                 // Something the 3D view needs is missing: the flat view always works
+                console.warn('3D view failed, using Flat:', e);
                 kitFailed = true;
                 Renderer.setView('flat');
                 return;
@@ -2239,8 +2574,9 @@ const Renderer3D = (() => {
 
         swayProps();
         syncTowers(dt / 1000);
-        syncEnemies(stepped);
+        syncEnemies(stepped, dt / 1000);
         syncMissiles();
+        syncBlasts(stepped ? dt / 1000 * (typeof speed === 'number' ? speed : 1) : 0);
         syncPortals();
         syncGate();
         syncRoute();
@@ -2331,7 +2667,7 @@ const Renderer3D = (() => {
     }
 
     return {
-        available, init, suspend, portrait: (name) => portraits[name] || null, resize: () => resize(false), mapChanged, frame, reveal, logicTime,
+        available, init, suspend, portrait: (name) => portraits[name] || null, enemyPortrait: (name) => enemyPortraits[name] || null, resize: () => resize(false), mapChanged, frame, reveal, logicTime,
         setQualityAuto: (v) => { qualityAuto = v; }, setZoom, togglePerf, toScreen,
         get hover() { return hover; },
         get zoom() { return zoom; },
