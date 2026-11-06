@@ -658,6 +658,8 @@ const Renderer3D = (() => {
         T3.Cache.enabled = true;
         const loader = new window.GLTFLoader();
         const img = new Image();
+        // Some hosts serve files from another origin: ask for CORS so the palette can be read
+        img.crossOrigin = 'anonymous';
         const imgReady = new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
         img.src = KIT_DIR + 'Textures/colormap.png';
         Promise.all([imgReady].concat(KIT_MODELS.map(n => loader.loadAsync(KIT_DIR + n + '.glb').then(g => [n, g.scene]))))
@@ -2212,7 +2214,14 @@ const Renderer3D = (() => {
         const stamp = `${theme}|${cols}x${rows}|${typeof mapStamp === 'undefined' ? '' : mapStamp}`;
         if (!world || mapKey === '' || stamp !== terrainStamp) {
             terrainStamp = stamp;
-            buildWorld();
+            try {
+                buildWorld();
+            } catch (e) {
+                // Something the 3D view needs is missing: the flat view always works
+                kitFailed = true;
+                Renderer.setView('flat');
+                return;
+            }
             refit();
         }
         FX.frame(stepped);
