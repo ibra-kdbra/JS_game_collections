@@ -404,7 +404,7 @@ function loadMap() {
         const w = holder.clientWidth || 600;
         const h = holder.clientHeight || 400;
         cols = Math.max(8, Math.floor(w / randomTs));
-        rows = Math.max(8, Math.floor(h / randomTs));
+        rows = Math.max(8, Math.floor(Renderer.rowsFitting(h / randomTs)));
         const numSpawns = name.endsWith('3') ? 3 : 2;
         if (name.startsWith('empty')) wallCover = 0;
         if (name.startsWith('sparse')) wallCover = 0.1;
@@ -744,7 +744,7 @@ function fitCanvas() {
     const w = holder.clientWidth;
     const h = holder.clientHeight;
     if (!w || !h) return;
-    const newTs = Math.max(4, Math.floor(Math.min(w / cols, h / rows)));
+    const newTs = Math.max(4, Math.floor(Math.min(w / cols, h / Renderer.rowsTall(rows))));
     if (newTs !== ts) {
         rescale(newTs);
         Renderer.mapChanged();
@@ -1242,6 +1242,8 @@ function loadPrefs() {
     if (prefs.mode in { campaign: 1, endless: 1 }) modeId = prefs.mode;
     if (prefs.difficulty in difficulties) diffId = prefs.difficulty;
     muteSounds = !!prefs.muted;
+    if (typeof prefs.volume === 'number') setSoundVolume(prefs.volume);
+    Renderer.setView(prefs.view);
     if (typeof prefs.numbers === 'boolean') damageNumbers = prefs.numbers;
     if (typeof prefs.bars === 'boolean') healthBar = prefs.bars;
     if (typeof prefs.effects === 'boolean') showEffects = prefs.effects;
@@ -1260,6 +1262,8 @@ function savePrefs() {
         mode: modeId,
         difficulty: diffId,
         muted: muteSounds,
+        volume: soundVolume,
+        view: Renderer.view,
         numbers: damageNumbers,
         bars: healthBar,
         effects: showEffects,
