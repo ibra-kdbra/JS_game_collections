@@ -35,6 +35,12 @@ State of the Game Lab upgrade, for continuing in a new session.
 - Volt Flip: difficulty is checked by bots only (a perfect look-ahead bot and a casual one with
   0.2–0.4 s reactions, median about 1700 m). Real players may find the late margin (0.17 s) tight;
   the levers are `SPEED` and `MARGIN` in `Volt_Flip/js/config.js`.
+- Volt Flip campaign (`work/volt-flip-campaign`, on top of phase 3): 5 chapters x 5 levels as data in
+  `Volt_Flip/js/levels.js`, chapter cards, level select with stars, saved progress. Endless stays the
+  main mode. The verifier proves every level and every star with bots; casual-bot finish rate by
+  chapter is 100%, 89%, 83%, 79%, 77% (finales 100%, 69%, 58%, 60%, 35%). Chapter 1 is 100% for the bot
+  even at the finale; real players may still find Relight (5-5) steep. Levers: each level's `speed`
+  and `margin`, and `SHARD_SHARE` (80%) for the shard star.
 - Brainy Warrior: the last six levels (29-34) were retuned from their own maps so the bot can win
   them. One-attempt bot success, before -> after: Tower of Tricks 0.9% -> 7.2%, The Labyrinth
   0.0% -> 4.7%, The Long March 0.1% -> 3.7%, Spell Lattice 0.0% -> 3.4%, The Archmage's Trial
@@ -63,7 +69,8 @@ State of the Game Lab upgrade, for continuing in a new session.
   `node Souls-Bumper/tools/verify-levels.mjs` (`node Souls-Bumper/tools/map.mjs <n>` prints a level),
   `node Gravity_Wells/tools/verify-puzzles.mjs`, `node ReWire/tools/verify-levels.mjs`,
   `node Raven/tools/verify-levels.mjs`, `node Volt_Flip/tools/verify.mjs` (bot survives 4000 m on
-  every seed; prints the speed and margin ramp) (re-record a changed Raven level with
+  every seed, every campaign level and star is finished by a bot; prints the speed and margin ramp and
+  the campaign's casual finish rates) (re-record a changed Raven level with
   `node Raven/tools/search-runs.mjs <n> --seeds 1`). Each prints its difficulty table.
 - Brainy Warrior budgets: `CHROME=<chromium> node Brainy_Warrior/tools/perf-check.mjs`.
 - Tower Defense: `node TowerDefense/tools/verify-maps.mjs` (bot wins every map) and

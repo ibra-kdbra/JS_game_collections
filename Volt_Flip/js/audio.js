@@ -119,6 +119,14 @@ export function createAudio(store) {
     best() {
       [0, 4, 7, 12, 16].forEach((s, i) => tone({ type: 'triangle', f0: note(s), dur: 0.14, vol: 0.06, delay: 0.25 + i * 0.07 }));
     },
+    finish() {
+      noise({ dur: 0.35, vol: 0.05, freq: 2000, sweepTo: 6000, q: 1.5 });
+      [0, 7, 12, 19].forEach((s, i) => tone({ type: 'triangle', f0: note(s), dur: 0.16, vol: 0.06, delay: i * 0.08 }));
+    },
+    star(n = 0) {
+      tone({ type: 'sine', f0: note(12 + n * 4), dur: 0.12, vol: 0.07 });
+      tone({ type: 'triangle', f0: note(24 + n * 4), dur: 0.08, vol: 0.03, delay: 0.03 });
+    },
     start() {
       tone({ type: 'triangle', f0: 392, dur: 0.07, vol: 0.06 });
       tone({ type: 'triangle', f0: 784, dur: 0.1, vol: 0.06, delay: 0.08 });
