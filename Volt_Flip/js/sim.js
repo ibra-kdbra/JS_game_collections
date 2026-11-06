@@ -4,8 +4,8 @@
  * so a run plays the same on a 60 Hz phone and a 144 Hz monitor, and the
  * verifier can replay it in Node.
  */
-import { DT, PICKUPS, PLAYER, SCORE, UNITS_PER_METRE, WORLD, speedAt } from './config.js';
-import { CEIL, FLOOR, createCourse, droneY, extend, prune, shutterPhase, solidAt, surfaceY } from './course.js';
+import { DT, PICKUPS, PLAYER, SCORE, UNITS_PER_METRE, WORLD } from './config.js';
+import { CEIL, FLOOR, buildLevel, courseSpeed, createCourse, droneY, extend, prune, shutterPhase, solidAt, surfaceY } from './course.js';
 
 const H = WORLD.height;
 const AHEAD = 1900; // course is always built this far past the courier
@@ -14,16 +14,21 @@ export function createPlayer() {
   return { y: surfaceY(FLOOR), vy: 0, g: FLOOR, grounded: true, coyote: 0, buffer: 0 };
 }
 
-export function createWorld({ seed = 1, pickups = true } = {}) {
-  const course = createCourse(seed, { pickups });
+/**
+ * A run: endless from a seed, or a campaign level (see buildLevel in course.js).
+ * A level run starts with a shield charged and ends with w.won at the finish line.
+ */
+export function createWorld({ seed = 1, pickups = true, level = null } = {}) {
+  const course = level ? buildLevel(level) : createCourse(seed, { pickups });
   extend(course, AHEAD);
   return {
     seed,
     course,
+    level,
     t: 0,
     steps: 0,
     dist: 0,
-    speed: speedAt(0),
+    speed: courseSpeed(course, 0),
     p: createPlayer(),
     score: 0,
     metre: 0,
@@ -33,7 +38,9 @@ export function createWorld({ seed = 1, pickups = true } = {}) {
     shards: 0,
     grazes: 0,
     flips: 0,
-    shield: false,
+    shield: Boolean(level) && level.shield !== false,
+    hits: 0, // shield breaks
+    won: false,
     invuln: 0,
     magnet: 0,
     over: false,
@@ -162,6 +169,7 @@ function gainChain(w) {
 /** Save the courier with the shield: turn gravity round and throw it back to the far surface. */
 function rescue(w) {
   w.shield = false;
+  w.hits++;
   w.invuln = PICKUPS.invulnerable;
   w.mult = 1;
   w.chain = 0;
@@ -177,7 +185,7 @@ export function step(w, wantFlip = false) {
   w.events.length = 0;
   if (w.over) return w;
   const c = w.course;
-  w.speed = speedAt(w.dist / UNITS_PER_METRE);
+  w.speed = courseSpeed(c, w.dist);
   w.dist += w.speed * DT;
   w.t += DT;
   w.steps++;
@@ -204,6 +212,7 @@ export function step(w, wantFlip = false) {
       if (w.shield) {
         o.broken = true;
         w.shield = false;
+        w.hits++;
         w.invuln = PICKUPS.invulnerable;
         w.mult = 1;
         w.chain = 0;
@@ -273,7 +282,15 @@ export function step(w, wantFlip = false) {
   while (w.metre < m) {
     w.metre++;
     w.score += SCORE.perMetre * w.mult;
-    if (w.metre % 250 === 0) w.events.push({ type: 'milestone', metre: w.metre });
+    if (w.metre % 250 === 0 && !c.finish) w.events.push({ type: 'milestone', metre: w.metre });
+  }
+
+  // A campaign level ends at its finish line.
+  if (c.finish && w.dist >= c.finish) {
+    w.over = true;
+    w.won = true;
+    w.cause = 'finish';
+    w.events.push({ type: 'finish', x: c.finish, y: p.y });
   }
   return w;
 }

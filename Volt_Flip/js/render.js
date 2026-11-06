@@ -172,6 +172,12 @@ export function createRenderer(canvas) {
       case 'milestone':
         popup(world, `${e.metre} m`, H / 2 - 40, PALETTE.text);
         break;
+      case 'finish':
+        burst(world.dist, world.p.y, 40, [PALETTE.accent, '#fff7cc', '#ffffff'], 380, 4);
+        popup(world, 'UPLINK', H / 2 - 40, PALETTE.accent);
+        fx.flash = 0.3;
+        fx.flashColor = '250, 204, 21';
+        break;
       case 'die':
         burst(world.dist, world.p.y, 46, [PALETTE.accent, PALETTE.danger, '#ffffff'], 420, 4.5);
         fx.flash = 0.4;
@@ -568,6 +574,32 @@ export function createRenderer(canvas) {
     ctx.fillRect(sx + 5.5, y - 13, 5, 4);
   }
 
+  /** A campaign level's finish line: a lit gate across the corridor, chequered like a flag. */
+  function drawFinish(x, camX, viewW) {
+    const sx = x - camX;
+    if (sx < -40 || sx > viewW + 40) return;
+    const pulse = reduced ? 0.7 : 0.6 + 0.4 * Math.sin(fx.time * 5);
+    drawGlow(glow.accent, sx, H / 2, 90, 0.18 + 0.12 * pulse);
+    ctx.fillStyle = 'rgba(250, 204, 21, 0.07)';
+    ctx.fillRect(sx, 0, 160, H);
+    const cell = 10;
+    for (let row = 0; row < H / cell; row++) {
+      for (let col = 0; col < 2; col++) {
+        ctx.fillStyle = (row + col) % 2 ? 'rgba(250, 204, 21, 0.85)' : 'rgba(9, 9, 11, 0.9)';
+        ctx.fillRect(sx - cell + col * cell, row * cell, cell, cell);
+      }
+    }
+    ctx.fillStyle = PALETTE.accent;
+    ctx.fillRect(sx - cell - 2, 0, 2, H);
+    ctx.fillRect(sx + cell, 0, 2, H);
+    // Beacons on both rails.
+    for (const yy of [-6, H + 6]) {
+      ctx.fillStyle = '#fffbe6';
+      ctx.fillRect(sx - 6, yy - 3, 12, 6);
+      drawGlow(glow.accent, sx, yy, 22, 0.5 * pulse + 0.2);
+    }
+  }
+
   function drawPlayer(world, y, alive) {
     const p = world.p;
     const x = WORLD.playerX;
@@ -675,6 +707,7 @@ export function createRenderer(canvas) {
     drawBackdrop(camX, viewW, yTop, yBottom);
     drawCorridor(camX, viewW, world.speed);
     drawRails(world, camX, viewW);
+    if (world.course.finish) drawFinish(world.course.finish, camX, viewW);
 
     const left = camX - 60;
     const right = camX + viewW + 60;
@@ -696,12 +729,13 @@ export function createRenderer(canvas) {
     }
 
     // Trail samples, in view space.
+    const alive = !world.over || world.won;
     if (!world.over) {
       fx.trail.push({ x: WORLD.playerX, y });
       for (const tr of fx.trail) tr.x -= world.speed * dt;
       if (fx.trail.length > (reduced ? 4 : 9)) fx.trail.shift();
     } else if (fx.trail.length) fx.trail.shift();
-    drawPlayer(world, y, !world.over);
+    drawPlayer(world, y, alive);
 
     // Sparks (world space).
     for (const p of fx.particles) {

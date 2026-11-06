@@ -11,10 +11,16 @@
  * 4. The ramp: speed rises and the reaction margin shrinks band by band, and
  *    a casual bot (short look-ahead, late reactions) dies further out on
  *    average than a casual bot that only meets the first band. Prints a table.
+ * 5. The campaign: every level builds, leaves fair room at every forced
+ *    flip, and the look-ahead bot finishes it without a hit (the no-hit star);
+ *    a shard-seeking version also takes the shard star in the same run. A
+ *    casual bot plays each level with its shield, and its finish rate per
+ *    level and chapter shows the ramp. Prints a table.
  * Exits non-zero on any failure.
  */
 import { DT, FLIP_TIME, PLAYER, SPEED, UNITS_PER_METRE, WORLD, marginAt, speedAt } from '../js/config.js';
-import { CEIL, FLOOR, context, createCourse, extend, fingerprint, surfaceY } from '../js/course.js';
+import { CEIL, FLOOR, buildLevel, courseSpeed, createCourse, extend, fingerprint, surfaceY } from '../js/course.js';
+import { CHAPTERS, LEVELS, shardTarget } from '../js/levels.js';
 import { canFlip, createPlayer, createWorld, metres, step, stepPlayer } from '../js/sim.js';
 import { createRng } from '../js/rng.js';
 import { botWantsFlip } from '../js/bot.js';
@@ -25,6 +31,25 @@ const arg = (name, fallback) => {
 };
 const SEEDS = arg('--seeds', 12);
 const TARGET = arg('--metres', 4000);
+const CASUAL_RUNS = arg('--casual', 48);
+const ONLY = process.argv.includes('--campaign'); // skip the endless checks
+
+/**
+ * A casual player: looks 0.6 s ahead, notices every third step, and taps once,
+ * 0.2 to 0.4 s after it decides to. Plays w until it ends or stop(w) is true.
+ */
+function playCasual(w, rng, stop = () => false) {
+  let tapAt = -1;
+  while (!w.over && !stop(w)) {
+    if (tapAt < 0 && canFlip(w.p) && w.steps % 3 === 0 && botWantsFlip(w, { horizon: 0.6, eager: true })) {
+      tapAt = w.steps + 12 + Math.floor(rng() * 13);
+    }
+    const tap = w.steps === tapAt;
+    if (tap) tapAt = -1;
+    step(w, tap);
+  }
+  return w;
+}
 
 let failures = 0;
 const fail = (msg) => {
@@ -33,6 +58,7 @@ const fail = (msg) => {
 };
 const ok = (msg) => console.log(`  ok ${msg}`);
 
+if (!ONLY) {
 /* ------------------------------------------------------------ 1. seeds */
 console.log('1. Deterministic courses');
 {
@@ -142,19 +168,9 @@ console.log('3. Fairness');
 /* ---------------------------------------------------------- 4. ramp */
 console.log('4. Difficulty ramp');
 {
-  // A casual player: looks 0.6 s ahead and taps once, 0.2 to 0.4 s after it decides to.
   function casual(seed) {
     const w = createWorld({ seed, pickups: false });
-    const rng = createRng(seed ^ 0x5bd1e995);
-    let tapAt = -1;
-    while (!w.over && metres(w) < TARGET) {
-      if (tapAt < 0 && canFlip(w.p) && w.steps % 3 === 0 && botWantsFlip(w, { horizon: 0.6, eager: true })) {
-        tapAt = w.steps + 12 + Math.floor(rng() * 13);
-      }
-      const tap = w.steps === tapAt;
-      if (tap) tapAt = -1;
-      step(w, tap);
-    }
+    playCasual(w, createRng(seed ^ 0x5bd1e995), (w) => metres(w) >= TARGET);
     return metres(w);
   }
   const bands = [0, 500, 1000, 1500, 2000, 3000, 4000];
@@ -191,5 +207,85 @@ console.log('4. Difficulty ramp');
   if (median >= TARGET) fail('the casual bot never dies; the ramp is too gentle');
 }
 
+}
+
+/* ---------------------------------------------------------- 5. campaign */
+console.log('5. Campaign');
+{
+  const ids = new Set();
+  const pct = (x) => `${Math.round(x * 100)}%`.padStart(4);
+  console.log('  level  name                speed    margin  length  shards  bot  casual  no-hit');
+  const chapterRates = [];
+  for (const ch of CHAPTERS) {
+    const rates = [];
+    for (const lv of ch.levels) {
+      if (ids.has(lv.id)) fail(`level id ${lv.id} is used twice`);
+      ids.add(lv.id);
+      let c;
+      try {
+        c = buildLevel(lv);
+      } catch (e) {
+        fail(e.message);
+        continue;
+      }
+      // Fair room at every forced change of side.
+      const forced = [
+        ...c.hazards.filter((o) => o.kind === 'spike' || o.kind === 'pylon').map((o) => ({ x0: o.x, x1: o.x + o.w, need: -o.surf })),
+        ...c.gaps.map((o) => ({ x0: o.x, x1: o.x + o.w, need: -o.surf })),
+      ].sort((a, b) => a.x0 - b.x0);
+      for (let i = 1; i < forced.length; i++) {
+        const a = forced[i - 1];
+        const b = forced[i];
+        if (a.need === b.need) continue;
+        const spare = (b.x0 - a.x1) / courseSpeed(c, b.x0) - FLIP_TIME;
+        if (spare < lv.margin * 0.95) fail(`${lv.id}: a forced flip at ${Math.round(b.x0)} leaves ${spare.toFixed(3)} s (margin ${lv.margin})`);
+      }
+      if (c.finish < 1500) fail(`${lv.id} is too short`);
+      const where = (w) => w.course.patternLog.findLast((p) => p.x <= w.dist + 30)?.key;
+
+      // The look-ahead bot: finishes with no hit.
+      const perfect = createWorld({ level: lv });
+      while (!perfect.over) step(perfect, botWantsFlip(perfect));
+      if (!perfect.won) fail(`${lv.id}: the look-ahead bot died (${perfect.cause}) at "${where(perfect)}"`);
+      else if (perfect.hits) fail(`${lv.id}: the look-ahead bot broke its shield`);
+
+      // The shard-seeking bot: all three stars in one run.
+      const greedy = createWorld({ level: lv });
+      while (!greedy.over) step(greedy, botWantsFlip(greedy, { shards: true }));
+      const target = shardTarget(lv, c.totalShards);
+      if (!greedy.won || greedy.hits) fail(`${lv.id}: the shard bot did not finish cleanly (${greedy.cause}) at "${where(greedy)}"`);
+      else if (greedy.shards < target) fail(`${lv.id}: the shard bot took ${greedy.shards} of ${c.totalShards} shards, the star needs ${target}`);
+      if (target < 1) fail(`${lv.id} has no shard star to earn`);
+
+      // The casual bot, with its shield, many times.
+      let won = 0;
+      let clean = 0;
+      for (let r = 1; r <= CASUAL_RUNS; r++) {
+        const w = playCasual(createWorld({ level: lv }), createRng(r * 2654435761 + lv.index));
+        if (w.won) won++;
+        if (w.won && !w.hits) clean++;
+      }
+      const rate = won / CASUAL_RUNS;
+      rates.push(rate);
+      const v = Array.isArray(lv.speed) ? `${lv.speed[0]}-${lv.speed[1]}` : String(lv.speed);
+      const secs = (c.finish / ((c.v0 + c.v1) / 2)).toFixed(0);
+      console.log(
+        `  ${lv.id.padEnd(5)}  ${lv.name.padEnd(18)}  ${v.padStart(7)}  ${lv.margin.toFixed(2).padStart(6)}  ${`${secs} s`.padStart(6)}  ${`${target}/${c.totalShards}`.padStart(6)}  ${String(greedy.shards).padStart(3)}  ${pct(rate).padStart(6)}  ${pct(clean / CASUAL_RUNS).padStart(6)}`,
+      );
+    }
+    const finale = ch.levels.findIndex((lv) => lv.finale);
+    if (finale !== ch.levels.length - 1) fail(`chapter ${ch.id} should end with its finale`);
+    else if (rates[finale] > Math.min(...rates) + 1e-9) fail(`the finale of chapter ${ch.id} is not its hardest level for the casual bot`);
+    const avg = rates.reduce((a, b) => a + b, 0) / Math.max(1, rates.length);
+    chapterRates.push(avg);
+    console.log(`         chapter ${ch.id} ${ch.name}: casual bot finishes ${pct(avg).trim()} of tries`);
+  }
+  if (ids.size !== LEVELS.length) fail('LEVELS does not list every chapter level');
+  if (chapterRates[0] < 0.85) fail(`chapter 1 should be easy: the casual bot finishes only ${Math.round(chapterRates[0] * 100)}%`);
+  for (let i = 1; i < chapterRates.length; i++) {
+    if (chapterRates[i] > chapterRates[i - 1] + 0.05) fail(`chapter ${i + 1} is easier for the casual bot than chapter ${i}`);
+  }
+  if (!failures) ok(`all ${LEVELS.length} levels are finished by the look-ahead bot with no hit, and every shard star is taken`);
+}
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);
