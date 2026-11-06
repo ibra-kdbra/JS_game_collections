@@ -954,6 +954,12 @@ function syncSettings() {
     $('set-autosend').checked = skipToNext;
     document.querySelectorAll('[data-shake]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.shake) === shakeLevel)));
     document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === Renderer.view)));
+    // When 3D could not run, say why next to the switch (the toast is gone after 3 s)
+    const v3 = document.querySelector('[data-view="3d"]');
+    if (v3) {
+        v3.disabled = !!Renderer.failed;
+        v3.title = Renderer.failed ? `3D could not load: ${Renderer.failed}. Reload to try again.` : '';
+    }
     $('set-haptics').checked = haptics;
     $('haptics-row').hidden = !('vibrate' in navigator) || !matchMedia('(pointer: coarse)').matches;
 }

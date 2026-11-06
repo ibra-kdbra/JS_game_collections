@@ -1251,7 +1251,7 @@ function loadPrefs() {
     if (prefs.difficulty in difficulties) diffId = prefs.difficulty;
     muteSounds = !!prefs.muted;
     if (typeof prefs.volume === 'number') setSoundVolume(prefs.volume);
-    Renderer.setView(prefs.view);
+    if (prefs.view3 === 'flat') Renderer.setView('flat');
     if (typeof prefs.numbers === 'boolean') damageNumbers = prefs.numbers;
     if (typeof prefs.bars === 'boolean') healthBar = prefs.bars;
     if (typeof prefs.effects === 'boolean') showEffects = prefs.effects;
@@ -1271,7 +1271,7 @@ function savePrefs() {
         difficulty: diffId,
         muted: muteSounds,
         volume: soundVolume,
-        view: Renderer.view,
+        view3: Renderer.chosen,
         numbers: damageNumbers,
         bars: healthBar,
         effects: showEffects,
