@@ -2,15 +2,32 @@
 const canvas = document.getElementById('canvas1');
 const ctx = canvas.getContext('2d');
 
-function setCanvasSize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+// The backing store matches the canvas's on-screen size times the device
+// pixel ratio (sharp on high-DPI screens, no stretching); drawing is in CSS
+// pixels. Thousands of stroked lines a frame: 2x is sharp and keeps phones smooth.
+function pixelRatio() {
+    if (window.ArtEmbed && window.ArtEmbed.on) return window.ArtEmbed.dpr(1.5);
+    return Math.min(window.devicePixelRatio || 1, 2);
 }
-setCanvasSize();
 
-ctx.fillStyle = 'white';
-ctx.strokeStyle = 'white';
-ctx.lineWidth = 1;
+function viewSize() {
+    return {
+        width: Math.max(1, canvas.clientWidth || window.innerWidth),
+        height: Math.max(1, canvas.clientHeight || window.innerHeight),
+    };
+}
+
+let dpr = 1;
+function setCanvasSize() {
+    const { width, height } = viewSize();
+    dpr = pixelRatio();
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.lineWidth = 1;
+    return { width, height };
+}
+const startSize = setCanvasSize();
 
 const flowColorPickers = [];
 const defaultColors = ['#4C026B', '#8E0E00', '#9D0208', '#BA1A1A', '#730D9E'];
@@ -105,8 +122,8 @@ class Particle {
 class Effect {
     constructor(canvas) {
         this.canvas = canvas;
-        this.width = this.canvas.width;
-        this.height = this.canvas.height;
+        this.width = startSize.width;
+        this.height = startSize.height;
         this.particles = [];
         // A live preview in the Art Lab (?embed=1) is a small frame: fewer lines.
         this.numberOfParticles = window.ArtEmbed && window.ArtEmbed.on ? 400 : 3000;
@@ -134,11 +151,11 @@ class Effect {
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
-                if (this.canvas.width === window.innerWidth && this.canvas.height === window.innerHeight) return;
-                this.canvas.width = window.innerWidth;
-                this.canvas.height = window.innerHeight;
-                this.width = this.canvas.width;
-                this.height = this.canvas.height;
+                const { width, height } = viewSize();
+                if (width === this.width && height === this.height && pixelRatio() === dpr) return;
+                const size = setCanvasSize();
+                this.width = size.width;
+                this.height = size.height;
                 this.init();
             }, 150);
         });
@@ -203,7 +220,7 @@ class Effect {
 const effect = new Effect(canvas);
 
 function animate() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, effect.width, effect.height);
     effect.render(ctx);
     requestAnimationFrame(animate);
 }

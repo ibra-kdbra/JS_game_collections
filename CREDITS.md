@@ -30,8 +30,9 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | Tower Defense map editor (`td-editor/`) | [selenebun/td-editor](https://github.com/selenebun/td-editor) | selenebun | **unknown** (the repository has no detected licence); `td-editor/LICENSE` here names only ibra-kdbra |
 | Tron | [momajd/Tron](https://github.com/momajd/Tron) (the original DOM version; the arena, AI and soundtrack were rewritten here) | momajd | **unknown** (no licence file found) |
 | Wahdatio | [monsterkodi/konnekt](https://github.com/monsterkodi/konnekt) (CoffeeScript sources in `Wahdatio/src/`) | monsterkodi | Unlicense |
-| Sprite tutorials (`Sprites_Games/*_project`) | Frank's Laboratory JavaScript game development tutorials and their sprite sheets | Frank's Laboratory | assets: **unknown** terms |
-| Breakout, Snake, Minesweeper, Crate Lab | Written for this collection | ibra-kdbra | MIT |
+| Breakout, Snake, Minesweeper, Crate Lab, Reef Keeper, Volt Flip | Written for this collection (Reef Keeper's genre comes from PopCap's 2001 *Insaniquarium*; its sprites are credited below, the rest of its art, music and sounds are original) | ibra-kdbra | MIT |
+| Reef Keeper sprites: guppies, carnivore, coins, diamond, jellyfish, first tank (`Reef_Keeper/sprites/`) | [Fish Set](https://opengameart.org/content/fish-set) | Andrew Tidey | CC0 |
+| Reef Keeper sprites: breeder, muncher, leviathan (`Reef_Keeper/sprites/fish-*.webp`) | [Cartoon fish](https://opengameart.org/content/cartoon-fish) | Robert Brooks, [Game Developer Studio](https://www.gamedeveloperstudio.com) | CC-BY 3.0 |
 
 ## Art Lab
 
@@ -43,6 +44,7 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | Experimental Math | Probably [thatsKevinJain/flowfields](https://github.com/thatsKevinJain/flowfields) (same `microcan` and `vec` helpers) | thatsKevinJain | **unknown** |
 | Flow Fields, Text Fields | Flow-field technique from Frank's Laboratory tutorials (likely) | **unknown** | **unknown** |
 | Blossoming Flowers | A CSS animation, origin **unknown** | **unknown** | **unknown** |
+| Sprite Lab (`Sprites_Games/`: lessons 1-8 in `*_project`, the page in `index.html` and `lab/`) | The JavaScript game development tutorials by [Franks Laboratory](https://www.youtube.com/c/Frankslaboratory) and their sprite sheets; `lab/dog-run.webp` is the run row cut from lesson 1's `shadow_dog.png`. Phone layouts, touch controls and the lab page were added here | Franks Laboratory | code and art: **unknown** terms |
 
 ## Music and sound
 
@@ -68,12 +70,16 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | --- | --- | --- | --- |
 | `Brainy_Warrior/models/warrior.glb`, `wizard.glb` | Warrior and wizard, animated | *RPG Characters - Nov 2020* by [Quaternius](https://quaternius.com), converted and compressed (see `Brainy_Warrior/models/LICENSE.txt`) | CC0 1.0 |
 | `Brainy_Warrior/models/orc.glb`, `orc-skull.glb`, `tribal.glb` | Enemies, animated | *Ultimate Monsters* by [Quaternius](https://quaternius.com), converted and compressed | CC0 1.0 |
+| `TowerDefense/models/kenney-tower-defense/` (39 of the kit's models and its palette texture) | Tower Defense's 3D view: map tiles, trees, rocks, crystals, plinths, the gate, ammo, selection marker | [*Tower Defense Kit* 2.1](https://opengameart.org/content/tower-defense-kit) by [Kenney](https://www.kenney.nl) (see `License.txt` there) | CC0 1.0 |
+| `TowerDefense/models/quaternius/turrets/` (14 turrets) | Tower Defense's towers, recoloured per tower | [*Lowpoly Steampunk Turrets*](https://opengameart.org/content/lowpoly-steampunk-turrets) by [Quaternius](https://quaternius.com), converted from FBX to GLB | CC0 1.0 |
+| `TowerDefense/models/quaternius/monsters/` (10 animated monsters) | Tower Defense's enemies, with walk and death animations | [*Lowpoly Animated Monsters*](https://opengameart.org/content/lowpoly-animated-monsters) and [*Textured Cute Monster Pack*](https://opengameart.org/content/textured-cute-monster-pack) by [Quaternius](https://quaternius.com), converted to GLB (licences in the folder) | CC0 1.0 |
+| `TowerDefense/models/quaternius/nature/` (rock, flowers) | Tower Defense map details | [*Stylized Nature MegaKit*](https://opengameart.org/content/stylized-nature-megakit) (free version) by [Quaternius](https://quaternius.com), textures reduced | CC0 1.0 |
 
 ## Libraries
 
 | Library | Where | Licence |
 | --- | --- | --- |
-| three.js | `assets/vendor/three/`, `MoonLDR/vendor/three/`, `Brainy_Warrior/vendor/three-0.150.1/` (with the `GLTFLoader`, `SkeletonUtils` and `BufferGeometryUtils` addons from the r150 tag in `addons/`) | MIT (licence files included) |
+| three.js | `assets/vendor/three/`, `MoonLDR/vendor/three/`, `Brainy_Warrior/vendor/three-0.150.1/` (with the `GLTFLoader`, `SkeletonUtils` and `BufferGeometryUtils` addons from the r150 tag in `addons/`), `TowerDefense/vendor/three-addons-0.160.0/` (the r160 `GLTFLoader`, `BufferGeometryUtils` and `SkeletonUtils`, for the shared r160 build) | MIT (licence files included) |
 | meshoptimizer decoder | `Brainy_Warrior/vendor/meshoptimizer/` (decodes the compressed character models) | MIT (licence file included) |
 | GSAP and ScrollTrigger | `assets/vendor/gsap/`, `Hangman/libs/` | GreenSock standard licence (free to use) |
 | Font Awesome Free (icon subset) | `assets/vendor/fontawesome/`, `Tetris/fonts/` | Icons CC BY 4.0, fonts SIL OFL 1.1, code MIT |
@@ -95,7 +101,7 @@ its licence file.
 
 | Font | Where |
 | --- | --- |
-| Albert Sans, Chakra Petch | `assets/fonts/` |
+| Albert Sans, Chakra Petch | `assets/fonts/` (also used by Volt Flip) |
 | Chakra Petch, JetBrains Mono | `Breakout/fonts/` |
 | Martian Mono | `Minesweeper/fonts/`, `Snake/fonts/` |
 | Big Shoulders Stencil Display, IBM Plex Mono | `Sokoban/fonts/` |
@@ -108,5 +114,5 @@ its licence file.
 | `ARCADE_R.TTF` ("Arcade" font) | `PacMan/font/`: licence **unknown**; the upstream author removed an earlier copy of this font over its licence |
 | Clear Sans (Intel) | `2048/style/fonts/`: Apache 2.0 |
 | Source Code Pro (Adobe) | `TowerDefense/fonts/`, `td-editor/fonts/` (no licence file shipped) |
-| Balsamiq Sans, Luckiest Guy | `Hangman/fonts/` |
+| Balsamiq Sans, Luckiest Guy | `Hangman/fonts/`, `Reef_Keeper/fonts/` |
 | `Art_Lab/Adaptive/font.otf` | **unknown** |

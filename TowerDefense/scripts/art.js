@@ -781,9 +781,10 @@ const Art = (() => {
     };
 
     // Build every sprite for a tile size of `tile` device pixels
+    const MAX_TILE = 320;
     function build(tile) {
-        tile = Math.max(8, Math.min(160, Math.round(tile)));
-        const atlas = new Atlas(tile > 90 ? 2048 : 1024);
+        tile = Math.max(8, Math.min(MAX_TILE, Math.round(tile)));
+        const atlas = new Atlas(tile > 200 ? 4096 : tile > 90 ? 2048 : 1024);
         const S = {};
         const T = tile;
         const unit = (fn, scale = 1) => (g) => {
@@ -1030,5 +1031,5 @@ const Art = (() => {
         return (portraitCache[key] = c.toDataURL());
     }
 
-    return { build, TURRET_SCALE, TOWER_ART, ENEMY_ART, towerPortrait, enemyPortrait, drawGate, GLOWS };
+    return { build, MAX_TILE, TURRET_SCALE, TOWER_ART, ENEMY_ART, towerPortrait, enemyPortrait, drawGate, GLOWS };
 })();

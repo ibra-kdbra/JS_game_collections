@@ -11,7 +11,7 @@ const compactView = matchMedia('(orientation: portrait) and (max-width: 380px), 
 // Short side panels (selected tower, placing): those phones, and phones held sideways
 const compactPanels = matchMedia(`${compactView.media}, (orientation: landscape) and (max-height: 560px)`);
 
-const Renderer = (() => {
+const RendererFlat = (() => {
     const TAU = Math.PI * 2;
     const params = new URLSearchParams(location.search);
     const perfMode = params.get('perf') === '1';
@@ -71,6 +71,12 @@ const Renderer = (() => {
     // ---------- Setup ----------
 
     function init(holderEl) {
+        if (canvas) {
+            canvas.style.display = '';
+            zoomEls.forEach(b => (b.style.display = ''));
+            resize();
+            return;
+        }
         holder = holderEl;
         canvas = document.createElement('canvas');
         canvas.id = 'map';
@@ -91,13 +97,14 @@ const Renderer = (() => {
         if (!holder) return;
         const w = holder.clientWidth;
         let h = holder.clientHeight;
-        // Small phones: the canvas only covers the map (it sits at the top); the
-        // strip under it is page, not canvas pixels the GPU has to fill every frame
-        if (compactView.matches && cols && rows) h = Math.min(h, Math.ceil(rows * ts) + 4);
+        // Small phones: the canvas covers the box but a strip at the bottom for the
+        // hint and the zoom buttons, and a new map starts zoomed in to fill it (tiles
+        // big enough for a finger; pinch out to see the whole map)
+        if (compactView.matches && cols && rows) h = Math.max(Math.min(h, Math.ceil(rows * ts) + 4), h - PHONE_STRIP);
         const q = FX.quality;
-        // The narrowest phones show the map much bigger than the old layout did: draw
-        // it at 1.5 device pixels per CSS pixel there, so a frame costs no more than before
-        const nd = Math.min(window.devicePixelRatio || 1, q === 0 ? 1.25 : compactView.matches && w < 340 ? 1.5 : 2);
+        // Draw at the screen's real resolution (up to 3 device pixels per CSS pixel);
+        // only when frames get slow does the quality step take it down
+        const nd = Math.min(window.devicePixelRatio || 1, [1.5, 2, 3][q]);
         const hh = holder.clientHeight;
         if (w === cssW && h === cssH && nd === dpr && hh === holderH) return;
         holderH = hh;
@@ -109,8 +116,28 @@ const Renderer = (() => {
         canvas.style.width = `${w}px`;
         canvas.style.height = `${h}px`;
         vignette = null;
+        fillPhone();
         clampCamera();
         scheduleRebuild(0);
+    }
+
+    const PHONE_STRIP = 60;
+    let fillPending = false;
+    function fillPhone() {
+        if (!fillPending || !cssH || !cols) return;
+        fillPending = false;
+        if (!compactView.matches) return;
+        zoom = Math.max(1, Math.min(maxZoom(), (cssH - 4) / (rows * ts)));
+        camY = rows * ts / 2;
+        updateZoomButtons();
+    }
+
+    // Hide while the 3D view is shown
+    function suspend() {
+        if (!canvas) return;
+        canvas.style.display = 'none';
+        zoomEls.forEach(b => (b.style.display = 'none'));
+        hover = null;
     }
 
     // Map changed (new game, new tiles, new size): rebuild the cached layers
@@ -123,6 +150,8 @@ const Renderer = (() => {
         zoom = 1;
         camX = cols * ts / 2;
         camY = rows * ts / 2;
+        fillPending = true;
+        fillPhone();
         clampCamera();
         updateZoomButtons();
         scheduleRebuild(0);
@@ -183,9 +212,10 @@ const Renderer = (() => {
 
     function rebuild() {
         const tile = ts * zoom * dpr;
-        if (!SP || Math.abs(SP.tile - tile) / tile > 0.12) SP = Art.build(tile);
+        if (!SP || Math.abs(SP.tile - Math.min(Art.MAX_TILE, tile)) / tile > 0.06) SP = Art.build(tile);
         // Terrain: same resolution, capped so big maps stay small in memory
-        const cap = Math.floor(Math.sqrt(7e6 / (cols * rows)));
+        // (12 million pixels, under the 16 million one canvas may have on iPhones)
+        const cap = Math.floor(Math.sqrt(12e6 / (cols * rows)));
         const px = Math.max(4, Math.min(Math.round(tile), cap));
         const key = `${theme}|${cols}x${rows}|${px}|${mapStamp}`;
         if (key !== terrainKey) {
@@ -1185,7 +1215,7 @@ const Renderer = (() => {
     }
 
     return {
-        init, resize, mapChanged, frame, reveal, logicTime, setQualityAuto, setZoom, togglePerf, toScreen,
+        init, suspend, resize, mapChanged, frame, reveal, logicTime, setQualityAuto, setZoom, togglePerf, toScreen,
         get hover() { return hover; },
         get zoom() { return zoom; },
         get shake() { return { x: shakeX, y: shakeY }; },

@@ -8,6 +8,7 @@
     <link href="css/style.css" rel="stylesheet">
     <link href="./imgs/tower.svg" rel="icon" type="image/svg+xml" />
     <link href="./imgs/tower.png" rel="icon" type="image/png" />
+    <script type="importmap">{ "imports": { "three": "../assets/vendor/three/three.module.min.js" } }</script>
     <script type="module" src="../assets/kit/index.js"></script>
     <script src="vendor/p5-1.11.2.min.js" defer></script>
     <script src="vendor/lz-string-1.5.0.min.js" defer></script>
@@ -25,7 +26,19 @@
     <script src="scripts/terrain.js" defer></script>
     <script src="scripts/art.js" defer></script>
     <script src="scripts/fx.js" defer></script>
+    <script type="module">
+      import * as THREE from 'three';
+      import { GLTFLoader } from './vendor/three-addons-0.160.0/loaders/GLTFLoader.js';
+      import * as SkeletonUtils from './vendor/three-addons-0.160.0/utils/SkeletonUtils.js';
+      import * as BufferGeometryUtils from './vendor/three-addons-0.160.0/utils/BufferGeometryUtils.js';
+      window.THREE = THREE;
+      window.GLTFLoader = GLTFLoader;
+      window.SkeletonUtils = SkeletonUtils;
+      window.BufferGeometryUtils = BufferGeometryUtils;
+    </script>
     <script src="scripts/render.js" defer></script>
+    <script src="scripts/render3d.js" defer></script>
+    <script src="scripts/renderer.js" defer></script>
     <script src="scripts/waves.js" defer></script>
     <script src="scripts/sketch.js" defer></script>
     <script src="scripts/hud.js" defer></script>
@@ -113,7 +126,7 @@
       </section>
 
       <section id="store" aria-label="Build towers">
-        <h2>Build <small class="desk-only">keys 1-7</small></h2>
+        <h2>Build</h2>
         <div class="store-grid" id="store-grid"></div>
       </section>
 
@@ -215,6 +228,10 @@
                 <h4>Sound and feel</h4>
                 <label class="toggle"><span>Sound</span><input type="checkbox" role="switch" id="set-sound"><i></i></label>
                 <div class="set-row">
+                  <label for="set-volume">Volume</label>
+                  <input type="range" id="set-volume" min="0" max="100" step="5" value="70">
+                </div>
+                <div class="set-row">
                   <span id="shake-label">Screen shake</span>
                   <div class="seg small" role="group" aria-labelledby="shake-label" id="shake-seg">
                     <button type="button" data-shake="0">Off</button>
@@ -223,6 +240,16 @@
                   </div>
                 </div>
                 <label class="toggle" id="haptics-row"><span>Vibration</span><input type="checkbox" role="switch" id="set-haptics"><i></i></label>
+              </div>
+              <div class="set-group">
+                <h4>View</h4>
+                <div class="set-row">
+                  <span id="view-label">Map</span>
+                  <div class="seg small" role="group" aria-labelledby="view-label" id="view-seg">
+                    <button type="button" data-view="3d">3D</button>
+                    <button type="button" data-view="flat">Flat</button>
+                  </div>
+                </div>
               </div>
               <div class="set-group">
                 <h4>On the map</h4>

@@ -16,7 +16,17 @@
 //     --minpar N       at least this many optimal moves (default 0)
 //     --target N       climb towards this score instead of upwards
 //     --top N          how many to print (default 6)
-import { parseLevel } from '../js/levels.js';
+//
+//   Retuning an existing level instead of growing new islands:
+//     --from ID        start every restart from this level's map (its size,
+//                      enemies and circles are kept; --w/--h/--enemies/--spots
+//                      are ignored)
+//     --bot P          climb towards this one-attempt bot success rate (0-1)
+//                      instead of a score; each tile changed from the original
+//                      map costs --edit points (default 0.6), so the level keeps
+//                      its layout
+//     --minscore N     with --bot: penalise candidates scoring below N
+import { MAPS, parseLevel } from '../js/levels.js';
 import { measure, rng } from './difficulty.mjs';
 
 const args = Object.fromEntries(
@@ -42,8 +52,20 @@ const opt = {
     minmagic: 0,
     minpar: 0,
     top: 6,
+    edit: 0.6,
+    minscore: 0,
     ...args,
 };
+// Ids are strings, so read --from directly.
+const fromArg = process.argv.indexOf('--from');
+const source = fromArg > 0 ? MAPS.find((m) => m.id === process.argv[fromArg + 1]) : null;
+if (fromArg > 0 && !source) throw new Error(`No level with id ${process.argv[fromArg + 1]}`);
+const original = source ? source.map.map((row) => [...row]) : null;
+if (original) {
+    opt.h = original.length;
+    opt.w = Math.max(...original.map((r) => r.length));
+}
+const edits = (g) => (original ? g.reduce((n, row, z) => n + row.filter((c, x) => c !== original[z][x]).length, 0) : 0);
 const rand = rng(opt.seed);
 const ri = (n) => Math.floor(rand() * n);
 const pick = (a) => a[ri(a.length)];
@@ -150,7 +172,11 @@ function evaluate(g, runs = 300) {
     }
     const m = measure(level, { runs });
     if (!m || !m.solvable || m.reach > 60000) return null;
-    let fit = opt.target ? -Math.abs(m.score - opt.target) : m.score;
+    let fit = opt.bot
+        ? -40 * Math.abs(Math.log(Math.max(m.bot, 0.002)) - Math.log(opt.bot)) - opt.edit * edits(g) - Math.max(0, opt.minscore - m.score)
+        : opt.target
+          ? -Math.abs(m.score - opt.target)
+          : m.score;
     if (m.solutions > opt.maxsol) fit -= 6 * Math.log2(m.solutions / opt.maxsol);
     if (m.magic < opt.minmagic) fit -= 15 * (opt.minmagic - m.magic);
     if (m.opt < opt.minpar) fit -= 8 * (opt.minpar - m.opt);
@@ -159,9 +185,9 @@ function evaluate(g, runs = 300) {
 
 const found = new Map();
 for (let r = 0; r < opt.restarts; r++) {
-    let g = island();
+    let g = original ? original.map((row) => [...row]) : island();
     let cur = evaluate(g);
-    for (let tries = 0; !cur && tries < 50; tries++) {
+    for (let tries = 0; !cur && !original && tries < 50; tries++) {
         g = island();
         cur = evaluate(g);
     }
@@ -180,12 +206,12 @@ for (let r = 0; r < opt.restarts; r++) {
     const { m } = full;
     const key = g.map((row) => row.join('')).join('/');
     const ok = m.score >= opt.min && m.score <= opt.max && m.solutions <= opt.maxsol && m.magic >= opt.minmagic && m.opt >= opt.minpar;
-    process.stderr.write(`restart ${r}: score ${m.score} opt ${m.opt} sols ${m.solutions} magic ${m.magic} bot ${m.bot.toFixed(3)}${ok ? ' *' : ''}\n`);
-    if (ok) found.set(key, { g, m });
+    process.stderr.write(`restart ${r}: score ${m.score} opt ${m.opt} sols ${m.solutions} magic ${m.magic} bot ${m.bot.toFixed(3)} edits ${edits(g)}${ok ? ' *' : ''}\n`);
+    if (ok) found.set(key, { g, m, fit: full.fit });
 }
-const rank = (x) => (opt.target ? -Math.abs(x.m.score - opt.target) : x.m.score);
+const rank = (x) => (opt.bot ? x.fit : opt.target ? -Math.abs(x.m.score - opt.target) : x.m.score);
 const best = [...found.values()].sort((a, b) => rank(b) - rank(a)).slice(0, opt.top);
 for (const { g, m } of best) {
-    console.log(`// score ${m.score}  par ${m.opt}  solutions ${m.solutions}  magic ${m.magic}  bot ${m.bot.toFixed(3)}  trap ${m.pathTrap.toFixed(2)}  reach ${m.reach}`);
+    console.log(`// score ${m.score}  par ${m.opt}  solutions ${m.solutions}  magic ${m.magic}  bot ${m.bot.toFixed(3)}  trap ${m.pathTrap.toFixed(2)}  reach ${m.reach}  edits ${edits(g)}`);
     console.log(`map: [\n${g.map((row) => `    '${row.join('')}',`).join('\n')}\n],`);
 }

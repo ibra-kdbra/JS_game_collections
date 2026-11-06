@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Insaniquarium</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; touch-action: none; }
+  canvas { display: block; cursor: default; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<script src="assets/data.js"></script>
+<script src="game.js"></script>
+<script>
+  // Nothing converted yet: say how to set up instead of showing a black page.
+  if (!globalThis.__ASSETS) document.body.innerHTML = '<p style="color:#cde;font:16px/1.5 system-ui,sans-serif;max-width:34em;margin:3em auto;padding:0 16px">This game needs files made from your own copy of Insaniquarium Deluxe. Run <code>python3 tools/convert.py "path/to/Insaniquarium Deluxe" assets</code> and then <code>node tools/build.mjs</code>, as the README says.</p>';
+</script>
+</body>
+</html>
