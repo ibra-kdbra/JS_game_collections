@@ -81,40 +81,97 @@ function playSound(name) {
 }
 
 // Interface and game event sounds, synthesised so they need no files.
-// Each note: [start s, frequency Hz, length s, wave, volume, end frequency].
+// Each note: [start s, frequency Hz, length s, wave, volume, end frequency, options].
+// Options: d (detune in cents: a second voice for a fuller sound), lp (low-pass
+// cutoff Hz), a (attack s), echo (send to the soft echo, 0-1).
 const sfxNotes = {
-    click: [[0, 660, 0.05, 'square', 0.04]],
-    build: [[0, 392, 0.07, 'triangle', 0.18], [0.06, 587, 0.1, 'triangle', 0.18]],
-    upgrade: [[0, 440, 0.07, 'triangle', 0.16], [0.07, 554, 0.07, 'triangle', 0.16], [0.14, 659, 0.14, 'triangle', 0.18]],
-    sell: [[0, 988, 0.06, 'sine', 0.15], [0.06, 740, 0.12, 'sine', 0.15]],
-    error: [[0, 150, 0.14, 'sawtooth', 0.07, 110]],
-    wave: [[0, 220, 0.18, 'square', 0.06, 330], [0.18, 330, 0.25, 'square', 0.06]],
-    cleared: [[0, 523, 0.1, 'triangle', 0.15], [0.09, 659, 0.1, 'triangle', 0.15], [0.18, 784, 0.22, 'triangle', 0.15]],
-    leak: [[0, 180, 0.18, 'sine', 0.3, 60]],
-    victory: [[0, 523, 0.14, 'square', 0.07], [0.14, 659, 0.14, 'square', 0.07], [0.28, 784, 0.14, 'square', 0.07], [0.42, 1047, 0.45, 'triangle', 0.18]],
-    defeat: [[0, 392, 0.22, 'triangle', 0.18], [0.22, 330, 0.22, 'triangle', 0.18], [0.44, 262, 0.22, 'triangle', 0.18], [0.66, 196, 0.6, 'triangle', 0.2, 150]]
+    click: [[0, 880, 0.045, 'triangle', 0.05, 0, { lp: 3000 }]],
+    build: [[0, 392, 0.08, 'triangle', 0.16, 0, { d: 6 }], [0.06, 587, 0.12, 'triangle', 0.16, 0, { d: 6 }], [0, 98, 0.12, 'sine', 0.22, 60]],
+    upgrade: [[0, 440, 0.08, 'triangle', 0.14, 0, { d: 5 }], [0.07, 554, 0.08, 'triangle', 0.14, 0, { d: 5 }],
+        [0.14, 659, 0.22, 'triangle', 0.16, 0, { d: 5, echo: 0.3 }], [0.14, 1319, 0.3, 'sine', 0.05, 0, { echo: 0.4 }]],
+    sell: [[0, 988, 0.07, 'sine', 0.13, 0, { echo: 0.2 }], [0.06, 740, 0.14, 'sine', 0.13, 0, { echo: 0.2 }]],
+    error: [[0, 196, 0.12, 'square', 0.05, 160, { lp: 900 }], [0.1, 165, 0.16, 'square', 0.05, 130, { lp: 900 }]],
+    // A new wave: a low drum and a two-note horn call
+    wave: [[0, 130, 0.35, 'sine', 0.32, 45], [0.02, 196, 0.26, 'sawtooth', 0.05, 0, { d: 8, lp: 1100, a: 0.04 }],
+        [0.24, 294, 0.5, 'sawtooth', 0.055, 0, { d: 8, lp: 1300, a: 0.05, echo: 0.35 }]],
+    // A cleared wave: a bright chime that rings out
+    cleared: [[0, 784, 0.5, 'sine', 0.11, 0, { echo: 0.45 }], [0.09, 988, 0.5, 'sine', 0.1, 0, { echo: 0.45 }],
+        [0.18, 1175, 0.7, 'sine', 0.1, 0, { echo: 0.5 }], [0.18, 2350, 0.4, 'sine', 0.025, 0, { echo: 0.5 }]],
+    leak: [[0, 180, 0.2, 'sine', 0.28, 60], [0, 90, 0.25, 'triangle', 0.12, 50, { lp: 600 }]],
+    victory: [[0, 523, 0.16, 'triangle', 0.13, 0, { d: 6 }], [0.15, 659, 0.16, 'triangle', 0.13, 0, { d: 6 }],
+        [0.3, 784, 0.16, 'triangle', 0.13, 0, { d: 6 }], [0.45, 1047, 0.9, 'triangle', 0.16, 0, { d: 6, echo: 0.5 }],
+        [0.45, 523, 0.9, 'sine', 0.1, 0, { echo: 0.4 }]],
+    defeat: [[0, 392, 0.26, 'triangle', 0.15, 0, { lp: 1400 }], [0.24, 330, 0.26, 'triangle', 0.15, 0, { lp: 1400 }],
+        [0.48, 262, 0.26, 'triangle', 0.15, 0, { lp: 1400 }], [0.72, 196, 0.9, 'triangle', 0.17, 150, { lp: 1000, echo: 0.4 }]]
 };
+
+// A soft echo for chimes and calls (made with the first sound that needs it)
+let echoIn = null;
+function echoBus() {
+    if (echoIn) return echoIn;
+    echoIn = audioCtx.createGain();
+    const delay = audioCtx.createDelay(1);
+    delay.delayTime.value = 0.19;
+    const feedback = audioCtx.createGain();
+    feedback.gain.value = 0.32;
+    const tone = audioCtx.createBiquadFilter();
+    tone.type = 'lowpass';
+    tone.frequency.value = 2400;
+    const out = audioCtx.createGain();
+    out.gain.value = 0.5;
+    echoIn.connect(delay);
+    delay.connect(tone).connect(feedback).connect(delay);
+    tone.connect(out).connect(masterGain);
+    return echoIn;
+}
+
+// The new-wave call waits for the cleared chime when waves run back to back
+let sfxBusyUntil = 0;
 
 function sfx(name) {
     if (muteSounds || !audioCtx || audioCtx.state !== 'running') return;
     const notes = sfxNotes[name];
     if (!notes) return;
-    const now = audioCtx.currentTime;
+    let now = audioCtx.currentTime;
     if (now - (soundLastPlayed['sfx-' + name] || -1) < 0.06) return;
     soundLastPlayed['sfx-' + name] = now;
-    notes.forEach(([at, freq, len, type, vol, endFreq]) => {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+    if (name === 'wave' && sfxBusyUntil > now) now = sfxBusyUntil;
+    if (name === 'cleared') sfxBusyUntil = now + 0.55;
+    notes.forEach(([at, freq, len, type, vol, endFreq, o = {}]) => {
         const t0 = now + at;
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, t0);
-        if (endFreq) osc.frequency.exponentialRampToValueAtTime(endFreq, t0 + len);
+        const attack = o.a || 0.008;
+        const gain = audioCtx.createGain();
         gain.gain.setValueAtTime(0.0001, t0);
-        gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.01);
+        gain.gain.exponentialRampToValueAtTime(vol, t0 + attack);
         gain.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
-        osc.connect(gain).connect(masterGain);
-        osc.start(t0);
-        osc.stop(t0 + len + 0.02);
+        let node = gain;
+        if (o.lp) {
+            const f = audioCtx.createBiquadFilter();
+            f.type = 'lowpass';
+            f.frequency.value = o.lp;
+            f.Q.value = 0.7;
+            gain.connect(f);
+            node = f;
+        }
+        node.connect(masterGain);
+        if (o.echo) {
+            const send = audioCtx.createGain();
+            send.gain.value = o.echo;
+            node.connect(send).connect(echoBus());
+        }
+        const voices = o.d ? [-o.d, o.d] : [0];
+        voices.forEach(cents => {
+            const osc = audioCtx.createOscillator();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, t0);
+            if (endFreq) osc.frequency.exponentialRampToValueAtTime(endFreq, t0 + len);
+            osc.detune.value = cents;
+            const v = audioCtx.createGain();
+            v.gain.value = 1 / voices.length;
+            osc.connect(v).connect(gain);
+            osc.start(t0);
+            osc.stop(t0 + len + 0.03);
+        });
     });
 }
 
