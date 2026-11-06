@@ -1,12 +1,20 @@
 vec.polute();
 microcan.polute();
 
-const ctx = document.getElementById("main").getContext('2d');
+const canvas = document.getElementById("main");
+const ctx = canvas.getContext('2d');
 let w = window.innerWidth;
 let h = window.innerHeight;
 
+// Device pixels per CSS pixel: the backing store is w*dpr by h*dpr and all
+// drawing is scaled, so the dots stay sharp on high-DPI screens.
+const pixelRatio = () => (window.ArtEmbed ? window.ArtEmbed.dpr(1.5) : window.devicePixelRatio || 1);
+let dpr = pixelRatio();
+
 const n = 100;
-let fieldSize = w / n;
+// The n x n field covers the longer side, so an upright phone gets the whole
+// pattern instead of the last row repeated down the bottom of the screen.
+let fieldSize = Math.max(w, h) / n;
 
 const maxLifetime = 30 * 10;
 const pn = 1000;
@@ -38,8 +46,13 @@ const field = Array.from({length: n}, (_, y) => Array.from({length: n}, (__, x) 
   return computeFieldValue([x, y]);
 }));
 
-setCanvasSize("main", w, h);
-background(ctx, 0, 0, 0, 1, w, h);
+const fitCanvas = () => {
+  dpr = pixelRatio();
+  setCanvasSize("main", Math.round(w * dpr), Math.round(h * dpr));
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  background(ctx, 0, 0, 0, 1, w, h);
+};
+fitCanvas();
 
 // Rotating a phone or resizing the window: match the new size (once it
 // settles) instead of stretching the old drawing, and spread the particles
@@ -50,13 +63,12 @@ window.addEventListener('resize', () => {
   resizeTimer = setTimeout(() => {
     const nw = window.innerWidth;
     const nh = window.innerHeight;
-    if (nw === w && nh === h) return;
+    if (nw === w && nh === h && pixelRatio() === dpr) return;
     for (let i = 0; i < pn; i++) particles[i] = [particles[i][0] * nw / w, particles[i][1] * nh / h];
     w = nw;
     h = nh;
-    fieldSize = w / n;
-    setCanvasSize("main", w, h);
-    background(ctx, 0, 0, 0, 1, w, h);
+    fieldSize = Math.max(w, h) / n;
+    fitCanvas();
   }, 150);
 });
 
