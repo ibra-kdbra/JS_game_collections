@@ -26,6 +26,8 @@ jobs:
         run: node Breakout/tools/verify-levels.mjs
       - name: Snake
         run: node Snake/tools/verify.mjs
+      - name: Volt Flip courses
+        run: node Volt_Flip/tools/verify.mjs
       - name: Minesweeper solver
         run: node Minesweeper/test/solver.test.mjs
       - name: Souls Bumper levels

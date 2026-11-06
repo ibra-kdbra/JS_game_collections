@@ -213,6 +213,15 @@ export const games = [
     inputs: ['keyboard', 'mouse', 'touch'],
     mobile: true,
   },
+  {
+    slug: 'volt-flip',
+    title: 'Volt Flip',
+    href: 'Volt_Flip/index.html',
+    blurb: 'A one-button endless runner: flip gravity between floor and ceiling past spikes, holes, drones and shutters, and chain volt shards for a ×5 multiplier.',
+    genre: 'arcade',
+    inputs: ['keyboard', 'mouse', 'touch'],
+    mobile: true,
+  },
 ];
 
 export const experiments = [

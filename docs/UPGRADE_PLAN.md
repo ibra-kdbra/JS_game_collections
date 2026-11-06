@@ -149,6 +149,13 @@ work well on touch:
 
 Each one is built on the shared kit from day one, as the reference implementation.
 
+**What shipped:** Breakout, Snake, Minesweeper and Crate Lab (Sokoban-style), then **Volt Flip**
+(`Volt_Flip/`), the one-button runner: tap, click or Space flips gravity between floor and ceiling.
+Spikes, holes, pylons, drones, shutters and sweepers unlock with distance while the speed rises and
+the reaction margin shrinks; volt shards and close calls build a ×5 multiplier, with shield and
+magnet pickups. Courses are generated from seeded patterns sized to the current speed, and
+`Volt_Flip/tools/verify.mjs` proves with a look-ahead bot that every seed can be survived.
+
 ## Phase 4: Repo hygiene and performance
 
 - Move README-only media out of the deploy (about 50 MB: `ParticularDrift/example.gif` at 24 MB,
@@ -194,6 +201,6 @@ network the first four stop with an error (the smoke test shows this with `SMOKE
 - [x] Phase 2A · 2B · 2C: every original game upgraded on the kit
 - [ ] Phase 2D: Brainy Warrior is listed and being rebuilt; Shadow Dog Runner is being removed;
       the Sprite lab entry and the Art Lab fixes (Text Fields aspect, DPR, pinned Pickr) are open
-- [x] Phase 3: Breakout, Snake, Minesweeper and Crate Lab (the one-button runner was not built)
+- [x] Phase 3: Breakout, Snake, Minesweeper, Crate Lab and Volt Flip (one-button runner)
 - [x] Phase 4: README media moved, dead files removed, CREDITS.md, CI smoke test
 - [ ] Phase 4 follow-ups: self-host the Art Lab CDN libraries, owner decisions on licences
