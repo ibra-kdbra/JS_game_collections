@@ -20,3 +20,19 @@ body{
 p{
     color: white;
 }
+
+/* Fit the screen at the scene's 8:7 proportions, with room for the slider. */
+#container{
+    width: min(800px, calc(100vw - 16px), calc((100dvh - 150px) * 8 / 7));
+    font-family: 'Chakra Petch', system-ui, sans-serif;
+}
+#canvas1{
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 8 / 7;
+}
+#slider{
+    min-height: 44px;
+    accent-color: #facc15;
+}

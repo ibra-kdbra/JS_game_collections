@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script src="../Art_Lab/js/embed.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#09090b" />
+    <title>Sprite Lab | Art Lab</title>
+    <meta name="description" content="Eight sprite and game loop lessons from Franks Laboratory: sprite sheets, parallax, enemy movement, collisions, a point-and-shoot game, a side scroller and a state machine." />
+    <link href="../assets/icons/video_game.svg" rel="icon" type="image/svg+xml" />
+    <link rel="preload" href="../assets/fonts/chakra-petch-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="../assets/css/fonts.css" />
+    <link rel="stylesheet" href="../assets/css/variables.css" />
+    <link rel="stylesheet" href="lab/lab.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="icon-btn" href="../Art_Lab/index.html" aria-label="Back to the Art Lab" title="Back to the Art Lab">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6l-6 6 6 6M8 12h12" /></svg>
+      </a>
+      <p class="bar-title"><b>Sprite Lab</b> <span>Art Lab &middot; 8 lessons</span></p>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="title">
+        <div class="hero-art">
+          <canvas id="hero-canvas" aria-label="The Shadow Dog from lesson 1 running over the parallax city from lesson 2" role="img"></canvas>
+        </div>
+        <div class="hero-copy">
+          <p class="eyebrow">Franks Laboratory &middot; JavaScript game development</p>
+          <h1 id="title">Sprite Lab</h1>
+          <p class="lede">
+            Eight short lessons in how 2D games move: cutting frames from a sprite sheet, scrolling
+            parallax layers, enemy movement patterns, collisions and a state machine. They follow the
+            tutorials by <a href="https://www.youtube.com/c/Frankslaboratory" target="_blank" rel="noopener">Franks Laboratory</a>,
+            whose code and sprite art they are built from. Each one runs on its own page and fits a phone screen.
+          </p>
+        </div>
+      </section>
+
+      <section aria-labelledby="lessons-title">
+        <h2 class="section-title" id="lessons-title">Lessons</h2>
+        <ol class="lessons">
+          <li>
+            <a class="lesson" href="first_project/index.html">
+              <span class="lesson-no">01</span>
+              <span class="lesson-title">Sprite animation</span>
+              <span class="lesson-desc">One sprite sheet, ten animations. Pick one from the menu and watch its frames step.</span>
+              <span class="lesson-meta"><span class="chip">Menu</span><span class="go">Open <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" /></svg></span></span>
+            </a>
+          </li>
+          <li>
+            <a class="lesson" href="second_project/index.html">
+              <span class="lesson-no">02</span>
+              <span class="lesson-title">Parallax background</span>
+              <span class="lesson-desc">Five layers scroll at different speeds to fake depth. The slider sets the game speed.</span>
+              <span class="lesson-meta"><span class="chip">Slider</span><span class="go">Open <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" /></svg></span></span>
+            </a>
+          </li>
+          <li>
+            <a class="lesson" href="third_project/index.html">
+              <span class="lesson-no">03</span>
+              <span class="lesson-title">Enemy movement</span>
+              <span class="lesson-desc">A swarm of enemies, each picking a new random target and easing towards it.</span>
+              <span class="lesson-meta"><span class="chip">Watch</span><span class="go">Open <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" /></svg></span></span>
+            </a>
+          </li>
+          <li>
+            <a class="lesson" href="fourth_project/index.html">
+              <span class="lesson-no">04</span>
+              <span class="lesson-title">Collision detection</span>
+              <span class="lesson-desc">Tap or click the board for an explosion: sprite frames, sound and rotation.</span>
+              <span class="lesson-meta"><span class="chip">Tap</span><span class="go">Open <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" /></svg></span></span>
+            </a>
+          </li>
+          <li>
+            <a class="lesson" href="fifth_project/index.html">
+              <span class="lesson-no">05</span>
+              <span class="lesson-title">Point and shoot</span>
+              <span class="lesson-desc">Shoot the ravens before one gets past you. Hits are found by colour on a hidden canvas.</span>
+              <span class="lesson-meta"><span class="chip">Tap</span><span class="go">Open <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" /></svg></span></span>
+            </a>
+          </li>
+          <li>
+            <a class="lesson" href="sixth_project/index.html">
+              <span class="lesson-no">06</span>
+              <span class="lesson-title">Enemy types</span>
+              <span class="lesson-desc">Worms, ghosts and spiders: one base class, three ways to move.</span>
+              <span class="lesson-meta"><span class="chip">Watch</span><span class="go">Open <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" /></svg></span></span>
+            </a>
+          </li>
+          <li>
+            <a class="lesson" href="seventh_project/index.html">
+              <span class="lesson-no">07</span>
+              <span class="lesson-title">Side scroller</span>
+              <span class="lesson-desc">Jump the enemies for points. Arrow keys on a keyboard; swipe up to jump on a phone.</span>
+              <span class="lesson-meta"><span class="chip">Keys</span><span class="chip">Swipe</span><span class="go">Open <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" /></svg></span></span>
+            </a>
+          </li>
+          <li>
+            <a class="lesson" href="eigth_project/index.html">
+              <span class="lesson-no">08</span>
+              <span class="lesson-title">State management</span>
+              <span class="lesson-desc">A dog driven by a state machine: stand, sit, run, jump and fall, from the arrow keys or the on-screen pad.</span>
+              <span class="lesson-meta"><span class="chip">Keys</span><span class="chip">Pad</span><span class="go">Open <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" /></svg></span></span>
+            </a>
+          </li>
+        </ol>
+      </section>
+
+      <p class="credit">
+        Lessons, code and sprite art: <a href="https://www.youtube.com/c/Frankslaboratory" target="_blank" rel="noopener">Franks Laboratory</a>.
+        Phone layouts, touch controls and this page were added for the Game Lab. See <code>CREDITS.md</code> in the repository.
+      </p>
+    </main>
+
+    <script src="lab/lab.js"></script>
+  </body>
+</html>

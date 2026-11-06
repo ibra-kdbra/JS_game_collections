@@ -302,6 +302,17 @@ export const experiments = [
     rarity: 3,
     controls: 'U upload your own image, R randomise, C colours, S save, V record.',
   },
+  {
+    slug: 'sprite-lab',
+    title: 'Sprite Lab',
+    href: 'Sprites_Games/index.html',
+    blurb: 'Eight sprite and game loop lessons from Franks Laboratory: sprite sheets, parallax, enemy movement, collisions and a state machine.',
+    tags: ['Sprites', 'Lessons'],
+    engine: 'Canvas',
+    input: 'Panel',
+    rarity: 2,
+    controls: 'Pick a lesson; each opens on its own page. Tap, swipe, the arrow keys or an on-screen pad, as the lesson says.',
+  },
 ];
 
 /** Thumbnail srcset for a slug, relative to the page's base path. */

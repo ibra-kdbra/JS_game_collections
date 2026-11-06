@@ -41,6 +41,11 @@ State of the Game Lab upgrade, for continuing in a new session.
   0.0% -> 3.2%, The Last Stand 0.0% -> 2.7% (53% down to 24% within ten restarts; level 28 is
   7.8%, 56%). Pars are now 17, 22, 24, 21, 24, 23 (were 17, 24, 27, 23, 28, 30). The checker
   now fails any level the bot wins less than 2% of the time. Still needs playtesting by people.
+- Art Lab (Phase 2D, done): Sprite Lab is card 08 (`Sprites_Games/index.html`, tutorials #1-#8,
+  credited to Franks Laboratory; smoke-tested with `--only sprite-lab`). Text Fields keeps its
+  proportions and rebuilds on resize; Experimental Math, Text Fields and Flow Fields render at the
+  device pixel ratio. Particular Drift still renders at CSS pixels (a DPR change would change its
+  particle size and density). The Sprite Lab art and code licence is unknown (see `CREDITS.md`).
 - Tower Defense balance changed in phase 5 (wave bonus, extra gold per portal, Hive portals close
   after the wave, per-map enemy health) so a fair bot wins all 18 maps; existing maps are easier
   than before. Owner to confirm.
