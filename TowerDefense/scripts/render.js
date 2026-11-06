@@ -4,12 +4,6 @@
 //
 // World units are the game's pixels (a tile is `ts` wide); the camera maps them
 // to the screen. Sprites come from Art.build at the current on-screen tile size.
-//
-// Two views. Flat: straight down, as the game always was. Raised (2.5D, the
-// default): the ground is seen at an angle, like mobile tower defense games. A
-// ground point (x, y) is drawn at "upright" coordinates (x, y * tilt), and height h
-// moves it up by h. Walls and towers stand up, enemies stand on their shadows, and
-// everything is drawn back to front so nearer things cover farther ones.
 
 // Small phones held upright (the same query as the compact layout in style.css):
 // short side panels, and the map sits at the top of its box
@@ -17,7 +11,7 @@ const compactView = matchMedia('(orientation: portrait) and (max-width: 380px), 
 // Short side panels (selected tower, placing): those phones, and phones held sideways
 const compactPanels = matchMedia(`${compactView.media}, (orientation: landscape) and (max-height: 560px)`);
 
-const Renderer = (() => {
+const RendererFlat = (() => {
     const TAU = Math.PI * 2;
     const params = new URLSearchParams(location.search);
     const perfMode = params.get('perf') === '1';
@@ -48,17 +42,6 @@ const Renderer = (() => {
     let vignette = null;
     let hurtVignette = null;
 
-    // Raised view: screen height of one unit of ground depth, and heights in tiles
-    const TILT = 0.72;
-    const WALL_H = 0.26;    // walls: low enough that turrets and enemies behind them still show
-    const PED_H = Art.BODY_H; // tower bodies; turrets sit on top
-    const FX_H = 0.4;       // beams, missiles and blasts fly at about turret height
-    const EN_H = 0.5;       // an enemy's body is this much of its radius tall
-    const HEAD = 0.9;       // room above the first row for walls and towers standing up
-    let view = 'raised';
-    let tilt = TILT;
-    let walls = null;       // Terrain.renderWallRows result in the raised view
-
     let hover = null;       // mouse position in world units, or null
     let shakeX = 0;         // shake offset of the last frame in CSS pixels (tests read it)
     let shakeY = 0;
@@ -88,6 +71,12 @@ const Renderer = (() => {
     // ---------- Setup ----------
 
     function init(holderEl) {
+        if (canvas) {
+            canvas.style.display = '';
+            zoomEls.forEach(b => (b.style.display = ''));
+            resize();
+            return;
+        }
         holder = holderEl;
         canvas = document.createElement('canvas');
         canvas.id = 'map';
@@ -111,7 +100,7 @@ const Renderer = (() => {
         // Small phones: the canvas covers the box but a strip at the bottom for the
         // hint and the zoom buttons, and a new map starts zoomed in to fill it (tiles
         // big enough for a finger; pinch out to see the whole map)
-        if (compactView.matches && cols && rows) h = Math.max(Math.min(h, Math.ceil(rows * ts * tilt + head()) + 4), h - PHONE_STRIP);
+        if (compactView.matches && cols && rows) h = Math.max(Math.min(h, Math.ceil(rows * ts) + 4), h - PHONE_STRIP);
         const q = FX.quality;
         // Draw at the screen's real resolution (up to 3 device pixels per CSS pixel);
         // only when frames get slow does the quality step take it down
@@ -138,11 +127,17 @@ const Renderer = (() => {
         if (!fillPending || !cssH || !cols) return;
         fillPending = false;
         if (!compactView.matches) return;
-        const mh = rows * ts * tilt + head();
-        zoom = Math.max(1, Math.min(maxZoom(), (cssH - 4) / mh));
-        const mid = (rows * ts * tilt - head()) / 2;
-        camY = mid;
+        zoom = Math.max(1, Math.min(maxZoom(), (cssH - 4) / (rows * ts)));
+        camY = rows * ts / 2;
         updateZoomButtons();
+    }
+
+    // Hide while the 3D view is shown
+    function suspend() {
+        if (!canvas) return;
+        canvas.style.display = 'none';
+        zoomEls.forEach(b => (b.style.display = 'none'));
+        hover = null;
     }
 
     // Map changed (new game, new tiles, new size): rebuild the cached layers
@@ -154,36 +149,12 @@ const Renderer = (() => {
         previewKey = '';
         zoom = 1;
         camX = cols * ts / 2;
-        camY = (rows * ts * tilt - head()) / 2;
+        camY = rows * ts / 2;
         fillPending = true;
         fillPhone();
         clampCamera();
         updateZoomButtons();
         scheduleRebuild(0);
-    }
-
-    // Room above the map, in world units (none in the flat view)
-    function head() {
-        return view === 'raised' ? HEAD * ts : 0;
-    }
-
-    // Switch between the raised and the flat view
-    function setView(v) {
-        v = v === 'flat' ? 'flat' : 'raised';
-        if (v === view) return;
-        view = v;
-        tilt = v === 'raised' ? TILT : 1;
-        terrainKey = '';
-        walls = null;
-        if (cols) mapChanged();
-    }
-
-    // Map rows the screen must fit, for sizing the tiles, and the reverse
-    function rowsTall(n) {
-        return n * tilt + (view === 'raised' ? HEAD : 0);
-    }
-    function rowsFitting(tiles) {
-        return (tiles - (view === 'raised' ? HEAD : 0)) / tilt;
     }
 
     function scheduleRebuild(delay) {
@@ -196,16 +167,13 @@ const Renderer = (() => {
 
     function clampCamera() {
         if (!cols || !rows) return;
-        // The camera works in upright coordinates: the map runs from -head() at the
-        // top (room for what stands on the first row) to rows * ts * tilt
         const mw = cols * ts;
-        const top = -head();
-        const mh = rows * ts * tilt - top;
+        const mh = rows * ts;
         zoom = Math.max(1, Math.min(maxZoom(), zoom));
         const hw = cssW / 2 / zoom;
         const hh = cssH / 2 / zoom;
         camX = mw <= hw * 2 ? mw / 2 : Math.max(hw, Math.min(mw - hw, camX));
-        camY = mh <= hh * 2 ? top + mh / 2 : Math.max(top + hh, Math.min(top + mh - hh, camY));
+        camY = mh <= hh * 2 ? mh / 2 : Math.max(hh, Math.min(mh - hh, camY));
         ox = cssW / 2 - camX * zoom;
         oy = cssH / 2 - camY * zoom;
         // A map smaller than the view is centred, but keeps a strip free at the bottom
@@ -216,7 +184,7 @@ const Renderer = (() => {
         const sy = cssH - mh * zoom;
         let g = gutterFor(mw, mh);
         if (holderH - cssH >= GUTTER) g = { side: 'bottom', size: holderH - cssH + (sy > 0 ? sy - Math.min(sy / 2, 2) : 0) };
-        if (g.side === 'bottom' && sy > 0) oy = (compactView.matches ? Math.min(sy / 2, 2) : Math.min(sy / 2, sy - GUTTER)) - top * zoom;
+        if (g.side === 'bottom' && sy > 0) oy = compactView.matches ? Math.min(sy / 2, 2) : Math.min(sy / 2, sy - GUTTER);
         if (g.side === 'right' && sx > 0) ox = Math.min(sx / 2, sx - GUTTER);
         layoutGutter(g);
     }
@@ -244,18 +212,16 @@ const Renderer = (() => {
 
     function rebuild() {
         const tile = ts * zoom * dpr;
-        if (!SP || SP.tilt !== tilt || Math.abs(SP.tile - Math.min(Art.MAX_TILE, tile)) / tile > 0.06) SP = Art.build(tile, tilt);
-        // Terrain: same resolution, capped so big maps stay small in memory (12
-        // million pixels, under the 16 million one canvas may have on iPhones)
+        if (!SP || Math.abs(SP.tile - Math.min(Art.MAX_TILE, tile)) / tile > 0.06) SP = Art.build(tile);
+        // Terrain: same resolution, capped so big maps stay small in memory
+        // (12 million pixels, under the 16 million one canvas may have on iPhones)
         const cap = Math.floor(Math.sqrt(12e6 / (cols * rows)));
         const px = Math.max(4, Math.min(Math.round(tile), cap));
         const key = `${theme}|${cols}x${rows}|${px}|${mapStamp}`;
         if (key !== terrainKey) {
             terrainKey = key;
             terrainPx = px;
-            const raised = view === 'raised';
-            terrain = Terrain.render({ m: mapView(), px, theme, canvas: terrain || undefined, walls: raised ? false : undefined });
-            walls = raised ? Terrain.renderWallRows({ m: mapView(), px, theme, tilt, height: WALL_H }) : null;
+            terrain = Terrain.render({ m: mapView(), px, theme, canvas: terrain || undefined });
             gridKey = '';
         }
         rebuildAt = 0;
@@ -296,28 +262,9 @@ const Renderer = (() => {
     let pinch = null;
     let dragging = false;
 
-    // Upright coordinates of a page point
-    function toUp(clientX, clientY) {
+    function toWorld(clientX, clientY) {
         const r = canvas.getBoundingClientRect();
         return { x: (clientX - r.left - ox) / zoom, y: (clientY - r.top - oy) / zoom };
-    }
-
-    // Ground point under a page point. In the raised view a tower's body rises over
-    // the tile behind it: a press on the body means that tower, not the tile behind.
-    function toWorld(clientX, clientY) {
-        const u = toUp(clientX, clientY);
-        const g = { x: u.x, y: u.y / tilt };
-        if (view !== 'raised') return g;
-        let best = null;
-        for (let i = 0; i < towers.length; i++) {
-            const t = towers[i];
-            if (!t.alive || Math.abs(u.x - t.pos.x) > ts * 0.5) continue;
-            const foot = (t.pos.y + ts * 0.44) * tilt;
-            const crown = t.pos.y * tilt - PED_H * ts - ts * 0.5;
-            if (u.y < crown || u.y > foot) continue;
-            if (!best || t.pos.y > best.pos.y) best = t;
-        }
-        return best ? { x: best.pos.x, y: best.pos.y } : g;
     }
 
     // A press only turns into a pan after the pointer travels this far (CSS px), so
@@ -339,7 +286,7 @@ const Renderer = (() => {
             pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false });
             if (pointers.size === 2) {
                 const [a, b] = [...pointers.values()];
-                pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, zoom, mid: toUp((a.x + b.x) / 2, (a.y + b.y) / 2) };
+                pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, zoom, mid: toWorld((a.x + b.x) / 2, (a.y + b.y) / 2) };
                 dragging = true;
             }
         });
@@ -398,13 +345,13 @@ const Renderer = (() => {
         });
         canvas.addEventListener('wheel', e => {
             e.preventDefault();
-            const w = toUp(e.clientX, e.clientY);
+            const w = toWorld(e.clientX, e.clientY);
             const r = canvas.getBoundingClientRect();
             setZoom(zoom * Math.exp(-e.deltaY * 0.0015), w, e.clientX - r.left, e.clientY - r.top);
         }, { passive: false });
     }
 
-    // Zoom keeping upright point w under screen point (sx, sy)
+    // Zoom keeping world point w under screen point (sx, sy)
     function setZoom(z, w, sx, sy) {
         const nz = Math.max(1, Math.min(maxZoom(), z));
         if (!w) {
@@ -455,10 +402,10 @@ const Renderer = (() => {
     function reveal(wx, wy) {
         if (zoom <= 1.001) return;
         const sx = ox + wx * zoom;
-        const sy = oy + wy * tilt * zoom;
+        const sy = oy + wy * zoom;
         if (sx > 0 && sx < cssW && sy > 0 && sy < cssH) return;
         camX = wx;
-        camY = wy * tilt;
+        camY = wy;
         clampCamera();
     }
 
@@ -467,7 +414,6 @@ const Renderer = (() => {
     let K = 1;              // device pixels per world unit
     let baseE = 0;
     let baseF = 0;
-    let planeF = 0;         // vertical offset of the plane being drawn on (ground, or raised)
     let curAlpha = 1;
     let curOp = 'source-over';
 
@@ -485,25 +431,8 @@ const Renderer = (() => {
         }
     }
 
-    // Draw on the ground plane (seen at the tilt)
     function resetTransform() {
-        planeF = baseF;
-        ctx.setTransform(K, 0, 0, K * tilt, baseE, planeF);
-    }
-
-    // Draw on a plane at height h (world units) above the ground
-    function planeAt(h) {
-        planeF = baseF - h * K;
-        ctx.setTransform(K, 0, 0, K * tilt, baseE, planeF);
-    }
-
-    // Draw in upright coordinates (x, y * tilt - height), nothing squashed
-    function upright() {
         ctx.setTransform(K, 0, 0, K, baseE, baseF);
-    }
-
-    function restorePlane() {
-        ctx.setTransform(K, 0, 0, K * tilt, baseE, planeF);
     }
 
     // Draw sprite `name` centred on world (x, y), rotated, scaled by sx/sy
@@ -522,28 +451,10 @@ const Renderer = (() => {
         }
         const c = Math.cos(rot);
         const n = Math.sin(rot);
-        ctx.setTransform(K * c * sx, K * n * sx * tilt, -K * n * sy, K * c * sy * tilt, baseE + x * K, planeF + y * K * tilt);
+        ctx.setTransform(K * c * sx, K * n * sx, -K * n * sy, K * c * sy, baseE + x * K, baseF + y * K);
         ctx.drawImage(SP.atlas, s.x, s.y, s.w, s.h, -w / 2, -h / 2, w, h);
-        restorePlane();
+        ctx.setTransform(K, 0, 0, K, baseE, baseF);
     }
-
-    // Draw sprite `name` standing up, centred on upright point (x, Y), unsquashed
-    function sprUp(name, x, Y, rot = 0, sx = 1, sy = sx) {
-        const s = SP.s[name];
-        if (!s) return;
-        const k = ts / SP.tile;
-        const w = s.w * k;
-        const h = s.h * k;
-        drawCalls++;
-        const c = Math.cos(rot);
-        const n = Math.sin(rot);
-        ctx.setTransform(K * c * sx, K * n * sx, -K * n * sy, K * c * sy, baseE + x * K, baseF + Y * K);
-        ctx.drawImage(SP.atlas, s.x, s.y, s.w, s.h, -w / 2, -h / 2, w, h);
-        restorePlane();
-    }
-
-    // Screen angle of a direction on the ground
-    const screenAngle = (a) => (tilt === 1 ? a : Math.atan2(Math.sin(a) * tilt, Math.cos(a)));
 
     // Natural sprite width in tiles
     const natural = (name) => SP.s[name].w / SP.tile;
@@ -662,11 +573,10 @@ const Renderer = (() => {
 
         const mw = cols * ts;
         const mh = rows * ts;
-        // Keep effects inside the map (and the room above it in the raised view)
-        const hd = head() / tilt;
+        // Keep effects inside the map
         ctx.save();
         ctx.beginPath();
-        ctx.rect(0, -hd, mw, mh + hd);
+        ctx.rect(0, 0, mw, mh);
         ctx.clip();
         ctx.drawImage(terrain, 0, 0, mw, mh);
         drawCalls++;
@@ -676,42 +586,20 @@ const Renderer = (() => {
             setAlpha(1);
         }
 
-        if (view === 'raised') {
-            // Ground first, then everything that stands, back to front, then what flies
-            drawRoute();
-            drawPortals();
-            drawRanges();
-            drawSelection();
-            drawPlacement(true);
-            drawRings();
-            drawStanding(stepped);
-            planeAt(FX_H * ts);
-            drawBeams();
-            drawProjectiles();
-            drawParticles();
-            resetTransform();
-            upright();
-            if (healthBar) drawBars();
-            drawPlacementTag();
-            drawFloaters();
-            resetTransform();
-        } else {
-            drawRoute();
-            drawPortals();
-            drawRanges();
-            drawTowerBases();
-            drawEnemies(stepped);
-            drawTurrets();
-            drawRings();
-            drawBeams();
-            drawProjectiles();
-            drawParticles();
-            if (healthBar) drawBars();
-            drawPlacement();
-            drawPlacementTag();
-            drawSelection();
-            drawFloaters();
-        }
+        drawRoute();
+        drawPortals();
+        drawRanges();
+        drawTowerBases();
+        drawEnemies(stepped);
+        drawTurrets();
+        drawRings();
+        drawBeams();
+        drawProjectiles();
+        drawParticles();
+        if (healthBar) drawBars();
+        drawPlacement();
+        drawSelection();
+        drawFloaters();
         ctx.restore();
         curAlpha = ctx.globalAlpha;
         curOp = ctx.globalCompositeOperation;
@@ -783,17 +671,7 @@ const Renderer = (() => {
         }
         setOp('source-over');
         setAlpha(1);
-        if (view !== 'raised') spr('gate', ex, ey);
-    }
-
-    // Sprite with an `ay` (a raised body) standing on ground point (x, y)
-    function body(name, x, y) {
-        const s = SP.s[name];
-        if (!s) return;
-        const k = ts / SP.tile;
-        upright();
-        ctx.drawImage(SP.atlas, s.x, s.y, s.w, s.h, x - s.w * k / 2, y * tilt - s.ay * k, s.w * k, s.h * k);
-        drawCalls++;
+        spr('gate', ex, ey);
     }
 
     function portal(x, y, t, s) {
@@ -879,26 +757,6 @@ const Renderer = (() => {
     }
 
     let enemyId = 0;
-    // Walk cycle and facing, from how far and which way an enemy moved since last frame
-    function trackEnemy(e) {
-        if (e._lx === undefined) {
-            e._lx = e.pos.x;
-            e._ly = e.pos.y;
-            e._rot = Math.atan2(e.vel.y, e.vel.x) || 0;
-            e._ph = Math.random() * TAU;
-            e._id = enemyId++;
-        }
-        const dx = e.pos.x - e._lx;
-        const dy = e.pos.y - e._ly;
-        const d = Math.abs(dx) + Math.abs(dy);
-        if (d > 0.0001) {
-            e._ph += d / ts * 10;
-            e._rot += angDiff(Math.atan2(dy, dx) - e._rot) * 0.35;
-            e._lx = e.pos.x;
-            e._ly = e.pos.y;
-        }
-    }
-
     function drawEnemies(stepped) {
         const shadowNat = natural('shadow');
         const bosses = [];
@@ -906,7 +764,22 @@ const Renderer = (() => {
             const e = enemies[i];
             const art = Art.ENEMY_ART[e.name];
             if (!art) continue;
-            trackEnemy(e);
+            if (e._lx === undefined) {
+                e._lx = e.pos.x;
+                e._ly = e.pos.y;
+                e._rot = Math.atan2(e.vel.y, e.vel.x) || 0;
+                e._ph = Math.random() * TAU;
+                e._id = enemyId++;
+            }
+            const dx = e.pos.x - e._lx;
+            const dy = e.pos.y - e._ly;
+            const d = Math.abs(dx) + Math.abs(dy);
+            if (d > 0.0001) {
+                e._ph += d / ts * 10;
+                e._rot += angDiff(Math.atan2(dy, dx) - e._rot) * 0.35;
+                e._lx = e.pos.x;
+                e._ly = e.pos.y;
+            }
             if (stepped) FX.status(e);
             const r = art.r * ts;
             const bob = Math.sin(e._ph);
@@ -941,162 +814,11 @@ const Renderer = (() => {
         }
     }
 
-    // ---------- Raised view: things that stand, back to front ----------
-
-    const order = [];       // [depth, kind, item] flattened
-    function drawStanding(stepped) {
-        order.length = 0;
-        if (walls) for (let r = 0; r < walls.rows.length; r++) if (walls.rows[r]) order.push(r, 0, r);
-        for (let i = 0; i < towers.length; i++) order.push(towers[i].pos.y / ts, 1, i);
-        for (let i = 0; i < enemies.length; i++) order.push(enemies[i].pos.y / ts, 2, i);
-        const p = toPlace ? placementTile() : null;
-        if (p && !placeReasonCached(p.x, p.y)) order.push(p.y + 0.5, 3, 0);
-        order.push(exit.y + 0.5, 1, -1);
-        // Sort the triples by depth; a wall row goes before what stands on that row
-        const n = order.length / 3;
-        const idx = sortIdx(n);
-        for (let i = 0; i < n; i++) {
-            const j = idx[i] * 3;
-            const kind = order[j + 1];
-            const it = order[j + 2];
-            if (kind === 0) wallRow(it);
-            else if (kind === 1) it < 0 ? gateUp() : towerUp(towers[it], it, 1);
-            else if (kind === 2) enemyUp(enemies[it], it, stepped);
-            else ghostUp(p);
-        }
-        resetTransform();
-        setAlpha(1);
-    }
-
-    let idxBuf = new Uint32Array(64);
-    function sortIdx(n) {
-        if (idxBuf.length < n) idxBuf = new Uint32Array(n * 2);
-        const idx = idxBuf.subarray(0, n);
-        for (let i = 0; i < n; i++) idx[i] = i;
-        idx.sort((a, b) => order[a * 3] - order[b * 3] || order[a * 3 + 1] - order[b * 3 + 1]);
-        return idx;
-    }
-
-    function wallRow(r) {
-        const w = walls.rows[r];
-        const k = ts / walls.px;
-        upright();
-        ctx.drawImage(w.canvas, 0, w.y0 * k, w.canvas.width * k, w.canvas.height * k);
-        drawCalls++;
-        restorePlane();
-    }
-
-    // A tower: shadow, its solid body (the base art on top), the turret on top
-    function towerUp(t, i, alpha) {
-        const x = t.pos.x;
-        const y = t.pos.y;
-        const ph = PED_H * ts;
-        resetTransform();
-        setAlpha(0.5 * alpha);
-        spr('shadow', x + ts * 0.1, y + ts * 0.16, 0, (ts * 1.35) / ts / natural('shadow'));
-        setAlpha(alpha);
-        body('body_' + t.name, x, y);
-        const still = t.name === 'tesla' || t.name === 'lightningStrike';
-        // The turret's underside, for its thickness
-        planeAt(ph + ts * 0.02);
-        spr('turretSide_' + t.name, x, y + ts * 0.02, still ? 0 : t.angle);
-        // Turret, a little above the body's top
-        planeAt(ph + ts * 0.06);
-        const rec = (t._recoil || 0) * ts * 0.1;
-        const ca = Math.cos(t.angle);
-        const sa = Math.sin(t.angle);
-        spr('turret_' + t.name, x - ca * rec, y - sa * rec, still ? 0 : t.angle);
-        if (still) {
-            setOp('lighter');
-            setAlpha((0.45 + 0.2 * Math.sin(time * 5 + i) + (t._flash || 0) * 0.08) * alpha);
-            spr(t.name === 'tesla' ? 'glow_yellow' : 'glow_cyan', x, y - ts * 0.05, 0, 0.55 + (t._flash || 0) * 0.06);
-            setOp('source-over');
-            setAlpha(alpha);
-        } else if (t._flash > 0) {
-            const m = FX.muzzle(t, t._barrel || 0);
-            setOp('lighter');
-            setAlpha(Math.min(1, t._flash / 3) * alpha);
-            spr('flash', m.x, m.y, t.angle, t.name === 'railgun' || t.name === 'sniper' ? 1.1 : 0.8);
-            setOp('source-over');
-            setAlpha(alpha);
-        }
-        resetTransform();
-    }
-
-    // An enemy: a solid body seen at the tilt, its side stamped up from the ground,
-    // its art on top, facing where it walks
-    function enemyUp(e, i, stepped) {
-        const art = Art.ENEMY_ART[e.name];
-        if (!art) return;
-        trackEnemy(e);
-        if (stepped) FX.status(e);
-        const r = art.r * ts;
-        const bob = Math.sin(e._ph);
-        resetTransform();
-        setAlpha(0.8);
-        spr('shadow', e.pos.x + r * 0.15, e.pos.y + r * 0.25, 0, r * 2.4 / ts / natural('shadow'));
-        setAlpha(1);
-        const squash = e.name === 'weak' || e.name === 'spawner' ? 0.09 : e.name === 'tank' ? 0.015 : 0.05;
-        const sx = 1 + squash * bob;
-        const sy = 1 - squash * bob;
-        const lift = e.name === 'weak' ? Math.abs(bob) * r * 0.25 : 0;
-        const eh = r * EN_H * (1 - squash * bob);
-        const X = e.pos.x;
-        const Y = e.pos.y;
-        const rot = e._rot;
-        if (art.boss) {
-            setOp('lighter');
-            setAlpha(0.35 + 0.15 * Math.sin(time * 4 + i));
-            spr(e.name === 'taunt' ? 'glow_orange' : 'glow_yellow', X, Y, 0, (r * 3.2) / ts / natural('glow_orange'));
-            setOp('source-over');
-            setAlpha(1);
-        }
-        // Side: stamps about two device pixels apart
-        const n = Math.max(2, Math.min(7, Math.ceil(eh * K / 2)));
-        for (let j = 0; j < n; j++) {
-            planeAt(lift + eh * j / n);
-            spr(`enemy_${e.name}_side`, X, Y, rot, sx, sy);
-        }
-        planeAt(lift + eh);
-        spr('enemy_' + e.name, X, Y, rot, sx, sy);
-        const efx = e.effects;
-        for (let j = 0; j < efx.length; j++) {
-            const nm = efx[j].name;
-            const tint = nm === 'slow' ? 'ice' : nm === 'poison' ? 'poison' : nm === 'regen' ? 'regen' : null;
-            if (!tint) continue;
-            setAlpha(tint === 'regen' ? 0.18 + 0.1 * Math.sin(time * 8) : 0.42);
-            spr(`enemy_${e.name}_${tint}`, X, Y, rot, sx, sy);
-        }
-        if (e.hit > 0) {
-            setAlpha(Math.min(1, e.hit / 6) * 0.85);
-            spr(`enemy_${e.name}_white`, X, Y, rot, sx, sy);
-        }
-        setAlpha(1);
-        resetTransform();
-    }
-
-    // The player's gate, a small keep on its tile
-    function gateUp() {
-        const ex = (exit.x + 0.5) * ts;
-        const ey = (exit.y + 0.5) * ts;
-        body('body_gate', ex, ey);
-        resetTransform();
-    }
-
-    // The tower being placed, standing on its tile
-    function ghostUp(p) {
-        const tpl = tower[towerType];
-        const afford = godMode || cash >= tpl.cost;
-        const fake = { pos: { x: (p.x + 0.5) * ts, y: (p.y + 0.5) * ts }, name: towerType, angle: -Math.PI / 2, color: tpl.color };
-        towerUp(fake, 0, afford ? 0.85 : 0.45);
-        setAlpha(1);
-    }
-
     function drawProjectiles() {
         for (let i = 0; i < projectiles.length; i++) {
             const p = projectiles[i];
             if (!p.alive) continue;
-            const a = screenAngle(Math.atan2(p.vel.y, p.vel.x));
+            const a = Math.atan2(p.vel.y, p.vel.x);
             const blue = p.blastRadius > 1;
             spr(blue ? 'missileBlue' : 'missile', p.pos.x, p.pos.y, a, 1.2);
         }
@@ -1223,7 +945,7 @@ const Renderer = (() => {
                     setAlpha(Math.min(1, (1 - f) * 1.6));
                     const c = Math.cos(p.rot);
                     const n = Math.sin(p.rot);
-                    ctx.setTransform(K * c, K * n * tilt, -K * n, K * c * tilt, baseE + p.x * K, planeF + p.y * K * tilt);
+                    ctx.setTransform(K * c, K * n, -K * n, K * c, baseE + p.x * K, baseF + p.y * K);
                     ctx.fillStyle = p.color;
                     ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
                     drawCalls++;
@@ -1234,7 +956,7 @@ const Renderer = (() => {
                 setAlpha(p.a0 * (1 - f));
                 spr(p.sprite, p.x, p.y, p.rot, size / natural(p.sprite));
             }
-            restorePlane();
+            resetTransform();
         }
         setOp('source-over');
         setAlpha(1);
@@ -1259,8 +981,7 @@ const Renderer = (() => {
             const w = Math.max(ts * 0.8, r * 2) * (boss ? 1.4 : 1);
             const h = boss ? bh * 1.5 : bh;
             const x = e.pos.x - w / 2;
-            // Raised view: above the standing enemy, in upright coordinates
-            const y = view === 'raised' ? (e.pos.y - r) * tilt - r * EN_H - h - ts * 0.1 : e.pos.y - r - h - ts * 0.08;
+            const y = e.pos.y - r - h - ts * 0.08;
             const pad = Math.max(1 / zoom, ts * 0.03);
             ctx.rect(x - pad, y - pad, w + pad * 2, h + pad * 2);
             (left > 0.6 ? barG : left > 0.3 ? barY : barR).push(x, y, w * left, h);
@@ -1293,9 +1014,8 @@ const Renderer = (() => {
         ctx.stroke();
     }
 
-    // Ghost of the tower being placed, its range and the tile tint (the raised view
-    // draws the ghost standing, with the rest that stands)
-    function drawPlacement(groundOnly = false) {
+    // Ghost of the tower being placed, its range, the tile tint and the price
+    function drawPlacement() {
         const p = placementTile();
         const key = p ? `${p.x},${p.y},${towerType}` : '';
         if (key !== lastPlaceKey) {
@@ -1313,12 +1033,10 @@ const Renderer = (() => {
         ctx.fillStyle = ok && afford ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.35)';
         ctx.fillRect(p.x * ts, p.y * ts, ts, ts);
         if (ok) {
-            if (!groundOnly) {
-                setAlpha(afford ? 0.85 : 0.45);
-                spr('base_' + towerType, cx, cy);
-                spr('turret_' + towerType, cx, cy, towerType === 'tesla' ? 0 : -Math.PI / 2);
-                setAlpha(1);
-            }
+            setAlpha(afford ? 0.85 : 0.45);
+            spr('base_' + towerType, cx, cy);
+            spr('turret_' + towerType, cx, cy, towerType === 'tesla' ? 0 : -Math.PI / 2);
+            setAlpha(1);
         } else {
             ctx.strokeStyle = '#f87171';
             ctx.lineWidth = ts * 0.12;
@@ -1336,16 +1054,7 @@ const Renderer = (() => {
             ctx.lineWidth = Math.max(1.5 / zoom, ts * 0.06);
             ctx.strokeRect(p.x * ts, p.y * ts, ts, ts);
         }
-    }
-
-    // Price tag over the tile being placed on, kept readable on small tiles
-    function drawPlacementTag() {
-        const p = placementTile();
-        if (!p) return;
-        const tpl = tower[towerType];
-        const cx = (p.x + 0.5) * ts;
-        const afford = godMode || cash >= tpl.cost;
-        const raised = view === 'raised';
+        // Price tag, kept readable on small tiles
         const size = Math.max(11, Math.min(16, ts * zoom * 0.5)) / zoom;
         ctx.font = `700 ${size}px "Chakra Petch", system-ui, sans-serif`;
         ctx.textAlign = 'center';
@@ -1353,9 +1062,8 @@ const Renderer = (() => {
         const label = `$${tpl.cost}`;
         const w = ctx.measureText(label).width + size * 0.8;
         const h = size * 1.45;
-        // Raised view: above the standing ghost, in upright coordinates
-        let ty = raised ? p.y * ts * tilt - PED_H * ts - h / 2 - ts * 0.3 : p.y * ts - h / 2 - ts * 0.12;
-        if (ty - h / 2 < (raised ? -head() : 0)) ty = raised ? (p.y + 1) * ts * tilt + h / 2 + ts * 0.1 : (p.y + 1) * ts + h / 2 + ts * 0.12;
+        let ty = p.y * ts - h / 2 - ts * 0.12;
+        if (ty - h / 2 < 0) ty = (p.y + 1) * ts + h / 2 + ts * 0.12;
         const tx = Math.max(w / 2, Math.min(cols * ts - w / 2, cx));
         ctx.fillStyle = 'rgba(9,9,11,0.9)';
         ctx.beginPath();
@@ -1385,9 +1093,8 @@ const Renderer = (() => {
             }
             setAlpha(Math.min(1, f.life / 20));
             ctx.fillStyle = f.css || (f.css = `rgb(${f.color[0]},${f.color[1]},${f.color[2]})`);
-            const fy = view === 'raised' ? f.y * tilt - ts * 0.55 : f.y;
-            ctx.strokeText(f.text, f.x, fy);
-            ctx.fillText(f.text, f.x, fy);
+            ctx.strokeText(f.text, f.x, f.y);
+            ctx.fillText(f.text, f.x, f.y);
         }
         setAlpha(1);
     }
@@ -1416,7 +1123,7 @@ const Renderer = (() => {
     function fadeTip() {
         if (!tipEl) tipEl = document.getElementById('map-tip');
         if (!tipEl) return;
-        const near = !!hover && holder.dataset.gutter !== 'bottom' && oy + hover.y * tilt * zoom > cssH - 80;
+        const near = !!hover && holder.dataset.gutter !== 'bottom' && oy + hover.y * zoom > cssH - 80;
         if (near !== tipFaded) {
             tipFaded = near;
             tipEl.classList.toggle('faded', near);
@@ -1493,7 +1200,7 @@ const Renderer = (() => {
     // Page coordinates of a world point (used by tests and tips)
     function toScreen(wx, wy) {
         const r = canvas.getBoundingClientRect();
-        return { x: r.left + ox + wx * zoom, y: r.top + oy + wy * tilt * zoom };
+        return { x: r.left + ox + wx * zoom, y: r.top + oy + wy * zoom };
     }
 
     // F key: show or hide the performance numbers
@@ -1508,8 +1215,7 @@ const Renderer = (() => {
     }
 
     return {
-        init, resize, mapChanged, frame, reveal, logicTime, setQualityAuto, setZoom, togglePerf, toScreen, setView, rowsTall, rowsFitting,
-        get view() { return view; },
+        init, suspend, resize, mapChanged, frame, reveal, logicTime, setQualityAuto, setZoom, togglePerf, toScreen,
         get hover() { return hover; },
         get zoom() { return zoom; },
         get shake() { return { x: shakeX, y: shakeY }; },

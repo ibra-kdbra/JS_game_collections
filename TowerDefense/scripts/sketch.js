@@ -404,7 +404,7 @@ function loadMap() {
         const w = holder.clientWidth || 600;
         const h = holder.clientHeight || 400;
         cols = Math.max(8, Math.floor(w / randomTs));
-        rows = Math.max(8, Math.floor(Renderer.rowsFitting(h / randomTs)));
+        rows = Math.max(8, Math.floor(h / randomTs));
         const numSpawns = name.endsWith('3') ? 3 : 2;
         if (name.startsWith('empty')) wallCover = 0;
         if (name.startsWith('sparse')) wallCover = 0.1;
@@ -744,7 +744,7 @@ function fitCanvas() {
     const w = holder.clientWidth;
     const h = holder.clientHeight;
     if (!w || !h) return;
-    const newTs = Math.max(4, Math.floor(Math.min(w / cols, h / Renderer.rowsTall(rows))));
+    const newTs = Math.max(4, Math.floor(Math.min(w / cols, h / rows)));
     if (newTs !== ts) {
         rescale(newTs);
         Renderer.mapChanged();

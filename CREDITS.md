@@ -70,12 +70,13 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | --- | --- | --- | --- |
 | `Brainy_Warrior/models/warrior.glb`, `wizard.glb` | Warrior and wizard, animated | *RPG Characters - Nov 2020* by [Quaternius](https://quaternius.com), converted and compressed (see `Brainy_Warrior/models/LICENSE.txt`) | CC0 1.0 |
 | `Brainy_Warrior/models/orc.glb`, `orc-skull.glb`, `tribal.glb` | Enemies, animated | *Ultimate Monsters* by [Quaternius](https://quaternius.com), converted and compressed | CC0 1.0 |
+| `TowerDefense/models/kenney-tower-defense/` (77 of the kit's models and its palette texture) | Tower Defense's 3D view: map tiles, trees, rocks, crystals, tower parts, weapons, saucers, ammo, selection marker | [*Tower Defense Kit* 2.1](https://opengameart.org/content/tower-defense-kit) by [Kenney](https://www.kenney.nl) (see `License.txt` there) | CC0 1.0 |
 
 ## Libraries
 
 | Library | Where | Licence |
 | --- | --- | --- |
-| three.js | `assets/vendor/three/`, `MoonLDR/vendor/three/`, `Brainy_Warrior/vendor/three-0.150.1/` (with the `GLTFLoader`, `SkeletonUtils` and `BufferGeometryUtils` addons from the r150 tag in `addons/`) | MIT (licence files included) |
+| three.js | `assets/vendor/three/`, `MoonLDR/vendor/three/`, `Brainy_Warrior/vendor/three-0.150.1/` (with the `GLTFLoader`, `SkeletonUtils` and `BufferGeometryUtils` addons from the r150 tag in `addons/`), `TowerDefense/vendor/three-addons-0.160.0/` (the r160 `GLTFLoader` and `BufferGeometryUtils`, for the shared r160 build) | MIT (licence files included) |
 | meshoptimizer decoder | `Brainy_Warrior/vendor/meshoptimizer/` (decodes the compressed character models) | MIT (licence file included) |
 | GSAP and ScrollTrigger | `assets/vendor/gsap/`, `Hangman/libs/` | GreenSock standard licence (free to use) |
 | Font Awesome Free (icon subset) | `assets/vendor/fontawesome/`, `Tetris/fonts/` | Icons CC BY 4.0, fonts SIL OFL 1.1, code MIT |
