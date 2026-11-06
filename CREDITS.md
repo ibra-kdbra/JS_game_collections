@@ -30,7 +30,6 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | Tower Defense map editor (`td-editor/`) | [selenebun/td-editor](https://github.com/selenebun/td-editor) | selenebun | **unknown** (the repository has no detected licence); `td-editor/LICENSE` here names only ibra-kdbra |
 | Tron | [momajd/Tron](https://github.com/momajd/Tron) (the original DOM version; the arena, AI and soundtrack were rewritten here) | momajd | **unknown** (no licence file found) |
 | Wahdatio | [monsterkodi/konnekt](https://github.com/monsterkodi/konnekt) (CoffeeScript sources in `Wahdatio/src/`) | monsterkodi | Unlicense |
-| Sprite tutorials (`Sprites_Games/*_project`) | Frank's Laboratory JavaScript game development tutorials and their sprite sheets | Frank's Laboratory | assets: **unknown** terms |
 | Breakout, Snake, Minesweeper, Crate Lab, Reef Keeper, Volt Flip | Written for this collection (Reef Keeper's genre comes from PopCap's 2001 *Insaniquarium*; its sprites are credited below, the rest of its art, music and sounds are original) | ibra-kdbra | MIT |
 | Reef Keeper sprites: guppies, carnivore, coins, diamond, jellyfish, first tank (`Reef_Keeper/sprites/`) | [Fish Set](https://opengameart.org/content/fish-set) | Andrew Tidey | CC0 |
 | Reef Keeper sprites: breeder, muncher, leviathan (`Reef_Keeper/sprites/fish-*.webp`) | [Cartoon fish](https://opengameart.org/content/cartoon-fish) | Robert Brooks, [Game Developer Studio](https://www.gamedeveloperstudio.com) | CC-BY 3.0 |
@@ -45,6 +44,7 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | Experimental Math | Probably [thatsKevinJain/flowfields](https://github.com/thatsKevinJain/flowfields) (same `microcan` and `vec` helpers) | thatsKevinJain | **unknown** |
 | Flow Fields, Text Fields | Flow-field technique from Frank's Laboratory tutorials (likely) | **unknown** | **unknown** |
 | Blossoming Flowers | A CSS animation, origin **unknown** | **unknown** | **unknown** |
+| Sprite Lab (`Sprites_Games/`: lessons 1-8 in `*_project`, the page in `index.html` and `lab/`) | The JavaScript game development tutorials by [Franks Laboratory](https://www.youtube.com/c/Frankslaboratory) and their sprite sheets; `lab/dog-run.webp` is the run row cut from lesson 1's `shadow_dog.png`. Phone layouts, touch controls and the lab page were added here | Franks Laboratory | code and art: **unknown** terms |
 
 ## Music and sound
 

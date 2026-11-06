@@ -9,6 +9,7 @@ body{
 }
 #canvas1{
     /* background: blue; */
+    display: block;
     top: 0;
     left: 0;
 }
