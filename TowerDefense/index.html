@@ -113,7 +113,7 @@
       </section>
 
       <section id="store" aria-label="Build towers">
-        <h2>Build <small class="desk-only">keys 1-7</small></h2>
+        <h2>Build</h2>
         <div class="store-grid" id="store-grid"></div>
       </section>
 
@@ -215,6 +215,10 @@
                 <h4>Sound and feel</h4>
                 <label class="toggle"><span>Sound</span><input type="checkbox" role="switch" id="set-sound"><i></i></label>
                 <div class="set-row">
+                  <label for="set-volume">Volume</label>
+                  <input type="range" id="set-volume" min="0" max="100" step="5" value="70">
+                </div>
+                <div class="set-row">
                   <span id="shake-label">Screen shake</span>
                   <div class="seg small" role="group" aria-labelledby="shake-label" id="shake-seg">
                     <button type="button" data-shake="0">Off</button>
@@ -223,6 +227,16 @@
                   </div>
                 </div>
                 <label class="toggle" id="haptics-row"><span>Vibration</span><input type="checkbox" role="switch" id="set-haptics"><i></i></label>
+              </div>
+              <div class="set-group">
+                <h4>View</h4>
+                <div class="set-row">
+                  <span id="view-label">Map</span>
+                  <div class="seg small" role="group" aria-labelledby="view-label" id="view-seg">
+                    <button type="button" data-view="raised">2.5D</button>
+                    <button type="button" data-view="flat">Flat</button>
+                  </div>
+                </div>
               </div>
               <div class="set-group">
                 <h4>On the map</h4>

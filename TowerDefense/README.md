@@ -22,7 +22,7 @@ to send the next wave early for bonus gold. The build menu compares towers with
 power, range and rate bars. Select a tower to see its stats, what the upgrade
 changes (the bars and the upgraded range on the map show it too), its sell price
 and which enemy it targets (First, Last, Strongest or Closest). Each tower also counts its kills and the damage it has dealt. The menu (Esc) has
-sound, screen shake (Off, Subtle or Full; Subtle only shakes for bosses and lost
+sound and its volume, the view (2.5D or Flat), screen shake (Off, Subtle or Full; Subtle only shakes for bosses and lost
 lives), vibration (phones only), damage numbers, health bars, particles and
 back-to-back waves. The shake only moves the picture of the map, never what you
 point at: clicks and taps always land on the tile under the pointer. The first game shows a few short tips; they can be skipped
@@ -58,12 +58,30 @@ canvas from those cached pictures. Quality steps down by itself when frames get
 slow. Add `?perf=1` to the address (or press F) for frame times, entity counts and
 draw calls.
 
+### 2.5D and Flat
+
+The default view is 2.5D, the angled view of mobile tower defense games: the
+ground is seen at a tilt, walls and buildings stand up, towers are solid blocks
+in their own base shape with the turret on top, enemies are solid bodies on
+their shadows, and everything is drawn back to front. Walls are kept low so a
+turret or an enemy behind one always shows. Flat (in the menu) is the straight
+down view. Both draw at the screen's real resolution (up to 3 device pixels per
+CSS pixel); the sprites and the ground are redrawn for the zoom, so they stay
+sharp when you zoom in. The 2.5D view has its own sprites (tower bodies, turret
+and enemy sides), baked at the tilt so nothing is squashed or stretched.
+
+Tower sounds are mixed quieter than the interface, each has a cap on how many
+copies play at once and how long one rings, and everything goes through a
+limiter, so a big battle is never deafening.
+
 ### Touch
 
 Pick a tower, tap a tile to see its range and whether it fits, then tap the same
 tile again or press **Build**. While placing, the row of towers in the panel
 switches type. Tap a built tower to upgrade, sell or retarget it. Pinch or use the
-+ and - buttons to zoom, drag to look around.
++ and - buttons to zoom, drag to look around. On small phones a new map starts
+zoomed in so it fills the screen (bigger tiles for your finger); pinch out to see
+all of it.
 
 On small phones held upright (up to 380 px wide or 700 px tall) the map gets most
 of the screen: the wave panel is one row (enemy preview, start, a speed button
