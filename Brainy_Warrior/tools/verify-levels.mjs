@@ -9,6 +9,9 @@
 //  * Prints the difficulty table (tools/difficulty.mjs) and checks the ramp:
 //    levels 1-3 are easy, 4-8 medium, and from level 9 on the score never
 //    drops by more than a small tolerance, ending on the hardest level.
+//  * Checks every level is fair: the bot's one-attempt success rate is at
+//    least FAIR.minBot (the "10 tries" column is the chance it wins at least
+//    once in FAIR.tries restarts).
 //
 // Run from the repo root:  node Brainy_Warrior/tools/verify-levels.mjs
 import { readFileSync } from 'node:fs';
@@ -16,7 +19,7 @@ import { BAND_NAMES, LEVELS, bandOf } from '../js/levels.js';
 import { bfs, branching } from '../js/solver.js';
 import { apply, initialState, isWon } from '../js/rules.js';
 import { createWasmSolver } from '../js/wasm-solver.js';
-import { BANDS, band, measure } from './difficulty.mjs';
+import { BANDS, FAIR, band, measure, winWithin } from './difficulty.mjs';
 
 const wasm = await createWasmSolver(readFileSync(new URL('../wasm/solver.wasm', import.meta.url)));
 
@@ -86,16 +89,18 @@ for (const level of LEVELS) {
 }
 // Difficulty table and ramp.
 console.log('\nDifficulty (see tools/difficulty.mjs)');
-console.log(' #  level                  par  reach  dead  trap  optSh  sols  magic  enemies  bot    score  band');
+console.log(` #  level                  par  reach  dead  trap  optSh  sols  magic  enemies  bot    ${FAIR.tries} tries  score  band`);
 const scores = [];
 const bandMismatch = [];
+const unfair = [];
 LEVELS.forEach((level, i) => {
     const m = measure(level);
     scores.push(m.score);
+    if (m.bot < FAIR.minBot) unfair.push(`${i + 1} ${level.name}: the bot wins ${(m.bot * 100).toFixed(1)}% of attempts, below ${FAIR.minBot * 100}%`);
     if (BAND_NAMES[bandOf(i)] !== band(m.score)) bandMismatch.push(`${i + 1} ${level.name} is ${band(m.score)}, bandOf() says ${BAND_NAMES[bandOf(i)]}`);
     console.log(
         `${pad(i + 1, 2)}  ${level.name.padEnd(22)} ${pad(m.opt, 3)} ${pad(m.reach, 6)} ${m.dead.toFixed(2).padStart(5)} ${m.pathTrap.toFixed(2).padStart(5)}` +
-            ` ${m.pathOpt.toFixed(2).padStart(6)} ${pad(m.solutions, 5)} ${pad(m.magic, 6)} ${pad(m.enemies, 8)}  ${m.bot.toFixed(3)} ${m.score.toFixed(1).padStart(6)}  ${band(m.score)}`,
+            ` ${m.pathOpt.toFixed(2).padStart(6)} ${pad(m.solutions, 5)} ${pad(m.magic, 6)} ${pad(m.enemies, 8)}  ${m.bot.toFixed(3)} ${`${(winWithin(m.bot) * 100).toFixed(0)}%`.padStart(8)} ${m.score.toFixed(1).padStart(6)}  ${band(m.score)}`,
     );
 });
 const TOLERANCE = 2;
@@ -114,9 +119,14 @@ for (let i = 8; i < scores.length; i++) {
 }
 ramp(scores.at(-1) === Math.max(...scores), 'the last level should be the hardest');
 for (const m of bandMismatch) ramp(false, `level ${m} (update BAND_STARTS in js/levels.js)`);
+for (const u of unfair) {
+    failures++;
+    console.log(`FAIL fair: level ${u} (too hard to win without knowing the solution)`);
+}
 const wizardAt = LEVELS.findIndex((l) => l.wizardSpots.length > 1);
 ramp(wizardAt >= 3 && wizardAt <= 7, `the wizard should be introduced in levels 4-8 (first at ${wizardAt + 1})`);
 console.log(`Ramp: 1-3 easy (<= ${BANDS.easyMax}), 4-8 medium (<= ${BANDS.mediumMax}), 9+ non-decreasing within ${TOLERANCE}.`);
+console.log(`Fair: the bot wins at least ${FAIR.minBot * 100}% of single attempts on every level (${(winWithin(FAIR.minBot) * 100).toFixed(0)}% within ${FAIR.tries} tries).`);
 
 console.log(`\nA* hints match BFS from ${checked} mid-game positions, winnable or not.`);
 

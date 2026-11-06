@@ -199,7 +199,8 @@ network the first four stop with an error (the smoke test shows this with `SMOKE
 - [x] Phase 1: hub and Art Lab upgrades on the original design, service worker, feedback XSS fix
 - [x] Shared game kit (start of Phase 2)
 - [x] Phase 2A · 2B · 2C: every original game upgraded on the kit
-- [ ] Phase 2D: Brainy Warrior is listed and being rebuilt; Shadow Dog Runner is being removed;
+- [ ] Phase 2D: Brainy Warrior is rebuilt and listed (34 levels, every one checked winnable by a
+      bot in CI); Shadow Dog Runner is being removed;
       the Sprite lab entry and the Art Lab fixes (Text Fields aspect, DPR, pinned Pickr) are open
 - [x] Phase 3: Breakout, Snake, Minesweeper, Crate Lab and Volt Flip (one-button runner)
 - [x] Phase 4: README media moved, dead files removed, CREDITS.md, CI smoke test
