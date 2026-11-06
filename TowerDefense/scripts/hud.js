@@ -75,6 +75,7 @@ const towerSrc = (name, size = 64) => (typeof Renderer3D !== 'undefined' && Rend
 const towerPic = (name, size = 64) => `<img class="pic" data-pic="${name}" src="${towerSrc(name, size)}" alt="" width="${size}" height="${size}">`;
 window.addEventListener('td:portraits', () => {
     document.querySelectorAll('img[data-pic]').forEach(img => (img.src = towerSrc(img.dataset.pic)));
+    document.querySelectorAll('img[data-epic]').forEach(img => (img.src = enemySrc(img.dataset.epic)));
 });
 
 // What each tower is for, in a few words (the build menu)
@@ -82,7 +83,8 @@ const TOWER_ROLES = {
     gun: 'Fast shots', laser: 'Steady beam', slow: 'Slows a crowd', sniper: 'Long range',
     rocket: 'Homing splash', bomb: 'Big splash', tesla: 'Chain lightning'
 };
-const enemyPic = (name, size = 48) => `<img src="${Art.enemyPortrait(name, size)}" alt="" width="${size}" height="${size}">`;
+const enemySrc = (name, size = 48) => (typeof Renderer3D !== 'undefined' && Renderer3D.enemyPortrait(name)) || Art.enemyPortrait(name, size);
+const enemyPic = (name, size = 48) => `<img data-epic="${name}" src="${enemySrc(name, size)}" alt="" width="${size}" height="${size}">`;
 
 function mapInfo(id = mapId) {
     return MAP_LIST.find(m => m.id === id) || MAP_LIST[0];

@@ -62,17 +62,25 @@ draw calls.
 
 The default view is 3D: the map as a small lit diorama seen at an angle, like
 mobile tower defense games, drawn with WebGL (three.js) at the screen's real
-resolution. The map is laid out from Kenney's *Tower Defense Kit* (CC0, in
-`models/kenney-tower-defense/`): grass and path tiles that follow the roads,
-stone build pads, trees, rocks and crystals on the walls, towers stacked from
-the kit's parts with a turret, ballista, cannon or catapult that turns and
-recoils, saucers for enemies, and the kit's selection marker. The kit shares one
-palette picture; `scripts/render3d.js` recolours it per map theme (grass and
-path colours, Frost uses the kit's snow models) and per tower and enemy (their
-coloured trims). Health bars, numbers, beams and blasts are drawn on a 2D layer
-over the map. The build menu and tower panel show renders of the 3D towers.
-Flat (in the menu) is the original top-down view, and the only one without
-WebGL. `scripts/renderer.js` passes the game's calls to the view in use.
+resolution. All models are CC0 (see `CREDITS.md`):
+
+- Map: Kenney's *Tower Defense Kit* (`models/kenney-tower-defense/`): grass and
+  path tiles that follow the roads, build pads, trees and rocks on the walls. Its
+  palette is recoloured per map theme; Frost uses the kit's snow models.
+- Towers: Quaternius's steampunk turrets (`models/quaternius/turrets/`), one per
+  tower and upgrade, on a stone plinth, in the tower's colour. Guns turn to aim and
+  recoil; crystals and coils glow.
+- Enemies: Quaternius's animated monsters (`models/quaternius/monsters/`), picked
+  to match the flat view (Slime, Crab for the Beetle, Bat for the Dart, Ghost,
+  Mushroom for the Medic, Yeti for the Golem, Skeleton for the Racer, Cyclops for
+  the Tank, Dragon and Bee for the bosses). They walk, flash when hit and play
+  their death.
+- Effects: fireballs, smoke, shockwaves and a flash of light for explosions, a pop
+  for each kill, beams and bolts. Damage numbers only show big hits.
+
+The build menu, the tower panel and the wave preview show renders of the 3D
+models. Flat (in the menu) is the original top-down view, and the only one
+without WebGL. `scripts/renderer.js` passes the game's calls to the view in use.
 
 Tower sounds are mixed quieter than the interface, each has a cap on how many
 copies play at once and how long one rings, and everything goes through a
