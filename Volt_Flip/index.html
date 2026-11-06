@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#09090b" />
+    <meta name="description" content="Volt Flip for Game Lab: a one-button endless runner. Flip gravity between the floor and the ceiling, dodge spikes, holes, drones and shutters, and chain volt shards for a multiplier." />
+    <title>Volt Flip · Game Lab</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="../assets/fonts/chakra-petch-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="app" id="app">
+      <canvas id="view" role="img" aria-label="Volt Flip corridor"></canvas>
+
+      <header class="hud" id="hud">
+        <div class="hud-block hud-score">
+          <span class="hud-label">Score</span>
+          <span class="hud-value" id="score">0</span>
+        </div>
+        <div class="hud-block hud-mult" id="mult-box" data-level="1">
+          <span class="hud-label">Multiplier</span>
+          <span class="hud-value"><span id="mult">×1</span><span class="pips" id="pips" aria-hidden="true"></span></span>
+        </div>
+        <div class="hud-block hud-dist">
+          <span class="hud-label">Distance</span>
+          <span class="hud-value"><span id="dist">0</span><small> m</small></span>
+        </div>
+        <div class="hud-block hud-best">
+          <span class="hud-label">Best</span>
+          <span class="hud-value" id="best">0</span>
+        </div>
+        <div class="hud-actions">
+          <button type="button" class="icon-btn" id="btn-mute" aria-pressed="false" aria-label="Mute sound (M)" title="Sound (M)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" /><path class="ic-waves" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" /><path class="ic-cross" d="M16 9l6 6M22 9l-6 6" /></svg>
+          </button>
+          <button type="button" class="icon-btn" id="btn-pause" aria-label="Pause (P)" title="Pause (P)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" /></svg>
+          </button>
+        </div>
+      </header>
+
+      <p class="hint" id="hint" hidden><kbd>Tap</kbd> <kbd>Click</kbd> or <kbd>Space</kbd> to flip gravity</p>
+      <p class="countdown" id="countdown" hidden aria-hidden="true"></p>
+
+      <!-- Title -->
+      <section class="screen screen--title" data-screen="title" aria-labelledby="title-h">
+        <div class="card card--title">
+          <p class="eyebrow">Game Lab · Arcade</p>
+          <h1 class="wordmark" id="title-h">Volt<span>Flip</span></h1>
+          <p class="tagline">One button. Two gravities. Keep the current flowing.</p>
+          <dl class="result result--title">
+            <div><dt>Best score</dt><dd id="title-best">0</dd></div>
+            <div><dt>Furthest</dt><dd id="title-far">0 m</dd></div>
+          </dl>
+          <div class="stack">
+            <button type="button" class="btn btn--primary" data-action="start">Run <kbd>Space</kbd></button>
+            <button type="button" class="btn btn--ghost" data-action="help">How to play</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Help -->
+      <section class="screen" data-screen="help" aria-labelledby="help-h" hidden>
+        <div class="card card--wide">
+          <h2 id="help-h">How to play</h2>
+          <div class="help-cols">
+            <div>
+              <h3>One button</h3>
+              <p>Tap, click or press <kbd>Space</kbd> to flip gravity. The courier falls to the other rail and keeps running. You can flip only from a rail; a tap just before landing is kept and flips you on touchdown.</p>
+              <p>The run speeds up the further you get, and the gaps between obstacles shrink. New obstacles join at 120, 220, 420, 700, 950, 1250 and 1700 m.</p>
+              <p><kbd>P</kbd> or <kbd>Esc</kbd> pause · <kbd>M</kbd> mute. The run pauses by itself when you switch tabs.</p>
+            </div>
+            <div>
+              <h3>In the corridor</h3>
+              <ul class="legend">
+                <li><span class="sw sw--spike" aria-hidden="true"></span>Spikes and pylons: be on the other rail.</li>
+                <li><span class="sw sw--hole" aria-hidden="true"></span>Holes: a rail with red caps has no floor. Don't run into them.</li>
+                <li><span class="sw sw--drone" aria-hidden="true"></span>Drones patrol up and down their dotted track. Double-ringed ones reach the rails.</li>
+                <li><span class="sw sw--shutter" aria-hidden="true"></span>Shutters burn one half at a time, then pause while the other half charges.</li>
+                <li><span class="sw sw--shard" aria-hidden="true"></span>Volt shards: 25 points × multiplier. Eight in a row (or close calls) raise it, up to ×5. Missing a row lowers it.</li>
+                <li><span class="sw sw--shield" aria-hidden="true"></span>Shield: takes one hit or throws you out of a hole. Resets the multiplier.</li>
+                <li><span class="sw sw--magnet" aria-hidden="true"></span>Magnet: pulls nearby shards in for 7 s.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="row"><button type="button" class="btn btn--ghost" data-action="back">Back <kbd>Esc</kbd></button></div>
+        </div>
+      </section>
+
+      <!-- Pause -->
+      <section class="screen" data-screen="paused" aria-labelledby="pause-h" hidden>
+        <div class="card card--small">
+          <h2 id="pause-h">Paused</h2>
+          <p class="muted" id="pause-sub"></p>
+          <div class="stack">
+            <button type="button" class="btn btn--primary" data-action="resume">Resume <kbd>Space</kbd></button>
+            <button type="button" class="btn" data-action="restart">Restart</button>
+            <button type="button" class="btn btn--ghost" data-action="quit">Quit to title</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Game over -->
+      <section class="screen screen--over" data-screen="over" aria-labelledby="over-h" hidden>
+        <div class="card card--small">
+          <p class="eyebrow">Signal lost</p>
+          <h2 id="over-h"></h2>
+          <dl class="result">
+            <div><dt>Score</dt><dd id="res-score"></dd></div>
+            <div><dt>Distance</dt><dd id="res-dist"></dd></div>
+            <div><dt>Shards</dt><dd id="res-shards"></dd></div>
+            <div><dt>Top multiplier</dt><dd id="res-mult"></dd></div>
+          </dl>
+          <p class="new-best" id="new-best" hidden>New personal best</p>
+          <p class="muted best-line" id="res-best"></p>
+          <div class="stack">
+            <button type="button" class="btn btn--primary" data-action="restart">Run again <kbd>Space</kbd></button>
+            <button type="button" class="btn btn--ghost" data-action="quit">Title <kbd>Esc</kbd></button>
+          </div>
+        </div>
+      </section>
+    </div>
+    <p class="sr-only" id="announce" aria-live="polite"></p>
+    <noscript><p class="noscript">Volt Flip needs JavaScript to run.</p></noscript>
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

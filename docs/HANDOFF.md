@@ -8,6 +8,7 @@ State of the Game Lab upgrade, for continuing in a new session.
    self-hosted fonts/icons/three.js, accessibility, feedback XSS fix, service worker v2
 3. `upgrade/phase-2-games` – shared kit (`assets/kit/`) and every original game upgraded
 4. `upgrade/phase-3-new-games` – adds Breakout, Snake, Minesweeper, Crate Lab (Sokoban).
+   Volt Flip (the one-button endless runner, `Volt_Flip/`) completes Phase 3.
 5. `upgrade/phase-4-hygiene` – README media moved to `docs/media/`, dead files removed,
    `CREDITS.md`, `_config.yml` deploy excludes, browser smoke test and CI workflow.
 6. `upgrade/phase-5-polish` – on top of phase 4: games fill the window (kit shell renders no
@@ -31,6 +32,9 @@ State of the Game Lab upgrade, for continuing in a new session.
   HuggersFight, the commercial LSD track, Namco sounds, non-commercial Hangman sounds).
 - Saved progress in Breakout, Snake and Minesweeper is keyed by level number, and their level
   order changed in phase 5; harmless while phase 3+ is not live.
+- Volt Flip: difficulty is checked by bots only (a perfect look-ahead bot and a casual one with
+  0.2–0.4 s reactions, median about 1700 m). Real players may find the late margin (0.17 s) tight;
+  the levers are `SPEED` and `MARGIN` in `Volt_Flip/js/config.js`.
 - Brainy Warrior's last six levels are very hard (bot success near 0%); needs playtesting.
 - Tower Defense balance changed in phase 5 (wave bonus, extra gold per portal, Hive portals close
   after the wave, per-map enemy health) so a fair bot wins all 18 maps; existing maps are easier
@@ -48,7 +52,8 @@ State of the Game Lab upgrade, for continuing in a new session.
   `node Breakout/tools/verify-levels.mjs`, `node Snake/tools/verify.mjs`, `node Minesweeper/test/solver.test.mjs`,
   `node Souls-Bumper/tools/verify-levels.mjs` (`node Souls-Bumper/tools/map.mjs <n>` prints a level),
   `node Gravity_Wells/tools/verify-puzzles.mjs`, `node ReWire/tools/verify-levels.mjs`,
-  `node Raven/tools/verify-levels.mjs` (re-record a changed Raven level with
+  `node Raven/tools/verify-levels.mjs`, `node Volt_Flip/tools/verify.mjs` (bot survives 4000 m on
+  every seed; prints the speed and margin ramp) (re-record a changed Raven level with
   `node Raven/tools/search-runs.mjs <n> --seeds 1`). Each prints its difficulty table.
 - Brainy Warrior budgets: `CHROME=<chromium> node Brainy_Warrior/tools/perf-check.mjs`.
 - Tower Defense: `node TowerDefense/tools/verify-maps.mjs` (bot wins every map) and

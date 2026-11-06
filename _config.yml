@@ -14,6 +14,7 @@ exclude:
   - Reef_Keeper/tools
   - Snake/tools
   - Sokoban/tools
+  - Volt_Flip/tools
   - Souls-Bumper/tools
   - TowerDefense/tools
   - PacMan/src
