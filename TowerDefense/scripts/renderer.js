@@ -5,6 +5,8 @@
 
 const Renderer = (() => {
     let view = '3d';
+    let chosen = '3d';          // what the player picked; a fallback to Flat never changes it
+    let failed = '';            // why the 3D view could not run, if it could not
     let holder = null;
     let active = null;
     let upgradeRange = 0;
@@ -13,7 +15,11 @@ const Renderer = (() => {
 
     function init(h) {
         holder = h;
-        if (view === '3d' && !has3D()) view = 'flat';
+        if (view === '3d' && !has3D()) {
+            view = 'flat';
+            failed = !window.THREE ? 'three.js did not load' : 'WebGL is off or blocked in this browser';
+            setTimeout(() => typeof toast === 'function' && toast(`The 3D view could not start (${failed}), showing Flat`, 'error'), 800);
+        }
         active = pick();
         active.init(holder);
     }
@@ -21,6 +27,8 @@ const Renderer = (() => {
     // '3d' or 'flat' (older saved settings said 'raised' for the angled view)
     function setView(v) {
         v = v === 'flat' ? 'flat' : '3d';
+        chosen = v;
+        if (v === '3d' && failed) return;
         if (v === '3d' && holder && !has3D()) v = 'flat';
         if (v === view && active) return;
         view = v;
@@ -34,8 +42,27 @@ const Renderer = (() => {
         active.mapChanged();
     }
 
+    // The 3D view could not load or draw: show Flat for this visit, say why, and keep
+    // the player's choice so the next visit tries 3D again
+    function fallback(reason) {
+        if (failed) return;
+        failed = reason || 'unknown error';
+        if (active === Renderer3D) {
+            view = 'flat';
+            active.suspend();
+            active = RendererFlat;
+            active.init(holder);
+            active.upgradeRange = upgradeRange;
+            active.mapChanged();
+        }
+        if (typeof toast === 'function') toast(`The 3D view could not load (${failed}), showing Flat`, 'error');
+        if (typeof syncSettings === 'function') syncSettings();
+    }
+
     return {
-        init, setView,
+        init, setView, fallback,
+        get chosen() { return chosen; },
+        get failed() { return failed; },
         resize: () => active && active.resize(),
         mapChanged: (t) => {
             RendererFlat.mapChanged(t);

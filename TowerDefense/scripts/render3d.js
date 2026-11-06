@@ -648,6 +648,7 @@ const Renderer3D = (() => {
     let kitImage = null;        // the palette picture
     let kitLoading = false;
     let kitFailed = false;
+    let kitError = '';
 
     // Quaternius (CC0): turrets, animated monsters, and nature in models/quaternius
     const QT_DIR = 'models/quaternius/';
@@ -734,6 +735,7 @@ const Renderer3D = (() => {
             })
             .catch((e) => {
                 console.warn('3D models failed to load, using Flat:', e);
+                kitError = 'a model did not load: ' + String(e && e.message || e).replace(/^.*\//, '').slice(0, 60);
                 kitFailed = true;
             })
             .finally(() => { kitLoading = false; });
@@ -2537,7 +2539,7 @@ const Renderer3D = (() => {
         trackQuality(dt);
         if (!inited || !cols) return;
         if (kitFailed) {
-            Renderer.setView('flat');
+            Renderer.fallback(kitError);
             return;
         }
         if (!kit) {
@@ -2554,7 +2556,7 @@ const Renderer3D = (() => {
                 // Something the 3D view needs is missing: the flat view always works
                 console.warn('3D view failed, using Flat:', e);
                 kitFailed = true;
-                Renderer.setView('flat');
+                Renderer.fallback(String(e && e.message || e).slice(0, 80));
                 return;
             }
             refit();
