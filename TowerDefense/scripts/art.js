@@ -86,14 +86,7 @@ const Art = (() => {
         lightningStrike: { main: '#50ebff', dark: '#0f7d91', muzzle: [[0, -0.16]], level: 2 }
     };
 
-    // Raised view: the base art is the top of a solid body; that body gets its own
-    // shading, so the plate's drop shadow is left out, and the shape is noted
-    let plateShadow = true;
-    let plateShape = 'round';
-
     function basePlate(g, shape, main, dark) {
-        plateShape = shape;
-        if (!plateShadow) return basePlateTop(g, shape, main);
         // soft drop shadow
         g.save();
         g.translate(0.05, 0.07);
@@ -102,10 +95,6 @@ const Art = (() => {
         g.fillStyle = '#000';
         g.fill();
         g.restore();
-        basePlateTop(g, shape, main);
-    }
-
-    function basePlateTop(g, shape, main) {
         shapePath(g, shape, 0.44);
         fo(g, METAL_LO, OUT, 0.04);
         g.save();
@@ -793,7 +782,7 @@ const Art = (() => {
 
     // Build every sprite for a tile size of `tile` device pixels
     const MAX_TILE = 320;
-    function build(tile, tilt = 1) {
+    function build(tile) {
         tile = Math.max(8, Math.min(MAX_TILE, Math.round(tile)));
         const atlas = new Atlas(tile > 200 ? 4096 : tile > 90 ? 2048 : 1024);
         const S = {};
@@ -816,8 +805,6 @@ const Art = (() => {
             S['turret_' + name] = atlas.add('turret_' + name, T * 1.8, T * 1.8, unit(g => TURRETS[name](g, a), TURRET_SCALE));
         });
 
-        if (tilt < 1) buildRaised(atlas, S, T, tilt, unit);
-
         Object.keys(ENEMY_ART).forEach(name => {
             const a = ENEMY_ART[name];
             const d = T * a.r * 2 * 1.12;
@@ -828,11 +815,6 @@ const Art = (() => {
                 ENEMIES[name](g);
             };
             S['enemy_' + name] = atlas.add('enemy_' + name, d, d, draw);
-            // Raised view: the body's side, in a darker shade of the enemy's colour
-            if (tilt < 1) {
-                const sil = silhouette(draw, d, d, shade(a.color, 0.42));
-                S[`enemy_${name}_side`] = atlas.add(`enemy_${name}_side`, d, d, (g) => g.drawImage(sil, -sil.width / 2, -sil.height / 2));
-            }
             ['white', 'ice', 'poison', 'regen'].forEach(tint => {
                 const col = { white: '#ffffff', ice: '#9fdcff', poison: '#9cff3a', regen: '#ff6fb7' }[tint];
                 const sil = silhouette(draw, d, d, col);
@@ -976,98 +958,18 @@ const Art = (() => {
         });
         S.gate = atlas.add('gate', T * 1.1, T * 1.1, unit(g => drawGate(g)));
         atlas.finish();
-        return { atlas: atlas.canvas, s: S, tile: T, tilt };
-    }
-
-    // Height of a tower's body in the raised view, in tiles
-    const BODY_H = 0.3;
-
-    function shade(hex, k) {
-        const n = parseInt(hex.slice(1), 16);
-        const c = (v) => Math.round(v * k).toString(16).padStart(2, '0');
-        return `#${c(n >> 16 & 255)}${c(n >> 8 & 255)}${c(n & 255)}`;
-    }
-
-    // Raised view sprites, drawn at the tilt so nothing is squashed later: each
-    // tower's body (its base shape as a solid block with lit sides, the base art on
-    // top), a turret's underside for its thickness, and the gate as a small keep.
-    // A body sprite's `ay` is the pixel row of the ground centre under it.
-    function buildRaised(atlas, S, T, tilt, unit) {
-        const topH = 1.04 * tilt;
-        const Hu = topH + BODY_H + 0.04;
-        const solid = (draw, shapeOf, colors, h = BODY_H) => unit(g => {
-            const ty = -Hu / 2 + 0.52 * tilt;
-            const shape = shapeOf();
-            const n = Math.max(2, Math.ceil(h * T));
-            // Side: the footprint stamped from the foot up to the top
-            for (let i = 0; i <= n; i++) {
-                const f = 1 - i / n;              // 1 at the foot, 0 at the top
-                g.save();
-                g.translate(0, ty + h * f);
-                g.scale(1, tilt);
-                shapePath(g, shape, 0.44);
-                g.fillStyle = i === 0 ? OUT : f > 0.72 ? colors.low : f > 0.18 && f < 0.5 ? colors.band : colors.side;
-                g.fill();
-                g.restore();
-            }
-            // Light from the upper left: brighter left side, darker right
-            g.save();
-            g.globalCompositeOperation = 'source-atop';
-            const lg = g.createLinearGradient(-0.46, 0, 0.46, 0);
-            lg.addColorStop(0, 'rgba(255,255,255,0.22)');
-            lg.addColorStop(0.45, 'rgba(255,255,255,0)');
-            lg.addColorStop(1, 'rgba(0,0,0,0.42)');
-            g.fillStyle = lg;
-            g.fillRect(-0.6, ty - 0.1, 1.2, h + 0.6);
-            g.restore();
-            // Top face
-            g.save();
-            g.translate(0, ty);
-            g.scale(1, tilt);
-            draw(g);
-            g.restore();
-        });
-        const add = (key, draw, shapeOf, colors, h) => {
-            const s = atlas.add(key, T * 1.04, T * Hu, solid(draw, shapeOf, colors, h));
-            s.ay = (Hu / 2 + (-Hu / 2 + 0.52 * tilt) + h) * T + 1;
-            S[key] = s;
-        };
-        Object.keys(TOWER_ART).forEach(name => {
-            const a = TOWER_ART[name];
-            const level = a.level || 1;
-            let shape = 'round';
-            const top = (g) => {
-                plateShadow = false;
-                BASES[name](g, a);
-                plateShadow = true;
-                shape = plateShape;
-                levelMark(g, level);
-            };
-            // Learn the shape before the side is drawn
-            const probe = document.createElement('canvas').getContext('2d');
-            plateShadow = false;
-            BASES[name](probe, a);
-            plateShadow = true;
-            shape = plateShape;
-            add('body_' + name, top, () => shape, { side: METAL, low: METAL_LO, band: a.dark }, BODY_H);
-            const tw = T * 1.8;
-            const sil = silhouette(unit(g => TURRETS[name](g, a), TURRET_SCALE), tw, tw, '#16181e');
-            S['turretSide_' + name] = atlas.add('turretSide_' + name, tw, tw, (g) => g.drawImage(sil, -sil.width / 2, -sil.height / 2));
-        });
-        add('body_gate', (g) => { plateShadow = false; drawGate(g); plateShadow = true; }, () => 'square', { side: '#5a4a2a', low: '#3a2f1a', band: '#8a6a1f' }, BODY_H * 1.2);
+        return { atlas: atlas.canvas, s: S, tile: T };
     }
 
     // The player's base: a small keep with a crystal heart
     function drawGate(g) {
-        if (plateShadow) {
-            g.save();
-            g.translate(0.04, 0.06);
-            g.globalAlpha = 0.35;
-            rr(g, -0.42, -0.42, 0.84, 0.84, 0.12);
-            g.fillStyle = '#000';
-            g.fill();
-            g.restore();
-        }
+        g.save();
+        g.translate(0.04, 0.06);
+        g.globalAlpha = 0.35;
+        rr(g, -0.42, -0.42, 0.84, 0.84, 0.12);
+        g.fillStyle = '#000';
+        g.fill();
+        g.restore();
         rr(g, -0.42, -0.42, 0.84, 0.84, 0.12);
         fo(g, '#6b5a2e', OUT, 0.04);
         [[-0.32, -0.32], [0.32, -0.32], [0.32, 0.32], [-0.32, 0.32]].forEach(([x, y]) => {
@@ -1129,5 +1031,5 @@ const Art = (() => {
         return (portraitCache[key] = c.toDataURL());
     }
 
-    return { build, MAX_TILE, BODY_H, TURRET_SCALE, TOWER_ART, ENEMY_ART, towerPortrait, enemyPortrait, drawGate, GLOWS };
+    return { build, MAX_TILE, TURRET_SCALE, TOWER_ART, ENEMY_ART, towerPortrait, enemyPortrait, drawGate, GLOWS };
 })();

@@ -8,6 +8,7 @@
     <link href="css/style.css" rel="stylesheet">
     <link href="./imgs/tower.svg" rel="icon" type="image/svg+xml" />
     <link href="./imgs/tower.png" rel="icon" type="image/png" />
+    <script type="importmap">{ "imports": { "three": "../assets/vendor/three/three.module.min.js" } }</script>
     <script type="module" src="../assets/kit/index.js"></script>
     <script src="vendor/p5-1.11.2.min.js" defer></script>
     <script src="vendor/lz-string-1.5.0.min.js" defer></script>
@@ -25,7 +26,15 @@
     <script src="scripts/terrain.js" defer></script>
     <script src="scripts/art.js" defer></script>
     <script src="scripts/fx.js" defer></script>
+    <script type="module">
+      import * as THREE from 'three';
+      import { GLTFLoader } from './vendor/three-addons-0.160.0/loaders/GLTFLoader.js';
+      window.THREE = THREE;
+      window.GLTFLoader = GLTFLoader;
+    </script>
     <script src="scripts/render.js" defer></script>
+    <script src="scripts/render3d.js" defer></script>
+    <script src="scripts/renderer.js" defer></script>
     <script src="scripts/waves.js" defer></script>
     <script src="scripts/sketch.js" defer></script>
     <script src="scripts/hud.js" defer></script>
@@ -233,7 +242,7 @@
                 <div class="set-row">
                   <span id="view-label">Map</span>
                   <div class="seg small" role="group" aria-labelledby="view-label" id="view-seg">
-                    <button type="button" data-view="raised">2.5D</button>
+                    <button type="button" data-view="3d">3D</button>
                     <button type="button" data-view="flat">Flat</button>
                   </div>
                 </div>

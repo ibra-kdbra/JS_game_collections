@@ -1,0 +1,2333 @@
+// 3D view: the map as a small lit diorama seen from a fixed angle, like mobile
+// tower defense games. WebGL through three.js (vendored in assets/vendor/three,
+// loaded by index.html as window.THREE). The game rules never see any of this:
+// positions come from the same towers / enemies / projectiles the flat view draws.
+//
+// Units: one tile is one world unit. Game x maps to world X, game y to world Z,
+// and height is Y. The camera looks down at PITCH from the +Z side, so the screen
+// keeps the flat view's layout (right is +x, down is +y).
+//
+// Layers:
+// - WebGL: ground (the flat view's terrain picture as a texture, unlit so its
+//   colours stay true, with real shadows laid over it), walls as solid blocks with
+//   their tops and sides textured, props on the walls (trees, rocks, crystals,
+//   rooftop machines) that sway, towers built from parts with turrets that turn and
+//   recoil, enemies as instanced bodies that walk, bob and flash when hit, missiles,
+//   route arrows, portals, the gate, ranges and the tower being placed.
+// - A 2D canvas on top for what reads best flat on the glass: health bars, gold and
+//   damage numbers, the price tag, beams, sparks, smoke and blast rings (projected
+//   to where they happen), and the vignette.
+
+const Renderer3D = (() => {
+    const TAU = Math.PI * 2;
+    const params = new URLSearchParams(location.search);
+    const perfMode = params.get('perf') === '1';
+    let T3 = null;
+
+    let holder = null;
+    let canvas = null;
+    let overlay = null;
+    let octx = null;
+    let gl = null;
+    let scene = null;
+    let camera = null;
+    let inited = false;
+    let dpr = 1;
+    let cssW = 0;
+    let cssH = 0;
+    let holderH = 0;
+
+    // Camera: a point on the ground it looks at, and its distance (zoom 1 = the
+    // whole map fits)
+    const PITCH = 56 * Math.PI / 180;
+    const FOV = 28;
+    const target = { x: 0, z: 0 };
+    let fit = { dist: 10, x: 0, z: 0 };
+    let zoom = 1;
+    let fillZoom = 1;
+    let fillPending = false;
+
+    let theme = 'meadow';
+    let mapKey = '';
+    let hover = null;
+    let shakeX = 0;
+    let shakeY = 0;
+    let time = 0;
+    let last = performance.now();
+    let upgradeRange = 0;
+    let SP = null;              // the flat view's sprite atlas, for overlay effects
+    let drawCalls = 0;
+
+    // Heights in tiles
+    const FX_H = 0.5;           // beams, missiles and blasts
+    const TOP_H = 0.34;         // top of a tower's body, where the turret sits
+
+    // Adaptive quality
+    const frameTimes = new Float32Array(90);
+    let frameIdx = 0;
+    let qualityAuto = true;
+    let slowFor = 0;
+    let fastFor = 0;
+    const perf = { el: null, lastShow: 0, renderAcc: 0, logicAcc: 0, n: 0 };
+
+    // Scene parts
+    let world = null;           // rebuilt per map: board, ground, walls, props
+    let dyn = null;             // towers, enemies and the rest
+    let sun = null;
+    let hemi = null;
+    let props = [];             // { mesh, base: Matrix4[], sway: bool, phase: [] }
+
+    // ---------- Small helpers ----------
+
+    const V = () => new T3.Vector3();
+    let tmpM = null;
+    let tmpM2 = null;
+    let tmpQ = null;
+    let tmpV = null;
+    let tmpS = null;
+    let tmpC = null;
+    let ray = null;
+    let tint = null;
+    const vp = new Float32Array(16);
+    let fx = 1;                 // projection focal length in CSS px
+
+    const hashT = (x, y, s) => Terrain.hash(x, y, s);
+
+    const matCache = new Map();
+    function mat(color, o = {}) {
+        const key = `${color}|${o.emissive || ''}|${o.ei || 0}|${o.rough || 0}|${o.metal || 0}|${o.vc ? 1 : 0}`;
+        let m = matCache.get(key);
+        if (!m) {
+            m = new T3.MeshStandardMaterial({
+                color, roughness: o.rough ?? 0.62, metalness: o.metal ?? 0.18, flatShading: true,
+                emissive: o.emissive || 0x000000, emissiveIntensity: o.ei ?? 1, vertexColors: !!o.vc
+            });
+            matCache.set(key, m);
+        }
+        return m;
+    }
+
+    // Merge parts ({ geo, color, m: Matrix4 }) into one geometry with vertex colours
+    function merge(parts) {
+        const pos = [];
+        const nrm = [];
+        const col = [];
+        const c = new T3.Color();
+        parts.forEach(p => {
+            const g = (p.geo.index ? p.geo.toNonIndexed() : p.geo.clone());
+            if (p.m) g.applyMatrix4(p.m);
+            g.computeVertexNormals();
+            const P = g.attributes.position.array;
+            const N = g.attributes.normal.array;
+            c.set(p.color);
+            for (let i = 0; i < P.length; i++) pos.push(P[i]);
+            for (let i = 0; i < N.length; i++) nrm.push(N[i]);
+            for (let i = 0; i < P.length / 3; i++) col.push(c.r, c.g, c.b);
+            g.dispose();
+        });
+        const g = new T3.BufferGeometry();
+        g.setAttribute('position', new T3.Float32BufferAttribute(pos, 3));
+        g.setAttribute('normal', new T3.Float32BufferAttribute(nrm, 3));
+        g.setAttribute('color', new T3.Float32BufferAttribute(col, 3));
+        return g;
+    }
+
+    // Matrix from position, Euler rotation and scale
+    function M(x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = sx, sz = sx) {
+        const m = new T3.Matrix4();
+        m.compose(new T3.Vector3(x, y, z), new T3.Quaternion().setFromEuler(new T3.Euler(rx, ry, rz)), new T3.Vector3(sx, sy, sz));
+        return m;
+    }
+
+    function disposeTree(o) {
+        o.traverse(n => {
+            if (n.geometry && !n.geometry._shared) n.geometry.dispose();
+            if (n.material && n.material._own) {
+                if (n.material.map) n.material.map.dispose();
+                if (n.material.emissiveMap) n.material.emissiveMap.dispose();
+                n.material.dispose();
+            }
+        });
+    }
+
+    // Soft round glow texture for sprites
+    let glowTex = null;
+    function glowTexture() {
+        if (glowTex) return glowTex;
+        const c = document.createElement('canvas');
+        c.width = c.height = 128;
+        const g = c.getContext('2d');
+        const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+        grad.addColorStop(0, 'rgba(255,255,255,1)');
+        grad.addColorStop(0.25, 'rgba(255,255,255,0.55)');
+        grad.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = grad;
+        g.fillRect(0, 0, 128, 128);
+        glowTex = new T3.CanvasTexture(c);
+        glowTex.colorSpace = T3.SRGBColorSpace;
+        return glowTex;
+    }
+    function glowSprite(color, size, opacity = 1) {
+        const m = new T3.SpriteMaterial({ map: glowTexture(), color, transparent: true, opacity, blending: T3.AdditiveBlending, depthWrite: false, toneMapped: false });
+        m._own = true;
+        const s = new T3.Sprite(m);
+        s.scale.set(size, size, 1);
+        return s;
+    }
+
+    // ---------- Setup ----------
+
+    function available() {
+        if (!window.THREE) return false;
+        try {
+            const c = document.createElement('canvas');
+            return !!(c.getContext('webgl2') || c.getContext('webgl'));
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function init(holderEl) {
+        if (inited) {
+            canvas.style.display = '';
+            overlay.style.display = '';
+            zoomEls.forEach(b => (b.style.display = ''));
+            resize(true);
+            return;
+        }
+        T3 = window.THREE;
+        holder = holderEl;
+        tmpM = new T3.Matrix4();
+        tmpM2 = new T3.Matrix4();
+        tmpQ = new T3.Quaternion();
+        tmpV = new T3.Vector3();
+        tmpS = new T3.Vector3();
+        tmpC = new T3.Color();
+        tint = new T3.Color();
+        ray = new T3.Raycaster();
+        canvas = document.createElement('canvas');
+        canvas.id = 'map';
+        canvas.setAttribute('aria-label', 'Game map');
+        canvas.className = 'map3d';
+        holder.prepend(canvas);
+        overlay = document.createElement('canvas');
+        overlay.className = 'map-overlay';
+        overlay.setAttribute('aria-hidden', 'true');
+        canvas.after(overlay);
+        octx = overlay.getContext('2d');
+        gl = new T3.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+        gl.toneMapping = T3.NoToneMapping;
+        gl.shadowMap.enabled = true;
+        gl.shadowMap.type = T3.PCFSoftShadowMap;
+        scene = new T3.Scene();
+        camera = new T3.PerspectiveCamera(FOV, 1, 0.1, 400);
+        hemi = new T3.HemisphereLight(0xf2f6ff, 0x50566a, 1.25);
+        scene.add(hemi);
+        sun = new T3.DirectionalLight(0xfff2de, 1.85);
+        sun.castShadow = true;
+        sun.shadow.mapSize.set(2048, 2048);
+        sun.shadow.bias = -0.0008;
+        sun.shadow.normalBias = 0.02;
+        scene.add(sun);
+        scene.add(sun.target);
+        dyn = new T3.Group();
+        scene.add(dyn);
+        buildDynamic();
+        loadKit();
+        bindInput();
+        buildZoomControls();
+        if (perfMode) {
+            perf.el = document.createElement('div');
+            perf.el.className = 'perf';
+            holder.append(perf.el);
+        }
+        inited = true;
+        resize(true);
+    }
+
+    // Hide while the flat view is shown
+    function suspend() {
+        if (!inited) return;
+        canvas.style.display = 'none';
+        overlay.style.display = 'none';
+        zoomEls.forEach(b => (b.style.display = 'none'));
+        hover = null;
+    }
+
+    const PHONE_STRIP = 60;
+    const GUTTER = 54;
+
+    function resize(force) {
+        if (!holder) return;
+        const w = holder.clientWidth;
+        const hh = holder.clientHeight;
+        let h = hh;
+        if (compactView.matches) h = Math.max(120, hh - PHONE_STRIP);
+        const q = FX.quality;
+        const nd = Math.min(window.devicePixelRatio || 1, [1.25, 2, 3][q]);
+        if (!force && w === cssW && h === cssH && nd === dpr && hh === holderH) return;
+        cssW = w;
+        cssH = h;
+        holderH = hh;
+        dpr = nd;
+        gl.setPixelRatio(dpr);
+        gl.setSize(w, h, false);
+        canvas.style.width = `${w}px`;
+        canvas.style.height = `${h}px`;
+        overlay.width = Math.max(1, Math.round(w * dpr));
+        overlay.height = Math.max(1, Math.round(h * dpr));
+        overlay.style.width = `${w}px`;
+        overlay.style.height = `${h}px`;
+        sun.shadow.mapSize.set(q === 2 ? 2048 : 1024, q === 2 ? 2048 : 1024);
+        if (sun.shadow.map) {
+            sun.shadow.map.dispose();
+            sun.shadow.map = null;
+        }
+        gl.shadowMap.enabled = q > 0;
+        vignette = null;
+        camera.aspect = w / Math.max(1, h);
+        camera.updateProjectionMatrix();
+        refit();
+    }
+
+    // ---------- Camera ----------
+
+    function placeCamera(cam, tx, tz, dist) {
+        cam.position.set(tx, Math.sin(PITCH) * dist, tz + Math.cos(PITCH) * dist);
+        cam.lookAt(tx, 0, tz);
+        cam.updateMatrixWorld();
+    }
+
+    // Distance and look-at point that fit the map's box into w x h CSS px whose
+    // centre is at (cx, cy); onlyH fits the height and lets the width overflow
+    function fitBox(w, h, cx, cy, onlyH) {
+        const cam = camera.clone();
+        cam.aspect = cssW / Math.max(1, cssH);
+        cam.updateProjectionMatrix();
+        const pts = [];
+        for (const X of [0, cols]) for (const Z of [0, rows]) for (const Y of [0, 0.45]) pts.push(new T3.Vector3(X, Y, Z));
+        let tx = cols / 2;
+        let tz = rows / 2;
+        let dist = 10;
+        const v = new T3.Vector3();
+        const box = () => {
+            let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+            for (const p of pts) {
+                v.copy(p).project(cam);
+                const sx = (v.x * 0.5 + 0.5) * cssW;
+                const sy = (-v.y * 0.5 + 0.5) * cssH;
+                x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
+            }
+            return { x0, x1, y0, y1 };
+        };
+        for (let pass = 0; pass < 4; pass++) {
+            let lo = 0.5;
+            let hi = 600;
+            for (let i = 0; i < 36; i++) {
+                const mid = (lo + hi) / 2;
+                placeCamera(cam, tx, tz, mid);
+                const b = box();
+                const ok = (onlyH || b.x1 - b.x0 <= w) && b.y1 - b.y0 <= h;
+                if (ok) hi = mid; else lo = mid;
+            }
+            dist = hi;
+            placeCamera(cam, tx, tz, dist);
+            const b = box();
+            // Move the look-at point so the box's centre lands on (cx, cy)
+            const k = pxPerTileAt(cam, tx, tz);
+            if (!onlyH) tx += ((b.x0 + b.x1) / 2 - cx) / k;
+            tz += ((b.y0 + b.y1) / 2 - cy) / (k * Math.sin(PITCH));
+        }
+        return { dist, x: tx, z: tz };
+    }
+
+    function pxPerTileAt(cam, x, z) {
+        const a = new T3.Vector3(x, 0, z).project(cam);
+        const b = new T3.Vector3(x + 1, 0, z).project(cam);
+        return Math.abs(b.x - a.x) * 0.5 * cssW;
+    }
+
+    let gutterKey = '';
+    function refit() {
+        if (!cols || !rows || !cssW) return;
+        const compact = compactView.matches;
+        const bottom = compact ? 0 : GUTTER;
+        const pad = 8;
+        fit = fitBox(cssW - pad * 2, cssH - bottom - pad * 2, cssW / 2, (cssH - bottom) / 2, false);
+        measureZoomMax();
+        if (fillPending) {
+            fillPending = false;
+            zoom = 1;
+            if (compact) {
+                const f = fitBox(cssW - pad * 2, cssH - pad * 2, cssW / 2, cssH / 2, true);
+                fillZoom = Math.max(1, Math.min(maxZoom(), fit.dist / f.dist));
+                zoom = fillZoom;
+                target.x = cols / 2;
+                target.z = f.z;
+            }
+        }
+        // Gutter for the hint and the zoom buttons (style.css reads these)
+        const g = compact ? { side: 'bottom', size: holderH - cssH } : { side: 'bottom', size: GUTTER };
+        const key = `${g.side}|${Math.round(g.size)}`;
+        if (key !== gutterKey) {
+            gutterKey = key;
+            holder.dataset.gutter = g.side;
+            holder.dataset.wide = '0';
+            holder.style.setProperty('--gutter', `${Math.round(g.size)}px`);
+        }
+        clampCamera();
+        updateZoomButtons();
+    }
+
+    // Zoom in until a tile is about 96 CSS px wide (worked out by refit)
+    let zoomMax = 3;
+    function maxZoom() {
+        return zoomMax;
+    }
+    function measureZoomMax() {
+        const cam = camera.clone();
+        placeCamera(cam, fit.x, fit.z, fit.dist);
+        const k = pxPerTileAt(cam, fit.x, fit.z);
+        zoomMax = Math.max(1.5, Math.min(5, 96 / Math.max(4, k)));
+    }
+
+    function clampCamera() {
+        zoom = Math.max(1, Math.min(maxZoom(), zoom));
+        if (zoom <= 1.001) {
+            target.x = fit.x;
+            target.z = fit.z;
+        } else {
+            // The further in, the more of the map the camera may travel over
+            const f = 1 - 1 / zoom;
+            const cx = cols / 2;
+            const cz = rows / 2;
+            const hx = cols / 2 * f + Math.abs(fit.x - cx);
+            const hz = rows / 2 * f + Math.abs(fit.z - cz) + 0.6;
+            target.x = Math.max(cx - hx, Math.min(cx + hx, target.x));
+            target.z = Math.max(fit.z - hz, Math.min(fit.z + hz, target.z));
+        }
+        placeCamera(camera, target.x, target.z, fit.dist / zoom);
+        updateVP();
+    }
+
+    function updateVP() {
+        camera.updateMatrixWorld();
+        tmpM.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+        vp.set(tmpM.elements);
+        fx = camera.projectionMatrix.elements[0] * cssW / 2;
+    }
+
+    // Screen point (CSS px in the canvas) and size of one tile there
+    const P = { x: 0, y: 0, k: 1, ok: true };
+    function proj(X, Y, Z) {
+        const e = vp;
+        const x = e[0] * X + e[4] * Y + e[8] * Z + e[12];
+        const y = e[1] * X + e[5] * Y + e[9] * Z + e[13];
+        const w = e[3] * X + e[7] * Y + e[11] * Z + e[15];
+        P.ok = w > 0.01;
+        const iw = 1 / Math.max(0.01, w);
+        P.x = (x * iw * 0.5 + 0.5) * cssW;
+        P.y = (-y * iw * 0.5 + 0.5) * cssH;
+        P.k = fx * iw;
+        return P;
+    }
+
+    // Ground point (tiles) under a CSS point of the canvas
+    function groundAt(sx, sy, out) {
+        ray.setFromCamera({ x: sx / cssW * 2 - 1, y: -(sy / cssH * 2 - 1) }, camera);
+        const o = ray.ray.origin;
+        const d = ray.ray.direction;
+        const t = d.y < -1e-6 ? -o.y / d.y : 0;
+        out.x = o.x + d.x * t;
+        out.z = o.z + d.z * t;
+        return out;
+    }
+
+    // ---------- Input ----------
+
+    const pointers = new Map();
+    let pinch = null;
+    let dragging = false;
+    const PAN_START = { mouse: 12, pen: 14, touch: 16 };
+    const TAP_SLOP = 28;
+
+    function local(e) {
+        const r = canvas.getBoundingClientRect();
+        return { x: e.clientX - r.left, y: e.clientY - r.top };
+    }
+
+    // World point (game pixels) under a page point: a tower when the press is on one
+    // (its body stands over the tiles behind it), else the ground
+    const hitList = [];
+    let overTower = false;
+    function toWorld(clientX, clientY) {
+        const r = canvas.getBoundingClientRect();
+        const sx = clientX - r.left;
+        const sy = clientY - r.top;
+        ray.setFromCamera({ x: sx / cssW * 2 - 1, y: -(sy / cssH * 2 - 1) }, camera);
+        hitList.length = 0;
+        towerModels.forEach(m => hitList.push(m.hit));
+        const hits = ray.intersectObjects(hitList, false);
+        overTower = false;
+        if (hits.length) {
+            const t = hits[0].object.userData.tower;
+            if (t && t.alive) {
+                overTower = true;
+                return { x: t.pos.x, y: t.pos.y };
+            }
+        }
+        const g = groundAt(sx, sy, {});
+        return { x: g.x * ts, y: g.z * ts };
+    }
+
+    function bindInput() {
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+        canvas.addEventListener('pointerdown', e => {
+            canvas.setPointerCapture(e.pointerId);
+            if (e.pointerType === 'mouse') hover = toWorld(e.clientX, e.clientY);
+            FX.calm(700);
+            if (e.pointerType === 'mouse' && e.button !== 0) {
+                if (e.button === 2) onMapTap(null, e);
+                return;
+            }
+            const l = local(e);
+            pointers.set(e.pointerId, { x: l.x, y: l.y, sx: l.x, sy: l.y, cx: e.clientX, cy: e.clientY, moved: false });
+            if (pointers.size === 2) {
+                const [a, b] = [...pointers.values()];
+                const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+                pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, zoom, ground: groundAt(mid.x, mid.y, {}) };
+                dragging = true;
+            }
+        });
+        canvas.addEventListener('pointermove', e => {
+            if (e.pointerType === 'mouse') {
+                hover = toWorld(e.clientX, e.clientY);
+                canvas.classList.toggle('over-tower', overTower);
+                FX.calm(500);
+            }
+            const p = pointers.get(e.pointerId);
+            if (!p) return;
+            const l = local(e);
+            const px = p.x;
+            const py = p.y;
+            p.x = l.x;
+            p.y = l.y;
+            if (!p.moved && Math.hypot(p.x - p.sx, p.y - p.sy) > (PAN_START[e.pointerType] || 14)) p.moved = true;
+            if (pinch && pointers.size >= 2) {
+                const [a, b] = [...pointers.values()];
+                const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+                const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+                zoom = Math.max(1, Math.min(maxZoom(), pinch.zoom * d / pinch.d));
+                clampCamera();
+                // keep the ground point under the fingers in place
+                const g = groundAt(mid.x, mid.y, {});
+                target.x += pinch.ground.x - g.x;
+                target.z += pinch.ground.z - g.z;
+                clampCamera();
+                scheduleAtlas();
+                updateZoomButtons();
+            } else if (p.moved && zoom > 1.001) {
+                dragging = true;
+                const g0 = groundAt(px, py, {});
+                const g1 = groundAt(p.x, p.y, {});
+                target.x += g0.x - g1.x;
+                target.z += g0.z - g1.z;
+                clampCamera();
+            }
+        });
+        const end = e => {
+            const p = pointers.get(e.pointerId);
+            pointers.delete(e.pointerId);
+            if (pointers.size < 2) pinch = null;
+            if (!p) return;
+            const l = local(e);
+            if (!dragging && Math.hypot(l.x - p.sx, l.y - p.sy) < TAP_SLOP) onMapTap(toWorld(p.cx, p.cy), e);
+            if (pointers.size === 0) dragging = false;
+        };
+        canvas.addEventListener('pointerup', end);
+        canvas.addEventListener('pointercancel', e => {
+            pointers.delete(e.pointerId);
+            pinch = null;
+            if (pointers.size === 0) dragging = false;
+        });
+        canvas.addEventListener('pointerleave', e => {
+            if (e.pointerType === 'mouse') hover = null;
+        });
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            const l = local(e);
+            zoomAt(zoom * Math.exp(-e.deltaY * 0.0015), l.x, l.y);
+        }, { passive: false });
+    }
+
+    // Zoom keeping the ground point under (sx, sy) in place (the centre by default)
+    function zoomAt(z, sx = cssW / 2, sy = cssH / 2) {
+        const g0 = groundAt(sx, sy, {});
+        zoom = Math.max(1, Math.min(maxZoom(), z));
+        clampCamera();
+        const g1 = groundAt(sx, sy, {});
+        target.x += g0.x - g1.x;
+        target.z += g0.z - g1.z;
+        clampCamera();
+        scheduleAtlas();
+        updateZoomButtons();
+    }
+
+    function setZoom(z) {
+        zoomAt(z);
+    }
+
+    let zoomEls = [];
+    function buildZoomControls() {
+        const make = (cls, parent, first) => {
+            if (!parent) return;
+            const box = document.createElement('div');
+            box.className = `zoom-ctl ${cls}`;
+            box.innerHTML = `<button type="button" data-z="in" aria-label="Zoom in">+</button>
+                <button type="button" data-z="out" aria-label="Zoom out">&minus;</button>`;
+            box.addEventListener('click', e => {
+                const b = e.target.closest('[data-z]');
+                if (!b) return;
+                zoomAt(b.dataset.z === 'in' ? zoom * 1.5 : zoom / 1.5);
+                b.blur();
+            });
+            if (first) parent.prepend(box); else parent.append(box);
+            zoomEls.push(box);
+        };
+        make('on-map', holder);
+        make('in-hud', document.querySelector('.hud-buttons'), true);
+    }
+
+    function updateZoomButtons() {
+        zoomEls.forEach(box => {
+            box.querySelector('[data-z="in"]').disabled = zoom >= maxZoom() - 0.01;
+            box.querySelector('[data-z="out"]').disabled = zoom <= 1.001;
+        });
+    }
+
+    // Bring a world point (game px) into view if it is off screen
+    function reveal(wx, wy) {
+        if (zoom <= 1.001 || !camera) return;
+        const p = proj(wx / ts, 0.3, wy / ts);
+        if (p.x > 0 && p.x < cssW && p.y > 0 && p.y < cssH) return;
+        target.x = wx / ts;
+        target.z = wy / ts;
+        clampCamera();
+    }
+
+    // Page coordinates of a world point (game px), at a tower's middle height
+    function toScreen(wx, wy) {
+        const r = canvas.getBoundingClientRect();
+        const p = proj(wx / ts, 0.25, wy / ts);
+        return { x: r.left + p.x, y: r.top + p.y };
+    }
+
+    // ---------- The kit: Kenney's Tower Defense Kit (CC0), models/kenney-tower-defense ----------
+    //
+    // Every model shares one small palette texture (colormap.png). Map themes and
+    // tower and enemy colours are made by recolouring that palette: grass and path
+    // colours per theme, accent colours (purple, orange, red) per tower or enemy.
+
+    const KIT_DIR = 'models/kenney-tower-defense/';
+    const KIT_MODELS = [
+        'tile', 'tile-dirt', 'tile-straight', 'tile-corner-round', 'tile-end-round', 'tile-split', 'tile-crossing',
+        'tile-spawn', 'tile-spawn-end', 'tile-hill', 'tile-rock', 'tile-crystal',
+        'snow-tile', 'snow-tile-dirt', 'snow-tile-straight', 'snow-tile-corner-round', 'snow-tile-end-round', 'snow-tile-split',
+        'snow-tile-crossing', 'snow-tile-spawn', 'snow-tile-spawn-end', 'snow-tile-hill',
+        'detail-tree', 'detail-tree-large', 'detail-rocks', 'detail-rocks-large', 'detail-crystal', 'detail-crystal-large',
+        'detail-dirt', 'detail-dirt-large', 'snow-detail-tree', 'snow-detail-tree-large', 'snow-detail-rocks',
+        'snow-detail-rocks-large', 'snow-detail-crystal', 'snow-detail-crystal-large', 'wood-structure', 'wood-structure-high',
+        'tower-square-bottom-a', 'tower-square-bottom-b', 'tower-square-bottom-c', 'tower-square-middle-a', 'tower-square-middle-b',
+        'tower-square-middle-c', 'tower-square-top-a', 'tower-square-top-b', 'tower-square-top-c', 'tower-square-roof-a',
+        'tower-round-bottom-a', 'tower-round-bottom-b', 'tower-round-bottom-c', 'tower-round-middle-a', 'tower-round-middle-b',
+        'tower-round-middle-c', 'tower-round-top-a', 'tower-round-top-b', 'tower-round-top-c', 'tower-round-roof-a',
+        'tower-round-roof-b', 'tower-round-roof-c', 'tower-round-crystals',
+        'weapon-ballista', 'weapon-cannon', 'weapon-catapult', 'weapon-turret', 'weapon-ammo-bullet', 'weapon-ammo-cannonball',
+        'enemy-ufo-a', 'enemy-ufo-b', 'enemy-ufo-c', 'enemy-ufo-d', 'enemy-ufo-a-weapon', 'enemy-ufo-b-weapon',
+        'enemy-ufo-c-weapon', 'enemy-ufo-d-weapon', 'selection-a', 'spawn-round'
+    ];
+    let kit = null;             // name -> [{ geo, m: Matrix4 (part in the model), name }]
+    let kitRoots = null;        // name -> loaded scene (for towers, which keep their parts)
+    let kitImage = null;        // the palette picture
+    let kitLoading = false;
+    let kitFailed = false;
+
+    function loadKit() {
+        if (kitLoading || kit) return;
+        kitLoading = true;
+        T3.Cache.enabled = true;
+        const loader = new window.GLTFLoader();
+        const img = new Image();
+        const imgReady = new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+        img.src = KIT_DIR + 'Textures/colormap.png';
+        Promise.all([imgReady].concat(KIT_MODELS.map(n => loader.loadAsync(KIT_DIR + n + '.glb').then(g => [n, g.scene]))))
+            .then(list => {
+                kitImage = img;
+                kit = {};
+                kitRoots = {};
+                list.slice(1).forEach(([n, root]) => {
+                    root.updateMatrixWorld(true);
+                    kitRoots[n] = root;
+                    const parts = [];
+                    root.traverse(o => {
+                        if (!o.isMesh) return;
+                        o.geometry._shared = true;
+                        parts.push({ geo: o.geometry, m: o.matrixWorld.clone(), name: o.name });
+                    });
+                    kit[n] = parts;
+                });
+                mapKey = '';
+                try {
+                    makePortraits();
+                } catch (e) { /* the flat pictures stay */ }
+            })
+            .catch(() => { kitFailed = true; })
+            .finally(() => { kitLoading = false; });
+    }
+
+    // Pictures of each tower's model for the build menu and the tower panel
+    const portraits = {};
+    function makePortraits() {
+        const S = 160;
+        const rt = new T3.WebGLRenderTarget(S, S, { samples: 4 });
+        rt.texture.colorSpace = T3.SRGBColorSpace;
+        const sc = new T3.Scene();
+        sc.add(new T3.HemisphereLight(0xf2f6ff, 0x50566a, 1.5));
+        const d = new T3.DirectionalLight(0xfff2de, 2.1);
+        d.position.set(-2, 5, 3);
+        sc.add(d);
+        const cam = new T3.PerspectiveCamera(26, 1, 0.1, 60);
+        const px = new Uint8Array(S * S * 4);
+        const c = document.createElement('canvas');
+        c.width = c.height = S;
+        const g = c.getContext('2d');
+        const img = g.createImageData(S, S);
+        const dir = new T3.Vector3(0.9, 1.05, 1.5).normalize();
+        const box = new T3.Box3();
+        const sph = new T3.Sphere();
+        Object.keys(Art.TOWER_ART).forEach(name => {
+            const b = buildTowerModel(name, false);
+            if (!b.still) b.turret.rotation.y = yawFor(Math.PI * 0.3);
+            sc.add(b.root);
+            b.root.updateMatrixWorld(true);
+            box.setFromObject(b.root).getBoundingSphere(sph);
+            cam.position.copy(sph.center).addScaledVector(dir, sph.radius / Math.sin(13 * Math.PI / 180) * 0.98);
+            cam.lookAt(sph.center);
+            gl.setRenderTarget(rt);
+            gl.setClearColor(0x000000, 0);
+            gl.clear();
+            gl.render(sc, cam);
+            gl.readRenderTargetPixels(rt, 0, 0, S, S, px);
+            for (let y = 0; y < S; y++) {
+                for (let x = 0; x < S; x++) {
+                    const i = ((S - 1 - y) * S + x) * 4;
+                    const o = (y * S + x) * 4;
+                    const a = px[i + 3];
+                    const k = a ? 255 / a : 0;
+                    img.data[o] = Math.min(255, px[i] * k);
+                    img.data[o + 1] = Math.min(255, px[i + 1] * k);
+                    img.data[o + 2] = Math.min(255, px[i + 2] * k);
+                    img.data[o + 3] = a;
+                }
+            }
+            g.putImageData(img, 0, 0);
+            portraits[name] = c.toDataURL();
+            sc.remove(b.root);
+        });
+        gl.setRenderTarget(null);
+        rt.dispose();
+        window.dispatchEvent(new Event('td:portraits'));
+    }
+
+    // ---------- Palette recolouring ----------
+
+    function rgbToHsl(r, g, b) {
+        r /= 255; g /= 255; b /= 255;
+        const mx = Math.max(r, g, b);
+        const mn = Math.min(r, g, b);
+        const l = (mx + mn) / 2;
+        let h = 0;
+        let s = 0;
+        if (mx !== mn) {
+            const d = mx - mn;
+            s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+            if (mx === r) h = (g - b) / d + (g < b ? 6 : 0);
+            else if (mx === g) h = (b - r) / d + 2;
+            else h = (r - g) / d + 4;
+            h *= 60;
+        }
+        return [h, s, l];
+    }
+    function hslToRgb(h, s, l) {
+        const c = new T3.Color().setHSL(((h % 360) + 360) % 360 / 360, Math.max(0, Math.min(1, s)), Math.max(0, Math.min(1, l)));
+        return [c.r * 255, c.g * 255, c.b * 255];
+    }
+    // What a palette colour is: grass, path, accent (the coloured trims) or other
+    function paletteClass(h, s, l) {
+        if (h >= 95 && h <= 175 && s > 0.25) return 'grass';
+        if (h >= 10 && h <= 42 && s > 0.35 && s < 0.9 && l > 0.55) return 'path';
+        if (((h >= 245 && h <= 295) && s > 0.35 && l < 0.74) || ((h <= 22 || h >= 345) && s > 0.62 && l > 0.45 && l < 0.7) || (h > 14 && h < 32 && s > 0.95)) return 'accent';
+        return 'other';
+    }
+
+    const texCache = new Map();
+    // Palette texture with colours changed by fn(class, h, s, l) -> [h, s, l] or null
+    function paletteTex(key, fn) {
+        if (texCache.has(key)) return texCache.get(key);
+        const c = document.createElement('canvas');
+        c.width = kitImage.width;
+        c.height = kitImage.height;
+        const g = c.getContext('2d', { willReadFrequently: true });
+        g.drawImage(kitImage, 0, 0);
+        if (fn) {
+            const d = g.getImageData(0, 0, c.width, c.height);
+            const a = d.data;
+            const memo = new Map();
+            for (let i = 0; i < a.length; i += 4) {
+                const k = (a[i] << 16) | (a[i + 1] << 8) | a[i + 2];
+                let out = memo.get(k);
+                if (out === undefined) {
+                    const [h, s, l] = rgbToHsl(a[i], a[i + 1], a[i + 2]);
+                    const r = fn(paletteClass(h, s, l), h, s, l);
+                    out = r ? hslToRgb(r[0], r[1], r[2]) : null;
+                    memo.set(k, out);
+                }
+                if (out) {
+                    a[i] = out[0];
+                    a[i + 1] = out[1];
+                    a[i + 2] = out[2];
+                }
+            }
+            g.putImageData(d, 0, 0);
+        }
+        const t = new T3.CanvasTexture(c);
+        t.colorSpace = T3.SRGBColorSpace;
+        t.flipY = false;
+        t.magFilter = T3.NearestFilter;
+        t.minFilter = T3.NearestFilter;
+        t.generateMipmaps = false;
+        texCache.set(key, t);
+        return t;
+    }
+
+    const kitMats = new Map();
+    function kitMat(key, fn, o = {}) {
+        const k = `${key}|${o.emissive || ''}`;
+        let m = kitMats.get(k);
+        if (!m) {
+            m = new T3.MeshStandardMaterial({ map: paletteTex(key, fn), roughness: 0.78, metalness: 0.04 });
+            if (o.emissive) {
+                m.emissive = new T3.Color(o.emissive);
+                m.emissiveMap = m.map;
+                m.emissiveIntensity = o.ei ?? 0.6;
+            }
+            kitMats.set(k, m);
+        }
+        return m;
+    }
+
+    // Ground colours per map theme (Frost uses the kit's own snow models)
+    const THEME_GROUND = {
+        meadow: null,
+        frost: null,
+        desert: { grass: [42, 0.5, 0.66], path: [20, 0.48, 0.58] },
+        city: { grass: [128, 0.32, 0.4], path: [222, 0.07, 0.36] },
+        void: { grass: [262, 0.32, 0.3], path: [272, 0.42, 0.56] },
+        ash: { grass: [24, 0.07, 0.3], path: [16, 0.28, 0.44] }
+    };
+    function groundMat(themeId) {
+        const t = THEME_GROUND[themeId];
+        if (!t) return kitMat('base');
+        return kitMat(`ground-${themeId}`, (cls, h, s, l) => {
+            if (cls !== 'grass' && cls !== 'path') return null;
+            const [th, ts_, tl] = t[cls];
+            // keep the kit's light and dark steps around the new colour
+            const base = cls === 'grass' ? 0.5 : 0.72;
+            return [th, ts_, tl + (l - base) * 0.9];
+        });
+    }
+    // Trims recoloured to a hex colour (towers, enemies, the gate)
+    function accentMat(hex, o) {
+        const c = new T3.Color(hex);
+        const hsl = {};
+        c.getHSL(hsl);
+        return kitMat(`accent-${hex}`, (cls, h, s, l) => {
+            if (cls !== 'accent') return null;
+            return [hsl.h * 360, Math.max(0.35, hsl.s), hsl.l * 0.55 + l * 0.45];
+        }, o);
+    }
+
+    // One instanced mesh per model part, for many copies of a model
+    function instances(name, mats, material, parent, opts = {}) {
+        const parts = kit[name];
+        if (!parts || !mats.length) return [];
+        return parts.map(p => {
+            const mesh = new T3.InstancedMesh(p.geo, material, mats.length);
+            mats.forEach((m, i) => mesh.setMatrixAt(i, tmpM.multiplyMatrices(m, p.m)));
+            mesh.castShadow = opts.cast !== false;
+            mesh.receiveShadow = true;
+            mesh.frustumCulled = false;
+            parent.add(mesh);
+            return mesh;
+        });
+    }
+
+    // A copy of a model as a group of meshes with one material
+    function kitClone(name, material) {
+        const root = kitRoots[name].clone(true);
+        root.traverse(o => {
+            if (!o.isMesh) return;
+            o.material = material;
+            o.castShadow = true;
+            o.receiveShadow = true;
+        });
+        return root;
+    }
+
+    // ---------- The map: board, tiles, obstacles, details ----------
+
+    function mapChanged(themeId) {
+        if (themeId) theme = themeId;
+        mapKey = '';
+        fillPending = true;
+        routeKey = '';
+        previewKey = '';
+        if (inited && cols && kit) {
+            buildWorld();
+            refit();
+        }
+    }
+
+    // Road tiles: which of the four sides (N E S W) connect to another road tile
+    const SIDES = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+    // Sides each road model connects at rotation 0 (checked against the models)
+    const ROAD = {
+        straight: [0, 2],
+        'corner-round': [1, 2],
+        'end-round': [2],
+        split: [1, 2, 3],
+        crossing: [0, 1, 2, 3]
+    };
+    function roadPick(conn) {
+        const n = conn.filter(Boolean).length;
+        const want = conn.map(Boolean);
+        for (const [name, sides] of Object.entries(ROAD)) {
+            if (sides.length !== n) continue;
+            for (let k = 0; k < 4; k++) {
+                const got = [false, false, false, false];
+                sides.forEach(s => (got[(s + k) % 4] = true));
+                if (got.every((v, i) => v === want[i])) return { name, k };
+            }
+        }
+        return { name: 'dirt', k: 0 };
+    }
+
+    let wallH = null;
+    let groundY = null;         // per tile: height of the ground top (hills are higher)
+    function buildWorld() {
+        if (!kit) return;
+        if (world) {
+            scene.remove(world);
+            disposeTree(world);
+        }
+        world = new T3.Group();
+        scene.add(world);
+        props = [];
+        const th = Terrain.THEMES[theme] || Terrain.THEMES.meadow;
+        const snow = theme === 'frost';
+        const pre = snow ? 'snow-' : '';
+        const gm = groundMat(theme);
+        // Props share the ground's colours on themes without green (no meadow bushes in the desert)
+        const dm = theme === 'desert' || theme === 'void' || theme === 'ash' ? gm : kitMat('base');
+        scene.background = new T3.Color(th.frame);
+
+        // The board the map sits on
+        const board = new T3.Mesh(new T3.BoxGeometry(cols + 0.6, 1.4, rows + 0.6), mat(shadeHex(th.frame, 0.7), { rough: 0.95 }));
+        board.position.set(cols / 2, -0.9, rows / 2);
+        board.receiveShadow = true;
+        world.add(board);
+        const rimTop = new T3.Mesh(new T3.BoxGeometry(cols + 0.6, 0.08, rows + 0.6), mat(shadeHex(th.frame, 1.3), { rough: 0.8 }));
+        rimTop.position.set(cols / 2, -0.23, rows / 2);
+        rimTop.receiveShadow = true;
+        world.add(rimTop);
+
+        const cls = [];
+        for (let x = 0; x < cols; x++) {
+            cls[x] = [];
+            for (let y = 0; y < rows; y++) cls[x][y] = Terrain.tileClass(mapView(), x, y);
+        }
+        const spawnAt = new Set(spawnpoints.map(s => `${s.x},${s.y}`));
+        const exitKey = `${exit.x},${exit.y}`;
+        const isRoad = (x, y) => x >= 0 && y >= 0 && x < cols && y < rows &&
+            (cls[x][y] === 'r' || spawnAt.has(`${x},${y}`) || `${x},${y}` === exitKey);
+        const byModel = {};
+        const put = (name, x, y, rotK, h = 0, s = 1, jx = 0, jz = 0, ry = null) => {
+            (byModel[name] = byModel[name] || []).push(M(x + 0.5 + jx, h, y + 0.5 + jz, 0, ry === null ? -rotK * Math.PI / 2 : ry, 0, s));
+        };
+        wallH = [];
+        groundY = [];
+        for (let x = 0; x < cols; x++) {
+            wallH[x] = new Float32Array(rows);
+            groundY[x] = new Float32Array(rows);
+            for (let y = 0; y < rows; y++) {
+                const c = cls[x][y];
+                const key = `${x},${y}`;
+                const r = hashT(x, y, 11);
+                if (spawnAt.has(key) || key === exitKey) {
+                    const conn = SIDES.map(([dx, dy]) => isRoad(x + dx, y + dy));
+                    const pick = roadPick(conn);
+                    // Spawn and gate tiles face the road that leaves them
+                    const k = conn.findIndex(Boolean);
+                    put(pre + (key === exitKey ? 'tile-spawn-end' : 'tile-spawn'), x, y, k < 0 ? 0 : (k + 2) % 4, -0.2);
+                    void pick;
+                } else if (c === 'r') {
+                    const conn = SIDES.map(([dx, dy]) => isRoad(x + dx, y + dy));
+                    let pick = roadPick(conn);
+                    // Wide roads: inside an area of road, plain dirt
+                    const diag = (a, b) => isRoad(x + SIDES[a][0] + SIDES[b][0], y + SIDES[a][1] + SIDES[b][1]);
+                    const n = conn.filter(Boolean).length;
+                    if (n >= 2) {
+                        for (let a = 0; a < 4; a++) {
+                            const b = (a + 1) % 4;
+                            if (conn[a] && conn[b] && diag(a, b)) pick = { name: 'dirt', k: 0 };
+                        }
+                    }
+                    put(pre + 'tile-' + pick.name, x, y, pick.k, -0.2);
+                } else if (c === 'w') {
+                    const inner = x > 0 && y > 0 && x < cols - 1 && y < rows - 1 &&
+                        cls[x - 1][y] === 'w' && cls[x + 1][y] === 'w' && cls[x][y - 1] === 'w' && cls[x][y + 1] === 'w';
+                    const hill = inner && r < 0.3;
+                    put(pre + (hill ? 'tile-hill' : 'tile'), x, y, Math.floor(hashT(x, y, 19) * 4), -0.2);
+                    const top = hill ? 0.4 : 0;
+                    groundY[x][y] = top;
+                    wallH[x][y] = top;
+                    obstacles(x, y, top, inner, put, snow);
+                } else if (c === 'p') {
+                    put(pre + 'tile', x, y, 0, -0.2);
+                    (byModel.__pad = byModel.__pad || []).push(M(x + 0.5, 0.0, y + 0.5));
+                } else {
+                    put(pre + 'tile', x, y, Math.floor(hashT(x, y, 19) * 4), -0.2);
+                    // A few small details on open ground
+                    if (r < 0.07) {
+                        const list = snow ? ['snow-detail-rocks', 'snow-detail-dirt'] : theme === 'void' ? ['detail-crystal', 'detail-rocks'] : ['detail-rocks', 'detail-dirt'];
+                        const name = list[Math.floor(hashT(x, y, 12) * list.length)];
+                        put(name, x, y, 0, 0, 0.6 + hashT(x, y, 16) * 0.3, (hashT(x, y, 13) - 0.5) * 0.5, (hashT(x, y, 14) - 0.5) * 0.5, hashT(x, y, 17) * TAU);
+                    }
+                }
+            }
+        }
+        Object.keys(byModel).forEach(name => {
+            const list = byModel[name];
+            if (name === '__pad') {
+                const g = new T3.CylinderGeometry(0.6, 0.64, 0.06, 4).rotateY(Math.PI / 4);
+                g.translate(0, 0.03, 0);
+                const mesh = new T3.InstancedMesh(g, mat('#c9cbe3', { rough: 0.85 }), list.length);
+                list.forEach((m, i) => mesh.setMatrixAt(i, m));
+                mesh.receiveShadow = true;
+                mesh.frustumCulled = false;
+                world.add(mesh);
+                const g2 = new T3.CylinderGeometry(0.5, 0.52, 0.02, 4).rotateY(Math.PI / 4);
+                g2.translate(0, 0.07, 0);
+                const inset = new T3.InstancedMesh(g2, mat('#b4b7d4', { rough: 0.9 }), list.length);
+                list.forEach((m, i) => inset.setMatrixAt(i, m));
+                inset.receiveShadow = true;
+                inset.frustumCulled = false;
+                world.add(inset);
+                return;
+            }
+            const isTile = name.includes('tile');
+            const material = isTile ? gm : dm;
+            const meshes = instances(name, list, material, world, { cast: !isTile || name.includes('hill') });
+            if (/tree/.test(name)) meshes.forEach(mesh => props.push({ mesh, base: list.map((m, i) => { mesh.getMatrixAt(i, tmpM); return tmpM.clone(); }), amp: name.includes('large') ? 0.7 : 1, phase: list.map((m, i) => i * 1.7 + m.elements[12] * 0.9 + m.elements[14] * 0.4) }));
+        });
+
+        // Sun over the map's upper left, its shadow box around the map
+        const span = Math.max(cols, rows);
+        sun.position.set(cols / 2 - span * 0.45, span * 0.95, rows / 2 - span * 0.5);
+        sun.target.position.set(cols / 2, 0, rows / 2);
+        const sc = sun.shadow.camera;
+        const rr = span * 0.8;
+        sc.left = -rr; sc.right = rr; sc.top = rr; sc.bottom = -rr;
+        sc.near = 0.5; sc.far = span * 3;
+        sc.updateProjectionMatrix();
+        hemi.groundColor.set(shadeHex(th.frame, 1.6));
+
+        buildGate();
+        mapKey = `${theme}|${cols}x${rows}`;
+    }
+
+    // Trees, rocks and crystals on a wall tile, by theme
+    function obstacles(x, y, top, inner, put, snow) {
+        const r = (s) => hashT(x, y, s);
+        const t = theme;
+        const pick = (list) => list[Math.floor(r(31) * list.length)];
+        let set;
+        if (snow) set = [['snow-detail-tree-large'], ['snow-detail-tree', 'snow-detail-tree'], ['snow-detail-rocks-large'], ['snow-detail-tree', 'snow-detail-crystal']];
+        else if (t === 'desert') set = [['detail-rocks-large'], ['detail-rocks', 'detail-dirt-large'], ['detail-dirt-large', 'detail-rocks'], ['detail-crystal']];
+        else if (t === 'void') set = [['detail-crystal-large'], ['detail-crystal', 'detail-crystal'], ['detail-crystal-large', 'detail-rocks'], ['detail-rocks-large']];
+        else if (t === 'ash') set = [['detail-rocks-large'], ['detail-rocks', 'detail-rocks'], ['detail-rocks-large', 'detail-dirt'], ['detail-crystal']];
+        else if (t === 'city') set = [['detail-tree-large'], ['detail-tree', 'detail-tree'], ['detail-tree-large', 'detail-rocks'], ['detail-tree', 'detail-tree', 'detail-tree'], ['detail-rocks-large', 'detail-tree'], ['detail-tree-large'], ['detail-tree-large']];
+        else set = [['detail-tree-large'], ['detail-tree', 'detail-tree', 'detail-tree'], ['detail-tree-large', 'detail-rocks'], ['detail-rocks-large', 'detail-tree']];
+        const group = pick(set);
+        const spots = group.length === 1 ? [[0, 0]] : group.length === 2 ? [[-0.2, -0.12], [0.18, 0.16]] : [[-0.22, -0.16], [0.2, -0.1], [-0.02, 0.22]];
+        group.forEach((name, i) => {
+            const [sx, sz] = spots[i];
+            const jx = sx + (r(40 + i) - 0.5) * 0.12;
+            const jz = sz + (r(50 + i) - 0.5) * 0.12;
+            const s = (name.includes('wood') ? 0.9 : 1) * (0.85 + r(60 + i) * 0.35) * (inner ? 1.1 : 1);
+            put(name, x, y, 0, top, s, jx, jz, r(70 + i) * TAU);
+        });
+    }
+
+    function shadeHex(hex, k) {
+        const c = new T3.Color(hex);
+        c.r = Math.min(1, c.r * k); c.g = Math.min(1, c.g * k); c.b = Math.min(1, c.b * k);
+        return c.getHex();
+    }
+
+    function swayProps() {
+        if (FX.quality === 0) return;
+        for (const p of props) {
+            for (let i = 0; i < p.base.length; i++) {
+                const a = Math.sin(time * 1.6 + p.phase[i]) * 0.04 * p.amp;
+                const b = Math.cos(time * 1.3 + p.phase[i] * 0.7) * 0.03 * p.amp;
+                tmpQ.setFromAxisAngle(tmpV.set(1, 0, 0), b);
+                tmpM2.makeRotationFromQuaternion(tmpQ);
+                tmpM.makeRotationZ(a).multiply(tmpM2);
+                tmpM2.multiplyMatrices(p.base[i], tmpM);
+                p.mesh.setMatrixAt(i, tmpM2);
+            }
+            p.mesh.instanceMatrix.needsUpdate = true;
+        }
+    }
+
+    // ---------- Towers: stacked kit parts, a weapon on top ----------
+
+    const towerModels = new Map();      // tower -> model
+    // Parts from the ground up, then the weapon (null: a roof or crystals instead)
+    const TOWER_PARTS = {
+        gun: [['tower-square-bottom-a', 'tower-square-top-a'], 'weapon-turret'],
+        machineGun: [['tower-square-bottom-a', 'tower-square-middle-a', 'tower-square-top-a'], 'weapon-turret'],
+        laser: [['tower-round-bottom-c', 'tower-round-crystals'], null],
+        beamEmitter: [['tower-round-bottom-c', 'tower-round-middle-c', 'tower-round-crystals'], null],
+        slow: [['tower-round-bottom-b', 'tower-round-roof-b'], null],
+        poison: [['tower-round-bottom-b', 'tower-round-middle-b', 'tower-round-roof-b'], null],
+        sniper: [['tower-square-bottom-c', 'tower-square-top-b'], 'weapon-ballista'],
+        railgun: [['tower-square-bottom-c', 'tower-square-middle-b', 'tower-square-top-b'], 'weapon-ballista'],
+        rocket: [['tower-square-bottom-b', 'tower-square-top-c'], 'weapon-cannon'],
+        missileSilo: [['tower-square-bottom-b', 'tower-square-middle-c', 'tower-square-top-c'], 'weapon-cannon'],
+        bomb: [['tower-round-bottom-a', 'tower-round-top-c'], 'weapon-catapult'],
+        clusterBomb: [['tower-round-bottom-a', 'tower-round-middle-a', 'tower-round-top-c'], 'weapon-catapult'],
+        tesla: [['tower-round-bottom-c', 'tower-round-roof-c'], null],
+        lightningStrike: [['tower-round-bottom-c', 'tower-round-middle-c', 'tower-round-roof-c'], null]
+    };
+    const TOWER_SCALE = 0.74;           // a tower's footprint is a little under a tile
+    const TOWER_SQUASH = 0.8;           // and it is a little lower than the kit's
+    const kitHeights = {};
+    function partHeight(name) {
+        if (kitHeights[name] === undefined) {
+            const box = new T3.Box3().setFromObject(kitRoots[name]);
+            // Tops and roofs hold the weapon at their floor, not their battlements
+            kitHeights[name] = /top|crystals/.test(name) ? 0.2 : /roof/.test(name) ? box.max.y : box.max.y;
+        }
+        return kitHeights[name];
+    }
+
+    function buildTowerModel(name, ghost) {
+        const a = Art.TOWER_ART[name];
+        const spec = TOWER_PARTS[name] || TOWER_PARTS.gun;
+        const material = ghost ? ghostMat(accentMat(a.main)) : accentMat(a.main);
+        const root = new T3.Group();
+        const body = new T3.Group();
+        body.scale.set(TOWER_SCALE, TOWER_SCALE * TOWER_SQUASH, TOWER_SCALE);
+        root.add(body);
+        let y = 0;
+        let crown = 0;
+        spec[0].forEach(part => {
+            const o = kitClone(part, material);
+            o.position.y = y;
+            body.add(o);
+            const box = new T3.Box3().setFromObject(kitRoots[part]);
+            crown = y + box.max.y;
+            y += partHeight(part);
+        });
+        const turret = new T3.Group();
+        turret.position.y = y * TOWER_SCALE * TOWER_SQUASH;
+        root.add(turret);
+        const inner = new T3.Group();
+        inner.scale.setScalar(TOWER_SCALE * 1.05);
+        turret.add(inner);
+        let barrel = null;
+        if (spec[1]) {
+            const w = kitClone(spec[1], material);
+            inner.add(w);
+            w.traverse(o => { if (o.name === 'barrel' || o.name === 'arrow' || o.name === 'catapult') barrel = o; });
+            if (barrel) barrel.userData.z0 = barrel.position.z;
+        }
+        // Crystal and roof towers glow: an orb or the crystals
+        let glow = null;
+        let orb = null;
+        const top = crown * TOWER_SCALE * TOWER_SQUASH;
+        if (name === 'tesla' || name === 'lightningStrike' || name === 'slow' || name === 'poison') {
+            const c = { tesla: '#fff07a', lightningStrike: '#7ff6ff', slow: '#bfe6ff', poison: '#a6f25a' }[name];
+            const om = new T3.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 2, roughness: 0.2 });
+            om._own = true;
+            if (ghost) {
+                om.transparent = true;
+                om.opacity = 0.6;
+            }
+            orb = new T3.Mesh(new T3.SphereGeometry(0.09, 16, 12), om);
+            orb.position.y = top + 0.05;
+            root.add(orb);
+            glow = glowSprite(name === 'tesla' ? 0xffe066 : name === 'poison' ? 0x9cff3a : 0x6ff3ff, 0.7, 0.75);
+            glow.position.y = top + 0.05;
+            root.add(glow);
+        } else if (name === 'laser' || name === 'beamEmitter') {
+            glow = glowSprite(name === 'laser' ? 0x60b8ff : 0x5ff0e0, 0.9, 0.55);
+            glow.position.y = top - 0.05;
+            root.add(glow);
+        }
+        return { root, turret, inner, barrel, glow, orb, top, still: !spec[1] };
+    }
+
+    // Invisible hit volume for picking a tower by its body
+    let hitGeo = null;
+    let hitMat = null;
+    function makeModel(t, ghost) {
+        const b = buildTowerModel(t.name, ghost);
+        const m = { name: t.name, root: b.root, turret: b.turret, inner: b.inner, barrel: b.barrel, glow: b.glow, orb: b.orb, top: b.top, still: b.still, hit: null, tower: t, spin: null };
+        if (!ghost) {
+            if (!hitGeo) {
+                hitGeo = new T3.CylinderGeometry(0.46, 0.46, 1, 10);
+                hitGeo.translate(0, 0.5, 0);
+                hitGeo._shared = true;
+                hitMat = new T3.MeshBasicMaterial({ visible: false });
+            }
+            m.hit = new T3.Mesh(hitGeo, hitMat);
+            m.hit.scale.y = Math.max(0.9, b.top + 0.3);
+            m.hit.userData.tower = t;
+            m.root.add(m.hit);
+        }
+        return m;
+    }
+
+    const ghostMats = new Map();
+    function ghostMat(src) {
+        let g = ghostMats.get(src);
+        if (!g) {
+            g = src.clone();
+            g.transparent = true;
+            g.opacity = 0.62;
+            g.depthWrite = false;
+            ghostMats.set(src, g);
+        }
+        return g;
+    }
+
+    // Turn the weapon (it faces +Z) towards a game angle
+    const yawFor = (a) => Math.atan2(Math.cos(a), Math.sin(a));
+
+    function syncTowers(dt) {
+        const seen = new Set();
+        for (let i = 0; i < towers.length; i++) {
+            const t = towers[i];
+            if (!t.alive) continue;
+            seen.add(t);
+            let m = towerModels.get(t);
+            if (m && m.name !== t.name) {
+                dyn.remove(m.root);
+                towerModels.delete(t);
+                m = null;
+                t._pop = 1;
+            }
+            if (!m) {
+                m = makeModel(t, false);
+                towerModels.set(t, m);
+                dyn.add(m.root);
+                if (t._pop === undefined) t._pop = 1;
+            }
+            const X = t.pos.x / ts;
+            const Z = t.pos.y / ts;
+            const pop = t._pop || 0;
+            if (pop > 0) t._pop = Math.max(0, pop - dt * 3.2);
+            const s = 1 + Math.sin(pop * Math.PI) * 0.16;
+            const gy = groundY && groundY[t.gridPos.x] ? groundY[t.gridPos.x][t.gridPos.y] : 0;
+            m.root.position.set(X, gy, Z);
+            m.root.scale.set(s, 1 + (s - 1) * 1.4, s);
+            if (!m.still) m.turret.rotation.y = yawFor(t.angle);
+            if (m.barrel) m.barrel.position.z = m.barrel.userData.z0 - (t._recoil || 0) * 0.12;
+            const hov = hover && Math.abs(hover.x - t.pos.x) < ts * 0.5 && Math.abs(hover.y - t.pos.y) < ts * 0.5 && !toPlace;
+            if (m.glow) {
+                const k = 0.75 + 0.25 * Math.sin(time * 5 + i) + (t._flash || 0) * 0.08;
+                m.glow.material.opacity = Math.min(1, 0.55 * k);
+                const sz = 0.55 + 0.18 * k;
+                m.glow.scale.set(sz, sz, 1);
+            }
+            if (m.orb) m.orb.position.y = m.top + 0.06 + Math.sin(time * 2.4 + i) * 0.03;
+            m.root.position.y += hov ? 0.03 : 0;
+        }
+        towerModels.forEach((m, t) => {
+            if (seen.has(t)) return;
+            dyn.remove(m.root);
+            if (m.glow) m.glow.material.dispose();
+            towerModels.delete(t);
+        });
+    }
+
+    // ---------- Enemies: the kit's saucers, instanced per kind ----------
+
+    const ENEMY_MODEL = {
+        weak: 'enemy-ufo-a', strong: 'enemy-ufo-b', fast: 'enemy-ufo-c', strongFast: 'enemy-ufo-c-weapon',
+        medic: 'enemy-ufo-a-weapon', stronger: 'enemy-ufo-b-weapon', faster: 'enemy-ufo-c', tank: 'enemy-ufo-d-weapon',
+        taunt: 'enemy-ufo-d', spawner: 'enemy-ufo-b'
+    };
+    const enemyKinds = {};      // name -> { parts: [{ mesh, m }], cap, n }
+    function enemyKind(name) {
+        let k = enemyKinds[name];
+        if (k) return k;
+        k = { parts: [], cap: 0, n: 0, model: ENEMY_MODEL[name] || 'enemy-ufo-a' };
+        enemyKinds[name] = k;
+        grow(k, 32, name);
+        return k;
+    }
+
+    function grow(k, cap, name) {
+        k.parts.forEach(p => {
+            dyn.remove(p.mesh);
+            p.mesh.dispose();
+        });
+        const a = Art.ENEMY_ART[name];
+        const material = accentMat(a.color, a.boss ? { emissive: a.color, ei: 0.25 } : undefined);
+        k.parts = (kit[k.model] || []).map(p => {
+            const mesh = new T3.InstancedMesh(p.geo, material, cap);
+            mesh.instanceMatrix.setUsage(T3.DynamicDrawUsage);
+            mesh.castShadow = true;
+            mesh.frustumCulled = false;
+            const white = new T3.Color(1, 1, 1);
+            for (let i = 0; i < cap; i++) mesh.setColorAt(i, white);
+            mesh.count = 0;
+            dyn.add(mesh);
+            return { mesh, m: p.m, spin: /weapon|barrel/.test(p.name) };
+        });
+        k.cap = cap;
+        k.name = name;
+    }
+
+    let enemyId = 0;
+    function angDiff(a) {
+        while (a > Math.PI) a -= TAU;
+        while (a < -Math.PI) a += TAU;
+        return a;
+    }
+    function trackEnemy(e) {
+        if (e._lx === undefined) {
+            e._lx = e.pos.x;
+            e._ly = e.pos.y;
+            e._rot = Math.atan2(e.vel.y, e.vel.x) || 0;
+            e._ph = Math.random() * TAU;
+            e._id = enemyId++;
+        }
+        const dx = e.pos.x - e._lx;
+        const dy = e.pos.y - e._ly;
+        const d = Math.abs(dx) + Math.abs(dy);
+        if (d > 0.0001) {
+            e._ph += d / ts * 10;
+            e._rot += angDiff(Math.atan2(dy, dx) - e._rot) * 0.25;
+            e._lx = e.pos.x;
+            e._ly = e.pos.y;
+        }
+    }
+
+    function syncEnemies(stepped) {
+        Object.values(enemyKinds).forEach(k => (k.n = 0));
+        const base = new T3.Matrix4();
+        const q = new T3.Quaternion();
+        const q2 = new T3.Quaternion();
+        const eul = new T3.Euler();
+        const pos = new T3.Vector3();
+        const scl = new T3.Vector3();
+        for (let i = 0; i < enemies.length; i++) {
+            const e = enemies[i];
+            const art = Art.ENEMY_ART[e.name];
+            if (!art) continue;
+            trackEnemy(e);
+            if (stepped) FX.status(e);
+            const k = enemyKind(e.name);
+            if (k.n >= k.cap) grow(k, k.cap * 2, e.name);
+            const j = k.n++;
+            const size = art.r * 2.05 * (art.boss ? 1.1 : 1);
+            const hoverY = 0.16 + Math.sin(time * 3 + e._id * 1.3) * 0.04;
+            pos.set(e.pos.x / ts, hoverY, e.pos.y / ts);
+            // Lean into the way it flies, and spin slowly
+            const lean = 0.18;
+            eul.set(Math.sin(e._rot) * lean, time * (art.boss ? 0.6 : 1.4) + e._id, -Math.cos(e._rot) * lean, 'XYZ');
+            q.setFromEuler(eul);
+            scl.set(size, size * 0.9, size);
+            base.compose(pos, q, scl);
+            let tr = 1, tg = 1, tb = 1;
+            const efx = e.effects;
+            for (let n = 0; n < efx.length; n++) {
+                const nm = efx[n].name;
+                if (nm === 'slow') { tr *= 0.6; tg *= 0.82; tb *= 1.5; }
+                else if (nm === 'poison') { tr *= 0.7; tg *= 1.45; tb *= 0.55; }
+                else if (nm === 'regen') { const w = 1.15 + 0.15 * Math.sin(time * 8); tr *= w; tb *= w * 0.95; }
+            }
+            const hit = e.hit > 0 ? Math.min(1, e.hit / 6) : 0;
+            tint.setRGB(tr, tg, tb);
+            if (hit) tint.lerp(tmpC.setRGB(3, 3, 3), hit * 0.7);
+            void q2;
+            for (const p of k.parts) {
+                tmpM2.multiplyMatrices(base, p.m);
+                p.mesh.setMatrixAt(j, tmpM2);
+                p.mesh.setColorAt(j, tint);
+            }
+        }
+        Object.values(enemyKinds).forEach(k => {
+            k.parts.forEach(p => {
+                p.mesh.count = k.n;
+                p.mesh.instanceMatrix.needsUpdate = true;
+                if (p.mesh.instanceColor) p.mesh.instanceColor.needsUpdate = true;
+            });
+        });
+    }
+
+    // ---------- Missiles, route arrows, portals, gate, ranges ----------
+
+    let missiles = null;
+    let routeMesh = null;
+    let routeGold = null;
+    let selRing = null;
+    let rangeFill = null;
+    let rangeLine = null;
+    let upLine = null;
+    let placeTile = null;
+    let placeCross = null;
+    let gate = null;
+    const portalObjs = [];
+    let portalsKey = '';
+
+    function dashedRing(segments = 56, inner = 0.965) {
+        const pos = [];
+        for (let i = 0; i < segments; i++) {
+            const a0 = i / segments * TAU;
+            const a1 = (i + 0.55) / segments * TAU;
+            const p = (a, r) => [Math.cos(a) * r, 0, Math.sin(a) * r];
+            const A = p(a0, inner), B = p(a0, 1), C = p(a1, 1), D = p(a1, inner);
+            pos.push(...A, ...D, ...C, ...A, ...C, ...B);
+        }
+        const g = new T3.BufferGeometry();
+        g.setAttribute('position', new T3.Float32BufferAttribute(pos, 3));
+        return g;
+    }
+
+    function basic(color, opacity, add = false) {
+        const m = new T3.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, toneMapped: false, side: T3.DoubleSide });
+        if (add) m.blending = T3.AdditiveBlending;
+        return m;
+    }
+
+    function buildDynamic() {
+        missiles = null;
+        // Route arrows
+        const sh = new T3.Shape();
+        const pts = [-0.15, -0.22, 0.09, 0, -0.15, 0.22, -0.04, 0.22, 0.2, 0, -0.04, -0.22];
+        sh.moveTo(pts[0], pts[1]);
+        for (let i = 2; i < pts.length; i += 2) sh.lineTo(pts[i], pts[i + 1]);
+        const cg = new T3.ShapeGeometry(sh).rotateX(Math.PI / 2);
+        const mkRoute = (c) => {
+            const m = new T3.InstancedMesh(cg, basic(c, 1, true), 1);
+            m.frustumCulled = false;
+            m.count = 0;
+            m.renderOrder = 2;
+            dyn.add(m);
+            return m;
+        };
+        routeMesh = mkRoute(0xffffff);
+        routeGold = mkRoute(0xffd23f);
+        // Selection ring, range circle, upgrade range, placement tile and cross
+        selRing = new T3.Mesh(new T3.RingGeometry(0.55, 0.63, 48).rotateX(-Math.PI / 2), basic(0xfacc15, 0.95));
+        selRing.visible = false;
+        selRing.renderOrder = 3;
+        dyn.add(selRing);
+        rangeFill = new T3.Mesh(new T3.CircleGeometry(1, 64).rotateX(-Math.PI / 2), basic(0xffffff, 0.12));
+        rangeFill.visible = false;
+        rangeFill.renderOrder = 1;
+        dyn.add(rangeFill);
+        rangeLine = new T3.Mesh(dashedRing(), basic(0xffffff, 0.85));
+        rangeLine.visible = false;
+        rangeLine.renderOrder = 2;
+        dyn.add(rangeLine);
+        upLine = new T3.Mesh(dashedRing(64, 0.955), basic(0x4ade80, 0.95));
+        upLine.visible = false;
+        upLine.renderOrder = 2;
+        dyn.add(upLine);
+        placeTile = new T3.Mesh(new T3.PlaneGeometry(0.96, 0.96).rotateX(-Math.PI / 2), basic(0x4ade80, 0.35));
+        placeTile.visible = false;
+        placeTile.renderOrder = 2;
+        dyn.add(placeTile);
+        const cross = new T3.Group();
+        [Math.PI / 4, -Math.PI / 4].forEach(a => {
+            const b = new T3.Mesh(new T3.BoxGeometry(0.6, 0.06, 0.1), basic(0xf87171, 0.95));
+            b.rotation.y = a;
+            cross.add(b);
+        });
+        cross.visible = false;
+        placeCross = cross;
+        dyn.add(cross);
+    }
+
+    function buildGate() {
+        if (gate) dyn.remove(gate.root);
+        const root = new T3.Group();
+        const gold = accentMat('#facc15');
+        const keep = new T3.Group();
+        keep.scale.set(0.8, 0.72, 0.8);
+        let y = 0;
+        ['tower-square-bottom-b', 'tower-square-middle-a', 'tower-square-top-a'].forEach(part => {
+            const o = kitClone(part, gold);
+            o.position.y = y;
+            keep.add(o);
+            y += partHeight(part);
+        });
+        root.add(keep);
+        const crystalMat = new T3.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xfacc15, emissiveIntensity: 1.8, roughness: 0.2, metalness: 0.1, flatShading: true });
+        crystalMat._own = true;
+        const crystal = new T3.Mesh(new T3.OctahedronGeometry(0.15, 0), crystalMat);
+        crystal.scale.set(1, 1.6, 1);
+        crystal.castShadow = true;
+        const top = y * 0.72 + 0.25;
+        crystal.position.y = top;
+        root.add(crystal);
+        const glow = glowSprite(0xffe066, 1.6, 0.6);
+        glow.position.y = top;
+        root.add(glow);
+        dyn.add(root);
+        gate = { root, crystal, glow, mat: crystalMat, top };
+    }
+
+    function syncGate() {
+        if (!gate || !exit) return;
+        gate.root.position.set(exit.x + 0.5, 0, exit.y + 0.5);
+        gate.crystal.rotation.y = time * 1.2;
+        gate.crystal.position.y = gate.top + Math.sin(time * 2) * 0.05;
+        const hit = FX.gateHit > 0 ? FX.gateHit / 24 : 0;
+        gate.mat.emissive.setRGB(0.98, 0.8 * (1 - hit) + 0.2 * hit, 0.08 * (1 - hit) + 0.2 * hit);
+        gate.mat.color.copy(gate.mat.emissive);
+        gate.glow.material.color.setRGB(1, 0.88 - hit * 0.6, 0.4 - hit * 0.3);
+        const s = 1.4 + 0.15 * Math.sin(time * 3) + hit * 1.2;
+        gate.glow.scale.set(s, s, 1);
+    }
+
+    function portalObj() {
+        const root = new T3.Group();
+        const ringM = mat('#7c4dff', { emissive: new T3.Color('#7c4dff'), ei: 1.8, rough: 0.3 });
+        const ring = new T3.Mesh(new T3.TorusGeometry(0.36, 0.055, 8, 32), ringM);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = 0.06;
+        root.add(ring);
+        const ring2 = new T3.Mesh(new T3.TorusGeometry(0.24, 0.03, 6, 28), mat('#c38bff', { emissive: new T3.Color('#c38bff'), ei: 1.6 }));
+        ring2.rotation.x = Math.PI / 2;
+        ring2.position.y = 0.1;
+        root.add(ring2);
+        const core = new T3.Mesh(new T3.CircleGeometry(0.34, 32).rotateX(-Math.PI / 2), basic(0x2a1460, 0.95));
+        core.position.y = 0.02;
+        root.add(core);
+        // Light column
+        const colG = new T3.CylinderGeometry(0.3, 0.34, 1.1, 24, 1, true);
+        colG.translate(0, 0.55, 0);
+        const colM = new T3.MeshBasicMaterial({ color: 0x9a6bff, transparent: true, opacity: 0.22, blending: T3.AdditiveBlending, depthWrite: false, side: T3.DoubleSide, toneMapped: false });
+        colM._own = true;
+        // fade towards the top
+        const cnv = document.createElement('canvas');
+        cnv.width = 4;
+        cnv.height = 64;
+        const g = cnv.getContext('2d');
+        const gr = g.createLinearGradient(0, 0, 0, 64);
+        gr.addColorStop(0, 'rgba(255,255,255,0)');
+        gr.addColorStop(1, 'rgba(255,255,255,1)');
+        g.fillStyle = gr;
+        g.fillRect(0, 0, 4, 64);
+        colM.alphaMap = new T3.CanvasTexture(cnv);
+        const column = new T3.Mesh(colG, colM);
+        root.add(column);
+        const glow = glowSprite(0x9a6bff, 1.3, 0.55);
+        glow.position.y = 0.25;
+        root.add(glow);
+        dyn.add(root);
+        return { root, ring, ring2, column, glow };
+    }
+
+    function syncPortals() {
+        const list = spawnpoints.map(s => [s.x, s.y, 1]).concat(tempSpawns.map(([s]) => [s.x, s.y, 0.75]));
+        while (portalObjs.length < list.length) portalObjs.push(portalObj());
+        portalObjs.forEach((p, i) => {
+            const it = list[i];
+            p.root.visible = !!it;
+            if (!it) return;
+            p.root.position.set(it[0] + 0.5, 0, it[1] + 0.5);
+            p.root.scale.setScalar(it[2]);
+            p.ring.rotation.z = time * 1.4 + i;
+            p.ring2.rotation.z = -time * 2.2 - i;
+            p.column.material.opacity = 0.16 + 0.08 * Math.sin(time * 3 + i);
+            const s = 1.1 + 0.12 * Math.sin(time * 4 + i);
+            p.glow.scale.set(s, s, 1);
+        });
+    }
+
+    function syncMissiles() {
+        if (!missiles) {
+            missiles = [['weapon-ammo-bullet', '#e0313b'], ['weapon-ammo-cannonball', '#3d7fe0']].map(([name, c]) => {
+                const parts = kit[name] || [];
+                return parts.map(p => {
+                    const mesh = new T3.InstancedMesh(p.geo, accentMat(c), 64);
+                    mesh.instanceMatrix.setUsage(T3.DynamicDrawUsage);
+                    mesh.castShadow = true;
+                    mesh.frustumCulled = false;
+                    mesh.count = 0;
+                    dyn.add(mesh);
+                    return { mesh, m: p.m };
+                });
+            });
+        }
+        const n = [0, 0];
+        const q = new T3.Quaternion();
+        const e = new T3.Euler();
+        const p3 = new T3.Vector3();
+        const one = new T3.Vector3(1.3, 1.3, 1.3);
+        for (let i = 0; i < projectiles.length; i++) {
+            const p = projectiles[i];
+            if (!p.alive) continue;
+            const k = p.blastRadius > 1 ? 1 : 0;
+            if (n[k] >= 64) continue;
+            e.set(0, yawFor(Math.atan2(p.vel.y, p.vel.x)), 0);
+            q.setFromEuler(e);
+            p3.set(p.pos.x / ts, FX_H, p.pos.y / ts);
+            tmpM.compose(p3, q, one);
+            const j = n[k]++;
+            missiles[k].forEach(part => part.mesh.setMatrixAt(j, tmpM2.multiplyMatrices(tmpM, part.m)));
+        }
+        missiles.forEach((parts, k) => parts.forEach(part => {
+            part.mesh.count = n[k];
+            part.mesh.instanceMatrix.needsUpdate = true;
+        }));
+    }
+
+    // Route arrows, with the preview of the new way while placing on open ground
+    let routeKey = '';
+    let route = null;
+    let previewKey = '';
+    let previewRoute = null;
+    const DIR_ANGLE = [0, Math.PI, -Math.PI / 2, 0, Math.PI / 2];
+    const DX = [0, -1, 0, 1, 0];
+    const DY = [0, 0, -1, 0, 1];
+
+    function traceRoute(dirAt) {
+        const n = cols * rows;
+        const best = new Int16Array(n).fill(-1);
+        const starts = spawnpoints.map(s => [s.x, s.y]).concat(tempSpawns.map(([s]) => [s.x, s.y]));
+        starts.forEach(([x, y]) => {
+            let i = 0;
+            const seen = new Uint8Array(n);
+            while (x >= 0 && y >= 0 && x < cols && y < rows) {
+                const k = x * rows + y;
+                if (seen[k]) break;
+                seen[k] = 1;
+                if (x === exit.x && y === exit.y) break;
+                if (best[k] === -1 || i < best[k]) best[k] = i;
+                const d = dirAt(x, y);
+                if (!d) break;
+                x += DX[d];
+                y += DY[d];
+                i++;
+            }
+        });
+        const out = { x: [], y: [], a: [], i: [], n: 0 };
+        for (let k = 0; k < n; k++) {
+            if (best[k] < 0) continue;
+            const x = Math.floor(k / rows);
+            const y = k % rows;
+            const d = dirAt(x, y);
+            if (!d) continue;
+            out.x.push(x);
+            out.y.push(y);
+            out.a.push(DIR_ANGLE[d]);
+            out.i.push(best[k]);
+            out.n++;
+        }
+        return out;
+    }
+
+    function flowWithBlock(bx, by) {
+        const n = cols * rows;
+        const occ = new Uint8Array(n);
+        for (let i = 0; i < towers.length; i++) if (towers[i].alive) occ[towers[i].gridPos.x * rows + towers[i].gridPos.y] = 1;
+        for (let i = 0; i < newTowers.length; i++) if (newTowers[i].alive) occ[newTowers[i].gridPos.x * rows + newTowers[i].gridPos.y] = 1;
+        occ[bx * rows + by] = 1;
+        const walk = (x, y) => grid[x][y] !== 1 && grid[x][y] !== 3 && !occ[x * rows + y];
+        const dir = new Uint8Array(n);
+        const seen = new Uint8Array(n);
+        const q = new Int32Array(n);
+        let h = 0;
+        let t = 0;
+        const start = exit.x * rows + exit.y;
+        q[t++] = start;
+        seen[start] = 1;
+        while (h < t) {
+            const k = q[h++];
+            const x = Math.floor(k / rows);
+            const y = k % rows;
+            const nb = [[x - 1, y, 3], [x, y - 1, 4], [x + 1, y, 1], [x, y + 1, 2]];
+            for (let j = 0; j < 4; j++) {
+                const [nx, ny, d] = nb[j];
+                if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) continue;
+                const nk = nx * rows + ny;
+                if (seen[nk] || !walk(nx, ny)) continue;
+                seen[nk] = 1;
+                dir[nk] = d;
+                q[t++] = nk;
+            }
+        }
+        for (let x = 0; x < cols; x++) for (let y = 0; y < rows; y++) if (grid[x][y] === 2) dir[x * rows + y] = paths[x][y] || 0;
+        return (x, y) => dir[x * rows + y];
+    }
+
+    function syncRoute() {
+        const key = `${pathVersion}|${tempSpawns.length}|${cols}x${rows}`;
+        if (key !== routeKey) {
+            routeKey = key;
+            route = traceRoute((x, y) => paths[x][y]);
+        }
+        const strong = !started || toPlace;
+        let r = route;
+        let gold = false;
+        const p = toPlace ? placementTile() : null;
+        if (p && grid[p.x][p.y] === 0 && !placeReasonCached(p.x, p.y)) {
+            const k = `${p.x},${p.y},${pathVersion}`;
+            if (k !== previewKey) {
+                previewKey = k;
+                previewRoute = traceRoute(flowWithBlock(p.x, p.y));
+            }
+            r = previewRoute;
+            gold = true;
+        }
+        const mesh = gold ? routeGold : routeMesh;
+        (gold ? routeMesh : routeGold).count = 0;
+        if (!r || !r.n || (FX.quality === 0 && !strong)) {
+            mesh.count = 0;
+            return;
+        }
+        if (mesh.instanceMatrix.count < r.n) {
+            const m2 = new T3.InstancedMesh(mesh.geometry, mesh.material, Math.max(r.n, cols * rows));
+            m2.frustumCulled = false;
+            m2.renderOrder = 2;
+            dyn.remove(mesh);
+            dyn.add(m2);
+            if (gold) routeGold = m2; else routeMesh = m2;
+            return syncRoute();
+        }
+        const tt = time * 6;
+        const baseA = gold ? 0.75 : strong ? 0.26 : 0.12;
+        const amp = gold ? 0.3 : strong ? 0.5 : 0.25;
+        let n = 0;
+        const q = new T3.Quaternion();
+        const up = new T3.Vector3(0, 1, 0);
+        const sc = new T3.Vector3(0.9, 1, 0.9);
+        for (let j = 0; j < r.n; j++) {
+            const ph = ((r.i[j] - tt) % 8 + 8) % 8;
+            const a = Math.min(1, baseA + amp * Math.max(0, 1 - ph / 3));
+            if (a < 0.06) continue;
+            q.setFromAxisAngle(up, -r.a[j]);
+            tmpV.set(r.x[j] + 0.5, 0.02, r.y[j] + 0.5);
+            tmpM.compose(tmpV, q, sc);
+            mesh.setMatrixAt(n, tmpM);
+            mesh.setColorAt(n, tmpC.setRGB(a, a, a));
+            n++;
+        }
+        mesh.count = n;
+        mesh.instanceMatrix.needsUpdate = true;
+        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }
+
+    // Selection, ranges and the tower being placed
+    let ghostModel = null;
+    let brackets = null;
+    function syncOverlays3D() {
+        const sel = selected && !toPlace && selected.alive ? selected : null;
+        if (!brackets && kit) {
+            brackets = kitClone('selection-a', kitMat('base'));
+            brackets.traverse(o => { o.castShadow = false; });
+            dyn.add(brackets);
+            selRing.visible = false;
+        }
+        const mark = brackets || selRing;
+        mark.visible = !!sel;
+        rangeFill.visible = rangeLine.visible = false;
+        upLine.visible = false;
+        if (sel) {
+            const X = sel.pos.x / ts;
+            const Z = sel.pos.y / ts;
+            const s = (brackets ? 1.08 : 1) + 0.06 * Math.sin(time * 5);
+            const gy = groundY && groundY[sel.gridPos.x] ? groundY[sel.gridPos.x][sel.gridPos.y] : 0;
+            mark.position.set(X, gy + 0.02, Z);
+            mark.scale.set(s, 1, s);
+            showRange(X, Z, sel.range + 1, sel.color, true);
+            if (upgradeRange && upgradeRange !== sel.range) {
+                upLine.visible = true;
+                upLine.position.set(X, 0.04, Z);
+                upLine.scale.setScalar(upgradeRange + 1);
+            }
+        }
+        // Placement
+        const p = placementTile();
+        const key = p ? `${p.x},${p.y},${towerType}` : '';
+        if (key !== lastPlaceKey) {
+            lastPlaceKey = key;
+            updatePlaceStatus();
+        }
+        placeTile.visible = placeCross.visible = false;
+        const wantGhost = p && towerType;
+        if (ghostModel && (!wantGhost || ghostModel.name !== towerType)) {
+            dyn.remove(ghostModel.root);
+            ghostModel = null;
+        }
+        if (!p) return;
+        const tpl = tower[towerType];
+        const reason = placeReasonCached(p.x, p.y);
+        const afford = godMode || cash >= tpl.cost;
+        const ok = !reason;
+        const X = p.x + 0.5;
+        const Z = p.y + 0.5;
+        const lift = grid[p.x][p.y] === 1 && wallH ? wallH[p.x][p.y] : 0;
+        showRange(X, Z, (tpl.range || 3) + 1, tpl.color, ok && afford);
+        placeTile.visible = true;
+        placeTile.position.set(X, lift + 0.025, Z);
+        placeTile.material.color.set(ok && afford ? 0x4ade80 : 0xf87171);
+        placeTile.material.opacity = ghost ? 0.5 : 0.32;
+        if (ok) {
+            if (!ghostModel) {
+                ghostModel = makeModel({ name: towerType, angle: -Math.PI / 2 }, true);
+                dyn.add(ghostModel.root);
+            }
+            ghostModel.root.position.set(X, 0, Z);
+            ghostModel.turret.rotation.y = Math.PI / 2 + Math.sin(time * 1.5) * 0.4;
+            ghostModel.root.traverse(o => { if (o.isMesh) o.material.opacity = afford ? 0.7 : 0.35; });
+            if (ghostModel.spin) ghostModel.spin.rotation.y += 0.03;
+        } else {
+            if (ghostModel) {
+                dyn.remove(ghostModel.root);
+                ghostModel = null;
+            }
+            placeCross.visible = true;
+            placeCross.position.set(X, lift + 0.08, Z);
+        }
+    }
+
+    function showRange(X, Z, r, color, ok) {
+        rangeFill.visible = rangeLine.visible = true;
+        rangeFill.position.set(X, 0.012, Z);
+        rangeFill.scale.setScalar(r);
+        rangeLine.position.set(X, 0.016, Z);
+        rangeLine.scale.setScalar(r);
+        rangeLine.rotation.y = time * 0.25;
+        if (ok) rangeFill.material.color.setRGB(color[0] / 255, color[1] / 255, color[2] / 255);
+        else rangeFill.material.color.set(0xf87171);
+        rangeFill.material.opacity = ok ? 0.13 : 0.16;
+        rangeLine.material.color.set(ok ? 0xffffff : 0xf87171);
+    }
+
+    // ---------- Overlay (2D, projected) ----------
+
+    let atlasAt = 0;
+    function scheduleAtlas() {
+        atlasAt = performance.now() + 160;
+    }
+    function ensureAtlas() {
+        const k = proj(target.x, FX_H, target.z).k * dpr;
+        const tile = Math.max(16, k);
+        if (!SP || (atlasAt && performance.now() > atlasAt && Math.abs(SP.tile - Math.min(Art.MAX_TILE, tile)) / tile > 0.15)) {
+            SP = Art.build(tile);
+            atlasAt = 0;
+        }
+    }
+    const natural = (name) => SP.s[name].w / SP.tile;
+
+    // Sprite centred on screen point (css px), w = width in css px
+    function ospr(name, x, y, w, rot = 0, sy = 1) {
+        const s = SP.s[name];
+        if (!s) return;
+        const W = w * dpr;
+        const H = W * s.h / s.w * sy;
+        if (rot) {
+            octx.setTransform(Math.cos(rot), Math.sin(rot), -Math.sin(rot), Math.cos(rot), x * dpr, y * dpr);
+            octx.drawImage(SP.atlas, s.x, s.y, s.w, s.h, -W / 2, -H / 2, W, H);
+            octx.setTransform(1, 0, 0, 1, 0, 0);
+        } else {
+            octx.drawImage(SP.atlas, s.x, s.y, s.w, s.h, x * dpr - W / 2, y * dpr - H / 2, W, H);
+        }
+        drawCalls++;
+    }
+
+    function enemyHeight(e) {
+        const art = Art.ENEMY_ART[e.name];
+        return (art ? art.r : 0.3) * 0.85;
+    }
+
+    function drawOverlay() {
+        const W = overlay.width;
+        const H = overlay.height;
+        octx.setTransform(1, 0, 0, 1, 0, 0);
+        octx.globalAlpha = 1;
+        octx.globalCompositeOperation = 'source-over';
+        octx.clearRect(0, 0, W, H);
+        ensureAtlas();
+        drawRings();
+        drawBeams();
+        drawFlashes();
+        drawParticles();
+        if (healthBar) drawBars();
+        drawTag();
+        drawFloaters();
+        drawVignette();
+        octx.globalAlpha = 1;
+        octx.globalCompositeOperation = 'source-over';
+    }
+
+    // Blast rings, flat on the ground: an ellipse from the local ground directions
+    function drawRings() {
+        const R = FX.rings;
+        if (!R.n) return;
+        octx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < R.n; i++) {
+            const r = R.items[i];
+            const f = 1 - r.life / r.max;
+            const rad = (r.r0 + (r.r1 - r.r0) * (1 - (1 - f) * (1 - f))) / ts;
+            const X = r.x / ts;
+            const Z = r.y / ts;
+            const c = proj(X, 0.05, Z);
+            const cx = c.x, cy = c.y;
+            const ax = proj(X + 1, 0.05, Z);
+            const ux = ax.x - cx, uy = ax.y - cy;
+            const az = proj(X, 0.05, Z + 1);
+            const vx = az.x - cx, vy = az.y - cy;
+            const s = SP.s[r.sprite];
+            if (!s) continue;
+            octx.globalAlpha = Math.max(0, r.a0 * (1 - f));
+            const k = rad / 0.43;   // the sprite's ring sits at 0.43 of its width
+            octx.setTransform(ux * k * dpr / s.w, uy * k * dpr / s.w, vx * k * dpr / s.w, vy * k * dpr / s.w, cx * dpr, cy * dpr);
+            octx.drawImage(SP.atlas, s.x, s.y, s.w, s.h, -s.w / 2, -s.h / 2, s.w, s.h);
+            drawCalls++;
+        }
+        octx.setTransform(1, 0, 0, 1, 0, 0);
+        octx.globalCompositeOperation = 'source-over';
+        octx.globalAlpha = 1;
+    }
+
+    function seg(x1, y1, x2, y2, color, w) {
+        octx.beginPath();
+        octx.moveTo(x1 * dpr, y1 * dpr);
+        octx.lineTo(x2 * dpr, y2 * dpr);
+        octx.strokeStyle = color;
+        octx.lineWidth = Math.max(1, w * dpr);
+        octx.stroke();
+        drawCalls++;
+    }
+
+    const MUZZLE_H = TOP_H + 0.12;
+    function drawBeams() {
+        const B = FX.beams;
+        if (!B.n) return;
+        octx.globalCompositeOperation = 'lighter';
+        octx.lineCap = 'round';
+        for (let i = 0; i < B.n; i++) {
+            const b = B.items[i];
+            const f = b.life / b.max;
+            switch (b.kind) {
+                case 'tracer': {
+                    const p = 1 - (b.life - 1) / Math.max(1, b.max - 1);
+                    const hx = b.x1 + (b.x2 - b.x1) * p;
+                    const hy = b.y1 + (b.y2 - b.y1) * p;
+                    const len = Math.hypot(b.x2 - b.x1, b.y2 - b.y1) || 1;
+                    const tl = Math.min(len * p, ts * 0.45);
+                    const ux = (b.x2 - b.x1) / len;
+                    const uy = (b.y2 - b.y1) / len;
+                    const h = MUZZLE_H - (MUZZLE_H - 0.3) * p;
+                    const a = proj((hx - ux * tl) / ts, h, (hy - uy * tl) / ts);
+                    const ax = a.x, ay = a.y;
+                    const c = proj(hx / ts, h, hy / ts);
+                    seg(ax, ay, c.x, c.y, 'rgba(255,214,90,0.95)', c.k * 0.07 * b.w);
+                    break;
+                }
+                case 'laser':
+                case 'emitter': {
+                    const t = b.tower;
+                    const e = b.target;
+                    if (!t || !t.alive || !e || !e.alive) break;
+                    const m = FX.muzzle(t, 0);
+                    const a = proj(m.x / ts, MUZZLE_H, m.y / ts);
+                    const ax = a.x, ay = a.y;
+                    const c = proj(e.pos.x / ts, enemyHeight(e), e.pos.y / ts);
+                    const col = b.kind === 'laser' ? 'rgba(60,170,255,0.5)' : 'rgba(60,240,220,0.55)';
+                    const flick = 0.85 + 0.15 * Math.sin(time * 40 + i);
+                    seg(ax, ay, c.x, c.y, col, c.k * (b.kind === 'laser' ? 0.18 : 0.2) * b.w * flick);
+                    seg(ax, ay, c.x, c.y, 'rgba(235,255,255,0.95)', c.k * 0.05 * b.w);
+                    if (SP.s.glow_cyan) ospr(b.kind === 'laser' ? 'glow_cyan' : 'glow_cyan', c.x, c.y, c.k * 0.6, 0);
+                    break;
+                }
+                case 'snipe':
+                case 'rail': {
+                    const a = proj(b.x1 / ts, MUZZLE_H, b.y1 / ts);
+                    const ax = a.x, ay = a.y;
+                    const c = proj(b.x2 / ts, 0.3, b.y2 / ts);
+                    if (b.kind === 'snipe') {
+                        seg(ax, ay, c.x, c.y, `rgba(255,70,60,${0.55 * f})`, c.k * 0.16 * f);
+                        seg(ax, ay, c.x, c.y, `rgba(255,240,230,${f})`, c.k * 0.04);
+                    } else {
+                        seg(ax, ay, c.x, c.y, `rgba(200,90,255,${0.6 * f})`, c.k * 0.32 * f);
+                        seg(ax, ay, c.x, c.y, `rgba(255,230,255,${f})`, c.k * 0.07 * f);
+                    }
+                    break;
+                }
+                case 'shell': {
+                    const p = 1 - (b.life - 1) / Math.max(1, b.max - 1);
+                    const x = (b.x1 + (b.x2 - b.x1) * p) / ts;
+                    const z = (b.y1 + (b.y2 - b.y1) * p) / ts;
+                    const c = proj(x, MUZZLE_H + Math.sin(p * Math.PI) * 1.2, z);
+                    octx.globalAlpha = 0.95;
+                    ospr('glow_orange', c.x, c.y, c.k * 0.45);
+                    octx.globalAlpha = 1;
+                    break;
+                }
+                case 'bolt': {
+                    const flick = (Math.random() < 0.25 ? 0.4 : 1) * f;
+                    const pts = b.pts;
+                    const n = pts.length - 1;
+                    const dx = b.x2 - b.x1;
+                    const dy = b.y2 - b.y1;
+                    const len = Math.hypot(dx, dy) || 1;
+                    const px = -dy / len;
+                    const py = dx / len;
+                    octx.beginPath();
+                    let k = 1;
+                    for (let j = 0; j <= n; j++) {
+                        const u = j / n;
+                        const o = pts[j] * Math.min(1, len / (ts * 2));
+                        const h = 0.75 * (1 - u) + 0.3 * u + o / ts * 0.6;
+                        const c = proj((b.x1 + dx * u + px * o) / ts, h, (b.y1 + dy * u + py * o) / ts);
+                        k = c.k;
+                        if (j === 0) octx.moveTo(c.x * dpr, c.y * dpr); else octx.lineTo(c.x * dpr, c.y * dpr);
+                    }
+                    octx.strokeStyle = b.w >= 1.5 ? `rgba(80,235,255,${0.55 * flick})` : `rgba(255,230,80,${0.55 * flick})`;
+                    octx.lineWidth = k * 0.16 * b.w * dpr;
+                    octx.stroke();
+                    octx.strokeStyle = `rgba(255,255,240,${flick})`;
+                    octx.lineWidth = k * 0.045 * b.w * dpr;
+                    octx.stroke();
+                    drawCalls += 2;
+                    break;
+                }
+            }
+        }
+        octx.globalCompositeOperation = 'source-over';
+        octx.globalAlpha = 1;
+    }
+
+    function drawFlashes() {
+        octx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < towers.length; i++) {
+            const t = towers[i];
+            if (!(t._flash > 0) || t.name === 'tesla' || t.name === 'lightningStrike' || t.name === 'slow' || t.name === 'poison') continue;
+            const m = FX.muzzle(t, t._barrel || 0);
+            const c = proj(m.x / ts, MUZZLE_H, m.y / ts);
+            octx.globalAlpha = Math.min(1, t._flash / 3);
+            const big = t.name === 'railgun' || t.name === 'sniper';
+            ospr('flash', c.x, c.y, c.k * (big ? 0.75 : 0.55), Math.atan2(Math.sin(t.angle) * Math.cos(PITCH), Math.cos(t.angle)));
+        }
+        octx.globalAlpha = 1;
+        octx.globalCompositeOperation = 'source-over';
+    }
+
+    function drawParticles() {
+        const Pp = FX.particles;
+        if (!Pp.n) return;
+        for (let pass = 0; pass < 2; pass++) {
+            const add = pass === 1;
+            octx.globalCompositeOperation = add ? 'lighter' : 'source-over';
+            for (let i = 0; i < Pp.n; i++) {
+                const p = Pp.items[i];
+                if (p.add !== add) continue;
+                const f = 1 - p.life / p.max;
+                const c = proj(p.x / ts, FX_H * (p.color ? 0.6 + 0.4 * (1 - f) : 1), p.y / ts);
+                if (p.color) {
+                    octx.globalAlpha = Math.min(1, (1 - f) * 1.6);
+                    const k = c.k / ts * dpr;
+                    octx.setTransform(Math.cos(p.rot), Math.sin(p.rot), -Math.sin(p.rot), Math.cos(p.rot), c.x * dpr, c.y * dpr);
+                    octx.fillStyle = p.color;
+                    octx.fillRect(-p.w * k / 2, -p.h * k / 2, p.w * k, p.h * k);
+                    octx.setTransform(1, 0, 0, 1, 0, 0);
+                    drawCalls++;
+                    continue;
+                }
+                const size = p.s0 + (p.s1 - p.s0) * f;
+                if (size <= 0.01) continue;
+                octx.globalAlpha = Math.max(0, p.a0 * (1 - f));
+                ospr(p.sprite, c.x, c.y, size * c.k, p.rot);
+            }
+        }
+        octx.globalCompositeOperation = 'source-over';
+        octx.globalAlpha = 1;
+    }
+
+    function drawBars() {
+        for (let i = 0; i < enemies.length; i++) {
+            const e = enemies[i];
+            const art = Art.ENEMY_ART[e.name];
+            const left = Math.max(0, e.health / e.maxHealth);
+            const boss = art && art.boss;
+            if (left >= 1 && !boss) continue;
+            const r = art ? art.r : 0.3;
+            const c = proj(e.pos.x / ts, r * 1.75 + 0.12, e.pos.y / ts);
+            const w = Math.min(boss ? 84 : 56, Math.max(c.k * 0.7, c.k * r * 2) * (boss ? 1.35 : 1));
+            const h = Math.min(boss ? 9 : 7, Math.max(3, c.k * 0.09) * (boss ? 1.4 : 1));
+            const x = c.x - w / 2;
+            const y = c.y - h;
+            const pad = Math.max(1, c.k * 0.025);
+            octx.fillStyle = 'rgba(9,9,11,0.85)';
+            octx.fillRect((x - pad) * dpr, (y - pad) * dpr, (w + pad * 2) * dpr, (h + pad * 2) * dpr);
+            octx.fillStyle = left > 0.6 ? '#4ade80' : left > 0.3 ? '#facc15' : '#f87171';
+            octx.fillRect(x * dpr, y * dpr, w * left * dpr, h * dpr);
+        }
+    }
+
+    function drawTag() {
+        const p = placementTile();
+        if (!p) return;
+        const tpl = tower[towerType];
+        const afford = godMode || cash >= tpl.cost;
+        const c = proj(p.x + 0.5, 1.15, p.y + 0.5);
+        const size = Math.max(12, Math.min(17, c.k * 0.42));
+        octx.font = `700 ${size * dpr}px "Chakra Petch", system-ui, sans-serif`;
+        octx.textAlign = 'center';
+        octx.textBaseline = 'middle';
+        const label = `$${tpl.cost}`;
+        const w = octx.measureText(label).width / dpr + size * 0.9;
+        const h = size * 1.5;
+        let ty = c.y - h / 2;
+        if (ty - h / 2 < 2) ty = proj(p.x + 0.5, 0, p.y + 1.2).y + h / 2;
+        const tx = Math.max(w / 2 + 2, Math.min(cssW - w / 2 - 2, c.x));
+        octx.fillStyle = 'rgba(9,9,11,0.9)';
+        octx.beginPath();
+        if (octx.roundRect) octx.roundRect((tx - w / 2) * dpr, (ty - h / 2) * dpr, w * dpr, h * dpr, h / 4 * dpr);
+        else octx.rect((tx - w / 2) * dpr, (ty - h / 2) * dpr, w * dpr, h * dpr);
+        octx.fill();
+        octx.strokeStyle = afford ? 'rgba(250,204,21,0.7)' : 'rgba(248,113,113,0.7)';
+        octx.lineWidth = dpr;
+        octx.stroke();
+        octx.fillStyle = afford ? '#facc15' : '#f87171';
+        octx.fillText(label, tx * dpr, (ty + size * 0.05) * dpr);
+    }
+
+    function drawFloaters() {
+        if (!floaters.length) return;
+        octx.textAlign = 'center';
+        octx.textBaseline = 'middle';
+        octx.lineJoin = 'round';
+        octx.strokeStyle = '#09090b';
+        const cap = FX.quality === 0 ? 30 : FX.quality === 1 ? 60 : 120;
+        const from = Math.max(0, floaters.length - cap);
+        let lastSize = 0;
+        for (let i = from; i < floaters.length; i++) {
+            const f = floaters[i];
+            const c = proj(f.x / ts, 0.9, f.y / ts);
+            const size = Math.round(Math.max(11, Math.min(20, c.k * 0.42)) * f.size * dpr);
+            if (size !== lastSize) {
+                octx.font = `700 ${size}px "Chakra Petch", system-ui, sans-serif`;
+                octx.lineWidth = size * 0.28;
+                lastSize = size;
+            }
+            octx.globalAlpha = Math.min(1, f.life / 20);
+            octx.fillStyle = f.css || (f.css = `rgb(${f.color[0]},${f.color[1]},${f.color[2]})`);
+            octx.strokeText(f.text, c.x * dpr, c.y * dpr);
+            octx.fillText(f.text, c.x * dpr, c.y * dpr);
+        }
+        octx.globalAlpha = 1;
+    }
+
+    let vignette = null;
+    let hurtVignette = null;
+    function radial(inner, outer) {
+        const c = document.createElement('canvas');
+        c.width = c.height = 256;
+        const g = c.getContext('2d');
+        const grad = g.createRadialGradient(128, 128, 80, 128, 128, 182);
+        grad.addColorStop(0, inner);
+        grad.addColorStop(1, outer);
+        g.fillStyle = grad;
+        g.fillRect(0, 0, 256, 256);
+        return c;
+    }
+    function drawVignette() {
+        if (!vignette) {
+            vignette = radial('rgba(0,0,0,0)', 'rgba(0,0,0,0.32)');
+            hurtVignette = radial('rgba(248,113,113,0)', 'rgba(248,80,80,0.75)');
+        }
+        const W = overlay.width;
+        const H = overlay.height;
+        if (FX.quality > 0) octx.drawImage(vignette, 0, 0, W, H);
+        let a = hurt > 0 ? hurt / 24 : 0;
+        if (!gameOver && health > 0 && health <= maxHealth * 0.25) a = Math.max(a, 0.18 + 0.12 * Math.sin(time * 4));
+        if (a > 0) {
+            octx.globalAlpha = Math.min(1, a);
+            octx.drawImage(hurtVignette, 0, 0, W, H);
+            octx.globalAlpha = 1;
+        }
+    }
+
+    // ---------- Frame ----------
+
+    function mapView() {
+        return {
+            cols, rows, grid, display,
+            spawnpoints: spawnpoints.map(s => [s.x, s.y]),
+            exit: [exit.x, exit.y]
+        };
+    }
+
+    let terrainStamp = '';
+    function frame(stepped) {
+        const now = performance.now();
+        const dt = Math.min(100, now - last);
+        last = now;
+        time += dt / 1000;
+        trackQuality(dt);
+        if (!inited || !cols) return;
+        if (kitFailed) {
+            Renderer.setView('flat');
+            return;
+        }
+        if (!kit) {
+            gl.render(scene, camera);
+            return;
+        }
+        // A changed grid (editor, imported map) means a new world
+        const stamp = `${theme}|${cols}x${rows}|${typeof mapStamp === 'undefined' ? '' : mapStamp}`;
+        if (!world || mapKey === '' || stamp !== terrainStamp) {
+            terrainStamp = stamp;
+            buildWorld();
+            refit();
+        }
+        FX.frame(stepped);
+        drawCalls = 0;
+
+        // Shake moves the picture only (CSS), never what the pointer hits
+        const sh = FX.shakeOffset(now);
+        shakeX = sh.x;
+        shakeY = sh.y;
+        const tr = sh.x || sh.y ? `translate(${sh.x}px,${sh.y}px)` : '';
+        if (canvas.style.transform !== tr) {
+            canvas.style.transform = tr;
+            overlay.style.transform = tr;
+        }
+
+        swayProps();
+        syncTowers(dt / 1000);
+        syncEnemies(stepped);
+        syncMissiles();
+        syncPortals();
+        syncGate();
+        syncRoute();
+        syncOverlays3D();
+        updateVP();
+        gl.render(scene, camera);
+        drawCalls += gl.info.render.calls;
+        drawOverlay();
+        fadeTip();
+
+        perf.renderAcc += performance.now() - now;
+        perf.n++;
+        if (perf.el && now - perf.lastShow > 400) showPerf(now);
+    }
+
+    let tipEl = null;
+    let tipFaded = false;
+    function fadeTip() {
+        if (!tipEl) tipEl = document.getElementById('map-tip');
+        if (!tipEl) return;
+        const near = !!hover && holder.dataset.gutter !== 'bottom' && proj(hover.x / ts, 0, hover.y / ts).y > cssH - 80;
+        if (near !== tipFaded) {
+            tipFaded = near;
+            tipEl.classList.toggle('faded', near);
+        }
+    }
+
+    // ---------- Quality and perf ----------
+
+    function trackQuality(dt) {
+        frameTimes[frameIdx] = dt;
+        frameIdx = (frameIdx + 1) % frameTimes.length;
+        if (!qualityAuto || paused || document.hidden) return;
+        let sum = 0;
+        for (let i = 0; i < frameTimes.length; i++) sum += frameTimes[i];
+        const avg = sum / frameTimes.length;
+        if (avg > 22) {
+            slowFor += dt;
+            fastFor = 0;
+        } else if (avg < 15) {
+            fastFor += dt;
+            slowFor = 0;
+        } else {
+            slowFor = fastFor = 0;
+        }
+        if (slowFor > 2000 && FX.quality > 0) {
+            FX.setQuality(FX.quality - 1);
+            slowFor = 0;
+            frameTimes.fill(16);
+            resize(true);
+        } else if (fastFor > 8000 && FX.quality < 2) {
+            FX.setQuality(FX.quality + 1);
+            fastFor = 0;
+            resize(true);
+        }
+    }
+
+    function logicTime(ms) {
+        perf.logicAcc += ms;
+    }
+
+    function showPerf(now) {
+        const sorted = Array.from(frameTimes).sort((a, b) => a - b);
+        let sum = 0;
+        for (let i = 0; i < sorted.length; i++) sum += sorted[i];
+        const avg = sum / sorted.length;
+        const n = Math.max(1, perf.n);
+        perf.el.textContent =
+            `${(1000 / avg).toFixed(0)} fps · frame ${avg.toFixed(1)} ms (p95 ${sorted[Math.floor(sorted.length * 0.95)].toFixed(1)})\n` +
+            `render ${(perf.renderAcc / n).toFixed(2)} ms · logic ${(perf.logicAcc / n).toFixed(2)} ms · draws ${drawCalls}\n` +
+            `enemies ${enemies.length} · towers ${towers.length} · missiles ${projectiles.length}\n` +
+            `particles ${FX.particles.n} · beams ${FX.beams.n} · rings ${FX.rings.n} · floaters ${floaters.length}\n` +
+            `3D · quality ${['low', 'medium', 'high'][FX.quality]} · zoom ${zoom.toFixed(2)} · ${canvas.width}x${canvas.height} · tris ${gl.info.render.triangles}`;
+        perf.lastShow = now;
+        perf.renderAcc = perf.logicAcc = 0;
+        perf.n = 0;
+    }
+
+    function togglePerf() {
+        if (perf.el) {
+            perf.el.remove();
+            perf.el = null;
+        } else {
+            perf.el = document.createElement('div');
+            perf.el.className = 'perf';
+            holder.append(perf.el);
+        }
+    }
+
+    return {
+        available, init, suspend, portrait: (name) => portraits[name] || null, resize: () => resize(false), mapChanged, frame, reveal, logicTime,
+        setQualityAuto: (v) => { qualityAuto = v; }, setZoom, togglePerf, toScreen,
+        get hover() { return hover; },
+        get zoom() { return zoom; },
+        get shake() { return { x: shakeX, y: shakeY }; },
+        set upgradeRange(v) { upgradeRange = v; },
+        get perfMode() { return perfMode; }
+    };
+})();

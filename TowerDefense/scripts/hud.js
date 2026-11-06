@@ -70,7 +70,18 @@ const TYPE_NAMES = {
 const esc = (str) => String(str).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
 const isTouch = () => lastPointer !== 'mouse';
 const icon = (name) => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
-const towerPic = (name, size = 64) => `<img class="pic" src="${Art.towerPortrait(name, size)}" alt="" width="${size}" height="${size}">`;
+// Tower pictures: renders of the 3D models once they have loaded, else the flat art
+const towerSrc = (name, size = 64) => (typeof Renderer3D !== 'undefined' && Renderer3D.portrait(name)) || Art.towerPortrait(name, size);
+const towerPic = (name, size = 64) => `<img class="pic" data-pic="${name}" src="${towerSrc(name, size)}" alt="" width="${size}" height="${size}">`;
+window.addEventListener('td:portraits', () => {
+    document.querySelectorAll('img[data-pic]').forEach(img => (img.src = towerSrc(img.dataset.pic)));
+});
+
+// What each tower is for, in a few words (the build menu)
+const TOWER_ROLES = {
+    gun: 'Fast shots', laser: 'Steady beam', slow: 'Slows a crowd', sniper: 'Long range',
+    rocket: 'Homing splash', bomb: 'Big splash', tesla: 'Chain lightning'
+};
 const enemyPic = (name, size = 48) => `<img src="${Art.enemyPortrait(name, size)}" alt="" width="${size}" height="${size}">`;
 
 function mapInfo(id = mapId) {
@@ -203,7 +214,7 @@ function buildStore() {
             <kbd>${i + 1}</kbd>${towerPic(name, 64)}
             <span class="name">${esc(t.title.replace(' Tower', ''))}</span>
             <span class="cost">$${t.cost}</span>
-            <span class="bars">${barsHTML(t)}</span>
+            <span class="role">${esc(TOWER_ROLES[name] || '')}</span>
         </button>`;
     }).join('');
     grid.addEventListener('click', e => {

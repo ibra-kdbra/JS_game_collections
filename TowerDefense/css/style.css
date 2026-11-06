@@ -519,9 +519,9 @@ header {
     white-space: normal;
     display: grid;
     grid-template-columns: 40px minmax(0, 1fr) auto;
-    grid-template-areas: "icon name cost" "icon bars bars";
+    grid-template-areas: "icon name cost" "icon role role";
     align-items: center;
-    column-gap: 8px;
+    column-gap: 6px;
     row-gap: 4px;
     text-align: left;
     padding: 6px 8px;
@@ -534,6 +534,16 @@ header {
     grid-area: icon;
     width: 40px;
     height: 40px;
+    object-fit: contain;
+}
+
+.tower-btn .role {
+    grid-area: role;
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .tower-btn .name {
@@ -648,6 +658,16 @@ header {
 
 body.is-placing #sketch-holder canvas {
     cursor: crosshair;
+}
+
+#sketch-holder canvas.over-tower {
+    cursor: pointer;
+}
+
+/* 3D view: the 2D layer for bars, numbers and effects sits over the WebGL map */
+#sketch-holder canvas.map-overlay {
+    pointer-events: none;
+    z-index: 1;
 }
 
 .banner {
@@ -1993,7 +2013,7 @@ body.game-over .store-grid {
         padding: 6px;
     }
 
-    #store h2, .tower-btn kbd, .tower-btn .bars {
+    #store h2, .tower-btn kbd, .tower-btn .bars, .tower-btn .role {
         display: none;
     }
 
@@ -2210,7 +2230,7 @@ body.game-over .store-grid {
         flex: 1 1 auto;
     }
 
-    #store h2, .tower-btn kbd, .tower-btn .bars {
+    #store h2, .tower-btn kbd, .tower-btn .bars, .tower-btn .role {
         display: none;
     }
 

@@ -550,17 +550,11 @@ const Terrain = (() => {
         // Soft shadow under the road's upper edge so it reads as worn into the ground
         innerShadow(ctx, roadPath, cols * px, rows * px, px * 0.09, 'rgba(0,0,0,0.2)');
 
-        // 4. Walls: shadow, side face, top face with a lit rim. In the raised (2.5D)
-        // view walls are drawn standing by renderWallRows; the ground only gets the
-        // dark footprint they stand on.
+        // 4. Walls: shadow, side face, top face with a lit rim
         const lift = px * (th.wallKind === 'building' ? 0.3 : 0.24);
         const wallR = th.wallKind === 'building' ? px * 0.08 : px * 0.3;
         const outer = new Path2D();
         blobPath(outer, cols, rows, isWall, px, px * 0.02, wallR);
-        if (opts.walls === false) {
-            ctx.fillStyle = th.wallLo;
-            ctx.fill(outer);
-        } else {
         ctx.save();
         ctx.translate(px * 0.12, px * 0.1);
         ctx.fillStyle = 'rgba(0,0,0,0.28)';
@@ -595,7 +589,6 @@ const Terrain = (() => {
             }
         }
         ctx.restore();
-        }
 
         // 5. Decorations
         if (opts.decorations !== false) {
@@ -606,7 +599,6 @@ const Terrain = (() => {
                     if (special.has(key)) continue;
                     const r = hash(x, y, 11);
                     if (c === 'w') {
-                        if (opts.walls === false) continue;
                         // Fewer, bigger props deep inside large wall areas
                         const inner = x > 0 && y > 0 && x < cols - 1 && y < rows - 1 &&
                             isWall(x - 1, y) && isWall(x + 1, y) && isWall(x, y - 1) && isWall(x, y + 1);
@@ -843,136 +835,6 @@ const Terrain = (() => {
         ctx.fillRect(x * px, (y + 1) * px - Math.max(1, px * 0.05), px, Math.max(1, px * 0.05));
     }
 
-    /*
-     * Walls standing up, for the raised (2.5D) view: one picture per map row, so the
-     * renderer can draw them in depth order with towers and enemies. The picture of
-     * row r is in "upright" coordinates, where ground point (x, y) sits at (x, y * tilt)
-     * and height h moves up by h: it covers from r * px * tilt - height - head down to
-     * (r + 1) * px * tilt. Each wall is its footprint swept up by `height` (the side
-     * face, shaded darker towards the foot) with the textured top face on it.
-     */
-    function renderWallRows(opts) {
-        const m = opts.m;
-        const px = opts.px;
-        const tilt = opts.tilt;
-        const height = opts.height * px;
-        const head = px * 0.9;
-        const th = THEMES[opts.theme] || THEMES.meadow;
-        const cols = m.cols;
-        const rows = m.rows;
-        const cls = [];
-        for (let x = 0; x < cols; x++) {
-            cls[x] = [];
-            for (let y = 0; y < rows; y++) cls[x][y] = tileClass(m, x, y);
-        }
-        const isWall = (x, y) => cls[x][y] === 'w';
-        const wallR = th.wallKind === 'building' ? px * 0.08 : px * 0.3;
-        const shape = new Path2D();
-        blobPath(shape, cols, rows, isWall, px, px * 0.02, wallR);
-        const W = Math.ceil(cols * px);
-        const Hc = Math.ceil(px * tilt + height + head);
-        const out = [];
-        for (let r = 0; r < rows; r++) {
-            let any = false;
-            for (let x = 0; x < cols && !any; x++) any = isWall(x, r);
-            if (!any) {
-                out.push(null);
-                continue;
-            }
-            const y0 = r * px * tilt - height - head;
-            const c = makeCanvas(W, Hc);
-            const g = c.getContext('2d', { willReadFrequently: true });
-            // The row's footprint, squashed onto the ground, as a stamp for the sweep
-            const foot = makeCanvas(W, Math.ceil(px * tilt) + 2);
-            const fg = foot.getContext('2d', { willReadFrequently: true });
-            fg.setTransform(1, 0, 0, tilt, 0, -r * px * tilt);
-            fg.save();
-            fg.beginPath();
-            fg.rect(0, r * px, W, px);
-            fg.clip();
-            fg.fillStyle = th.wallSide;
-            fg.fill(shape);
-            fg.restore();
-            // Side face: the footprint stamped at every height up to the top
-            const step = Math.max(1, height / 40);
-            for (let h = 0; h <= height; h += step) g.drawImage(foot, 0, r * px * tilt - h - y0);
-            // Darker towards the foot, with a dark line where it meets the ground
-            g.globalCompositeOperation = 'source-atop';
-            const footY = (r + 1) * px * tilt - y0;
-            const grad = g.createLinearGradient(0, footY - height, 0, footY);
-            grad.addColorStop(0, 'rgba(0,0,0,0)');
-            grad.addColorStop(1, 'rgba(0,0,0,0.35)');
-            g.fillStyle = grad;
-            g.fillRect(0, 0, W, Hc);
-            g.globalCompositeOperation = 'source-over';
-            // Top face, raised by `height`, with the lit rim and the texture
-            g.save();
-            g.setTransform(1, 0, 0, tilt, 0, -height - y0);
-            g.beginPath();
-            g.rect(0, r * px, W, px);
-            g.clip();
-            g.save();
-            g.translate(-px * 0.025, -px * 0.03);
-            g.fillStyle = th.wallHi;
-            g.fill(shape);
-            g.restore();
-            g.fillStyle = th.wallTop;
-            g.fill(shape);
-            g.clip(shape);
-            for (let x = 0; x < cols; x++) if (isWall(x, r)) wallTexture(g, x, r, px, th, isWall);
-            g.restore();
-            // Windows or cracks on the side face of walls with open ground in front
-            g.save();
-            g.translate(0, -y0);
-            for (let x = 0; x < cols; x++) {
-                if (!isWall(x, r) || (r + 1 < rows && isWall(x, r + 1))) continue;
-                sideDetail(g, x, (r + 1) * px * tilt, px, height, th);
-            }
-            g.restore();
-            // Props on top (trees, rocks, vents), standing up
-            for (let x = 0; x < cols; x++) {
-                if (!isWall(x, r) || hash(x, r, 11) >= 0.38) continue;
-                const inner = x > 0 && r > 0 && x < cols - 1 && r < rows - 1 &&
-                    isWall(x - 1, r) && isWall(x + 1, r) && isWall(x, r - 1) && isWall(x, r + 1);
-                if (hash(x, r, 11) >= (inner ? 0.3 : 0.38)) continue;
-                const list = th.wallDeco;
-                const name = list[Math.floor(hash(x, r, 12) * list.length)];
-                const ox = (hash(x, r, 13) - 0.5) * px * (inner ? 0.5 : 0.24);
-                const oy = (hash(x, r, 14) - 0.5) * px * (inner ? 0.4 : 0.14);
-                const k = inner ? 0.85 + hash(x, r, 16) * 0.45 : 1;
-                const cy = ((r + 0.5) * px + oy) * tilt - height - y0;
-                DECO[name](g, (x + 0.5) * px + ox, cy, px * k, th, hash(x, r, 15));
-            }
-            out.push({ canvas: c, y0 });
-        }
-        return { rows: out, px };
-    }
-
-    // Windows (buildings) or cracks (rock) on a wall's front face; footY is its foot
-    function sideDetail(g, x, footY, px, height, th) {
-        if (th.wallKind === 'building') {
-            g.fillStyle = '#f6d36b';
-            for (let j = 0; j < 2; j++) {
-                for (let i = 0; i < 3; i++) {
-                    if (hash(x, j, 120 + i) < 0.45) continue;
-                    g.globalAlpha = 0.85;
-                    g.fillRect(x * px + px * (0.12 + i * 0.28), footY - height * (0.82 - j * 0.42), px * 0.14, height * 0.26);
-                }
-            }
-            g.globalAlpha = 1;
-            return;
-        }
-        g.strokeStyle = th.wallLo;
-        g.lineWidth = Math.max(1, px * 0.03);
-        g.beginPath();
-        for (let i = 0; i < 2; i++) {
-            const sx = x * px + px * (0.25 + 0.5 * i + (hash(x, footY | 0, 130 + i) - 0.5) * 0.2);
-            g.moveTo(sx, footY - height * 0.85);
-            g.lineTo(sx + px * 0.03, footY - height * 0.2);
-        }
-        g.stroke();
-    }
-
     function plate(ctx, x, y, px, dark, light) {
         const cx = (x + 0.5) * px;
         const cy = (y + 0.5) * px;
@@ -981,5 +843,5 @@ const Terrain = (() => {
         circle(ctx, cx, cy, px * 0.4, dark);
     }
 
-    return { THEMES, MAP_THEMES, themeFor, render, renderWallRows, hash, tileClass, makeCanvas, roundRectPath, DECO };
+    return { THEMES, MAP_THEMES, themeFor, render, hash, tileClass, makeCanvas, roundRectPath, DECO };
 })();
