@@ -47,7 +47,7 @@ class Tower {
     attack(e) {
         const damage = Math.round(Math.random() * (this.damageMax - this.damageMin) + this.damageMin);
         e.dealDamage(damage, this.type);
-        playSound(this.sound);
+        playSound(this.sound, this.pos.x);
         this.onHit(e);
     }
 
