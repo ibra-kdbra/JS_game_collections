@@ -664,6 +664,45 @@ body.is-placing #sketch-holder canvas {
     cursor: pointer;
 }
 
+/* 3D view: "Loading 3D n%" over the map while the models come in */
+.load3d {
+    position: absolute;
+    left: 50%;
+    top: 45%;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+    display: grid;
+    gap: 8px;
+    justify-items: center;
+    padding: 12px 18px;
+    border-radius: 10px;
+    background: rgba(9, 9, 11, 0.85);
+    border: 1px solid var(--line);
+    font: 700 14px/1 var(--display);
+    pointer-events: none;
+}
+
+.load3d[hidden] {
+    display: none;
+}
+
+.load3d i {
+    display: block;
+    width: 180px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--line);
+    overflow: hidden;
+}
+
+.load3d b {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--accent);
+    transition: width 0.2s;
+}
+
 /* 3D view: the 2D layer for bars, numbers and effects sits over the WebGL map */
 #sketch-holder canvas.map-overlay {
     pointer-events: none;

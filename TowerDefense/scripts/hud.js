@@ -71,20 +71,16 @@ const esc = (str) => String(str).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': 
 const isTouch = () => lastPointer !== 'mouse';
 const icon = (name) => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
 // Tower pictures: renders of the 3D models once they have loaded, else the flat art
-const towerSrc = (name, size = 64) => (typeof Renderer3D !== 'undefined' && Renderer3D.portrait(name)) || Art.towerPortrait(name, size);
-const towerPic = (name, size = 64) => `<img class="pic" data-pic="${name}" src="${towerSrc(name, size)}" alt="" width="${size}" height="${size}">`;
-window.addEventListener('td:portraits', () => {
-    document.querySelectorAll('img[data-pic]').forEach(img => (img.src = towerSrc(img.dataset.pic)));
-    document.querySelectorAll('img[data-epic]').forEach(img => (img.src = enemySrc(img.dataset.epic)));
-});
+// Pictures of the 3D models (models/portraits, made by tools/make-portraits.mjs);
+// the flat art stands in if a file is missing
+const towerPic = (name, size = 64) => `<img class="pic" src="models/portraits/tower-${name}.webp" alt="" width="${size}" height="${size}" loading="lazy" onerror="this.onerror=null;this.src=Art.towerPortrait('${name}', ${size})">`;
 
 // What each tower is for, in a few words (the build menu)
 const TOWER_ROLES = {
     gun: 'Fast shots', laser: 'Steady beam', slow: 'Slows a crowd', sniper: 'Long range',
     rocket: 'Homing splash', bomb: 'Big splash', tesla: 'Chain lightning'
 };
-const enemySrc = (name, size = 48) => (typeof Renderer3D !== 'undefined' && Renderer3D.enemyPortrait(name)) || Art.enemyPortrait(name, size);
-const enemyPic = (name, size = 48) => `<img data-epic="${name}" src="${enemySrc(name, size)}" alt="" width="${size}" height="${size}">`;
+const enemyPic = (name, size = 48) => `<img src="models/portraits/enemy-${name}.webp" alt="" width="${size}" height="${size}" onerror="this.onerror=null;this.src=Art.enemyPortrait('${name}', ${size})">`;
 
 function mapInfo(id = mapId) {
     return MAP_LIST.find(m => m.id === id) || MAP_LIST[0];
