@@ -57,7 +57,25 @@ function startAudio() {
     });
 }
 
-function playSound(name) {
+// Left-right position of a sound from where it happens on the map (x in game
+// pixels): the left edge of the map plays a little left, the right edge right
+function panFor(x) {
+    if (typeof x !== 'number' || typeof cols === 'undefined' || !cols) return 0;
+    return Math.max(-1, Math.min(1, (x / (cols * ts)) * 2 - 1)) * 0.65;
+}
+
+// A stereo panner in front of the master volume, or the master itself
+function outFor(x) {
+    const pan = panFor(x);
+    if (!pan || !audioCtx.createStereoPanner) return masterGain;
+    const p = audioCtx.createStereoPanner();
+    p.pan.value = pan;
+    p.connect(masterGain);
+    return p;
+}
+
+// x: where on the map it happens, for the stereo position
+function playSound(name, x) {
     if (muteSounds || !audioCtx || audioCtx.state !== 'running') return;
     const buffer = soundBuffers[name];
     if (!buffer) return;
@@ -74,7 +92,9 @@ function playSound(name) {
     gain.gain.setValueAtTime(vol, now + len * 0.6);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + len);
     src.buffer = buffer;
-    src.connect(gain).connect(masterGain);
+    // A little different every time, so a volley does not sound like one sample
+    src.playbackRate.value = 0.94 + Math.random() * 0.12;
+    src.connect(gain).connect(outFor(x));
     src.onended = () => { soundVoices[name]--; };
     src.start(now);
     src.stop(now + len + 0.02);
@@ -104,6 +124,96 @@ const sfxNotes = {
     defeat: [[0, 392, 0.26, 'triangle', 0.15, 0, { lp: 1400 }], [0.24, 330, 0.26, 'triangle', 0.15, 0, { lp: 1400 }],
         [0.48, 262, 0.26, 'triangle', 0.15, 0, { lp: 1400 }], [0.72, 196, 0.9, 'triangle', 0.17, 150, { lp: 1000, echo: 0.4 }]]
 };
+
+// ---------- Tower shots without a sound file, synthesised ----------
+// Gun: a short filtered crack. Laser: a soft rising hum while it burns. Mortar: a
+// deep thump. Slow and Poison: a quiet low chime with each pulse. Quiet next to the
+// file sounds, with gaps and voice caps so a battle never piles up.
+
+let noiseBuf = null;
+function whiteNoise() {
+    if (noiseBuf) return noiseBuf;
+    const n = Math.floor(audioCtx.sampleRate * 0.4);
+    noiseBuf = audioCtx.createBuffer(1, n, audioCtx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    return noiseBuf;
+}
+
+const SHOTS = {
+    gun: { gap: 0.07, vol: 0.05 },
+    machineGun: { gap: 0.06, vol: 0.04 },
+    laser: { gap: 0.32, vol: 0.025 },
+    beamEmitter: { gap: 0.32, vol: 0.03 },
+    bomb: { gap: 0.18, vol: 0.2 },
+    clusterBomb: { gap: 0.18, vol: 0.2 },
+    slow: { gap: 1.0, vol: 0.05 },
+    poison: { gap: 1.0, vol: 0.05 }
+};
+
+function shotSound(t) {
+    if (muteSounds || !audioCtx || audioCtx.state !== 'running' || !t || t.sound) return;
+    const k = SHOTS[t.name];
+    if (!k) return;
+    const now = audioCtx.currentTime;
+    const key = 'shot-' + t.name;
+    if (now - (soundLastPlayed[key] || -1) < k.gap) return;
+    soundLastPlayed[key] = now;
+    const out = outFor(t.pos && t.pos.x);
+    const env = (node, vol, len, attack = 0.003) => {
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(vol, now + attack);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + len);
+        node.connect(g).connect(out);
+        return g;
+    };
+    const tone = (type, f0, f1, len, vol, attack) => {
+        const o = audioCtx.createOscillator();
+        o.type = type;
+        o.frequency.setValueAtTime(f0, now);
+        if (f1) o.frequency.exponentialRampToValueAtTime(f1, now + len);
+        env(o, vol, len, attack);
+        o.start(now);
+        o.stop(now + len + 0.02);
+    };
+    const hiss = (freq, q, len, vol) => {
+        const src = audioCtx.createBufferSource();
+        src.buffer = whiteNoise();
+        src.playbackRate.value = 0.9 + Math.random() * 0.2;
+        const f = audioCtx.createBiquadFilter();
+        f.type = 'bandpass';
+        f.frequency.value = freq;
+        f.Q.value = q;
+        src.connect(f);
+        env(f, vol, len);
+        src.start(now, Math.random() * 0.2);
+        src.stop(now + len + 0.02);
+    };
+    const v = k.vol;
+    switch (t.name) {
+        case 'gun':
+        case 'machineGun':
+            hiss(2400 + Math.random() * 600, 0.9, 0.06, v * 1.6);
+            tone('square', 190, 90, 0.05, v * 0.5);
+            break;
+        case 'laser':
+        case 'beamEmitter':
+            tone('sawtooth', t.name === 'laser' ? 520 : 440, t.name === 'laser' ? 760 : 620, 0.28, v, 0.05);
+            tone('sine', 1040, 1180, 0.28, v * 0.6, 0.05);
+            break;
+        case 'bomb':
+        case 'clusterBomb':
+            tone('sine', 150, 42, 0.32, v);
+            hiss(500, 0.7, 0.18, v * 0.5);
+            break;
+        case 'slow':
+        case 'poison':
+            tone('sine', t.name === 'slow' ? 523 : 392, 0, 0.6, v, 0.01);
+            tone('sine', t.name === 'slow' ? 784 : 587, 0, 0.45, v * 0.5, 0.01);
+            break;
+    }
+}
 
 // A soft echo for chimes and calls (made with the first sound that needs it)
 let echoIn = null;

@@ -26,7 +26,7 @@ class Missile {
 
     explode() {
         dmgSource = this.source;
-        playSound('boom');
+        playSound('boom', this.pos.x);
         this.kill();
         const { x, y } = this.pos;
         const inRadius = getInRange(x, y, this.blastRadius, enemies);

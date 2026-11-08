@@ -116,7 +116,7 @@ class Enemy {
         if (this.alive) {
             cash += this.cash;
             this.kill();
-            playSound(this.sound);
+            playSound(this.sound, this.pos.x);
             onEnemyKilled(this);
         }
     }

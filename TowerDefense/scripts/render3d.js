@@ -204,6 +204,7 @@ const Renderer3D = (() => {
         tmpS = new T3.Vector3();
         tmpC = new T3.Color();
         tint = new T3.Color();
+        mz = new T3.Vector3();
         ray = new T3.Raycaster();
         canvas = document.createElement('canvas');
         canvas.id = 'map';
@@ -1201,7 +1202,8 @@ const Renderer3D = (() => {
             const [sx, sz] = spots[i];
             const jx = sx + (r(40 + i) - 0.5) * 0.12;
             const jz = sz + (r(50 + i) - 0.5) * 0.12;
-            const s = (0.85 + r(60 + i) * 0.35) * (inner ? 1.1 : 1);
+            const big = /tree/.test(name) ? 1.55 : /rock|crystal/i.test(name) ? 1.25 : 1;
+            const s = big * (0.85 + r(60 + i) * 0.35) * (inner ? 1.1 : 1);
             put(name, x, y, 0, top, s, jx, jz, r(70 + i) * TAU);
         });
     }
@@ -1238,8 +1240,11 @@ const Renderer3D = (() => {
         rocket: 'Bomber_1', missileSilo: 'Bomber_2', bomb: 'Cannon_1', clusterBomb: 'GearCannon_2',
         tesla: 'Upwards_1', lightningStrike: 'Upwards_3'
     };
-    const TURRET_W = 0.62;              // the turret's base across, in tiles (it sits on a plinth)
-    const PLINTH_H = 0.3;               // height of the stone plinth under it
+    // Sizes in tiles, set against the trees (about a tile tall) and the monsters:
+    // a tower is a little taller than a big monster and a little shorter than a tree
+    const TURRET_W = 0.5;               // the turret's base across (it sits on a plinth)
+    const TURRET_H = 0.62;              // the turret's height at most
+    const PLINTH_H = 0.2;               // height of the stone plinth under it
     // The parts that glow: crystals on Slow and Poison, the coil on Tesla towers
     const GLOW_PART = { slow: '#9fdcff', poison: '#9cff3a', tesla: '#ffe066', lightningStrike: '#6ff3ff', laser: '#60b8ff', beamEmitter: '#5ff0e0' };
 
@@ -1258,7 +1263,7 @@ const Renderer3D = (() => {
         src.traverse(o => { if (o.isMesh && !/_Gun$|Top$/.test(partName(o))) bbox.expandByObject(o); });
         const bb = bbox.isEmpty() ? size : bbox.getSize(new T3.Vector3());
         // ...but never wider than about a tile, barrels included
-        const scale = Math.min(TURRET_W / Math.max(bb.x, bb.z), 1.05 / Math.max(size.x, size.z));
+        const scale = Math.min(TURRET_W / Math.max(bb.x, bb.z), 0.95 / Math.max(size.x, size.z), TURRET_H / size.y);
         turretProtos[file] = { src, scale, minY: box.min.y, height: size.y * scale };
         return turretProtos[file];
     }
@@ -1302,6 +1307,39 @@ const Renderer3D = (() => {
         return g;
     }
 
+    // Where the shots leave a gun: the ends of its barrels, in the gun's own frame.
+    // The points furthest along the way the gun faces, grouped side by side into
+    // one tip per barrel (twin guns have two, missile pods four)
+    function barrelTips(gun, f0) {
+        const dir = [new T3.Vector3(1, 0, 0), new T3.Vector3(-1, 0, 0), new T3.Vector3(0, 0, 1), new T3.Vector3(0, 0, -1)][[0, Math.PI, Math.PI / 2, -Math.PI / 2].indexOf(f0)] || new T3.Vector3(1, 0, 0);
+        const side = new T3.Vector3(-dir.z, 0, dir.x);
+        const pts = [];
+        const v = new T3.Vector3();
+        gun.forEach(({ geo }) => {
+            const a = geo.attributes.position;
+            for (let i = 0; i < a.count; i++) pts.push(v.fromBufferAttribute(a, i).clone());
+        });
+        let far = -Infinity;
+        pts.forEach(q => { far = Math.max(far, q.dot(dir)); });
+        const end = pts.filter(q => q.dot(dir) > far - 0.035).sort((a, b) => a.dot(side) - b.dot(side));
+        const tips = [];
+        let group = [];
+        const flush = () => {
+            if (!group.length) return;
+            const c = new T3.Vector3();
+            group.forEach(q => c.add(q));
+            c.divideScalar(group.length).addScaledVector(dir, 0.015);
+            tips.push(c);
+            group = [];
+        };
+        end.forEach((q, i) => {
+            if (i && q.dot(side) - end[i - 1].dot(side) > 0.03) flush();
+            group.push(q);
+        });
+        flush();
+        return tips.length ? tips : [dir.clone().multiplyScalar(far)];
+    }
+
     // A tower's model, built once per kind and drawn with few meshes: the plinth and
     // the turret's fixed parts merged by material, the gun merged by material too
     const towerProtos = new Map();
@@ -1312,7 +1350,7 @@ const Renderer3D = (() => {
         const root = new T3.Group();
         const plinth = kitClone(/sniper|railgun|rocket|missile|gun$|machine/i.test(name) ? 'tower-square-bottom-a' : 'tower-round-bottom-a',
             ghost ? towerMat(name, 'stone', true) : accentMat(Art.TOWER_ART[name].main));
-        plinth.scale.set(0.78, PLINTH_H / 0.5, 0.78);
+        plinth.scale.set(0.66, PLINTH_H / 0.5, 0.66);
         root.add(plinth);
         const body = p.src.clone(true);
         body.scale.multiplyScalar(p.scale);
@@ -1358,7 +1396,8 @@ const Renderer3D = (() => {
             f0 = [0, Math.PI, Math.PI / 2, -Math.PI / 2][ext.indexOf(Math.max(...ext))];
         }
         void gunNode;
-        const proto = { fixed, gun, f0, still, top: p.height + PLINTH_H };
+        const top = p.height + PLINTH_H;
+        const proto = { fixed, gun, f0, still, top, tips: still || !gun.length ? [new T3.Vector3(0, top * 0.95, 0)] : barrelTips(gun, f0) };
         towerProtos.set(key, proto);
         return proto;
     }
@@ -1389,7 +1428,14 @@ const Renderer3D = (() => {
             root.add(glow);
         }
         const aim = gun && !proto.still ? { f0: proto.f0 } : null;
-        return { root, turret: root, inner: root, gun, aim, glow, orb: null, top: proto.top, still: proto.still };
+        // A muzzle flash that sits at the barrel that fired
+        let flash = null;
+        if (aim && !ghost) {
+            flash = glowSprite(0xfff0b0, 0.4, 0);
+            flash.visible = false;
+            gun.add(flash);
+        }
+        return { root, turret: root, inner: root, gun, aim, glow, orb: null, top: proto.top, still: proto.still, tips: proto.tips, flash };
     }
 
     // Invisible hit volume for picking a tower by its body
@@ -1397,7 +1443,7 @@ const Renderer3D = (() => {
     let hitMat = null;
     function makeModel(t, ghost) {
         const b = buildTowerModel(t.name, ghost);
-        const m = { name: t.name, root: b.root, turret: b.turret, inner: b.inner, gun: b.gun, aim: b.aim, glow: b.glow, orb: b.orb, top: b.top, still: b.still, hit: null, tower: t, spin: null };
+        const m = { name: t.name, root: b.root, turret: b.turret, inner: b.inner, gun: b.gun, aim: b.aim, glow: b.glow, orb: b.orb, top: b.top, still: b.still, tips: b.tips, flash: b.flash, hit: null, tower: t, spin: null };
         if (!ghost) {
             if (!hitGeo) {
                 hitGeo = new T3.CylinderGeometry(0.46, 0.46, 1, 10);
@@ -1480,6 +1526,22 @@ const Renderer3D = (() => {
         }
     }
 
+    // World point (tiles) where tower t's shot leaves barrel i; the 2D muzzle at gun
+    // height when its model is not there
+    const MUZZLE_H = TOP_H + 0.12;
+    function muzzle3D(t, i, out) {
+        const m = t && towerModels.get(t);
+        if (!m || !m.tips) {
+            const q = t ? FX2.muzzle(t, i) : { x: 0, y: 0 };
+            return out.set(q.x / ts, MUZZLE_H, q.y / ts);
+        }
+        const tip = m.tips[(i || 0) % m.tips.length];
+        const node = m.aim ? m.gun : m.root;
+        node.updateWorldMatrix(true, false);
+        return out.copy(tip).applyMatrix4(node.matrixWorld);
+    }
+    let mz = null;              // scratch point (made in init, when three.js is there)
+
     function syncTowers(dt) {
         if (!load.towersReady) return;
         const gdt = dt * gameRate();
@@ -1514,6 +1576,19 @@ const Renderer3D = (() => {
             const gy = groundY && groundY[t.gridPos.x] ? groundY[t.gridPos.x][t.gridPos.y] : 0;
             m.root.position.set(t.pos.x / ts, gy, t.pos.y / ts);
             moveTower(m, t, i, dt, gdt);
+            if (m.flash) {
+                const f = t._flash || 0;
+                m.flash.visible = f > 0;
+                if (f > 0) {
+                    const tip = m.tips[(t._barrel || 0) % m.tips.length];
+                    m.flash.position.copy(tip);
+                    const big = t.name === 'sniper' || t.name === 'railgun' || t.name === 'bomb' || t.name === 'clusterBomb';
+                    const sz = (big ? 0.55 : 0.36) * (0.7 + 0.3 * Math.random());
+                    m.flash.scale.set(sz, sz, 1);
+                    m.flash.material.opacity = Math.min(1, f / 3);
+                    m.flash.material.color.setHex(t.name === 'railgun' ? 0xe0a0ff : t.name === 'sniper' ? 0xffb0a0 : 0xfff0b0);
+                }
+            }
             const hov = hover && !toPlace && Math.abs(hover.x - t.pos.x) < ts * 0.5 && Math.abs(hover.y - t.pos.y) < ts * 0.5;
             if (hov) m.root.position.y += 0.03;
         }
@@ -1873,6 +1948,7 @@ const Renderer3D = (() => {
         cluster: [0xffc46b, 0xff6a1a], sub: [0xffc46b, 0xff6a1a], rail: [0xf0b8ff, 0xa04dff]
     };
     const blastPool = [];
+    const FX2 = {};                     // the game's own FX functions this view wraps
     const lights = [];
     let lightNext = 0;
     function buildBlasts() {
@@ -1898,6 +1974,12 @@ const Renderer3D = (() => {
             const out = blast(x, y, kind, radiusTiles);
             if (Renderer.view === '3d') startBlast(x / ts, y / ts, kind, radiusTiles, false);
             return out;
+        };
+        FX2.muzzle = FX.muzzle;
+        FX.muzzle = (t, i = 0) => {
+            if (Renderer.view !== '3d' || !towerModels.get(t)) return FX2.muzzle(t, i);
+            muzzle3D(t, i, mz);
+            return { x: mz.x * ts, y: mz.z * ts };
         };
         const death = FX.death;
         FX.death = (e) => {
@@ -2166,7 +2248,7 @@ const Renderer3D = (() => {
         });
     }
 
-    function syncMissiles() {
+    function syncMissiles(gdt) {
         if (!missiles) {
             missiles = [['weapon-ammo-bullet', '#e0313b'], ['weapon-ammo-cannonball', '#3d7fe0']].map(([name, c]) => {
                 const parts = kit[name] || [];
@@ -2191,9 +2273,29 @@ const Renderer3D = (() => {
             if (!p.alive) continue;
             const k = p.blastRadius > 1 ? 1 : 0;
             if (n[k] >= 64) continue;
+            if (p._h === undefined) {
+                // New missile: start it at the barrel of the tower it came out of
+                let src = null;
+                let best = ts * 0.6;
+                for (let j = 0; j < towers.length; j++) {
+                    const d = Math.hypot(towers[j].pos.x - p.pos.x, towers[j].pos.y - p.pos.y);
+                    if (d < best) { best = d; src = towers[j]; }
+                }
+                muzzle3D(src, src ? src._barrel || 0 : 0, mz);
+                p._ox = src ? mz.x - p.pos.x / ts : 0;
+                p._oz = src ? mz.z - p.pos.y / ts : 0;
+                p._h = src ? mz.y : FX_H;
+            }
+            // ...then ease onto its flight path
+            const ease = damp(6, gdt);
+            p._ox -= p._ox * ease;
+            p._oz -= p._oz * ease;
+            p._h += (FX_H - p._h) * ease;
+            const pitch = (FX_H - p._h) * 1.5;
             e.set(0, yawFor(Math.atan2(p.vel.y, p.vel.x)), 0);
             q.setFromEuler(e);
-            p3.set(p.pos.x / ts, FX_H, p.pos.y / ts);
+            void pitch;
+            p3.set(p.pos.x / ts + p._ox, p._h, p.pos.y / ts + p._oz);
             tmpM.compose(p3, q, one);
             const j = n[k]++;
             missiles[k].forEach(part => part.mesh.setMatrixAt(j, tmpM2.multiplyMatrices(tmpM, part.m)));
@@ -2473,7 +2575,6 @@ const Renderer3D = (() => {
         ensureAtlas();
         drawRings();
         drawBeams();
-        drawFlashes();
         drawParticles();
         if (healthBar) drawBars();
         drawTag();
@@ -2523,7 +2624,6 @@ const Renderer3D = (() => {
         drawCalls++;
     }
 
-    const MUZZLE_H = TOP_H + 0.12;
     function drawBeams() {
         const B = FX.beams;
         if (!B.n) return;
@@ -2534,18 +2634,17 @@ const Renderer3D = (() => {
             const f = b.life / b.max;
             switch (b.kind) {
                 case 'tracer': {
+                    // A bullet streak from the barrel's end to the target
                     const p = 1 - (b.life - 1) / Math.max(1, b.max - 1);
-                    const hx = b.x1 + (b.x2 - b.x1) * p;
-                    const hy = b.y1 + (b.y2 - b.y1) * p;
-                    const len = Math.hypot(b.x2 - b.x1, b.y2 - b.y1) || 1;
-                    const tl = Math.min(len * p, ts * 0.45);
-                    const ux = (b.x2 - b.x1) / len;
-                    const uy = (b.y2 - b.y1) / len;
-                    const h = MUZZLE_H - (MUZZLE_H - 0.3) * p;
-                    const a = proj((hx - ux * tl) / ts, h, (hy - uy * tl) / ts);
+                    muzzle3D(b.src, b.barrel, mz);
+                    const ex = b.x2 / ts, ey = 0.3, ez = b.y2 / ts;
+                    const hx = mz.x + (ex - mz.x) * p, hy = mz.y + (ey - mz.y) * p, hz = mz.z + (ez - mz.z) * p;
+                    const tl = Math.min(p, 0.35);
+                    const a = proj(hx - (ex - mz.x) * tl, hy - (ey - mz.y) * tl, hz - (ez - mz.z) * tl);
                     const ax = a.x, ay = a.y;
-                    const c = proj(hx / ts, h, hy / ts);
-                    seg(ax, ay, c.x, c.y, 'rgba(255,214,90,0.95)', c.k * 0.07 * b.w);
+                    const c = proj(hx, hy, hz);
+                    seg(ax, ay, c.x, c.y, 'rgba(255,200,80,0.6)', c.k * 0.12 * b.w);
+                    seg(ax, ay, c.x, c.y, 'rgba(255,250,220,0.95)', c.k * 0.045 * b.w);
                     break;
                 }
                 case 'laser':
@@ -2553,10 +2652,11 @@ const Renderer3D = (() => {
                     const t = b.tower;
                     const e = b.target;
                     if (!t || !t.alive || !e || !e.alive) break;
-                    const m = FX.muzzle(t, 0);
-                    const a = proj(m.x / ts, MUZZLE_H, m.y / ts);
+                    muzzle3D(t, 0, mz);
+                    const a = proj(mz.x, mz.y, mz.z);
                     const ax = a.x, ay = a.y;
                     const c = proj(e.pos.x / ts, enemyHeight(e), e.pos.y / ts);
+                    if (SP.s.glow_cyan) ospr('glow_cyan', ax, ay, a.k * 0.35, 0);
                     const col = b.kind === 'laser' ? 'rgba(60,170,255,0.5)' : 'rgba(60,240,220,0.55)';
                     const flick = 0.85 + 0.15 * Math.sin(time * 40 + i);
                     seg(ax, ay, c.x, c.y, col, c.k * (b.kind === 'laser' ? 0.18 : 0.2) * b.w * flick);
@@ -2566,7 +2666,8 @@ const Renderer3D = (() => {
                 }
                 case 'snipe':
                 case 'rail': {
-                    const a = proj(b.x1 / ts, MUZZLE_H, b.y1 / ts);
+                    muzzle3D(b.src, b.barrel, mz);
+                    const a = proj(mz.x, mz.y, mz.z);
                     const ax = a.x, ay = a.y;
                     const c = proj(b.x2 / ts, 0.3, b.y2 / ts);
                     if (b.kind === 'snipe') {
@@ -2579,10 +2680,11 @@ const Renderer3D = (() => {
                     break;
                 }
                 case 'shell': {
+                    // A shell lobbed from the mortar's mouth in an arc
                     const p = 1 - (b.life - 1) / Math.max(1, b.max - 1);
-                    const x = (b.x1 + (b.x2 - b.x1) * p) / ts;
-                    const z = (b.y1 + (b.y2 - b.y1) * p) / ts;
-                    const c = proj(x, MUZZLE_H + Math.sin(p * Math.PI) * 1.2, z);
+                    muzzle3D(b.src, b.barrel, mz);
+                    const ex = b.x2 / ts, ez = b.y2 / ts;
+                    const c = proj(mz.x + (ex - mz.x) * p, mz.y + (0.3 - mz.y) * p + Math.sin(p * Math.PI) * 1.0, mz.z + (ez - mz.z) * p);
                     octx.globalAlpha = 0.95;
                     ospr('glow_orange', c.x, c.y, c.k * 0.45);
                     octx.globalAlpha = 1;
@@ -2592,8 +2694,11 @@ const Renderer3D = (() => {
                     const flick = (Math.random() < 0.25 ? 0.4 : 1) * f;
                     const pts = b.pts;
                     const n = pts.length - 1;
-                    const dx = b.x2 - b.x1;
-                    const dy = b.y2 - b.y1;
+                    // Lightning from the top of the coil
+                    muzzle3D(b.src, 0, mz);
+                    const x1 = mz.x * ts, y1 = mz.z * ts, h1 = mz.y;
+                    const dx = b.x2 - x1;
+                    const dy = b.y2 - y1;
                     const len = Math.hypot(dx, dy) || 1;
                     const px = -dy / len;
                     const py = dx / len;
@@ -2602,8 +2707,8 @@ const Renderer3D = (() => {
                     for (let j = 0; j <= n; j++) {
                         const u = j / n;
                         const o = pts[j] * Math.min(1, len / (ts * 2));
-                        const h = 0.75 * (1 - u) + 0.3 * u + o / ts * 0.6;
-                        const c = proj((b.x1 + dx * u + px * o) / ts, h, (b.y1 + dy * u + py * o) / ts);
+                        const h = h1 * (1 - u) + 0.3 * u + o / ts * 0.6;
+                        const c = proj((x1 + dx * u + px * o) / ts, h, (y1 + dy * u + py * o) / ts);
                         k = c.k;
                         if (j === 0) octx.moveTo(c.x * dpr, c.y * dpr); else octx.lineTo(c.x * dpr, c.y * dpr);
                     }
@@ -2620,21 +2725,6 @@ const Renderer3D = (() => {
         }
         octx.globalCompositeOperation = 'source-over';
         octx.globalAlpha = 1;
-    }
-
-    function drawFlashes() {
-        octx.globalCompositeOperation = 'lighter';
-        for (let i = 0; i < towers.length; i++) {
-            const t = towers[i];
-            if (!(t._flash > 0) || t.name === 'tesla' || t.name === 'lightningStrike' || t.name === 'slow' || t.name === 'poison') continue;
-            const m = FX.muzzle(t, t._barrel || 0);
-            const c = proj(m.x / ts, MUZZLE_H, m.y / ts);
-            octx.globalAlpha = Math.min(1, t._flash / 3);
-            const big = t.name === 'railgun' || t.name === 'sniper';
-            ospr('flash', c.x, c.y, c.k * (big ? 0.75 : 0.55), Math.atan2(Math.sin(t.angle) * Math.cos(PITCH), Math.cos(t.angle)));
-        }
-        octx.globalAlpha = 1;
-        octx.globalCompositeOperation = 'source-over';
     }
 
     function drawParticles() {
@@ -2831,7 +2921,7 @@ const Renderer3D = (() => {
         swayProps();
         syncTowers(dt / 1000);
         syncEnemies(stepped, dt / 1000);
-        syncMissiles();
+        syncMissiles(dt / 1000 * gameRate());
         syncBlasts(stepped ? dt / 1000 * (typeof speed === 'number' ? speed : 1) : 0);
         syncPortals();
         syncGate();

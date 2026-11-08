@@ -78,6 +78,13 @@ resolution. All models are CC0 (see `CREDITS.md`):
 - Effects: fireballs, smoke, shockwaves and a flash of light for explosions, a pop
   for each kill, beams and bolts. Damage numbers only show big hits.
 
+Shots leave from the barrels: each turret's barrel ends are measured from its
+model (one per barrel on twin guns and missile pods), so tracers, sniper and rail
+shots, laser beams, mortar shells, missiles and the muzzle flash start there and
+follow the gun as it turns and recoils; lightning starts at the top of the coil.
+Towers are sized against the scenery: a little taller than a big monster and a
+little shorter than a tree.
+
 Motion: turrets turn towards their target at a set speed (heavy guns slower),
 kick back on a spring when they fire and sweep slowly when nothing is in range;
 spires and crystals turn. A new tower rises out of the ground in a puff of dust,
@@ -106,7 +113,10 @@ the draw call and triangle budgets with 24 towers and 60 enemies, and that a
 model that fails to load falls back to Flat for that visit. Flat (in the menu) is the original top-down view, and the only one
 without WebGL. `scripts/renderer.js` passes the game's calls to the view in use.
 
-Tower sounds are mixed quieter than the interface, each has a cap on how many
+Sounds come from where they happen (left or right of the map) and vary a little
+in pitch each time. Towers without a sound file get a synthesised one: a short
+crack for guns, a rising hum for lasers, a deep thump for mortars and a soft chime
+for the Slow and Poison pulses. Tower sounds are mixed quieter than the interface, each has a cap on how many
 copies play at once and how long one rings, and everything goes through a
 limiter, so a big battle is never deafening.
 
