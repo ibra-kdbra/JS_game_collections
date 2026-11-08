@@ -29,10 +29,12 @@
     <script type="module">
       import * as THREE from 'three';
       import { GLTFLoader } from './vendor/three-addons-0.160.0/loaders/GLTFLoader.js';
+      import { MeshoptDecoder } from './vendor/meshoptimizer/meshopt_decoder.mjs';
       import * as SkeletonUtils from './vendor/three-addons-0.160.0/utils/SkeletonUtils.js';
       import * as BufferGeometryUtils from './vendor/three-addons-0.160.0/utils/BufferGeometryUtils.js';
       window.THREE = THREE;
       window.GLTFLoader = GLTFLoader;
+      window.MeshoptDecoder = MeshoptDecoder;
       window.SkeletonUtils = SkeletonUtils;
       window.BufferGeometryUtils = BufferGeometryUtils;
     </script>

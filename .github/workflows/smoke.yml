@@ -62,3 +62,5 @@ jobs:
         run: node tools/smoke.mjs
       - name: Tower Defense aiming during explosions
         run: node TowerDefense/tools/aim-test.mjs
+      - name: Tower Defense 3D view (loading, models, budgets, fallback)
+        run: node TowerDefense/tools/test-3d.mjs

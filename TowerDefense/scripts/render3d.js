@@ -267,7 +267,7 @@ const Renderer3D = (() => {
         let h = hh;
         if (compactView.matches) h = Math.max(120, hh - PHONE_STRIP);
         const q = FX.quality;
-        const nd = Math.min(window.devicePixelRatio || 1, [1.25, 2, 3][q]);
+        const nd = Math.min(window.devicePixelRatio || 1, [1, 1.5, 2][q]);
         if (!force && w === cssW && h === cssH && nd === dpr && hh === holderH) return;
         cssW = w;
         cssH = h;
@@ -663,82 +663,127 @@ const Renderer3D = (() => {
         Rock_Medium_1: 0.36, Flower_3_Group: 0.26
     };
     let qt = null;
+    // Kenney's map parts are in once this is true; turrets once towersReady
+
+    // Loading runs in three steps so the map shows as soon as possible: the map's
+    // models first, then the turrets (the 3D view starts once both are in), then the
+    // monsters one by one in the order the campaign brings them. An enemy whose model
+    // is still on its way is drawn as a simple stand-in until it arrives.
+    // The files are compressed with meshopt (see README: 3D models).
+    const load = { done: 0, total: 0, mapReady: false, towersReady: false, started: 0, readyAt: 0 };
+    const MONSTER_ORDER = ['Slime', 'Crab', 'Bat', 'Ghost', 'Mushroom', 'Yeti', 'Skeleton', 'Cyclops', 'Dragon', 'Bee'];
 
     function loadKit() {
         if (kitLoading || kit) return;
         kitLoading = true;
+        load.started = performance.now();
         T3.Cache.enabled = true;
         const loader = new window.GLTFLoader();
+        if (window.MeshoptDecoder) loader.setMeshoptDecoder(window.MeshoptDecoder);
+        const counted = (p) => p.then(v => { load.done++; showLoading(); return v; });
+        load.total = KIT_MODELS.length + QT_MODELS.nature.length + QT_MODELS.turrets.length + 1;
+        showLoading();
         const img = new Image();
         // Some hosts serve files from another origin: ask for CORS so the palette can be read
         img.crossOrigin = 'anonymous';
-        const imgReady = new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+        const imgReady = counted(new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('colormap.png')); }));
         img.src = KIT_DIR + 'Textures/colormap.png';
-        const qtLoads = [];
-        Object.entries(QT_MODELS).forEach(([kind, names]) => names.forEach(n => {
-            qtLoads.push(loader.loadAsync(`${QT_DIR}${kind}/${n}.glb`).then(g => [kind, n, g]));
-        }));
-        Promise.all([imgReady, Promise.all(qtLoads)].concat(KIT_MODELS.map(n => loader.loadAsync(KIT_DIR + n + '.glb').then(g => [n, g.scene]))))
-            .then(list => {
-                kitImage = img;
-                qt = { turrets: {}, turret: {}, monster: {}, nature: {} };
-                list[1].forEach(([kind, n, g]) => {
-                    if (kind === 'turrets') qt.turret[n] = g.scene;
-                    else if (kind === 'monsters') qt.monster[n] = g;
-                    else qt.nature[n] = g.scene;
+        const get = (url) => counted(loader.loadAsync(url));
+        const mapLoads = Promise.all([
+            imgReady,
+            Promise.all(KIT_MODELS.map(n => get(KIT_DIR + n + '.glb').then(g => [n, g.scene]))),
+            Promise.all(QT_MODELS.nature.map(n => get(`${QT_DIR}nature/${n}.glb`).then(g => [n, g.scene])))
+        ]);
+        const turretLoads = Promise.all(QT_MODELS.turrets.map(n => get(`${QT_DIR}turrets/${n}.glb`).then(g => [n, g.scene])));
+        qt = { turret: {}, monster: {}, nature: {} };
+        mapLoads.then(([, kitList, natureList]) => {
+            kitImage = img;
+            kit = {};
+            kitRoots = {};
+            kitList.forEach(([n, root]) => {
+                root.updateMatrixWorld(true);
+                kitRoots[n] = root;
+                const parts = [];
+                root.traverse(o => {
+                    if (!o.isMesh) return;
+                    o.geometry._shared = true;
+                    parts.push({ geo: o.geometry, m: o.matrixWorld.clone(), name: o.name });
                 });
-                list.splice(1, 1);
-                kit = {};
-                kitRoots = {};
-                list.slice(1).forEach(([n, root]) => {
-                    root.updateMatrixWorld(true);
-                    kitRoots[n] = root;
-                    const parts = [];
-                    root.traverse(o => {
-                        if (!o.isMesh) return;
-                        o.geometry._shared = true;
-                        parts.push({ geo: o.geometry, m: o.matrixWorld.clone(), name: o.name });
-                    });
-                    kit[n] = parts;
-                });
-                // Nature models keep their own textured materials, scaled to tiles
-                Object.entries(qt.nature).forEach(([n, root]) => {
-                    root.updateMatrixWorld(true);
-                    const box = new T3.Box3().setFromObject(root);
-                    const k = NATURE_SIZE[n] / Math.max(0.01, box.max.y - box.min.y);
-                    const fix = new T3.Matrix4().makeScale(k, k, k).multiply(new T3.Matrix4().makeTranslation(0, -box.min.y, 0));
-                    const parts = [];
-                    root.traverse(o => {
-                        if (!o.isMesh) return;
-                        o.geometry._shared = true;
-                        const mats = [].concat(o.material);
-                        mats.forEach(mm => {
-                            mm.roughness = 0.9;
-                            mm.metalness = 0;
-                            if (mm.map) mm.map.anisotropy = 4;
-                            if (mm.transparent || mm.alphaTest) {
-                                // Leaves: soft edges with the anti-aliasing instead of a hard cut-out
-                                mm.transparent = false;
-                                mm.alphaTest = 0.35;
-                                mm.alphaToCoverage = true;
-                                mm.side = T3.DoubleSide;
-                            }
-                        });
-                        parts.push({ geo: o.geometry, m: fix.clone().multiply(o.matrixWorld), name: o.name, mat: o.material });
-                    });
-                    kit['n:' + n] = parts;
-                });
-                mapKey = '';
-                try {
-                    makePortraits();
-                } catch (e) { /* the flat pictures stay */ }
-            })
-            .catch((e) => {
-                console.warn('3D models failed to load, using Flat:', e);
-                kitError = 'a model did not load: ' + String(e && e.message || e).replace(/^.*\//, '').slice(0, 60);
-                kitFailed = true;
-            })
-            .finally(() => { kitLoading = false; });
+                kit[n] = parts;
+            });
+            natureList.forEach(([n, root]) => addNature(n, root));
+            load.mapReady = true;
+            mapKey = '';
+            return turretLoads;
+        }).then(list => {
+            list.forEach(([n, scene]) => { qt.turret[n] = scene; });
+            load.towersReady = true;
+            load.readyAt = performance.now();
+            showLoading();
+            // Monsters after, three at a time, the first waves' ones first
+            let next = 0;
+            const loadMonster = () => {
+                if (next >= MONSTER_ORDER.length) return;
+                const n = MONSTER_ORDER[next++];
+                loader.loadAsync(`${QT_DIR}monsters/${n}.glb`)
+                    .then(g => { qt.monster[n] = g; })
+                    .catch(e => console.warn(`Monster ${n} did not load; a stand-in is drawn:`, e))
+                    .finally(loadMonster);
+            };
+            loadMonster();
+            loadMonster();
+            loadMonster();
+        }).catch((e) => {
+            console.warn('3D models failed to load, using Flat:', e);
+            kitError = 'a model did not load: ' + String(e && e.message || e).replace(/^.*\//, '').slice(0, 60);
+            kitFailed = true;
+            showLoading();
+        }).finally(() => { kitLoading = false; });
+    }
+
+    // Nature models keep their own textured materials, scaled to tiles
+    function addNature(n, root) {
+        root.updateMatrixWorld(true);
+        const box = new T3.Box3().setFromObject(root);
+        const k = NATURE_SIZE[n] / Math.max(0.01, box.max.y - box.min.y);
+        const fix = new T3.Matrix4().makeScale(k, k, k).multiply(new T3.Matrix4().makeTranslation(0, -box.min.y, 0));
+        const parts = [];
+        root.traverse(o => {
+            if (!o.isMesh) return;
+            o.geometry._shared = true;
+            [].concat(o.material).forEach(mm => {
+                mm.roughness = 0.9;
+                mm.metalness = 0;
+                if (mm.map) mm.map.anisotropy = 4;
+                if (mm.transparent || mm.alphaTest) {
+                    mm.transparent = false;
+                    mm.alphaTest = 0.35;
+                    mm.alphaToCoverage = true;
+                    mm.side = T3.DoubleSide;
+                }
+            });
+            parts.push({ geo: o.geometry, m: fix.clone().multiply(o.matrixWorld), name: o.name, mat: o.material });
+        });
+        kit['n:' + n] = parts;
+        qt.nature[n] = root;
+    }
+
+    // "Loading 3D... n%" over the map until the map and the towers are in
+    let loadEl = null;
+    function showLoading() {
+        if (!holder) return;
+        const busy = !load.towersReady && !kitFailed;
+        if (!loadEl) {
+            loadEl = document.createElement('div');
+            loadEl.className = 'load3d';
+            loadEl.setAttribute('role', 'status');
+            loadEl.innerHTML = '<span>Loading 3D</span><i><b></b></i>';
+            holder.append(loadEl);
+        }
+        loadEl.hidden = !busy || canvas.style.display === 'none';
+        const pct = load.total ? Math.round(100 * load.done / load.total) : 0;
+        loadEl.querySelector('b').style.width = `${pct}%`;
+        loadEl.querySelector('span').textContent = `Loading 3D ${pct}%`;
     }
 
     // Pictures of each tower's and enemy's model for the build menu, the tower panel
@@ -787,13 +832,12 @@ const Renderer3D = (() => {
             }
             g.putImageData(img, 0, 0);
             sc.remove(root);
-            return c.toDataURL();
+            return c.toDataURL('image/webp', 0.92);
         };
         const towerDir = new T3.Vector3(0.9, 1.05, 1.5).normalize();
         Object.keys(Art.TOWER_ART).forEach(name => {
             const b = buildTowerModel(name, false);
-            const m = { gun: b.gun, aim: b.aim };
-            if (b.aim) aimGun(m, Math.PI * 0.3, 0);
+            if (b.aim) b.gun.rotation.y = b.aim.f0 - Math.PI * 0.3;
             portraits[name] = shoot(b.root, towerDir, 0.98);
         });
         // Enemies a little from the front, mid-stride
@@ -813,7 +857,6 @@ const Renderer3D = (() => {
         });
         gl.setRenderTarget(null);
         rt.dispose();
-        window.dispatchEvent(new Event('td:portraits'));
     }
 
     // ---------- Palette recolouring ----------
@@ -1200,6 +1243,9 @@ const Renderer3D = (() => {
     // The parts that glow: crystals on Slow and Poison, the coil on Tesla towers
     const GLOW_PART = { slow: '#9fdcff', poison: '#9cff3a', tesla: '#ffe066', lightningStrike: '#6ff3ff', laser: '#60b8ff', beamEmitter: '#5ff0e0' };
 
+    // A part's name: its own, or its parent's when the file split it by material
+    const partName = (o) => (/^mesh_\d/.test(o.name) && o.parent ? o.parent.name : o.name);
+
     const turretProtos = {};
     function turretProto(file) {
         if (turretProtos[file]) return turretProtos[file];
@@ -1209,7 +1255,7 @@ const Renderer3D = (() => {
         const size = box.getSize(new T3.Vector3());
         // Size by the base (barrels may stick out past the tile)
         const bbox = new T3.Box3();
-        src.traverse(o => { if (o.isMesh && !/_Gun$|Top$/.test(o.name)) bbox.expandByObject(o); });
+        src.traverse(o => { if (o.isMesh && !/_Gun$|Top$/.test(partName(o))) bbox.expandByObject(o); });
         const bb = bbox.isEmpty() ? size : bbox.getSize(new T3.Vector3());
         // ...but never wider than about a tile, barrels included
         const scale = Math.min(TURRET_W / Math.max(bb.x, bb.z), 1.05 / Math.max(size.x, size.z));
@@ -1236,6 +1282,26 @@ const Renderer3D = (() => {
         return m;
     }
 
+    // A copy of a geometry with plain float positions, normals and uvs (the files
+    // store them quantized to small integers)
+    function floatGeometry(src) {
+        const g = new T3.BufferGeometry();
+        ['position', 'normal', 'uv'].forEach(k => {
+            const a = src.attributes[k];
+            if (!a) return;
+            const n = a.count;
+            const out = new Float32Array(n * a.itemSize);
+            for (let i = 0; i < n; i++) {
+                out[i * a.itemSize] = a.getX(i);
+                if (a.itemSize > 1) out[i * a.itemSize + 1] = a.getY(i);
+                if (a.itemSize > 2) out[i * a.itemSize + 2] = a.getZ(i);
+            }
+            g.setAttribute(k, new T3.Float32BufferAttribute(out, a.itemSize));
+        });
+        if (src.index) g.setIndex(src.index.clone());
+        return g;
+    }
+
     // A tower's model, built once per kind and drawn with few meshes: the plinth and
     // the turret's fixed parts merged by material, the gun merged by material too
     const towerProtos = new Map();
@@ -1260,15 +1326,15 @@ const Renderer3D = (() => {
         let gunNode = null;
         root.traverse(o => {
             if (!o.isMesh) return;
-            const isGun = !still && /_Gun$/.test(o.name);
+            const pn = partName(o);
+            const isGun = still ? /Top$|_Gun$/.test(pn) && !/Teleporter\d$/.test(pn) : /_Gun$/.test(pn);
             if (isGun) gunNode = o;
             const light = /light/i.test(o.material.name);
             const isPlinth = !o.material.name || o.material.name === '' || o.material === plinth.children[0]?.material;
             const mat = o.material.isMeshStandardMaterial && o.material.map ? o.material
-                : towerMat(name, glows && /Top$|_Gun$/.test(o.name) && light ? 'glow' : light ? 'light' : 'dark', ghost);
+                : towerMat(name, glows && /Top$|_Gun$/.test(pn) && light ? 'glow' : light ? 'light' : 'dark', ghost);
             void isPlinth;
-            const g = o.geometry.clone();
-            for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'uv') g.deleteAttribute(k);
+            const g = floatGeometry(o.geometry);
             if (!g.attributes.uv) g.setAttribute('uv', new T3.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
             g.applyMatrix4(o.matrixWorld);
             const gk = `${isGun ? 'gun' : 'fixed'}|${mat.uuid}`;
@@ -1292,7 +1358,7 @@ const Renderer3D = (() => {
             f0 = [0, Math.PI, Math.PI / 2, -Math.PI / 2][ext.indexOf(Math.max(...ext))];
         }
         void gunNode;
-        const proto = { fixed, gun, f0, still: !gun.length, top: p.height + PLINTH_H };
+        const proto = { fixed, gun, f0, still, top: p.height + PLINTH_H };
         towerProtos.set(key, proto);
         return proto;
     }
@@ -1322,7 +1388,7 @@ const Renderer3D = (() => {
             glow.position.y = PLINTH_H + (proto.top - PLINTH_H) * (/laser|beam/i.test(name) ? 0.7 : 0.92);
             root.add(glow);
         }
-        const aim = gun ? { f0: proto.f0 } : null;
+        const aim = gun && !proto.still ? { f0: proto.f0 } : null;
         return { root, turret: root, inner: root, gun, aim, glow, orb: null, top: proto.top, still: proto.still };
     }
 
@@ -1350,63 +1416,144 @@ const Renderer3D = (() => {
     // Turn something that faces +Z towards a game angle
     const yawFor = (a) => Math.atan2(Math.cos(a), Math.sin(a));
 
-    // Point a turret's gun at game angle a, pushed back by the recoil (0..1)
-    function aimGun(m, a, recoil) {
-        m.gun.rotation.y = m.aim.f0 - a;
-        m.gun.position.set(-Math.cos(a) * recoil * 0.05, 0, -Math.sin(a) * recoil * 0.05);
+    // Ease towards a target at rate k per second, the same at any frame rate
+    const damp = (k, dt) => 1 - Math.exp(-k * dt);
+
+    // ---- Tower motion ----
+    // The gun turns towards the game's aim at a limited speed (heavy guns slower),
+    // kicks back on a spring when it fires, and sweeps slowly when nothing is in
+    // range. Spires and crystals turn and bob. A new tower rises out of the ground
+    // with a puff of dust; an upgrade pops with a gold ring; a sold one sinks.
+    const TURN_SPEED = { sniper: 5, railgun: 4.5, rocket: 6, missileSilo: 5.5, bomb: 4, clusterBomb: 3.5 };
+    const leaving = [];                 // sold or replaced towers sinking away
+
+    function moveTower(m, t, i, dt, gdt) {
+        if (m.gun && m.aim) {
+            // Aim: the game's angle, or a slow sweep once it has not moved for a while
+            // (nothing in range)
+            if (t.angle !== m.lastAngle || t._recoil > 0) {
+                m.lastAngle = t.angle;
+                m.lastAim = time;
+            }
+            const idle = time - (m.lastAim || 0) > 1.5;
+            const want = idle ? m.yaw + Math.sin(time * 0.6 + i) * 0.6 * gdt : m.aim.f0 - t.angle;
+            const rate = (TURN_SPEED[t.name] || 9) * gdt;
+            const d = angDiff(want - m.yaw);
+            m.yaw += Math.max(-rate, Math.min(rate, d));
+            m.gun.rotation.y = m.yaw;
+            // Recoil: a fresh shot sets t._recoil to 1; push the spring back
+            const r = t._recoil || 0;
+            if (r > (m.lastRecoil || 0) + 0.3) m.kickV -= 2.6 * (t.name === 'bomb' || t.name === 'clusterBomb' ? 1.4 : 1);
+            m.lastRecoil = r;
+            // Spring: stiff, a little bouncy
+            m.kickV += (-260 * m.kick - 18 * m.kickV) * Math.min(gdt, 0.033);
+            m.kick += m.kickV * Math.min(gdt, 0.033);
+            const k = Math.max(-0.09, Math.min(0.02, m.kick));
+            const fa = m.yaw - m.aim.f0;          // = -t.angle when on target
+            m.gun.position.set(Math.cos(-fa) * k, 0, Math.sin(-fa) * k);
+        } else if (m.gun) {
+            // Spires: turn slowly, faster just after a pulse
+            m.spin += gdt * (0.8 + (t._flash || 0) * 0.6);
+            m.gun.rotation.y = m.spin;
+            m.gun.position.y = Math.sin(time * 2 + i) * 0.012;
+        }
+        if (m.glow) {
+            const k = 0.75 + 0.25 * Math.sin(time * 5 + i) + (t._flash || 0) * 0.1;
+            m.glow.material.opacity = Math.min(1, 0.55 * k);
+            const sz = 0.55 + 0.18 * k;
+            m.glow.scale.set(sz, sz, 1);
+        }
+        // Building: rise out of the ground, overshoot and settle
+        if (m.rise < 1) {
+            m.rise = Math.min(1, m.rise + dt * 2.6);
+            const e = m.rise;
+            const back = 1 + 2.2 * Math.pow(e - 1, 3) + 1.2 * Math.pow(e - 1, 2);
+            m.root.position.y += (back - 1) * 0.6;
+            const sq = 1 + Math.sin(e * Math.PI) * 0.12;
+            m.root.scale.set(sq, 2 - sq, sq);
+        } else if (m.pop > 0) {
+            m.pop = Math.max(0, m.pop - dt * 3);
+            const s = 1 + Math.sin(m.pop * Math.PI) * 0.14;
+            m.root.scale.set(s, 1 + (s - 1) * 1.5, s);
+        } else {
+            m.root.scale.set(1, 1, 1);
+        }
     }
 
     function syncTowers(dt) {
+        if (!load.towersReady) return;
+        const gdt = dt * gameRate();
         const seen = new Set();
         for (let i = 0; i < towers.length; i++) {
             const t = towers[i];
             if (!t.alive) continue;
             seen.add(t);
             let m = towerModels.get(t);
+            let upgraded = false;
             if (m && m.name !== t.name) {
-                dyn.remove(m.root);
+                sinkTower(m, true);
                 towerModels.delete(t);
                 m = null;
-                t._pop = 1;
+                upgraded = true;
             }
             if (!m) {
                 m = makeModel(t, false);
+                m.yaw = m.aim ? m.aim.f0 - t.angle : 0;
+                m.kick = m.kickV = 0;
+                m.spin = Math.random() * TAU;
+                m.rise = upgraded ? 1 : 0;
+                m.pop = upgraded ? 1 : 0;
                 towerModels.set(t, m);
                 dyn.add(m.root);
-                shadowsAt = time + 0.35;
-                if (t._pop === undefined) t._pop = 1;
+                shadowsAt = time + 0.5;
+                const X = t.pos.x / ts;
+                const Z = t.pos.y / ts;
+                if (upgraded) startBlast(X, Z, 'upgrade', 0.7, true, '#facc15');
+                else startBlast(X, Z, 'dust', 0.65, true, '#cbbfa6');
             }
-            const X = t.pos.x / ts;
-            const Z = t.pos.y / ts;
-            const pop = t._pop || 0;
-            if (pop > 0) t._pop = Math.max(0, pop - dt * 3.2);
-            const s = 1 + Math.sin(pop * Math.PI) * 0.16;
             const gy = groundY && groundY[t.gridPos.x] ? groundY[t.gridPos.x][t.gridPos.y] : 0;
-            m.root.position.set(X, gy, Z);
-            m.root.scale.set(s, 1 + (s - 1) * 1.4, s);
-            if (m.aim) aimGun(m, t.angle, t._recoil || 0);
-            const hov = hover && Math.abs(hover.x - t.pos.x) < ts * 0.5 && Math.abs(hover.y - t.pos.y) < ts * 0.5 && !toPlace;
-            if (m.glow) {
-                const k = 0.75 + 0.25 * Math.sin(time * 5 + i) + (t._flash || 0) * 0.08;
-                m.glow.material.opacity = Math.min(1, 0.55 * k);
-                const sz = 0.55 + 0.18 * k;
-                m.glow.scale.set(sz, sz, 1);
-            }
-            if (m.orb) m.orb.position.y = m.top + 0.06 + Math.sin(time * 2.4 + i) * 0.03;
-            m.root.position.y += hov ? 0.03 : 0;
+            m.root.position.set(t.pos.x / ts, gy, t.pos.y / ts);
+            moveTower(m, t, i, dt, gdt);
+            const hov = hover && !toPlace && Math.abs(hover.x - t.pos.x) < ts * 0.5 && Math.abs(hover.y - t.pos.y) < ts * 0.5;
+            if (hov) m.root.position.y += 0.03;
         }
-        // Redraw the shadows once a new tower has popped up, and when one goes
         if (shadowsAt && time >= shadowsAt) {
             shadowsAt = 0;
             gl.shadowMap.needsUpdate = true;
         }
         towerModels.forEach((m, t) => {
             if (seen.has(t)) return;
-            gl.shadowMap.needsUpdate = true;
-            dyn.remove(m.root);
-            if (m.glow) m.glow.material.dispose();
             towerModels.delete(t);
+            sinkTower(m, false);
+            startBlast(t.pos.x / ts, t.pos.y / ts, 'dust', 0.6, true, '#cbbfa6');
         });
+        for (let i = leaving.length - 1; i >= 0; i--) {
+            const m = leaving[i];
+            m.out += dt * (m.quick ? 8 : 3);
+            const f = Math.min(1, m.out);
+            m.root.position.y = m.y0 - f * f * 0.7;
+            m.root.scale.setScalar(1 - f * 0.4);
+            if (f >= 1) {
+                dyn.remove(m.root);
+                if (m.glow) m.glow.material.dispose();
+                leaving.splice(i, 1);
+                gl.shadowMap.needsUpdate = true;
+            }
+        }
+    }
+
+    function sinkTower(m, quick) {
+        if (m.hit) m.root.remove(m.hit);
+        m.out = 0;
+        m.quick = quick;
+        m.y0 = m.root.position.y;
+        leaving.push(m);
+    }
+
+    // Game ticks per real second over 60: 0 while paused, 2 or 3 when sped up
+    function gameRate() {
+        if (paused || gameOver) return 0;
+        return typeof speed === 'number' ? speed : 1;
     }
 
     // ---------- Enemies: Quaternius's animated monsters (CC0) ----------
@@ -1424,13 +1571,16 @@ const Renderer3D = (() => {
         Dragon: { Main: '#7a45bd', Wings: '#4b2580', Claws: '#2a1645', Belly: '#d2aaff' },
         Skeleton: { Skeleton: '#f0b27a' }
     };
+    // How far each walk cycle carries the model, in tiles at its game size: the walk
+    // plays at the speed that keeps the feet from sliding
+    const STRIDE = { Slime: 0.55, Crab: 0.5, Skeleton: 0.75, Yeti: 0.5, Cyclops: 0.5, Ghost: 0.6, Mushroom: 0.45 };
     const enemyProtos = {};
     function enemyProto(name) {
-        if (enemyProtos[name]) return enemyProtos[name];
         const file = ENEMY_MODEL[name] || 'Slime';
         const g = qt.monster[file];
+        if (!g) return null;
+        if (enemyProtos[name]) return enemyProtos[name];
         const art = Art.ENEMY_ART[name];
-        // Colour the untextured monsters like their flat-view enemy
         const paint = MONSTER_PAINT[file];
         if (paint) g.scene.traverse(o => { if (o.isMesh) [].concat(o.material).forEach(m => { if (paint[m.name]) m.color.set(paint[m.name]); }); });
         g.scene.updateMatrixWorld(true);
@@ -1439,47 +1589,101 @@ const Renderer3D = (() => {
         const across = art.r * 2 * (art.boss ? 1.25 : 1.0);
         const scale = Math.min(across / Math.max(size.x, size.z), across * 1.25 / size.y);
         const find = (re) => g.animations.find(a => re.test(a.name));
+        const move = find(/walk|run|fly/i) || find(/idle/i);
         enemyProtos[name] = {
             file, scene: g.scene, scale, minY: box.min.y, height: size.y * scale,
-            move: find(/walk|run|fly/i) || find(/idle/i), death: find(/death/i), hit: find(/hit/i),
-            fly: FLYING[file] || 0, bounce: !find(/walk|run|fly/i)
+            move, death: find(/death/i), hit: find(/hit/i),
+            fly: FLYING[file] || 0, bounce: !find(/walk|run|fly/i),
+            // tiles per walk cycle at this size; fliers flap at a steady rate
+            stride: STRIDE[file] ? STRIDE[file] * across / 0.6 : 0,
+            pool: []
         };
         return enemyProtos[name];
     }
 
+    // Models are kept in a pool per enemy kind and reused, so a wave of 40 enemies
+    // does not clone 40 skinned models and throw them away again
     const enemyModels = new Map();      // enemy -> model
     const dying = [];                   // models playing their death
+    let clones = 0;                     // skinned models made so far (the pool keeps this low)
     function makeEnemyModel(e) {
         const p = enemyProto(e.name);
-        const root = new T3.Group();
-        const body = window.SkeletonUtils.clone(p.scene);
-        body.scale.multiplyScalar(p.scale);
-        body.position.y = -p.minY * p.scale;
-        root.add(body);
-        const mats = [];
-        body.traverse(o => {
-            if (!o.isMesh) return;
-            o.material = o.material.clone();
-            mats.push(o.material);
-            o.castShadow = false;
-            o.receiveShadow = false;
-            o.frustumCulled = false;
-        });
-        const mixer = new T3.AnimationMixer(body);
-        let act = null;
-        if (p.move) {
-            act = mixer.clipAction(p.move);
-            act.play();
-            act.time = Math.random() * p.move.duration;
+        if (!p) return makeStandIn(e);
+        let m = p.pool.pop();
+        if (!m) {
+            clones++;
+            const root = new T3.Group();
+            const body = window.SkeletonUtils.clone(p.scene);
+            body.scale.multiplyScalar(p.scale);
+            body.position.y = -p.minY * p.scale;
+            root.add(body);
+            const mats = [];
+            body.traverse(o => {
+                if (!o.isMesh) return;
+                o.material = o.material.clone();
+                mats.push(o.material);
+                o.castShadow = false;
+                o.receiveShadow = false;
+                o.frustumCulled = false;
+            });
+            const mixer = new T3.AnimationMixer(body);
+            const act = p.move ? mixer.clipAction(p.move) : null;
+            const hit = p.hit ? mixer.clipAction(p.hit) : null;
+            if (hit) {
+                hit.setLoop(T3.LoopOnce, 1);
+                hit.setEffectiveWeight(0);
+            }
+            const die = p.death ? mixer.clipAction(p.death) : null;
+            if (die) {
+                die.setLoop(T3.LoopOnce, 1);
+                die.clampWhenFinished = true;
+            }
+            m = { root, body, mats, mixer, act, hitAct: hit, die, p };
         }
+        m.mixer.stopAllAction();
+        if (m.act) {
+            m.act.reset().play();
+            m.act.time = Math.random() * p.move.duration;
+        }
+        m.root.scale.setScalar(1);
+        m.root.rotation.set(0, 0, 0);
+        m.mats.forEach(x => x.emissive.setRGB(0, 0, 0));
+        m.spawn = 0;
+        m.flinch = 0;
+        m.flinchV = 0;
+        m.lastHit = 0;
+        m.vy = 0;
+        dyn.add(m.root);
+        return m;
+    }
+
+    // While a monster's file is still loading: a plain ball in its colour
+    let standInGeo = null;
+    function makeStandIn(e) {
+        if (!standInGeo) {
+            standInGeo = new T3.IcosahedronGeometry(1, 1);
+            standInGeo._shared = true;
+        }
+        const art = Art.ENEMY_ART[e.name];
+        const mat = new T3.MeshStandardMaterial({ color: art.color, roughness: 0.5, flatShading: true });
+        const mesh = new T3.Mesh(standInGeo, mat);
+        mesh.scale.setScalar(art.r * 0.8);
+        mesh.position.y = art.r * 0.8;
+        const root = new T3.Group();
+        root.add(mesh);
         dyn.add(root);
-        return { root, body, mats, mixer, act, p, hitT: 0 };
+        return { root, mats: [mat], mixer: null, p: { fly: 0, bounce: true, stride: 0 }, standIn: true, spawn: 0, flinch: 0, flinchV: 0, lastHit: 0, vy: 0 };
     }
 
     function dropEnemyModel(m) {
         dyn.remove(m.root);
+        if (m.standIn) {
+            m.mats.forEach(x => x.dispose());
+            return;
+        }
         m.mixer.stopAllAction();
-        m.mats.forEach(x => x.dispose());
+        if (m.p.pool.length < 60) m.p.pool.push(m);
+        else m.mats.forEach(x => x.dispose());
     }
 
     let enemyId = 0;
@@ -1488,23 +1692,28 @@ const Renderer3D = (() => {
         while (a < -Math.PI) a += TAU;
         return a;
     }
-    function trackEnemy(e) {
+    // Facing and distance walked, from how the enemy moved since the last frame
+    function trackEnemy(e, dt) {
         if (e._lx === undefined) {
             e._lx = e.pos.x;
             e._ly = e.pos.y;
             e._rot = Math.atan2(e.vel.y, e.vel.x) || 0;
             e._ph = Math.random() * TAU;
             e._id = enemyId++;
+            e._spd = 0;
         }
         const dx = e.pos.x - e._lx;
         const dy = e.pos.y - e._ly;
-        const d = Math.abs(dx) + Math.abs(dy);
+        const d = Math.hypot(dx, dy);
+        // tiles per real second, smoothed
+        if (dt > 0) e._spd += (d / ts / dt - e._spd) * damp(8, dt);
         if (d > 0.0001) {
             e._ph += d / ts * 10;
-            e._rot += angDiff(Math.atan2(dy, dx) - e._rot) * 0.2;
+            e._rot += angDiff(Math.atan2(dy, dx) - e._rot) * damp(10, dt);
             e._lx = e.pos.x;
             e._ly = e.pos.y;
         }
+        return d / ts;
     }
 
     // Soft round shadows under enemies, one instanced mesh
@@ -1531,37 +1740,68 @@ const Renderer3D = (() => {
     }
 
     const seenEnemies = new Set();
+    let animTick = 0;
     function syncEnemies(stepped, dt) {
         const bm = blobMesh();
         let nb = 0;
-        // Animations follow the game clock: frozen while paused, faster at 2x and 3x
-        const adt = stepped ? dt * (typeof speed === 'number' ? speed : 1) : 0;
+        const gdt = dt * gameRate();
+        // Big crowds: each skinned model updates every other frame (half the cost,
+        // still smooth at 30 updates a second)
+        const crowd = enemies.length > 45 || FX.quality === 0;
+        animTick++;
         seenEnemies.clear();
         for (let i = 0; i < enemies.length; i++) {
             const e = enemies[i];
-            if (!Art.ENEMY_ART[e.name]) continue;
-            trackEnemy(e);
+            const art = Art.ENEMY_ART[e.name];
+            if (!art) continue;
+            trackEnemy(e, gdt);
             if (stepped) FX.status(e);
             seenEnemies.add(e);
             let m = enemyModels.get(e);
+            // A stand-in is swapped for the real model once it has loaded
+            if (m && m.standIn && enemyProto(e.name)) {
+                dropEnemyModel(m);
+                m = null;
+            }
             if (!m) {
                 m = makeEnemyModel(e);
                 enemyModels.set(e, m);
             }
             const p = m.p;
+            // Coming out of a portal: grow from nothing and drop in
+            if (m.spawn < 1) m.spawn = Math.min(1, m.spawn + dt * 3.5);
+            const sp = m.spawn;
+            const grow = sp < 1 ? 1 - Math.pow(1 - sp, 3) : 1;
+            // Hit: a springy flinch, sideways squash and a tip backwards
+            if (e.hit > 0 && e.hit > m.lastHit) m.flinchV += 7;
+            m.lastHit = e.hit || 0;
+            m.flinchV += (-220 * m.flinch - 14 * m.flinchV) * Math.min(gdt, 0.033);
+            m.flinch += m.flinchV * Math.min(gdt, 0.033);
+            const fl = Math.max(-0.25, Math.min(0.25, m.flinch));
             const hover = p.fly ? p.fly + Math.sin(time * 3 + e._id) * 0.05 : 0;
             const hop = p.bounce ? Math.abs(Math.sin(e._ph * 0.5)) * 0.12 : 0;
-            m.root.position.set(e.pos.x / ts, hover + hop, e.pos.y / ts);
+            const X = e.pos.x / ts;
+            const Z = e.pos.y / ts;
+            m.root.position.set(X - Math.cos(e._rot) * fl * 0.15, (hover + hop) * grow + (1 - grow) * 0.4, Z - Math.sin(e._rot) * fl * 0.15);
+            m.root.rotation.set(0, yawFor(e._rot), 0);
+            m.root.rotateX(-fl * 0.8);
+            m.root.scale.set(grow * (1 + fl * 0.4), grow * (1 - fl * 0.5), grow * (1 + fl * 0.4));
             if (nb < 256) {
-                const art = Art.ENEMY_ART[e.name];
-                const bs = art.r * 2 * (p.fly ? 0.9 : 1.15) * (art.boss ? 1.25 : 1);
-                tmpV.set(e.pos.x / ts, 0.012, e.pos.y / ts);
+                const bs = art.r * 2 * (p.fly ? 0.9 : 1.15) * (art.boss ? 1.25 : 1) * grow;
+                tmpV.set(X, 0.012, Z);
                 tmpS.set(bs, 1, bs);
                 tmpM.compose(tmpV, tmpQ.identity(), tmpS);
                 bm.setMatrixAt(nb++, tmpM);
             }
-            m.root.rotation.y = yawFor(e._rot);
-            m.mixer.update(adt);
+            if (m.mixer) {
+                // Walk at the speed that matches the ground covered (slowed enemies
+                // walk slowly); fliers flap faster when they hurry
+                if (m.act) {
+                    const ts_ = p.stride ? e._spd * p.move.duration / p.stride : 1 + Math.min(1, e._spd * 0.4);
+                    m.act.timeScale = Math.max(0.25, Math.min(3, ts_));
+                }
+                if (!crowd || (animTick + e._id) % 2 === 0) m.mixer.update(crowd ? gdt * 2 : gdt);
+            }
             // Slowed, poisoned, healing: a glow in that colour; a white flash when hit
             let er = 0, eg = 0, eb = 0;
             const efx = e.effects;
@@ -1573,22 +1813,27 @@ const Renderer3D = (() => {
             }
             const hit = e.hit > 0 ? Math.min(1, e.hit / 6) : 0;
             er += hit * 0.9; eg += hit * 0.9; eb += hit * 0.9;
-            for (let k = 0; k < m.mats.length; k++) m.mats[k].emissive.setRGB(er, eg, eb);
+            if (m.er !== er || m.eg !== eg || m.eb !== eb) {
+                m.er = er; m.eg = eg; m.eb = eb;
+                for (let k = 0; k < m.mats.length; k++) m.mats[k].emissive.setRGB(er, eg, eb);
+            }
         }
         bm.count = nb;
         bm.instanceMatrix.needsUpdate = true;
-        // Gone: killed ones play their death, ones that reached the gate just vanish
+        // Gone: killed ones play their death (fliers fall and bounce), ones that
+        // reached the gate just vanish
         enemyModels.forEach((m, e) => {
             if (seenEnemies.has(e)) return;
             enemyModels.delete(e);
-            if (e.health <= 0 && m.p.death && dying.length < 40) {
-                m.mixer.stopAllAction();
-                const d = m.mixer.clipAction(m.p.death);
-                d.setLoop(T3.LoopOnce, 1);
-                d.clampWhenFinished = true;
-                d.play();
+            if (e.health <= 0 && dying.length < 40) {
+                if (m.die) {
+                    m.mixer.stopAllAction();
+                    m.die.reset().play();
+                }
                 m.mats.forEach(x => x.emissive.setRGB(0, 0, 0));
+                m.er = m.eg = m.eb = 0;
                 m.dieT = 0;
+                m.vy = m.p.fly ? 0 : 1.6;
                 dying.push(m);
             } else {
                 dropEnemyModel(m);
@@ -1596,11 +1841,19 @@ const Renderer3D = (() => {
         });
         for (let i = dying.length - 1; i >= 0; i--) {
             const m = dying[i];
-            m.dieT += adt;
-            m.mixer.update(adt);
-            if (m.p.fly) m.root.position.y = Math.max(0, m.root.position.y - adt * 0.8);
-            if (m.dieT > 0.9) {
-                const s = Math.max(0, 1 - (m.dieT - 0.9) * 4);
+            m.dieT += gdt;
+            if (m.mixer) m.mixer.update(gdt);
+            // A little hop up, then gravity; fliers drop and bounce once
+            m.vy -= 9.8 * gdt;
+            let y = m.root.position.y + m.vy * gdt;
+            if (y <= 0) {
+                y = 0;
+                m.vy = m.vy < -1.2 ? -m.vy * 0.3 : 0;
+            }
+            m.root.position.y = y;
+            if (m.standIn || !m.die) m.root.rotation.z += gdt * 6;
+            if (m.dieT > 0.8) {
+                const s = Math.max(0, 1 - (m.dieT - 0.8) * 4);
                 m.root.scale.setScalar(s);
                 if (s <= 0) {
                     dropEnemyModel(m);
@@ -1667,7 +1920,8 @@ const Renderer3D = (() => {
         b.r = isDeath ? radius : Math.max(0.6, radius * 0.7);
         b.x = x;
         b.z = z;
-        const [c1, c2] = isDeath ? [0xffffff, new T3.Color(color || '#ffffff').getHex()] : (BLAST_COLORS[kind] || BLAST_COLORS.rocket);
+        const [c1, c2] = kind === 'dust' ? [0x6b6152, new T3.Color(color).getHex()] : isDeath ? [0xffffff, new T3.Color(color || '#ffffff').getHex()] : (BLAST_COLORS[kind] || BLAST_COLORS.rocket);
+        b.kind = kind;
         b.core.material.color.setHex(c1);
         b.shell.material.color.setHex(c2);
         b.ring.material.color.setHex(isDeath ? c2 : c1);
@@ -1699,11 +1953,11 @@ const Renderer3D = (() => {
             const cs = b.r * 0.55 * Math.max(0, 1 - f * 2.2) + 0.02;
             b.core.position.set(b.x, h, b.z);
             b.core.scale.setScalar(cs);
-            b.core.material.opacity = Math.max(0, 1 - f * 2);
+            b.core.material.opacity = Math.max(0, 1 - f * 2) * (b.kind === 'dust' ? 0.25 : 1);
             const ss = b.r * (0.35 + ease * 0.75);
             b.shell.position.set(b.x, h + f * 0.25, b.z);
             b.shell.scale.set(ss, ss * 0.8, ss);
-            b.shell.material.opacity = 0.75 * (1 - f) * (1 - f);
+            b.shell.material.opacity = 0.75 * (1 - f) * (1 - f) * (b.kind === 'dust' ? 0.4 : 1);
             // The shockwave runs along the ground
             const rs = b.r * (0.3 + ease * (b.death ? 0.9 : 1.3));
             b.ring.position.set(b.x, 0.03, b.z);
@@ -2141,16 +2395,15 @@ const Renderer3D = (() => {
         placeTile.position.set(X, lift + 0.025, Z);
         placeTile.material.color.set(ok && afford ? 0x4ade80 : 0xf87171);
         placeTile.material.opacity = ghost ? 0.5 : 0.32;
-        if (ok) {
+        if (ok && load.towersReady) {
             if (!ghostModel) {
                 ghostModel = makeModel({ name: towerType, angle: -Math.PI / 2 }, true);
                 dyn.add(ghostModel.root);
             }
             ghostModel.root.position.set(X, 0, Z);
-            ghostModel.turret.rotation.y = Math.PI / 2 + Math.sin(time * 1.5) * 0.4;
+            if (ghostModel.gun) ghostModel.gun.rotation.y = (ghostModel.aim ? ghostModel.aim.f0 + Math.PI / 2 : time) + Math.sin(time * 1.5) * 0.4;
             ghostModel.root.traverse(o => { if (o.isMesh) o.material.opacity = afford ? 0.7 : 0.35; });
-            if (ghostModel.spin) ghostModel.spin.rotation.y += 0.03;
-        } else {
+        } else if (!ok) {
             if (ghostModel) {
                 dyn.remove(ghostModel.root);
                 ghostModel = null;
@@ -2543,6 +2796,7 @@ const Renderer3D = (() => {
             return;
         }
         if (!kit) {
+            showLoading();
             gl.render(scene, camera);
             return;
         }
@@ -2589,7 +2843,8 @@ const Renderer3D = (() => {
         drawOverlay();
         fadeTip();
 
-        perf.renderAcc += performance.now() - now;
+        perf.lastFrameMs = performance.now() - now;
+        perf.renderAcc += perf.lastFrameMs;
         perf.n++;
         if (perf.el && now - perf.lastShow > 400) showPerf(now);
     }
@@ -2669,7 +2924,13 @@ const Renderer3D = (() => {
     }
 
     return {
-        available, init, suspend, portrait: (name) => portraits[name] || null, enemyPortrait: (name) => enemyPortraits[name] || null, resize: () => resize(false), mapChanged, frame, reveal, logicTime,
+        available, init, suspend,
+        // Used by tools/make-portraits.mjs to render the pictures in models/portraits
+        renderPortraits: () => { makePortraits(); return { towers: { ...portraits }, enemies: { ...enemyPortraits } }; },
+        // How far each turret is from the game's aim, in radians (for tests)
+        aimErrors: () => [...towerModels.entries()].filter(([, m]) => m.aim).map(([t, m]) => Math.abs(angDiff(m.yaw - (m.aim.f0 - t.angle)))),
+        get loadState() { return { ...load, failed: kitFailed, monsters: Object.keys(qt ? qt.monster : {}) }; },
+        get counts() { return { clones, frameMs: perf.lastFrameMs || 0, enemyModels: enemyModels.size, dying: dying.length, towers: towerModels.size, leaving: leaving.length, calls: gl ? gl.info.render.calls : 0, tris: gl ? gl.info.render.triangles : 0 }; }, resize: () => resize(false), mapChanged, frame, reveal, logicTime,
         setQualityAuto: (v) => { qualityAuto = v; }, setZoom, togglePerf, toScreen,
         get hover() { return hover; },
         get zoom() { return zoom; },

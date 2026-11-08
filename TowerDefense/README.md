@@ -78,8 +78,32 @@ resolution. All models are CC0 (see `CREDITS.md`):
 - Effects: fireballs, smoke, shockwaves and a flash of light for explosions, a pop
   for each kill, beams and bolts. Damage numbers only show big hits.
 
-The build menu, the tower panel and the wave preview show renders of the 3D
-models. Flat (in the menu) is the original top-down view, and the only one
+Motion: turrets turn towards their target at a set speed (heavy guns slower),
+kick back on a spring when they fire and sweep slowly when nothing is in range;
+spires and crystals turn. A new tower rises out of the ground in a puff of dust,
+an upgrade pops with a gold ring, a sold tower sinks. Monsters grow out of the
+portals, walk at the pace that matches the ground they cover (slowed ones walk
+slowly), flinch when hit, and on death hop up and fall under gravity.
+
+Loading: the map and the towers come first (a "Loading 3D" bar shows over the
+map), then the monsters three at a time, the first waves' ones first; an enemy
+whose model is not in yet is drawn as a ball in its colour. Skinned monster
+models are reused from a pool instead of being made for every enemy.
+
+3D models: the Quaternius files were converted from FBX to GLB (faces grouped by
+material, so each part is one draw call) and all models are compressed with
+glTF-Transform (`optimize --compress meshopt --texture-compress webp`, keeping
+node names), about 1.7 MB in all; the game loads them with the meshopt decoder in
+`vendor/meshoptimizer/`. The build menu, the tower panel and the wave preview
+show pictures of the models from `models/portraits/`, made by
+`node TowerDefense/tools/make-portraits.mjs`.
+
+`node TowerDefense/tools/test-3d.mjs` (Playwright, software WebGL; runs in CI)
+checks that the game starts in 3D without errors, the load time and model size
+budgets, that every enemy gets a model and killed ones play out and go, that a
+second crowd reuses models, that turrets turn to their aim, that sold towers go,
+the draw call and triangle budgets with 24 towers and 60 enemies, and that a
+model that fails to load falls back to Flat for that visit. Flat (in the menu) is the original top-down view, and the only one
 without WebGL. `scripts/renderer.js` passes the game's calls to the view in use.
 
 Tower sounds are mixed quieter than the interface, each has a cap on how many
