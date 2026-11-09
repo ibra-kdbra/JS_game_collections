@@ -78,6 +78,14 @@ resolution. All models are CC0 (see `CREDITS.md`):
 - Effects: fireballs, smoke, shockwaves and a flash of light for explosions, a pop
   for each kill, beams and bolts. Damage numbers only show big hits.
 
+Effects are drawn in the 3D scene and glow through a bloom pass (high quality;
+it turns off when the quality steps down): tracers, laser and rail beams, sniper
+lines and lightning as glowing strips, lobbed mortar shells with fiery trails,
+sparks, smoke that rises from barrels and blasts, and blast rings on the ground.
+Explosions throw chunks of ground that tumble, bounce and settle, and embers that
+arc and fall. A killed monster flashes, plays its death, fades into the ground and
+leaves a burst of pieces in its colour with wisps rising; bosses burst bigger.
+
 Shots leave from the barrels: each turret's barrel ends are measured from its
 model (one per barrel on twin guns and missile pods), so tracers, sniper and rail
 shots, laser beams, mortar shells, missiles and the muzzle flash start there and
