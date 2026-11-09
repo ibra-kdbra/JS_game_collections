@@ -132,8 +132,14 @@ window.addEventListener('click', function(e){
 })
 
 function createAnimation(e){
-    let positionX = e.x - canvasPositions.left;
-    let positionY = e.y - canvasPositions.top;
+    if(e.target.closest && e.target.closest('a')) return;
+    // The canvas is scaled to fit the screen: measure it now (it moves on
+    // resize and rotation) and map the click into canvas pixels.
+    canvasPositions = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / canvasPositions.width;
+    const scaleY = canvas.height / canvasPositions.height;
+    let positionX = (e.clientX - canvasPositions.left) * scaleX;
+    let positionY = (e.clientY - canvasPositions.top) * scaleY;
     explosions.push(new Explosion(positionX, positionY));
 }
 

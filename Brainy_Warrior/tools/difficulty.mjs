@@ -249,3 +249,11 @@ export function measure(level, { runs = 3000, seed = 12345 } = {}) {
 export const BANDS = { easyMax: 20, mediumMax: 60, hardMax: 120 };
 export const band = (score) =>
     score <= BANDS.easyMax ? 'easy' : score <= BANDS.mediumMax ? 'medium' : score <= BANDS.hardMax ? 'hard' : 'expert';
+
+// Fairness floor. The bot plays one attempt; a player restarts. FAIR.tries
+// attempts win at least once with probability 1 - (1 - bot)^tries, and
+// verify-levels.mjs fails any level whose one-attempt rate is below FAIR.minBot
+// (about 18% over ten tries), so a level that only an exact solution can win
+// does not slip in.
+export const FAIR = { tries: 10, minBot: 0.02 };
+export const winWithin = (bot, tries = FAIR.tries) => 1 - (1 - bot) ** tries;

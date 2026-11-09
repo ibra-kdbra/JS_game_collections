@@ -22,7 +22,7 @@ to send the next wave early for bonus gold. The build menu compares towers with
 power, range and rate bars. Select a tower to see its stats, what the upgrade
 changes (the bars and the upgraded range on the map show it too), its sell price
 and which enemy it targets (First, Last, Strongest or Closest). Each tower also counts its kills and the damage it has dealt. The menu (Esc) has
-sound, screen shake (Off, Subtle or Full; Subtle only shakes for bosses and lost
+sound and its volume, the view (3D or Flat), screen shake (Off, Subtle or Full; Subtle only shakes for bosses and lost
 lives), vibration (phones only), damage numbers, health bars, particles and
 back-to-back waves. The shake only moves the picture of the map, never what you
 point at: clicks and taps always land on the tile under the pointer. The first game shows a few short tips; they can be skipped
@@ -48,7 +48,7 @@ of explosions and checks that every click selects the tower under the pointer.
 
 ### Look
 
-Everything is drawn in code, no image files: `scripts/terrain.js` paints each map
+The flat view is drawn in code, no image files: `scripts/terrain.js` paints each map
 once (ground, roads with rounded edges, raised walls, build pads, trees, rocks,
 crystals) in one of six looks (Meadow, City, Desert, Frost, Void, Ashlands),
 `scripts/art.js` draws the towers (a new silhouette per upgrade), enemies and
@@ -58,12 +58,84 @@ canvas from those cached pictures. Quality steps down by itself when frames get
 slow. Add `?perf=1` to the address (or press F) for frame times, entity counts and
 draw calls.
 
+### 3D and Flat
+
+The default view is 3D: the map as a small lit diorama seen at an angle, like
+mobile tower defense games, drawn with WebGL (three.js) at the screen's real
+resolution. All models are CC0 (see `CREDITS.md`):
+
+- Map: Kenney's *Tower Defense Kit* (`models/kenney-tower-defense/`): grass and
+  path tiles that follow the roads, build pads, trees and rocks on the walls. Its
+  palette is recoloured per map theme; Frost uses the kit's snow models.
+- Towers: Quaternius's steampunk turrets (`models/quaternius/turrets/`), one per
+  tower and upgrade, on a stone plinth, in the tower's colour. Guns turn to aim and
+  recoil; crystals and coils glow.
+- Enemies: Quaternius's animated monsters (`models/quaternius/monsters/`), picked
+  to match the flat view (Slime, Crab for the Beetle, Bat for the Dart, Ghost,
+  Mushroom for the Medic, Yeti for the Golem, Skeleton for the Racer, Cyclops for
+  the Tank, Dragon and Bee for the bosses). They walk, flash when hit and play
+  their death.
+- Effects: fireballs, smoke, shockwaves and a flash of light for explosions, a pop
+  for each kill, beams and bolts. Damage numbers only show big hits.
+
+Effects are drawn in the 3D scene and glow through a bloom pass (high quality;
+it turns off when the quality steps down): tracers, laser and rail beams, sniper
+lines and lightning as glowing strips, lobbed mortar shells with fiery trails,
+sparks, smoke that rises from barrels and blasts, and blast rings on the ground.
+Explosions throw chunks of ground that tumble, bounce and settle, and embers that
+arc and fall. A killed monster flashes, plays its death, fades into the ground and
+leaves a burst of pieces in its colour with wisps rising; bosses burst bigger.
+
+Shots leave from the barrels: each turret's barrel ends are measured from its
+model (one per barrel on twin guns and missile pods), so tracers, sniper and rail
+shots, laser beams, mortar shells, missiles and the muzzle flash start there and
+follow the gun as it turns and recoils; lightning starts at the top of the coil.
+Towers are sized against the scenery: a little taller than a big monster and a
+little shorter than a tree.
+
+Motion: turrets turn towards their target at a set speed (heavy guns slower),
+kick back on a spring when they fire and sweep slowly when nothing is in range;
+spires and crystals turn. A new tower rises out of the ground in a puff of dust,
+an upgrade pops with a gold ring, a sold tower sinks. Monsters grow out of the
+portals, walk at the pace that matches the ground they cover (slowed ones walk
+slowly), flinch when hit, and on death hop up and fall under gravity.
+
+Loading: the map and the towers come first (a "Loading 3D" bar shows over the
+map), then the monsters three at a time, the first waves' ones first; an enemy
+whose model is not in yet is drawn as a ball in its colour. Skinned monster
+models are reused from a pool instead of being made for every enemy.
+
+3D models: the Quaternius files were converted from FBX to GLB (faces grouped by
+material, so each part is one draw call) and all models are compressed with
+glTF-Transform (`optimize --compress meshopt --texture-compress webp`, keeping
+node names), about 1.7 MB in all; the game loads them with the meshopt decoder in
+`vendor/meshoptimizer/`. The build menu, the tower panel and the wave preview
+show pictures of the models from `models/portraits/`, made by
+`node TowerDefense/tools/make-portraits.mjs`.
+
+`node TowerDefense/tools/test-3d.mjs` (Playwright, software WebGL; runs in CI)
+checks that the game starts in 3D without errors, the load time and model size
+budgets, that every enemy gets a model and killed ones play out and go, that a
+second crowd reuses models, that turrets turn to their aim, that sold towers go,
+the draw call and triangle budgets with 24 towers and 60 enemies, and that a
+model that fails to load falls back to Flat for that visit. Flat (in the menu) is the original top-down view, and the only one
+without WebGL. `scripts/renderer.js` passes the game's calls to the view in use.
+
+Sounds come from where they happen (left or right of the map) and vary a little
+in pitch each time. Towers without a sound file get a synthesised one: a short
+crack for guns, a rising hum for lasers, a deep thump for mortars and a soft chime
+for the Slow and Poison pulses. Tower sounds are mixed quieter than the interface, each has a cap on how many
+copies play at once and how long one rings, and everything goes through a
+limiter, so a big battle is never deafening.
+
 ### Touch
 
 Pick a tower, tap a tile to see its range and whether it fits, then tap the same
 tile again or press **Build**. While placing, the row of towers in the panel
 switches type. Tap a built tower to upgrade, sell or retarget it. Pinch or use the
-+ and - buttons to zoom, drag to look around.
++ and - buttons to zoom, drag to look around. On small phones a new map starts
+zoomed in so it fills the screen (bigger tiles for your finger); pinch out to see
+all of it.
 
 On small phones held upright (up to 380 px wide or 700 px tall) the map gets most
 of the screen: the wave panel is one row (enemy preview, start, a speed button

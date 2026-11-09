@@ -2,9 +2,21 @@
 const canvas = document.getElementById('canvas1');
 const ctx = canvas.getContext('2d');
 
-// Hard-coded dimensions
-canvas.width = 1500;
-canvas.height = 720;
+// The canvas backing store matches the size it is shown at, times the
+// device pixel ratio, so the text keeps its proportions and stays sharp on
+// high-DPI screens. Everything below draws in CSS pixels.
+function pixelRatio() {
+    if (window.ArtEmbed && window.ArtEmbed.on) return window.ArtEmbed.dpr(1.5);
+    // Thousands of stroked lines a frame: 2x is sharp and keeps phones smooth.
+    return Math.min(window.devicePixelRatio || 1, 2);
+}
+
+function viewSize() {
+    return {
+        width: Math.max(1, canvas.clientWidth || window.innerWidth),
+        height: Math.max(1, canvas.clientHeight || window.innerHeight),
+    };
+}
 
 let lastTap = 0;
 
@@ -176,12 +188,14 @@ class Particle {
         let attempts = 0;
         let resetSuccess = false;
 
+        // Respawn inside a cell covered by the text, so the letters stay readable.
         while (attempts < 10 && !resetSuccess) {
             attempts++;
             let testIndex = Math.floor(Math.random() * this.effect.flowField.length);
-            if (this.effect.flowField[testIndex].alpha > 0) {
-                this.x = Math.floor(Math.random() * this.effect.width);
-                this.y = Math.floor(Math.random() * this.effect.height);
+            const cell = this.effect.flowField[testIndex];
+            if (cell && cell.alpha > 0) {
+                this.x = cell.x;
+                this.y = cell.y;
                 this.history = [{ x: this.x, y: this.y }];
                 this.timer = this.maxLength * 2;
                 resetSuccess = true;
@@ -200,12 +214,14 @@ class Effect {
     constructor(canvas) {
         this.canvas = canvas;
         this.context = ctx;
-        this.width = this.canvas.width;
-        this.height = this.canvas.height;
+        this.width = 0;
+        this.height = 0;
+        this.dpr = 1;
 
         this.particles = [];
         // A live preview in the Art Lab (?embed=1) is a small frame: fewer lines.
-        this.numberOfParticles = window.ArtEmbed && window.ArtEmbed.on ? 1500 : 4000;
+        this.maxParticles = window.ArtEmbed && window.ArtEmbed.on ? 1500 : 4000;
+        this.numberOfParticles = this.maxParticles;
         this.cellSize = 20;
         this.rows = 0;
         this.cols = 0;
@@ -223,7 +239,36 @@ class Effect {
         ];
         this.flowFieldColor = null;
 
+        this.fit();
+    }
+
+    // Match the canvas to its on-screen size and rebuild the field.
+    fit() {
+        const { width, height } = viewSize();
+        this.dpr = pixelRatio();
+        this.width = width;
+        this.height = height;
+        this.canvas.width = Math.round(width * this.dpr);
+        this.canvas.height = Math.round(height * this.dpr);
+        this.context.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+        // Cells and line count follow the screen: the original 20px cells and
+        // 4000 lines were made for a 1500x720 canvas.
+        const short = Math.min(width, height);
+        this.cellSize = Math.max(8, Math.min(20, Math.round(short / 32)));
+        const area = (width * height) / (1500 * 720);
+        this.numberOfParticles = Math.round(Math.max(600, Math.min(this.maxParticles, this.maxParticles * area)));
         this.init();
+    }
+
+    // The largest font size at which the text fits the screen with a margin,
+    // drawn at its natural proportions (never squeezed to fit).
+    fontSize() {
+        const base = 100;
+        this.context.font = `${base}px Helvetica, Arial, sans-serif`;
+        const textWidth = Math.max(1, this.context.measureText(this.userText).width);
+        const byWidth = (base * this.width * 0.88) / textWidth;
+        const byHeight = this.height * 0.55;
+        return Math.max(12, Math.floor(Math.min(byWidth, byHeight, 400)));
     }
 
     setUserText(text) {
@@ -243,7 +288,7 @@ class Effect {
 
     drawText() {
         this.context.save();
-        this.context.font = '400px Helvetica';
+        this.context.font = `${this.fontSize()}px Helvetica, Arial, sans-serif`;
         this.context.textAlign = 'center';
         this.context.textBaseline = 'middle';
 
@@ -258,7 +303,7 @@ class Effect {
         }
 
         this.context.fillStyle = gradient;
-        this.context.fillText(this.userText, this.width * 0.5, this.height * 0.5, this.width);
+        this.context.fillText(this.userText, this.width * 0.5, this.height * 0.5);
         this.context.restore();
     }
 
@@ -270,10 +315,15 @@ class Effect {
         this.context.clearRect(0, 0, this.width, this.height);
         this.drawText();
 
-        const pixels = this.context.getImageData(0, 0, this.width, this.height);
-        for (let y = 0; y < this.height; y += this.cellSize) {
-            for (let x = 0; x < this.width; x += this.cellSize) {
-                const index = (y * this.width + x) * 4;
+        // Sample the text in device pixels; the field itself is in CSS pixels.
+        const pw = this.canvas.width;
+        const ph = this.canvas.height;
+        const pixels = this.context.getImageData(0, 0, pw, ph);
+        for (let y = 0; y < this.rows * this.cellSize; y += this.cellSize) {
+            for (let x = 0; x < this.cols * this.cellSize; x += this.cellSize) {
+                const px = Math.min(pw - 1, Math.round(x * this.dpr));
+                const py = Math.min(ph - 1, Math.round(y * this.dpr));
+                const index = (py * pw + px) * 4;
                 const r = pixels.data[index];
                 const g = pixels.data[index + 1];
                 const b = pixels.data[index + 2];
@@ -315,12 +365,10 @@ class Effect {
         this.context.restore();
     }
 
-    resize(width, height) {
-        this.canvas.width = width;
-        this.canvas.height = height;
-        this.width = this.canvas.width;
-        this.height = this.canvas.height;
-        this.init();
+    resize() {
+        const { width, height } = viewSize();
+        if (width === this.width && height === this.height && pixelRatio() === this.dpr) return;
+        this.fit();
     }
 
     render() {
@@ -337,8 +385,16 @@ class Effect {
 
 const effect = new Effect(canvas);
 
+// Rotating a phone or resizing the window: rebuild at the new size once it
+// settles (a rotation fires several resize events in a row).
+let resizeTimer = 0;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => effect.resize(), 150);
+});
+
 function animate() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, effect.width, effect.height);
     effect.render();
     requestAnimationFrame(animate);
 }

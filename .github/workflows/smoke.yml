@@ -26,18 +26,24 @@ jobs:
         run: node Breakout/tools/verify-levels.mjs
       - name: Snake
         run: node Snake/tools/verify.mjs
+      - name: Volt Flip courses
+        run: node Volt_Flip/tools/verify.mjs
       - name: Minesweeper solver
         run: node Minesweeper/test/solver.test.mjs
       - name: Souls Bumper levels
         run: node Souls-Bumper/tools/verify-levels.mjs
       - name: Gravity Wells puzzles
         run: node Gravity_Wells/tools/verify-puzzles.mjs
+      - name: Reef Keeper balance
+        run: node Reef_Keeper/tools/verify.mjs
       - name: ReWire levels
         run: node ReWire/tools/verify-levels.mjs
       - name: Raven levels
         run: node Raven/tools/verify-levels.mjs
       - name: Tower Defense campaign maps
         run: node TowerDefense/tools/verify-maps.mjs
+      - name: Insaniquarium levels
+        run: node Insaniquarium/tools/bot.mjs
 
   smoke:
     name: Browser smoke test
@@ -56,3 +62,5 @@ jobs:
         run: node tools/smoke.mjs
       - name: Tower Defense aiming during explosions
         run: node TowerDefense/tools/aim-test.mjs
+      - name: Tower Defense 3D view (loading, models, budgets, fallback)
+        run: node TowerDefense/tools/test-3d.mjs

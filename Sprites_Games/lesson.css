@@ -1,0 +1,118 @@
+/* Sprite lab lessons: a way back to the lab, and the lesson's canvas scaled
+   to fit the screen at its own proportions (no sideways scrolling on phones).
+   Each lesson sets --cw and --ch to its canvas size in its own stylesheet or
+   inline on <html>. Cyber Yellow & Obsidian, as the rest of the site. */
+
+html,
+body {
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Fixed-size lesson canvases shrink to fit the screen, never stretch. */
+.fit-canvas #canvas1 {
+  width: min(calc(var(--cw) * 1px), calc(100vw - 16px), calc((100dvh - 72px) * var(--cw) / var(--ch)));
+  height: auto;
+  aspect-ratio: var(--cw) / var(--ch);
+  box-sizing: border-box;
+}
+
+.lesson-back {
+  position: fixed;
+  top: max(8px, env(safe-area-inset-top));
+  left: max(8px, env(safe-area-inset-left));
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px 0 10px;
+  font: 700 14px/1 'Chakra Petch', system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: #09090b;
+  background: #facc15;
+  border: 2px solid #09090b;
+  border-radius: 6px;
+  box-shadow: 3px 3px 0 #000;
+}
+
+.lesson-back svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lesson-back:hover {
+  background: #fef08a;
+}
+
+.lesson-back:focus-visible {
+  outline: 3px solid #fef08a;
+  outline-offset: 3px;
+}
+
+/* On-screen arrow pad (lesson 8): top right under the back button row, above the dog. */
+.pad {
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right));
+  top: calc(max(8px, env(safe-area-inset-top)) + 56px);
+  z-index: 40;
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  grid-template-rows: repeat(2, 56px);
+  gap: 6px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.pad button {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font: 700 22px/1 system-ui, sans-serif;
+  color: #facc15;
+  background: rgba(9, 9, 11, 0.82);
+  border: 2px solid #facc15;
+  border-radius: 6px;
+  touch-action: none;
+  cursor: pointer;
+}
+
+.pad button.is-down {
+  color: #09090b;
+  background: #facc15;
+}
+
+.pad [data-key='ArrowUp'] {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.pad [data-key='ArrowLeft'] {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.pad [data-key='ArrowDown'] {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.pad [data-key='ArrowRight'] {
+  grid-column: 3;
+  grid-row: 2;
+}

@@ -260,7 +260,7 @@ tower.rocket = {
         if (!this.canFire()) return;
         this.resetCooldown();
         projectiles.push(new Missile(this.pos.x, this.pos.y, e));
-        playSound(this.sound);
+        playSound(this.sound, this.pos.x);
         FX.launch(this);
     },
     
@@ -299,7 +299,7 @@ tower.rocket = {
                 m.accAmt = 0.7;
                 m.topSpeed = 6 * ts / 24;
                 projectiles.push(m);
-                playSound(this.sound);
+                playSound(this.sound, this.pos.x);
                 FX.launch(this);
             }
         }
@@ -407,7 +407,7 @@ tower.tesla = {
     onHit(e) {
         const amt = round(random(this.damageMin, this.damageMax));
         e.dealDamage(amt, this.type);
-        playSound(this.sound);
+        playSound(this.sound, this.pos.x);
     },
     
     upgrades: [
@@ -433,7 +433,7 @@ tower.tesla = {
             onHit(e) {
                 const amt = round(random(this.damageMin, this.damageMax));
                 e.dealDamage(amt, this.type);
-                playSound(this.sound);
+                playSound(this.sound, this.pos.x);
             }
         }
     ]

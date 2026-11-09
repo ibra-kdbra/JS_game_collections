@@ -3,13 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>State Management</title>
+    <title>8. State management | Sprite lab</title>
+    <link rel="stylesheet" href="../../assets/css/fonts.css" />
+    <link rel="stylesheet" href="../lesson.css" />
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <a class="lesson-back" href="../index.html" aria-label="Back to the Sprite lab"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6l-6 6 6 6M8 12h12" /></svg>Sprite lab</a>
     <canvas id="canvas1"></canvas>
     <img id="dogImage" src="./images/dog_left_right_white.png">
     <h1 id="loading">LOADING...</h1>
+    <div class="pad" aria-label="Arrow keys">
+        <button type="button" data-key="ArrowUp" aria-label="Up">&#9650;</button>
+        <button type="button" data-key="ArrowLeft" aria-label="Left">&#9664;</button>
+        <button type="button" data-key="ArrowDown" aria-label="Down">&#9660;</button>
+        <button type="button" data-key="ArrowRight" aria-label="Right">&#9654;</button>
+    </div>
     <script type="module" src="script.js"></script>
 </body>
 </html>

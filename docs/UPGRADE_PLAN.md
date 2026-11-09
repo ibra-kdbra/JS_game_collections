@@ -136,6 +136,29 @@ Each wave adds the shared kit, fixes responsiveness, adds touch, saves bests, th
 - **Art Lab**: fix Text Fields' aspect and resize, add DPR to Experimental Math, pin the Pickr version,
   credit the collidingScopes forks.
 
+**What shipped (Wave D, Art Lab):**
+- **Sprite Lab** is card 08 in the Art Lab (`slug: sprite-lab`, page `Sprites_Games/index.html`):
+  a lesson list for tutorials #1–#8 credited to Franks Laboratory, with a hero (lesson 1's Shadow
+  Dog running over lesson 2's parallax layers) that is also the card's `?embed=1` live preview.
+  Every lesson has a "Sprite lab" back button and fits a phone without sideways scrolling: fixed
+  canvases scale at their own proportions (`Sprites_Games/lesson.css`), lesson 4 maps taps into the
+  scaled canvas, lesson 5's hidden hit canvas no longer widens the page and a tap restarts after a
+  game over, lesson 7's full-screen button moved clear of the back button, and lesson 8 got an
+  on-screen arrow pad. The smoke test runs the eight lessons too (`--only sprite-lab`). The pack
+  opening lays out two rows of N/2 on upright phones (4 + 4).
+- **Text Fields**: the canvas matches its on-screen size times the pixel ratio (capped at 2), so
+  the text keeps its proportions instead of a 1500x720 canvas stretched to the window; the font
+  size fits the text to the screen, cells and line count follow the screen size, respawning lines
+  start inside the letters, and a resize or rotation rebuilds it.
+- **Experimental Math**: drawn at the full device pixel ratio (sharp at 3x), and the field covers
+  the longer side so upright phones no longer repeat the last field row.
+- **Flow Fields**: same pixel-ratio treatment as Text Fields (it had the same blur).
+- Pickr is pinned at 1.8.2 and self-hosted (`assets/vendor/pickr/`, since f5ee5a0); the
+  collidingScopes forks are credited in `CREDITS.md`.
+- Checked, not changed: LSD and Adaptive already render at screen resolution (2x cap), Blossoming
+  Flowers is CSS. Particular Drift still renders at CSS pixels: its particle size, density and
+  video export size are all in canvas pixels, so a DPR change would change the art, not just sharpen it.
+
 ## Phase 3: New games to fill genre gaps
 
 The collection has arcade, puzzle and strategy. It's missing a few short-session staples that
@@ -148,6 +171,13 @@ work well on touch:
 5. **Endless runner or flappy-style** one-button game.
 
 Each one is built on the shared kit from day one, as the reference implementation.
+
+**What shipped:** Breakout, Snake, Minesweeper and Crate Lab (Sokoban-style), then **Volt Flip**
+(`Volt_Flip/`), the one-button runner: tap, click or Space flips gravity between floor and ceiling.
+Spikes, holes, pylons, drones, shutters and sweepers unlock with distance while the speed rises and
+the reaction margin shrinks; volt shards and close calls build a ×5 multiplier, with shield and
+magnet pickups. Courses are generated from seeded patterns sized to the current speed, and
+`Volt_Flip/tools/verify.mjs` proves with a look-ahead bot that every seed can be survived.
 
 ## Phase 4: Repo hygiene and performance
 
@@ -182,9 +212,9 @@ Each one is built on the shared kit from day one, as the reference implementatio
   every local path in `data.js`. `.github/workflows/smoke.yml` runs it with the page and level
   checkers on every push and pull request.
 
-**Still open:** LSD, Particular Drift, Flow Fields and Text Fields load dat.GUI, Pickr, Font
-Awesome 6 and Google Fonts from CDNs, and Adaptive loads Montserrat from Google Fonts. Without
-network the first four stop with an error (the smoke test shows this with `SMOKE_OFFLINE=1`).
+**Follow-up, done:** dat.GUI 0.7.9, Pickr 1.8.2, Modak and Montserrat are self-hosted (f5ee5a0) and
+Font Awesome comes from `assets/vendor/fontawesome/`. Every Art Lab piece and the Sprite Lab
+pass `SMOKE_OFFLINE=1 SMOKE_STRICT=1 node tools/smoke.mjs` (no network, no cross-origin loads).
 
 ## Tracking
 
@@ -192,8 +222,10 @@ network the first four stop with an error (the smoke test shows this with `SMOKE
 - [x] Phase 1: hub and Art Lab upgrades on the original design, service worker, feedback XSS fix
 - [x] Shared game kit (start of Phase 2)
 - [x] Phase 2A · 2B · 2C: every original game upgraded on the kit
-- [ ] Phase 2D: Brainy Warrior is listed and being rebuilt; Shadow Dog Runner is being removed;
-      the Sprite lab entry and the Art Lab fixes (Text Fields aspect, DPR, pinned Pickr) are open
-- [x] Phase 3: Breakout, Snake, Minesweeper and Crate Lab (the one-button runner was not built)
+- [x] Phase 2D: Brainy Warrior is rebuilt and listed (34 levels, every one checked winnable by a
+      bot in CI); Shadow Dog Runner is removed; the Sprite Lab entry groups tutorials #1–#8;
+      Art Lab fixes done (Text Fields aspect and resize, DPR in Experimental Math, Flow Fields
+      and Text Fields, Pickr pinned at 1.8.2)
+- [x] Phase 3: Breakout, Snake, Minesweeper, Crate Lab and Volt Flip (one-button runner)
 - [x] Phase 4: README media moved, dead files removed, CREDITS.md, CI smoke test
-- [ ] Phase 4 follow-ups: self-host the Art Lab CDN libraries, owner decisions on licences
+- [ ] Phase 4 follow-ups: Art Lab CDN libraries self-hosted (done); owner decisions on licences open
