@@ -32,6 +32,9 @@ const Renderer3D = (() => {
     let scene = null;
     let camera = null;
     let inited = false;
+    let composer = null;        // bloom (high quality only)
+    let bloom = null;
+    const bloomOn = () => composer && FX.quality === 2;
     let dpr = 1;
     let cssW = 0;
     let cssH = 0;
@@ -55,7 +58,6 @@ const Renderer3D = (() => {
     let time = 0;
     let last = performance.now();
     let upgradeRange = 0;
-    let SP = null;              // the flat view's sprite atlas, for overlay effects
     let drawCalls = 0;
 
     // Heights in tiles
@@ -170,6 +172,7 @@ const Renderer3D = (() => {
     function glowSprite(color, size, opacity = 1) {
         const m = new T3.SpriteMaterial({ map: glowTexture(), color, transparent: true, opacity, blending: T3.AdditiveBlending, depthWrite: false, toneMapped: false });
         m._own = true;
+        m.color.multiplyScalar(2.2);
         const s = new T3.Sprite(m);
         s.scale.set(size, size, 1);
         return s;
@@ -235,6 +238,14 @@ const Renderer3D = (() => {
         scene.add(sun.target);
         dyn = new T3.Group();
         scene.add(dyn);
+        gl.info.autoReset = false;
+        if (window.PP) {
+            composer = new window.PP.EffectComposer(gl);
+            composer.addPass(new window.PP.RenderPass(scene, camera));
+            bloom = new window.PP.UnrealBloomPass(new T3.Vector2(256, 256), 0.75, 0.45, 1.3);
+            composer.addPass(bloom);
+            composer.addPass(new window.PP.OutputPass());
+        }
         buildDynamic();
         buildBlasts();
         loadKit();
@@ -276,6 +287,10 @@ const Renderer3D = (() => {
         dpr = nd;
         gl.setPixelRatio(dpr);
         gl.setSize(w, h, false);
+        if (composer) {
+            composer.setPixelRatio(dpr);
+            composer.setSize(w, h);
+        }
         canvas.style.width = `${w}px`;
         canvas.style.height = `${h}px`;
         overlay.width = Math.max(1, Math.round(w * dpr));
@@ -529,7 +544,6 @@ const Renderer3D = (() => {
                 target.x += pinch.ground.x - g.x;
                 target.z += pinch.ground.z - g.z;
                 clampCamera();
-                scheduleAtlas();
                 updateZoomButtons();
             } else if (p.moved && zoom > 1.001) {
                 dragging = true;
@@ -574,7 +588,6 @@ const Renderer3D = (() => {
         target.x += g0.x - g1.x;
         target.z += g0.z - g1.z;
         clampCamera();
-        scheduleAtlas();
         updateZoomButtons();
     }
 
@@ -1586,7 +1599,7 @@ const Renderer3D = (() => {
                     const sz = (big ? 0.55 : 0.36) * (0.7 + 0.3 * Math.random());
                     m.flash.scale.set(sz, sz, 1);
                     m.flash.material.opacity = Math.min(1, f / 3);
-                    m.flash.material.color.setHex(t.name === 'railgun' ? 0xe0a0ff : t.name === 'sniper' ? 0xffb0a0 : 0xfff0b0);
+                    m.flash.material.color.setHex(t.name === 'railgun' ? 0xe0a0ff : t.name === 'sniper' ? 0xffb0a0 : 0xfff0b0).multiplyScalar(2.5);
                 }
             }
             const hov = hover && !toPlace && Math.abs(hover.x - t.pos.x) < ts * 0.5 && Math.abs(hover.y - t.pos.y) < ts * 0.5;
@@ -1723,6 +1736,11 @@ const Renderer3D = (() => {
         m.root.scale.setScalar(1);
         m.root.rotation.set(0, 0, 0);
         m.mats.forEach(x => x.emissive.setRGB(0, 0, 0));
+        if (m.fading) {
+            m.fading = false;
+            m.mats.forEach(x => { x.transparent = false; x.depthWrite = true; x.opacity = 1; x.needsUpdate = true; });
+        }
+        m.er = m.eg = m.eb = 0;
         m.spawn = 0;
         m.flinch = 0;
         m.flinchV = 0;
@@ -1887,7 +1905,7 @@ const Renderer3D = (() => {
                 else if (nm === 'regen') { const w = 0.25 + 0.2 * Math.sin(time * 8); er += w; eg += w * 0.3; eb += w * 0.6; }
             }
             const hit = e.hit > 0 ? Math.min(1, e.hit / 6) : 0;
-            er += hit * 0.9; eg += hit * 0.9; eb += hit * 0.9;
+            er += hit * 0.35; eg += hit * 0.32; eb += hit * 0.3;
             if (m.er !== er || m.eg !== eg || m.eb !== eb) {
                 m.er = er; m.eg = eg; m.eb = eb;
                 for (let k = 0; k < m.mats.length; k++) m.mats[k].emissive.setRGB(er, eg, eb);
@@ -1927,15 +1945,439 @@ const Renderer3D = (() => {
             }
             m.root.position.y = y;
             if (m.standIn || !m.die) m.root.rotation.z += gdt * 6;
-            if (m.dieT > 0.8) {
-                const s = Math.max(0, 1 - (m.dieT - 0.8) * 4);
-                m.root.scale.setScalar(s);
-                if (s <= 0) {
+            // A white flash on the hit that killed it, then it fades into the ground
+            if (m.dieT < 0.12) {
+                const w = 1 - m.dieT / 0.12;
+                for (let k = 0; k < m.mats.length; k++) m.mats[k].emissive.setRGB(w * 0.6, w * 0.6, w * 0.6);
+            }
+            if (m.dieT > 0.7) {
+                if (!m.fading) {
+                    m.fading = true;
+                    m.mats.forEach(x => { x.transparent = true; x.depthWrite = false; x.needsUpdate = true; });
+                }
+                const f = Math.min(1, (m.dieT - 0.7) / 0.45);
+                m.mats.forEach(x => { x.opacity = 1 - f; });
+                m.root.position.y -= f * 0.15;
+                if (f >= 1) {
                     dropEnemyModel(m);
                     dying.splice(i, 1);
                 }
             }
         }
+    }
+
+    // ---------- Effects in the scene: sparks, smoke, beams, rings, debris, embers ----------
+    //
+    // The game's FX module keeps its pools of particles, beams and rings (positions on
+    // the ground, in game pixels). This view draws them in the WebGL scene as quads
+    // that face the camera, so they sort with the models and glow through the bloom.
+    // Heights come from where they start: at a barrel, a missile or an enemy.
+    // On top of that, its own physics: chunks of debris that fly, bounce and settle,
+    // embers that arc and fall, and wisps that rise from a killed enemy.
+
+    let fxSprites = null;       // the game's sprite atlas (glows, smoke, rings) as a texture
+    let fxS = null;             // sprite name -> uv rect
+    const batches = {};
+    const camR = new Float32Array(3);
+    const camU = new Float32Array(3);
+    const camP = new Float32Array(3);
+    const GLOW = 2.4;           // additive colours go over 1 so the bloom picks them up
+
+    function makeBatch(max, map, additive) {
+        const g = new T3.BufferGeometry();
+        const pos = new Float32Array(max * 12);
+        const uv = new Float32Array(max * 8);
+        const col = new Float32Array(max * 16);
+        const idx = new Uint32Array(max * 6);
+        for (let i = 0; i < max; i++) {
+            const a = i * 4;
+            idx.set([a, a + 1, a + 2, a, a + 2, a + 3], i * 6);
+        }
+        g.setIndex(new T3.BufferAttribute(idx, 1));
+        g.setAttribute('position', new T3.BufferAttribute(pos, 3).setUsage(T3.DynamicDrawUsage));
+        g.setAttribute('uv', new T3.BufferAttribute(uv, 2).setUsage(T3.DynamicDrawUsage));
+        g.setAttribute('color', new T3.BufferAttribute(col, 4).setUsage(T3.DynamicDrawUsage));
+        const mat = new T3.MeshBasicMaterial({
+            map, vertexColors: true, transparent: true, depthWrite: false, toneMapped: false, side: T3.DoubleSide,
+            blending: additive ? T3.AdditiveBlending : T3.NormalBlending
+        });
+        const mesh = new T3.Mesh(g, mat);
+        mesh.frustumCulled = false;
+        mesh.renderOrder = additive ? 6 : 5;
+        dyn.add(mesh);
+        return { mesh, g, pos, uv, col, n: 0, max };
+    }
+
+    function flushBatch(b) {
+        b.g.setDrawRange(0, b.n * 6);
+        b.g.attributes.position.needsUpdate = true;
+        b.g.attributes.uv.needsUpdate = true;
+        b.g.attributes.color.needsUpdate = true;
+        b.n = 0;
+    }
+
+    // One quad: corners a b c d (counter-clockwise), uv rect, colour with alpha
+    function quad(b, ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz, u0, v0, u1, v1, r, g, bl, a) {
+        if (b.n >= b.max || a <= 0.003) return;
+        const i = b.n++;
+        const P = b.pos;
+        const o = i * 12;
+        P[o] = ax; P[o + 1] = ay; P[o + 2] = az;
+        P[o + 3] = bx; P[o + 4] = by; P[o + 5] = bz;
+        P[o + 6] = cx; P[o + 7] = cy; P[o + 8] = cz;
+        P[o + 9] = dx; P[o + 10] = dy; P[o + 11] = dz;
+        const U = b.uv;
+        const q = i * 8;
+        U[q] = u0; U[q + 1] = v0; U[q + 2] = u1; U[q + 3] = v0;
+        U[q + 4] = u1; U[q + 5] = v1; U[q + 6] = u0; U[q + 7] = v1;
+        const C = b.col;
+        const k = i * 16;
+        for (let j = 0; j < 4; j++) {
+            C[k + j * 4] = r; C[k + j * 4 + 1] = g; C[k + j * 4 + 2] = bl; C[k + j * 4 + 3] = a;
+        }
+    }
+
+    // A sprite from the atlas facing the camera, w tiles wide, turned by rot
+    function billboard(b, name, x, y, z, w, rot, r, g, bl, a) {
+        const s = fxS[name];
+        if (!s) return;
+        const hw = w / 2;
+        const hh = hw * s.h / s.w;
+        const c = Math.cos(rot);
+        const n = Math.sin(rot);
+        const rx = camR[0] * c + camU[0] * n, ry = camR[1] * c + camU[1] * n, rz = camR[2] * c + camU[2] * n;
+        const ux = camU[0] * c - camR[0] * n, uy = camU[1] * c - camR[1] * n, uz = camU[2] * c - camR[2] * n;
+        quad(b,
+            x - rx * hw - ux * hh, y - ry * hw - uy * hh, z - rz * hw - uz * hh,
+            x + rx * hw - ux * hh, y + ry * hw - uy * hh, z + rz * hw - uz * hh,
+            x + rx * hw + ux * hh, y + ry * hw + uy * hh, z + rz * hw + uz * hh,
+            x - rx * hw + ux * hh, y - ry * hw + uy * hh, z - rz * hw + uz * hh,
+            s.u0, s.v0, s.u1, s.v1, r, g, bl, a);
+    }
+
+    // A strip from p to q, w tiles wide, turned to face the camera
+    function ribbon(b, px, py, pz, qx, qy, qz, w, r, g, bl, a) {
+        const dx = qx - px, dy = qy - py, dz = qz - pz;
+        const vx = camP[0] - px, vy = camP[1] - py, vz = camP[2] - pz;
+        let sx = dy * vz - dz * vy, sy = dz * vx - dx * vz, sz = dx * vy - dy * vx;
+        const l = Math.hypot(sx, sy, sz) || 1;
+        const k = w / 2 / l;
+        sx *= k; sy *= k; sz *= k;
+        quad(b, px - sx, py - sy, pz - sz, qx - sx, qy - sy, qz - sz, qx + sx, qy + sy, qz + sz, px + sx, py + sy, pz + sz,
+            0, 0, 1, 1, r, g, bl, a);
+    }
+
+    // A sprite lying flat on the ground (blast rings)
+    function flat(b, name, x, z, w, y, r, g, bl, a) {
+        const s = fxS[name];
+        if (!s) return;
+        const h = w / 2;
+        quad(b, x - h, y, z + h, x + h, y, z + h, x + h, y, z - h, x - h, y, z - h, s.u0, s.v0, s.u1, s.v1, r, g, bl, a);
+    }
+
+    function buildFx() {
+        const A = Art.build(128);
+        const W = A.atlas.width;
+        const H = A.atlas.height;
+        fxS = {};
+        Object.entries(A.s).forEach(([k, s]) => {
+            fxS[k] = { u0: s.x / W, u1: (s.x + s.w) / W, v0: 1 - (s.y + s.h) / H, v1: 1 - s.y / H, w: s.w, h: s.h };
+        });
+        fxSprites = new T3.CanvasTexture(A.atlas);
+        fxSprites.colorSpace = T3.SRGBColorSpace;
+        // A soft strip, bright in the middle, for beams and streaks
+        const c = document.createElement('canvas');
+        c.width = 4;
+        c.height = 64;
+        const g = c.getContext('2d');
+        const gr = g.createLinearGradient(0, 0, 0, 64);
+        gr.addColorStop(0, 'rgba(255,255,255,0)');
+        gr.addColorStop(0.35, 'rgba(255,255,255,0.55)');
+        gr.addColorStop(0.5, 'rgba(255,255,255,1)');
+        gr.addColorStop(0.65, 'rgba(255,255,255,0.55)');
+        gr.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = gr;
+        g.fillRect(0, 0, 4, 64);
+        const strip = new T3.CanvasTexture(c);
+        batches.glow = makeBatch(1600, fxSprites, true);
+        batches.smoke = makeBatch(700, fxSprites, false);
+        batches.beam = makeBatch(500, strip, true);
+        // Debris: little blocks that tumble, bounce and settle
+        const box = new T3.BoxGeometry(1, 1, 1);
+        debris.mesh = new T3.InstancedMesh(box, new T3.MeshStandardMaterial({ roughness: 0.7, metalness: 0.1 }), DEBRIS_MAX);
+        debris.mesh.instanceMatrix.setUsage(T3.DynamicDrawUsage);
+        debris.mesh.frustumCulled = false;
+        debris.mesh.castShadow = false;
+        debris.mesh.count = 0;
+        for (let i = 0; i < DEBRIS_MAX; i++) debris.mesh.setColorAt(i, tmpC.set(0xffffff));
+        dyn.add(debris.mesh);
+    }
+
+    // ---- Debris and embers (this view's own physics) ----
+    const DEBRIS_MAX = 220;
+    const debris = { mesh: null, list: [] };
+    const embers = [];
+    const EMBER_MAX = 400;
+
+    function spawnDebris(x, y, z, n, colors, speed, size) {
+        if (FX.quality === 0 || !FX.enabled) return;
+        for (let i = 0; i < n; i++) {
+            if (debris.list.length >= DEBRIS_MAX) debris.list.shift();
+            const a = Math.random() * TAU;
+            const v = speed * (0.4 + Math.random() * 0.6);
+            debris.list.push({
+                x, y, z, vx: Math.cos(a) * v, vy: speed * (1.2 + Math.random() * 1.4), vz: Math.sin(a) * v,
+                rx: Math.random() * TAU, ry: Math.random() * TAU, wx: (Math.random() - 0.5) * 18, wy: (Math.random() - 0.5) * 18,
+                s: size * (0.5 + Math.random() * 0.7), life: 1.4 + Math.random() * 0.8, t: 0,
+                color: colors[i % colors.length]
+            });
+        }
+    }
+
+    function spawnEmbers(x, y, z, n, color, speed, rise, size, life) {
+        if (!FX.enabled) return;
+        const c = new T3.Color(color);
+        for (let i = 0; i < n; i++) {
+            if (embers.length >= EMBER_MAX) embers.shift();
+            const a = Math.random() * TAU;
+            const v = speed * (0.3 + Math.random() * 0.7);
+            embers.push({
+                x, y, z, vx: Math.cos(a) * v, vy: rise * (0.5 + Math.random()), vz: Math.sin(a) * v,
+                grav: rise > 0 && speed < 0.6 ? -0.4 : 6, r: c.r, g: c.g, b: c.b,
+                s: size * (0.6 + Math.random() * 0.6), life: life * (0.6 + Math.random() * 0.6), t: 0
+            });
+        }
+    }
+
+    let dq = null;
+    let de = null;
+    function syncDebris(gdt) {
+        if (!dq) {
+            dq = new T3.Quaternion();
+            de = new T3.Euler();
+        }
+        const L = debris.list;
+        let n = 0;
+        for (let i = L.length - 1; i >= 0; i--) {
+            const d = L[i];
+            d.t += gdt;
+            if (d.t >= d.life) {
+                L.splice(i, 1);
+                continue;
+            }
+            d.vy -= 9.8 * gdt;
+            d.x += d.vx * gdt;
+            d.y += d.vy * gdt;
+            d.z += d.vz * gdt;
+            d.rx += d.wx * gdt;
+            d.ry += d.wy * gdt;
+            const floor = d.s * 0.5;
+            if (d.y < floor) {
+                d.y = floor;
+                if (d.vy < -0.6) {
+                    d.vy = -d.vy * 0.32;
+                    d.vx *= 0.6;
+                    d.vz *= 0.6;
+                    d.wx *= 0.6;
+                    d.wy *= 0.6;
+                } else {
+                    // resting: slide to a stop
+                    d.vy = 0;
+                    d.vx *= Math.max(0, 1 - gdt * 8);
+                    d.vz *= Math.max(0, 1 - gdt * 8);
+                    d.wx *= Math.max(0, 1 - gdt * 8);
+                    d.wy *= Math.max(0, 1 - gdt * 8);
+                }
+            }
+            const fade = Math.min(1, (d.life - d.t) / 0.4);
+            de.set(d.rx, d.ry, 0);
+            dq.setFromEuler(de);
+            tmpV.set(d.x, d.y, d.z);
+            tmpS.set(d.s * fade, d.s * fade, d.s * fade);
+            tmpM.compose(tmpV, dq, tmpS);
+            debris.mesh.setMatrixAt(n, tmpM);
+            debris.mesh.setColorAt(n, tmpC.set(d.color));
+            n++;
+        }
+        debris.mesh.count = n;
+        debris.mesh.instanceMatrix.needsUpdate = true;
+        if (debris.mesh.instanceColor) debris.mesh.instanceColor.needsUpdate = true;
+    }
+
+    // Height at which a new FX particle starts: a missile's, a barrel's, or an
+    // enemy's middle; smoke and sparks then rise or arc from there
+    function startHeight(px, py) {
+        let best = 0.25;
+        let h = 0.35;
+        for (let i = 0; i < projectiles.length; i++) {
+            const q = projectiles[i];
+            const d = Math.hypot(q.pos.x - px, q.pos.y - py) / ts;
+            if (d < best && q._h !== undefined) { best = d; h = q._h; }
+        }
+        if (best < 0.25) return h;
+        best = 0.75;
+        towerModels.forEach((m, t) => {
+            const d = Math.hypot(t.pos.x - px, t.pos.y - py) / ts;
+            if (d < best) { best = d; h = m.top * 0.85; }
+        });
+        return h;
+    }
+
+    function syncFx(gdt) {
+        if (!fxS) buildFx();
+        const e = camera.matrixWorld.elements;
+        camR[0] = e[0]; camR[1] = e[1]; camR[2] = e[2];
+        camU[0] = e[4]; camU[1] = e[5]; camU[2] = e[6];
+        camP[0] = e[12]; camP[1] = e[13]; camP[2] = e[14];
+        const G = batches.glow;
+        const S = batches.smoke;
+        const B = batches.beam;
+
+        // The game's particles: sparks, glows, smoke (its debris rects are replaced by ours)
+        const P = FX.particles;
+        for (let i = 0; i < P.n; i++) {
+            const p = P.items[i];
+            if (p.color) continue;
+            if (p._ll === undefined || p.life > p._ll) p._h3 = startHeight(p.x, p.y);
+            p._ll = p.life;
+            const f = 1 - p.life / p.max;
+            const size = p.s0 + (p.s1 - p.s0) * f;
+            if (size <= 0.01) continue;
+            const smoke = p.sprite === 'smoke';
+            const y = smoke ? p._h3 + f * 0.45 : Math.max(0.04, p._h3 + 0.5 * f - 0.9 * f * f);
+            const a = Math.max(0, p.a0 * (1 - f));
+            if (p.add) billboard(G, p.sprite, p.x / ts, y, p.y / ts, size, p.rot, GLOW, GLOW, GLOW, a);
+            else billboard(S, p.sprite, p.x / ts, y, p.y / ts, size * 1.15, p.rot, 1, 1, 1, a * 0.85);
+        }
+
+        // Blast and pulse rings, flat on the ground
+        const R = FX.rings;
+        for (let i = 0; i < R.n; i++) {
+            const r = R.items[i];
+            const f = 1 - r.life / r.max;
+            const rad = (r.r0 + (r.r1 - r.r0) * (1 - (1 - f) * (1 - f))) / ts;
+            flat(G, r.sprite, r.x / ts, r.y / ts, rad / 0.43, 0.04, GLOW, GLOW, GLOW, Math.max(0, r.a0 * (1 - f)));
+        }
+
+        // Shots
+        const BM = FX.beams;
+        for (let i = 0; i < BM.n; i++) {
+            const b = BM.items[i];
+            const f = b.life / b.max;
+            switch (b.kind) {
+                case 'tracer': {
+                    const p = 1 - (b.life - 1) / Math.max(1, b.max - 1);
+                    muzzle3D(b.src, b.barrel, mz);
+                    const ex = b.x2 / ts, ey = 0.32, ez = b.y2 / ts;
+                    const hx = mz.x + (ex - mz.x) * p, hy = mz.y + (ey - mz.y) * p, hz = mz.z + (ez - mz.z) * p;
+                    const tl = Math.min(p, 0.4);
+                    const tx = hx - (ex - mz.x) * tl, ty = hy - (ey - mz.y) * tl, tz = hz - (ez - mz.z) * tl;
+                    ribbon(B, tx, ty, tz, hx, hy, hz, 0.09 * b.w, 2.2, 1.5, 0.5, 0.9);
+                    ribbon(B, tx, ty, tz, hx, hy, hz, 0.03 * b.w, 2.6, 2.5, 2.2, 1);
+                    billboard(G, 'glow_yellow', hx, hy, hz, 0.14, 0, GLOW, GLOW, GLOW, 0.9);
+                    break;
+                }
+                case 'laser':
+                case 'emitter': {
+                    const t = b.tower;
+                    const en = b.target;
+                    if (!t || !t.alive || !en || !en.alive) break;
+                    muzzle3D(t, 0, mz);
+                    const ex = en.pos.x / ts, ey = enemyHeight(en), ez = en.pos.y / ts;
+                    const flick = 0.85 + 0.15 * Math.sin(time * 40 + i);
+                    const laser = b.kind === 'laser';
+                    const cr = laser ? 0.3 : 0.3, cg = laser ? 0.75 : 1.0, cb = laser ? 1.6 : 0.95;
+                    ribbon(B, mz.x, mz.y, mz.z, ex, ey, ez, (laser ? 0.2 : 0.24) * b.w * flick, cr * GLOW, cg * GLOW, cb * GLOW, 0.75);
+                    ribbon(B, mz.x, mz.y, mz.z, ex, ey, ez, 0.05 * b.w, 2.4, 2.6, 2.6, 1);
+                    billboard(G, 'glow_cyan', mz.x, mz.y, mz.z, 0.28 * flick, 0, GLOW, GLOW, GLOW, 0.9);
+                    billboard(G, laser ? 'glow_blue' : 'glow_cyan', ex, ey, ez, 0.5 * flick * b.w, time * 4, GLOW, GLOW, GLOW, 0.9);
+                    break;
+                }
+                case 'snipe':
+                case 'rail': {
+                    muzzle3D(b.src, b.barrel, mz);
+                    const ex = b.x2 / ts, ey = 0.32, ez = b.y2 / ts;
+                    if (b.kind === 'snipe') {
+                        ribbon(B, mz.x, mz.y, mz.z, ex, ey, ez, 0.16 * f, 2.4, 0.5, 0.4, 0.8 * f);
+                        ribbon(B, mz.x, mz.y, mz.z, ex, ey, ez, 0.035, 2.6, 2.4, 2.3, f);
+                    } else {
+                        ribbon(B, mz.x, mz.y, mz.z, ex, ey, ez, 0.36 * f, 1.6, 0.6, 2.4, 0.8 * f);
+                        ribbon(B, mz.x, mz.y, mz.z, ex, ey, ez, 0.07 * f, 2.6, 2.3, 2.6, f);
+                        // sparkles along the rail
+                        for (let j = 1; j < 6; j++) {
+                            const u = (j + (1 - f) * 2) / 6 % 1;
+                            billboard(G, 'glow_purple', mz.x + (ex - mz.x) * u, mz.y + (ey - mz.y) * u + Math.sin(j * 7) * 0.05, mz.z + (ez - mz.z) * u, 0.18 * f, 0, GLOW, GLOW, GLOW, f);
+                        }
+                    }
+                    break;
+                }
+                case 'shell': {
+                    const p = 1 - (b.life - 1) / Math.max(1, b.max - 1);
+                    muzzle3D(b.src, b.barrel, mz);
+                    const ex = b.x2 / ts, ez = b.y2 / ts;
+                    const arc = (u) => Math.sin(u * Math.PI) * 1.0;
+                    const x = mz.x + (ex - mz.x) * p, y = mz.y + (0.3 - mz.y) * p + arc(p), z = mz.z + (ez - mz.z) * p;
+                    billboard(G, 'glow_orange', x, y, z, 0.42, 0, GLOW, GLOW, GLOW, 1);
+                    billboard(G, 'glow_white', x, y, z, 0.16, 0, GLOW, GLOW, GLOW, 1);
+                    // a short fiery trail behind it
+                    for (let j = 1; j <= 4; j++) {
+                        const u = Math.max(0, p - j * 0.05);
+                        billboard(G, 'glow_orange', mz.x + (ex - mz.x) * u, mz.y + (0.3 - mz.y) * u + arc(u), mz.z + (ez - mz.z) * u, 0.3 - j * 0.05, 0, GLOW, GLOW, GLOW, 0.7 - j * 0.15);
+                    }
+                    break;
+                }
+                case 'bolt': {
+                    const flick = (Math.random() < 0.25 ? 0.4 : 1) * f;
+                    const pts = b.pts;
+                    const n = pts.length - 1;
+                    muzzle3D(b.src, 0, mz);
+                    const x1 = mz.x, z1 = mz.z, h1 = mz.y;
+                    const x2 = b.x2 / ts, z2 = b.y2 / ts;
+                    const dx = x2 - x1, dz = z2 - z1;
+                    const len = Math.hypot(dx, dz) || 1;
+                    const sx = -dz / len, sz = dx / len;
+                    const blue = b.w >= 1.5;
+                    let px = x1, py = h1, pz = z1;
+                    for (let j = 1; j <= n; j++) {
+                        const u = j / n;
+                        const o = pts[j] / ts * Math.min(1, len / 2);
+                        const x = x1 + dx * u + sx * o, y = h1 * (1 - u) + 0.32 * u + o * 0.6, z = z1 + dz * u + sz * o;
+                        ribbon(B, px, py, pz, x, y, z, 0.16 * b.w, blue ? 0.6 : 2.2, blue ? 2.2 : 2.0, blue ? 2.6 : 0.6, 0.6 * flick);
+                        ribbon(B, px, py, pz, x, y, z, 0.045 * b.w, 2.6, 2.6, 2.4, flick);
+                        px = x; py = y; pz = z;
+                    }
+                    billboard(G, blue ? 'glow_cyan' : 'glow_yellow', x1, h1, z1, 0.45 * flick, 0, GLOW, GLOW, GLOW, 1);
+                    break;
+                }
+            }
+        }
+
+        // Embers and wisps
+        for (let i = embers.length - 1; i >= 0; i--) {
+            const m = embers[i];
+            m.t += gdt;
+            if (m.t >= m.life) {
+                embers.splice(i, 1);
+                continue;
+            }
+            m.vy -= m.grav * gdt;
+            m.x += m.vx * gdt;
+            m.y += m.vy * gdt;
+            m.z += m.vz * gdt;
+            if (m.y < 0.03) {
+                m.y = 0.03;
+                m.vy = -m.vy * 0.3;
+                m.vx *= 0.5;
+                m.vz *= 0.5;
+            }
+            const f = m.t / m.life;
+            billboard(G, 'glow_white', m.x, m.y, m.z, m.s * (1 - f * 0.6), 0, m.r * GLOW, m.g * GLOW, m.b * GLOW, 1 - f);
+        }
+
+        flushBatch(G);
+        flushBatch(S);
+        flushBatch(B);
+        syncDebris(gdt);
     }
 
     // ---------- Explosions: fireballs, shockwaves and light flashes ----------
@@ -1972,7 +2414,14 @@ const Renderer3D = (() => {
         const blast = FX.blast;
         FX.blast = (x, y, kind, radiusTiles = 1) => {
             const out = blast(x, y, kind, radiusTiles);
-            if (Renderer.view === '3d') startBlast(x / ts, y / ts, kind, radiusTiles, false);
+            if (Renderer.view === '3d') {
+                startBlast(x / ts, y / ts, kind, radiusTiles, false);
+                const X = x / ts, Z = y / ts;
+                const th = Terrain.THEMES[theme] || Terrain.THEMES.meadow;
+                spawnDebris(X, 0.15, Z, 5 + Math.round(radiusTiles * 2), [th.ground[0], th.speck, th.road || '#7a6a55'], 1.6, 0.09);
+                const c = (BLAST_COLORS[kind] || BLAST_COLORS.rocket)[1];
+                spawnEmbers(X, 0.3, Z, 10 + Math.round(radiusTiles * 4), c, 2.2, 2.6, 0.12, 0.8);
+            }
             return out;
         };
         FX2.muzzle = FX.muzzle;
@@ -1987,6 +2436,12 @@ const Renderer3D = (() => {
             if (Renderer.view === '3d') {
                 const art = Art.ENEMY_ART[e.name];
                 startBlast(e.pos.x / ts, e.pos.y / ts, 'death', art ? art.r * (art.boss ? 2.4 : 1.4) : 0.4, true, art && art.color);
+                const X = e.pos.x / ts, Z = e.pos.y / ts;
+                const col = art ? art.color : '#cccccc';
+                const dark = '#' + new T3.Color(col).multiplyScalar(0.5).getHexString();
+                spawnDebris(X, 0.3, Z, art && art.boss ? 14 : 6, [col, dark, col], art && art.boss ? 2.2 : 1.5, art && art.boss ? 0.12 : 0.07);
+                // wisps that drift up and fade
+                spawnEmbers(X, 0.35, Z, art && art.boss ? 16 : 6, col, 0.35, 1.1, 0.16, 1.1);
             }
             return out;
         };
@@ -2004,9 +2459,11 @@ const Renderer3D = (() => {
         b.z = z;
         const [c1, c2] = kind === 'dust' ? [0x6b6152, new T3.Color(color).getHex()] : isDeath ? [0xffffff, new T3.Color(color || '#ffffff').getHex()] : (BLAST_COLORS[kind] || BLAST_COLORS.rocket);
         b.kind = kind;
-        b.core.material.color.setHex(c1);
-        b.shell.material.color.setHex(c2);
-        b.ring.material.color.setHex(isDeath ? c2 : c1);
+        // Brighter than white so the bloom catches them (dust stays dull)
+        const hot = kind === 'dust' ? 1 : 2.8;
+        b.core.material.color.setHex(c1).multiplyScalar(hot);
+        b.shell.material.color.setHex(c2).multiplyScalar(hot * 0.8);
+        b.ring.material.color.setHex(isDeath ? c2 : c1).multiplyScalar(hot * 0.7);
         [b.core, b.shell, b.ring].forEach(m => { m.visible = true; });
         b.smoke.visible = !isDeath && FX.quality > 0;
         if (!isDeath && FX.quality > 0) {
@@ -2530,36 +2987,6 @@ const Renderer3D = (() => {
 
     // ---------- Overlay (2D, projected) ----------
 
-    let atlasAt = 0;
-    function scheduleAtlas() {
-        atlasAt = performance.now() + 160;
-    }
-    function ensureAtlas() {
-        const k = proj(target.x, FX_H, target.z).k * dpr;
-        const tile = Math.max(16, k);
-        if (!SP || (atlasAt && performance.now() > atlasAt && Math.abs(SP.tile - Math.min(Art.MAX_TILE, tile)) / tile > 0.15)) {
-            SP = Art.build(tile);
-            atlasAt = 0;
-        }
-    }
-    const natural = (name) => SP.s[name].w / SP.tile;
-
-    // Sprite centred on screen point (css px), w = width in css px
-    function ospr(name, x, y, w, rot = 0, sy = 1) {
-        const s = SP.s[name];
-        if (!s) return;
-        const W = w * dpr;
-        const H = W * s.h / s.w * sy;
-        if (rot) {
-            octx.setTransform(Math.cos(rot), Math.sin(rot), -Math.sin(rot), Math.cos(rot), x * dpr, y * dpr);
-            octx.drawImage(SP.atlas, s.x, s.y, s.w, s.h, -W / 2, -H / 2, W, H);
-            octx.setTransform(1, 0, 0, 1, 0, 0);
-        } else {
-            octx.drawImage(SP.atlas, s.x, s.y, s.w, s.h, x * dpr - W / 2, y * dpr - H / 2, W, H);
-        }
-        drawCalls++;
-    }
-
     function enemyHeight(e) {
         const art = Art.ENEMY_ART[e.name];
         return (art ? art.r : 0.3) * 0.85;
@@ -2572,190 +2999,12 @@ const Renderer3D = (() => {
         octx.globalAlpha = 1;
         octx.globalCompositeOperation = 'source-over';
         octx.clearRect(0, 0, W, H);
-        ensureAtlas();
-        drawRings();
-        drawBeams();
-        drawParticles();
         if (healthBar) drawBars();
         drawTag();
         drawFloaters();
         drawVignette();
         octx.globalAlpha = 1;
         octx.globalCompositeOperation = 'source-over';
-    }
-
-    // Blast rings, flat on the ground: an ellipse from the local ground directions
-    function drawRings() {
-        const R = FX.rings;
-        if (!R.n) return;
-        octx.globalCompositeOperation = 'lighter';
-        for (let i = 0; i < R.n; i++) {
-            const r = R.items[i];
-            const f = 1 - r.life / r.max;
-            const rad = (r.r0 + (r.r1 - r.r0) * (1 - (1 - f) * (1 - f))) / ts;
-            const X = r.x / ts;
-            const Z = r.y / ts;
-            const c = proj(X, 0.05, Z);
-            const cx = c.x, cy = c.y;
-            const ax = proj(X + 1, 0.05, Z);
-            const ux = ax.x - cx, uy = ax.y - cy;
-            const az = proj(X, 0.05, Z + 1);
-            const vx = az.x - cx, vy = az.y - cy;
-            const s = SP.s[r.sprite];
-            if (!s) continue;
-            octx.globalAlpha = Math.max(0, r.a0 * (1 - f));
-            const k = rad / 0.43;   // the sprite's ring sits at 0.43 of its width
-            octx.setTransform(ux * k * dpr / s.w, uy * k * dpr / s.w, vx * k * dpr / s.w, vy * k * dpr / s.w, cx * dpr, cy * dpr);
-            octx.drawImage(SP.atlas, s.x, s.y, s.w, s.h, -s.w / 2, -s.h / 2, s.w, s.h);
-            drawCalls++;
-        }
-        octx.setTransform(1, 0, 0, 1, 0, 0);
-        octx.globalCompositeOperation = 'source-over';
-        octx.globalAlpha = 1;
-    }
-
-    function seg(x1, y1, x2, y2, color, w) {
-        octx.beginPath();
-        octx.moveTo(x1 * dpr, y1 * dpr);
-        octx.lineTo(x2 * dpr, y2 * dpr);
-        octx.strokeStyle = color;
-        octx.lineWidth = Math.max(1, w * dpr);
-        octx.stroke();
-        drawCalls++;
-    }
-
-    function drawBeams() {
-        const B = FX.beams;
-        if (!B.n) return;
-        octx.globalCompositeOperation = 'lighter';
-        octx.lineCap = 'round';
-        for (let i = 0; i < B.n; i++) {
-            const b = B.items[i];
-            const f = b.life / b.max;
-            switch (b.kind) {
-                case 'tracer': {
-                    // A bullet streak from the barrel's end to the target
-                    const p = 1 - (b.life - 1) / Math.max(1, b.max - 1);
-                    muzzle3D(b.src, b.barrel, mz);
-                    const ex = b.x2 / ts, ey = 0.3, ez = b.y2 / ts;
-                    const hx = mz.x + (ex - mz.x) * p, hy = mz.y + (ey - mz.y) * p, hz = mz.z + (ez - mz.z) * p;
-                    const tl = Math.min(p, 0.35);
-                    const a = proj(hx - (ex - mz.x) * tl, hy - (ey - mz.y) * tl, hz - (ez - mz.z) * tl);
-                    const ax = a.x, ay = a.y;
-                    const c = proj(hx, hy, hz);
-                    seg(ax, ay, c.x, c.y, 'rgba(255,200,80,0.6)', c.k * 0.12 * b.w);
-                    seg(ax, ay, c.x, c.y, 'rgba(255,250,220,0.95)', c.k * 0.045 * b.w);
-                    break;
-                }
-                case 'laser':
-                case 'emitter': {
-                    const t = b.tower;
-                    const e = b.target;
-                    if (!t || !t.alive || !e || !e.alive) break;
-                    muzzle3D(t, 0, mz);
-                    const a = proj(mz.x, mz.y, mz.z);
-                    const ax = a.x, ay = a.y;
-                    const c = proj(e.pos.x / ts, enemyHeight(e), e.pos.y / ts);
-                    if (SP.s.glow_cyan) ospr('glow_cyan', ax, ay, a.k * 0.35, 0);
-                    const col = b.kind === 'laser' ? 'rgba(60,170,255,0.5)' : 'rgba(60,240,220,0.55)';
-                    const flick = 0.85 + 0.15 * Math.sin(time * 40 + i);
-                    seg(ax, ay, c.x, c.y, col, c.k * (b.kind === 'laser' ? 0.18 : 0.2) * b.w * flick);
-                    seg(ax, ay, c.x, c.y, 'rgba(235,255,255,0.95)', c.k * 0.05 * b.w);
-                    if (SP.s.glow_cyan) ospr(b.kind === 'laser' ? 'glow_cyan' : 'glow_cyan', c.x, c.y, c.k * 0.6, 0);
-                    break;
-                }
-                case 'snipe':
-                case 'rail': {
-                    muzzle3D(b.src, b.barrel, mz);
-                    const a = proj(mz.x, mz.y, mz.z);
-                    const ax = a.x, ay = a.y;
-                    const c = proj(b.x2 / ts, 0.3, b.y2 / ts);
-                    if (b.kind === 'snipe') {
-                        seg(ax, ay, c.x, c.y, `rgba(255,70,60,${0.55 * f})`, c.k * 0.16 * f);
-                        seg(ax, ay, c.x, c.y, `rgba(255,240,230,${f})`, c.k * 0.04);
-                    } else {
-                        seg(ax, ay, c.x, c.y, `rgba(200,90,255,${0.6 * f})`, c.k * 0.32 * f);
-                        seg(ax, ay, c.x, c.y, `rgba(255,230,255,${f})`, c.k * 0.07 * f);
-                    }
-                    break;
-                }
-                case 'shell': {
-                    // A shell lobbed from the mortar's mouth in an arc
-                    const p = 1 - (b.life - 1) / Math.max(1, b.max - 1);
-                    muzzle3D(b.src, b.barrel, mz);
-                    const ex = b.x2 / ts, ez = b.y2 / ts;
-                    const c = proj(mz.x + (ex - mz.x) * p, mz.y + (0.3 - mz.y) * p + Math.sin(p * Math.PI) * 1.0, mz.z + (ez - mz.z) * p);
-                    octx.globalAlpha = 0.95;
-                    ospr('glow_orange', c.x, c.y, c.k * 0.45);
-                    octx.globalAlpha = 1;
-                    break;
-                }
-                case 'bolt': {
-                    const flick = (Math.random() < 0.25 ? 0.4 : 1) * f;
-                    const pts = b.pts;
-                    const n = pts.length - 1;
-                    // Lightning from the top of the coil
-                    muzzle3D(b.src, 0, mz);
-                    const x1 = mz.x * ts, y1 = mz.z * ts, h1 = mz.y;
-                    const dx = b.x2 - x1;
-                    const dy = b.y2 - y1;
-                    const len = Math.hypot(dx, dy) || 1;
-                    const px = -dy / len;
-                    const py = dx / len;
-                    octx.beginPath();
-                    let k = 1;
-                    for (let j = 0; j <= n; j++) {
-                        const u = j / n;
-                        const o = pts[j] * Math.min(1, len / (ts * 2));
-                        const h = h1 * (1 - u) + 0.3 * u + o / ts * 0.6;
-                        const c = proj((x1 + dx * u + px * o) / ts, h, (y1 + dy * u + py * o) / ts);
-                        k = c.k;
-                        if (j === 0) octx.moveTo(c.x * dpr, c.y * dpr); else octx.lineTo(c.x * dpr, c.y * dpr);
-                    }
-                    octx.strokeStyle = b.w >= 1.5 ? `rgba(80,235,255,${0.55 * flick})` : `rgba(255,230,80,${0.55 * flick})`;
-                    octx.lineWidth = k * 0.16 * b.w * dpr;
-                    octx.stroke();
-                    octx.strokeStyle = `rgba(255,255,240,${flick})`;
-                    octx.lineWidth = k * 0.045 * b.w * dpr;
-                    octx.stroke();
-                    drawCalls += 2;
-                    break;
-                }
-            }
-        }
-        octx.globalCompositeOperation = 'source-over';
-        octx.globalAlpha = 1;
-    }
-
-    function drawParticles() {
-        const Pp = FX.particles;
-        if (!Pp.n) return;
-        for (let pass = 0; pass < 2; pass++) {
-            const add = pass === 1;
-            octx.globalCompositeOperation = add ? 'lighter' : 'source-over';
-            for (let i = 0; i < Pp.n; i++) {
-                const p = Pp.items[i];
-                if (p.add !== add) continue;
-                const f = 1 - p.life / p.max;
-                const c = proj(p.x / ts, FX_H * (p.color ? 0.6 + 0.4 * (1 - f) : 1), p.y / ts);
-                if (p.color) {
-                    octx.globalAlpha = Math.min(1, (1 - f) * 1.6);
-                    const k = c.k / ts * dpr;
-                    octx.setTransform(Math.cos(p.rot), Math.sin(p.rot), -Math.sin(p.rot), Math.cos(p.rot), c.x * dpr, c.y * dpr);
-                    octx.fillStyle = p.color;
-                    octx.fillRect(-p.w * k / 2, -p.h * k / 2, p.w * k, p.h * k);
-                    octx.setTransform(1, 0, 0, 1, 0, 0);
-                    drawCalls++;
-                    continue;
-                }
-                const size = p.s0 + (p.s1 - p.s0) * f;
-                if (size <= 0.01) continue;
-                octx.globalAlpha = Math.max(0, p.a0 * (1 - f));
-                ospr(p.sprite, c.x, c.y, size * c.k, p.rot);
-            }
-        }
-        octx.globalCompositeOperation = 'source-over';
-        octx.globalAlpha = 1;
     }
 
     function drawBars() {
@@ -2923,12 +3172,15 @@ const Renderer3D = (() => {
         syncEnemies(stepped, dt / 1000);
         syncMissiles(dt / 1000 * gameRate());
         syncBlasts(stepped ? dt / 1000 * (typeof speed === 'number' ? speed : 1) : 0);
+        syncFx(dt / 1000 * gameRate());
         syncPortals();
         syncGate();
         syncRoute();
         syncOverlays3D();
         updateVP();
-        gl.render(scene, camera);
+        gl.info.reset();
+        if (bloomOn()) composer.render();
+        else gl.render(scene, camera);
         drawCalls += gl.info.render.calls;
         drawOverlay();
         fadeTip();

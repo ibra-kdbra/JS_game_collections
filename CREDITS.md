@@ -79,7 +79,7 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 
 | Library | Where | Licence |
 | --- | --- | --- |
-| three.js | `assets/vendor/three/`, `MoonLDR/vendor/three/`, `Brainy_Warrior/vendor/three-0.150.1/` (with the `GLTFLoader`, `SkeletonUtils` and `BufferGeometryUtils` addons from the r150 tag in `addons/`), `TowerDefense/vendor/three-addons-0.160.0/` (the r160 `GLTFLoader`, `BufferGeometryUtils` and `SkeletonUtils`, for the shared r160 build) | MIT (licence files included) |
+| three.js | `assets/vendor/three/`, `MoonLDR/vendor/three/`, `Brainy_Warrior/vendor/three-0.150.1/` (with the `GLTFLoader`, `SkeletonUtils` and `BufferGeometryUtils` addons from the r150 tag in `addons/`), `TowerDefense/vendor/three-addons-0.160.0/` (the r160 `GLTFLoader`, `BufferGeometryUtils`, `SkeletonUtils` and the bloom post-processing passes, for the shared r160 build) | MIT (licence files included) |
 | meshoptimizer decoder | `Brainy_Warrior/vendor/meshoptimizer/`, `TowerDefense/vendor/meshoptimizer/` (decodes the compressed character models) | MIT (licence file included) |
 | GSAP and ScrollTrigger | `assets/vendor/gsap/`, `Hangman/libs/` | GreenSock standard licence (free to use) |
 | Font Awesome Free (icon subset) | `assets/vendor/fontawesome/`, `Tetris/fonts/` | Icons CC BY 4.0, fonts SIL OFL 1.1, code MIT |

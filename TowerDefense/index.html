@@ -30,11 +30,16 @@
       import * as THREE from 'three';
       import { GLTFLoader } from './vendor/three-addons-0.160.0/loaders/GLTFLoader.js';
       import { MeshoptDecoder } from './vendor/meshoptimizer/meshopt_decoder.mjs';
+      import { EffectComposer } from './vendor/three-addons-0.160.0/postprocessing/EffectComposer.js';
+      import { RenderPass } from './vendor/three-addons-0.160.0/postprocessing/RenderPass.js';
+      import { UnrealBloomPass } from './vendor/three-addons-0.160.0/postprocessing/UnrealBloomPass.js';
+      import { OutputPass } from './vendor/three-addons-0.160.0/postprocessing/OutputPass.js';
       import * as SkeletonUtils from './vendor/three-addons-0.160.0/utils/SkeletonUtils.js';
       import * as BufferGeometryUtils from './vendor/three-addons-0.160.0/utils/BufferGeometryUtils.js';
       window.THREE = THREE;
       window.GLTFLoader = GLTFLoader;
       window.MeshoptDecoder = MeshoptDecoder;
+      window.PP = { EffectComposer, RenderPass, UnrealBloomPass, OutputPass };
       window.SkeletonUtils = SkeletonUtils;
       window.BufferGeometryUtils = BufferGeometryUtils;
     </script>
