@@ -7,7 +7,7 @@ import {
 	SkeletonHelper,
 	Vector3,
 	VectorKeyframeTrack
-} from 'three';
+} from '../../../../assets/vendor/three/three.module.min.js';
 
 
 function retarget( target, source, options = {} ) {
