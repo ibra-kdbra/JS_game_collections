@@ -57,6 +57,7 @@ const Renderer = (() => {
         }
         if (typeof toast === 'function') toast(`The 3D view could not load (${failed}), showing Flat`, 'error');
         if (typeof syncSettings === 'function') syncSettings();
+        if (typeof refreshPics === 'function') refreshPics();
     }
 
     return {
