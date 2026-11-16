@@ -1,6 +1,6 @@
 // Procedural low-poly characters: the fallback when the glTF models in
 // models/ can't load (or with ?models=simple). No asset files.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three-0.150.1/three.module.min.js';
 
 const mats = new Map();
 /** Shared flat-shaded material per colour. */

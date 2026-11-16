@@ -6,8 +6,8 @@
 //  * palm trees on the islets: one instanced mesh.
 // Everything is generated from the level map with a seeded RNG, so a level
 // always looks the same. dispose() frees it all on level change.
-import * as THREE from 'three';
-import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import * as THREE from '../vendor/three-0.150.1/three.module.min.js';
+import { mergeVertices } from '../vendor/three-0.150.1/addons/utils/BufferGeometryUtils.js';
 import { SEA, WALL, tileAt } from './rules.js';
 import { ATLAS, atlasRect } from './textures.js';
 import { lin } from './color.js';

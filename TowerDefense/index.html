@@ -8,7 +8,6 @@
     <link href="css/style.css" rel="stylesheet">
     <link href="./imgs/tower.svg" rel="icon" type="image/svg+xml" />
     <link href="./imgs/tower.png" rel="icon" type="image/png" />
-    <script type="importmap">{ "imports": { "three": "../assets/vendor/three/three.module.min.js" } }</script>
     <script type="module" src="../assets/kit/index.js"></script>
     <script src="vendor/p5-1.11.2.min.js" defer></script>
     <script src="vendor/lz-string-1.5.0.min.js" defer></script>
@@ -27,7 +26,7 @@
     <script src="scripts/art.js" defer></script>
     <script src="scripts/fx.js" defer></script>
     <script type="module">
-      import * as THREE from 'three';
+      import * as THREE from '../assets/vendor/three/three.module.min.js';
       import { GLTFLoader } from './vendor/three-addons-0.160.0/loaders/GLTFLoader.js';
       import { MeshoptDecoder } from './vendor/meshoptimizer/meshopt_decoder.mjs';
       import { EffectComposer } from './vendor/three-addons-0.160.0/postprocessing/EffectComposer.js';
