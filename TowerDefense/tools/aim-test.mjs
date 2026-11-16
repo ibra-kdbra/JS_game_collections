@@ -4,7 +4,8 @@
  * must select the tower under the pointer, the hovered tile must not move while
  * the mouse holds still, and the screen shake must stay small.
  *
- *   node TowerDefense/tools/aim-test.mjs            # exit 1 on any failure
+ *   node TowerDefense/tools/aim-test.mjs                 # all scenarios; exit 1 on any failure
+ *   node TowerDefense/tools/aim-test.mjs --scenario 2    # one of them (CI runs each on its own machine)
  *
  * Needs Playwright and Chromium, like tools/smoke.mjs (same PLAYWRIGHT_MODULE and
  * CHROMIUM_PATH settings). Serves the repository itself; --root <dir> serves
@@ -54,13 +55,18 @@ const browser = await chromium.launch({
 });
 
 const failures = [];
-const check = (ok, what) => {
-    if (!ok) failures.push(what);
-    console.log(`${ok ? 'ok  ' : 'FAIL'} ${what}`);
-};
 
 async function scenario({ shake, zoom, jitter, clicks }) {
-    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    // Each scenario keeps its own output, printed in order once all have run (they
+    // run side by side). A laptop-sized window: big enough for the full HUD, and
+    // software WebGL (as on CI) draws it far faster than a large one.
+    const lines = [];
+    const log = (line) => lines.push(line);
+    const check = (ok, what) => {
+        if (!ok) failures.push(what);
+        log(`${ok ? 'ok  ' : 'FAIL'} ${what}`);
+    };
+    const page = await browser.newPage({ viewport: { width: 1024, height: 640 } });
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     await page.addInitScript(() => {
@@ -139,7 +145,7 @@ async function scenario({ shake, zoom, jitter, clicks }) {
         }
         if (new Set(tiles).size !== 1 || tiles[0] !== `${tx},${ty}`) {
             hoverJumps++;
-            console.log(`     hover on ${tx},${ty}: ${tiles.join(' ')}`);
+            log(`     hover on ${tx},${ty}: ${tiles.join(' ')}`);
         }
         // Click with the hand drifting `jitter` pixels between press and release
         const a = Math.random() * Math.PI * 2;
@@ -149,7 +155,7 @@ async function scenario({ shake, zoom, jitter, clicks }) {
         await page.waitForTimeout(60);
         const sel = await page.evaluate(() => selected ? [selected.gridPos.x, selected.gridPos.y] : null);
         if (sel && sel[0] === tx && sel[1] === ty) hits++;
-        else console.log(`     click on ${tx},${ty} selected ${sel}`);
+        else log(`     click on ${tx},${ty} selected ${sel}`);
         await page.keyboard.press('Escape');
     }
     const blasts = await page.evaluate(() => window.__blasts);
@@ -164,11 +170,32 @@ async function scenario({ shake, zoom, jitter, clicks }) {
     check(moving <= (shake === 2 ? 0.35 : 0.1), `${label}: map shaking in ${(moving * 100).toFixed(0)}% of frames`);
     check(!errors.length, `${label}: no page errors${errors.length ? ': ' + errors.join('; ') : ''}`);
     await page.close();
+    return lines;
 }
 
-await scenario({ shake: 1, zoom: 1, jitter: 4, clicks: 18 });
-await scenario({ shake: 2, zoom: 1, jitter: 4, clicks: 18 });
-await scenario({ shake: 2, zoom: 2, jitter: 10, clicks: 12 });
+// The scenarios run at the same time, each in its own page. --scenario 1,3 runs
+// only those (CI gives each scenario its own machine); AIM_SERIAL=1 runs them one
+// after another.
+const SCENARIOS = [
+    { shake: 1, zoom: 1, jitter: 4, clicks: 18 },
+    { shake: 2, zoom: 1, jitter: 4, clicks: 18 },
+    { shake: 2, zoom: 2, jitter: 10, clicks: 12 }
+];
+const pickArg = args.indexOf('--scenario');
+const picked = pickArg >= 0
+    ? args[pickArg + 1].split(',').map(n => SCENARIOS[Number(n) - 1]).filter(Boolean)
+    : SCENARIOS;
+if (!picked.length) {
+    console.log(`--scenario takes numbers from 1 to ${SCENARIOS.length}`);
+    process.exit(1);
+}
+const outputs = [];
+if (process.env.AIM_SERIAL) {
+    for (const s of picked) outputs.push(await scenario(s));
+} else {
+    outputs.push(...await Promise.all(picked.map(s => scenario(s))));
+}
+outputs.forEach(lines => lines.forEach(line => console.log(line)));
 
 await browser.close();
 server.close();
