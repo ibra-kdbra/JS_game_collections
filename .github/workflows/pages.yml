@@ -1,0 +1,70 @@
+# Publishes the site to GitHub Pages:
+#   /            main, as before
+#   /preview/    the branch under review (PREVIEW_BRANCH), to try before merging
+#
+# Runs on pushes to either branch, or by hand (Actions > Pages > Run workflow).
+# Needs, once, in the repository settings:
+#   Settings > Pages > Source: "GitHub Actions" (the custom domain stays)
+#   Settings > Environments > github-pages > Deployment branches: allow PREVIEW_BRANCH
+# Each copy leaves out what its own _config.yml excludes (development material and
+# Insaniquarium), the same as the Jekyll build did.
+name: Pages
+
+on:
+  push:
+    branches: [main, upgrade/phase-3-new-games]
+  workflow_dispatch:
+
+env:
+  PREVIEW_BRANCH: upgrade/phase-3-new-games
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Main at the root
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: site
+      - name: The branch under review in /preview
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PREVIEW_BRANCH }}
+          path: preview
+      - name: Assemble the site
+        run: |
+          prune() {
+            # drop what _config.yml excludes, plus dotfiles and the Jekyll config
+            dir="${1:?}"
+            if [ -f "$dir/_config.yml" ]; then
+              sed -n 's/^  - //p' "$dir/_config.yml" | while read -r p; do
+                [ -n "$p" ] && rm -rf "${dir:?}/${p:?}"
+              done
+            fi
+            rm -rf "${dir:?}/.git" "${dir:?}/.github" "${dir:?}/.gitignore" "${dir:?}/_config.yml"
+          }
+          prune site
+          prune preview
+          rm -f preview/CNAME
+          mv preview site/preview
+          touch site/.nojekyll
+          echo "Site: $(du -sh site | cut -f1)"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
