@@ -177,6 +177,12 @@ button.link {
     font-size: 20px;
 }
 
+/* 3D / 2D: shows the current view, switches on click */
+.view-btn {
+    font: 700 14px/1 var(--display);
+    letter-spacing: 0.04em;
+}
+
 kbd {
     font: 700 11px/1 var(--display);
     color: var(--muted);

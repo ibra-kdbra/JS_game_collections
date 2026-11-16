@@ -1003,6 +1003,9 @@ function setup() {
     buildStore();
 
     const fromLink = loadPrefs();
+    // the saved view may be Flat: pictures to match
+    if (typeof refreshPics === 'function') refreshPics();
+    if (typeof syncViewButton === 'function') syncViewButton();
     resetGame();
     if (!fromLink) openLevels();
     else maybeStartTips();

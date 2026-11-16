@@ -70,17 +70,30 @@ const TYPE_NAMES = {
 const esc = (str) => String(str).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
 const isTouch = () => lastPointer !== 'mouse';
 const icon = (name) => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
-// Tower pictures: renders of the 3D models once they have loaded, else the flat art
-// Pictures of the 3D models (models/portraits, made by tools/make-portraits.mjs);
-// the flat art stands in if a file is missing
-const towerPic = (name, size = 64) => `<img class="pic" src="models/portraits/tower-${name}.webp" alt="" width="${size}" height="${size}" loading="lazy" onerror="this.onerror=null;this.src=Art.towerPortrait('${name}', ${size})">`;
+// Tower and enemy pictures match the view: in 3D, pictures of the 3D models
+// (models/portraits, made by tools/make-portraits.mjs); in Flat, the flat art. The
+// flat art also stands in if a picture file is missing.
+const picSrc = (kind, name, size) => (typeof Renderer !== 'undefined' && Renderer.view === 'flat'
+    ? (kind === 't' ? Art.towerPortrait(name, size) : Art.enemyPortrait(name, size))
+    : `models/portraits/${kind === 't' ? 'tower' : 'enemy'}-${name}.webp`);
+const picFallback = (kind, name, size) => `this.onerror=null;this.src=Art.${kind === 't' ? 'towerPortrait' : 'enemyPortrait'}('${name}', ${size})`;
+const towerPic = (name, size = 64) => `<img class="pic" data-pic="t:${name}:${size}" src="${picSrc('t', name, size)}" alt="" width="${size}" height="${size}" loading="lazy" onerror="${picFallback('t', name, size)}">`;
+
+// After switching between 3D and Flat: swap the pictures already on the page
+function refreshPics() {
+    document.querySelectorAll('img[data-pic]').forEach(img => {
+        const [kind, name, size] = img.dataset.pic.split(':');
+        img.onerror = () => { img.onerror = null; img.src = kind === 't' ? Art.towerPortrait(name, +size) : Art.enemyPortrait(name, +size); };
+        img.src = picSrc(kind, name, +size);
+    });
+}
 
 // What each tower is for, in a few words (the build menu)
 const TOWER_ROLES = {
     gun: 'Fast shots', laser: 'Steady beam', slow: 'Slows a crowd', sniper: 'Long range',
     rocket: 'Homing splash', bomb: 'Big splash', tesla: 'Chain lightning'
 };
-const enemyPic = (name, size = 48) => `<img src="models/portraits/enemy-${name}.webp" alt="" width="${size}" height="${size}" onerror="this.onerror=null;this.src=Art.enemyPortrait('${name}', ${size})">`;
+const enemyPic = (name, size = 48) => `<img data-pic="e:${name}:${size}" src="${picSrc('e', name, size)}" alt="" width="${size}" height="${size}" onerror="${picFallback('e', name, size)}">`;
 
 function mapInfo(id = mapId) {
     return MAP_LIST.find(m => m.id === id) || MAP_LIST[0];
@@ -956,6 +969,7 @@ function syncSettings() {
         v3.disabled = !!Renderer.failed;
         v3.title = Renderer.failed ? `3D could not load: ${Renderer.failed}. Reload to try again.` : '';
     }
+    syncViewButton();
     $('set-haptics').checked = haptics;
     $('haptics-row').hidden = !('vibrate' in navigator) || !matchMedia('(pointer: coarse)').matches;
 }
@@ -993,12 +1007,34 @@ $('shake-seg').addEventListener('click', e => {
     FX.shakeLevel = shakeLevel;
     savePrefs();
 });
+// Switch between 3D and Flat (the menu's View setting, or the 3D/Flat button by the menu)
+function setGameView(v) {
+    Renderer.setView(v);
+    fitCanvas();
+    try {
+        savePrefs();
+    } catch (err) { /* settings could not be saved here: the switch still holds for this visit */ }
+    syncViewButton();
+    syncSettings();
+    refreshPics();
+}
+function syncViewButton() {
+    const b = $('view-btn');
+    if (!b) return;
+    const flat = Renderer.view === 'flat';
+    b.textContent = flat ? '2D' : '3D';
+    b.setAttribute('aria-label', flat ? 'Flat view: switch to 3D' : '3D view: switch to Flat');
+    b.title = flat ? 'Flat view (click for 3D)' : '3D view (click for Flat)';
+    b.disabled = flat && !!Renderer.failed;
+}
 $('view-seg').addEventListener('click', e => {
     const b = e.target.closest('[data-view]');
     if (!b) return;
-    Renderer.setView(b.dataset.view);
-    fitCanvas();
-    savePrefs();
+    setGameView(b.dataset.view);
+});
+$('view-btn').addEventListener('click', e => {
+    setGameView(Renderer.view === 'flat' ? '3d' : 'flat');
+    e.currentTarget.blur();
 });
 $('set-haptics').addEventListener('change', e => {
     haptics = e.target.checked;
