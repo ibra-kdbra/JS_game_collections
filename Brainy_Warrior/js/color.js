@@ -1,6 +1,6 @@
 // Imported before anything creates a THREE.Color: work in linear colour with
 // sRGB output, so hex colours, glTF textures and canvas textures all agree.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three-0.150.1/three.module.min.js';
 
 THREE.ColorManagement.legacyMode = false;
 

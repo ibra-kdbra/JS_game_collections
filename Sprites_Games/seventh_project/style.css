@@ -27,3 +27,13 @@ img {
     left: 50%;
     transform: translateX(-50%);
 }
+
+/* Top right, clear of the "Sprite lab" button in the top left corner. */
+#fullScreenButton{
+    left: auto;
+    right: max(8px, env(safe-area-inset-right));
+    top: max(8px, env(safe-area-inset-top));
+    transform: none;
+    min-height: 44px;
+    font-size: 16px;
+}

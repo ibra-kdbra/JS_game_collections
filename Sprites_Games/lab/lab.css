@@ -1,0 +1,254 @@
+/* Sprite Lab: the Art Lab's entry for the Franks Laboratory sprite lessons.
+   Cyber Yellow & Obsidian, as the hub and the Art Lab: flat fills, crisp
+   lines, hard shadows. Tokens come from ../../assets/css/variables.css. */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { background: var(--bg); color-scheme: dark; }
+
+body {
+  min-height: 100vh;
+  font-family: var(--font-main);
+  color: var(--text-primary);
+  background-color: var(--bg);
+  /* the hub's faint pixel grid */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='2' height='2' fill='%23facc15' fill-opacity='.07'/%3E%3C/svg%3E");
+  line-height: 1.5;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--primary-light); outline-offset: 3px; }
+
+/* ---------- Top bar ---------- */
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 4px max(16px, env(safe-area-inset-right)) 4px max(16px, env(safe-area-inset-left));
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  color: var(--primary);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.icon-btn:hover { border-color: var(--primary); background: var(--surface-2); }
+
+.icon-btn svg,
+.go svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bar-title {
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-title b { color: var(--primary); font-weight: 700; }
+.bar-title span { color: var(--text-muted); margin-left: 6px; }
+
+/* ---------- Page ---------- */
+main {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 24px max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left));
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.hero-art {
+  position: relative;
+  border: 2px solid var(--primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-hard-accent);
+  overflow: hidden;
+  background: #1a1a1a;
+  aspect-ratio: 16 / 10;
+}
+
+#hero-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 6px;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-size: clamp(40px, 6vw, 64px);
+  line-height: 1;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.lede { color: var(--text-secondary); font-size: 16px; }
+.lede a, .credit a { color: var(--primary); text-underline-offset: 3px; }
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* ---------- Lessons ---------- */
+.lessons {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  gap: 16px;
+}
+
+.lessons li { display: flex; }
+
+.lesson {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  min-height: 100%;
+  padding: 16px;
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.lesson:hover,
+.lesson:focus-visible {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-hard-accent);
+  transform: translate(-2px, -2px);
+}
+
+.lesson-no {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--primary);
+}
+
+.lesson-title {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.lesson-desc { color: var(--text-secondary); font-size: 14.5px; flex: 1; }
+
+.lesson-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.chip {
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+}
+
+.go {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  min-height: 36px;
+  padding: 0 12px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--primary);
+  border-radius: var(--radius-md);
+}
+
+.go svg { width: 16px; height: 16px; }
+
+.credit {
+  margin-top: 32px;
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+
+.credit code { font-size: 12.5px; }
+
+@media (max-width: 760px) {
+  main { padding-top: 16px; }
+  .hero { grid-template-columns: 1fr; gap: 18px; margin-bottom: 28px; }
+  .bar-title span { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lesson { transition: none; }
+  .lesson:hover, .lesson:focus-visible { transform: none; }
+}
+
+/* ---------- Art Lab live preview (?embed=1, see ../../Art_Lab/js/embed.js) ----------
+   Only the running scene shows, covering the frame. */
+html.is-embed body { visibility: hidden; }
+
+html.is-embed .hero-art {
+  visibility: visible;
+  position: fixed;
+  inset: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  aspect-ratio: auto;
+}

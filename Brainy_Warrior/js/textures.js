@@ -1,7 +1,7 @@
 // Procedural textures, painted once on a canvas at start-up: nothing to
 // download. One 512x512 atlas holds the four ground materials, so the whole
 // island (tiles, cliffs, boulders and islets) is one material and one draw call.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three-0.150.1/three.module.min.js';
 
 export const ATLAS = { grass: 0, stone: 1, cliff: 2, sand: 3 };
 const TILE = 256;

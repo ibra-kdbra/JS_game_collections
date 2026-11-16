@@ -22,7 +22,7 @@ to send the next wave early for bonus gold. The build menu compares towers with
 power, range and rate bars. Select a tower to see its stats, what the upgrade
 changes (the bars and the upgraded range on the map show it too), its sell price
 and which enemy it targets (First, Last, Strongest or Closest). Each tower also counts its kills and the damage it has dealt. The menu (Esc) has
-sound, screen shake (Off, Subtle or Full; Subtle only shakes for bosses and lost
+sound and its volume, the view (3D or Flat), screen shake (Off, Subtle or Full; Subtle only shakes for bosses and lost
 lives), vibration (phones only), damage numbers, health bars, particles and
 back-to-back waves. The shake only moves the picture of the map, never what you
 point at: clicks and taps always land on the tile under the pointer. The first game shows a few short tips; they can be skipped
@@ -48,7 +48,7 @@ of explosions and checks that every click selects the tower under the pointer.
 
 ### Look
 
-Everything is drawn in code, no image files: `scripts/terrain.js` paints each map
+The flat view is drawn in code, no image files: `scripts/terrain.js` paints each map
 once (ground, roads with rounded edges, raised walls, build pads, trees, rocks,
 crystals) in one of six looks (Meadow, City, Desert, Frost, Void, Ashlands),
 `scripts/art.js` draws the towers (a new silhouette per upgrade), enemies and
@@ -58,12 +58,91 @@ canvas from those cached pictures. Quality steps down by itself when frames get
 slow. Add `?perf=1` to the address (or press F) for frame times, entity counts and
 draw calls.
 
+### 3D and Flat
+
+The default view is 3D: the map as a small lit diorama seen at an angle, like
+mobile tower defense games, drawn with WebGL (three.js) at the screen's real
+resolution. The look aims at a strategy game rather than a cartoon: filmic tone
+mapping, light from a sky environment map that metal reflects, natural ground
+colours with world-space grain, and pines in deep greens.
+
+- Map: Kenney's *Tower Defense Kit* (`models/kenney-tower-defense/`, CC0): grass
+  and path tiles that follow the roads, build pads, rocks and crystals. Its palette
+  is recoloured per map theme; Frost uses the kit's snow models. Rocks and flowers
+  from Quaternius (CC0); the pines are built in code.
+- Towers and enemies are built in code (`scripts/units3d.js`) to match the flat
+  view's art part for part: each tower's base shape and colour band, its turret
+  (twin barrels, rails, missile pods, mortar tubes, coils, fans), and each enemy
+  (the blob, the six-legged beetle, the dart and interceptor, the medic disc, the
+  two-legged walker, the rocket racer, the tank, and the two bosses). Painted
+  metal, steel, glass and glowing parts share one material that carries colour,
+  metalness, roughness, glow and wear per vertex.
+- Motion runs on the GPU: beetle and walker legs step in time with the ground they
+  cover, tank treads roll and the turret looks about, engine flames flicker and
+  stretch with speed, the boss's spike ring turns and pods pulse. Fliers hover and
+  bank into turns. A hit makes an enemy flinch and flash; slowed, poisoned and
+  healing enemies glow in that colour.
+- Effects: fireballs, smoke, shockwaves and a flash of light for explosions, a pop
+  for each kill, beams and bolts. Damage numbers only show big hits.
+
+Effects are drawn in the 3D scene and glow through a bloom pass (high quality;
+it turns off when the quality steps down): tracers, laser and rail beams, sniper
+lines and lightning as glowing strips, lobbed mortar shells with fiery trails,
+sparks, smoke that rises from barrels and blasts, and blast rings on the ground.
+Explosions throw chunks of ground that tumble, bounce and settle, and embers that
+arc and fall. A killed monster flashes, plays its death, fades into the ground and
+leaves a burst of pieces in its colour with wisps rising; bosses burst bigger.
+Killed enemies topple (fliers drop out of the air) and burn away from their edges
+with a glowing rim.
+
+Shots leave from the barrels: each turret's model names its barrel ends (one per
+barrel on twin guns and missile pods), so tracers, sniper and rail
+shots, laser beams, mortar shells, missiles and the muzzle flash start there and
+follow the gun as it turns and recoils; lightning starts at the top of the coil.
+Towers are sized against the scenery: a little taller than a big monster and a
+little shorter than a tree.
+
+Motion: turrets turn towards their target at a set speed (heavy guns slower),
+kick back on a spring when they fire and sweep slowly when nothing is in range;
+spires and crystals turn. A new tower rises out of the ground in a puff of dust,
+an upgrade pops with a gold ring, a sold tower sinks. Monsters grow out of the
+portals, walk at the pace that matches the ground they cover (slowed ones walk
+slowly), flinch when hit, and on death hop up and fall under gravity.
+
+Performance: each enemy kind is one instanced draw however many are on the map,
+so late waves cost little more than early ones. Only the map is loaded from files
+(about 390 KB, compressed with glTF-Transform `optimize --compress meshopt
+--texture-compress webp` and read with the meshopt decoder in
+`vendor/meshoptimizer/`); a "Loading 3D" bar shows until it is in. Before the view
+shows, every shader the battle will use (all towers, all enemy kinds, explosions,
+missiles, shadows, bloom) is compiled once, so nothing stalls when a new enemy kind
+or effect first appears in a late wave. The build menu, the tower panel and the wave preview
+show pictures of the models from `models/portraits/`, made by
+`node TowerDefense/tools/make-portraits.mjs`.
+
+`node TowerDefense/tools/test-3d.mjs` (Playwright, software WebGL; runs in CI)
+checks that the game starts in 3D without errors, the load time and model size
+budgets, that every enemy gets a model and killed ones play out and go, that turrets turn to their aim, that sold towers go,
+the draw call and triangle budgets with 24 towers and 60 enemies, that no shader
+is compiled mid-battle, and that a
+model that fails to load falls back to Flat for that visit. Flat (in the menu) is the original top-down view, and the only one
+without WebGL. `scripts/renderer.js` passes the game's calls to the view in use.
+
+Sounds come from where they happen (left or right of the map) and vary a little
+in pitch each time. Towers without a sound file get a synthesised one: a short
+crack for guns, a rising hum for lasers, a deep thump for mortars and a soft chime
+for the Slow and Poison pulses. Tower sounds are mixed quieter than the interface, each has a cap on how many
+copies play at once and how long one rings, and everything goes through a
+limiter, so a big battle is never deafening.
+
 ### Touch
 
 Pick a tower, tap a tile to see its range and whether it fits, then tap the same
 tile again or press **Build**. While placing, the row of towers in the panel
 switches type. Tap a built tower to upgrade, sell or retarget it. Pinch or use the
-+ and - buttons to zoom, drag to look around.
++ and - buttons to zoom, drag to look around. On small phones a new map starts
+zoomed in so it fills the screen (bigger tiles for your finger); pinch out to see
+all of it.
 
 On small phones held upright (up to 380 px wide or 700 px tall) the map gets most
 of the screen: the wave panel is one row (enemy preview, start, a speed button

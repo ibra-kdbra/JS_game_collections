@@ -70,8 +70,30 @@ const TYPE_NAMES = {
 const esc = (str) => String(str).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
 const isTouch = () => lastPointer !== 'mouse';
 const icon = (name) => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
-const towerPic = (name, size = 64) => `<img class="pic" src="${Art.towerPortrait(name, size)}" alt="" width="${size}" height="${size}">`;
-const enemyPic = (name, size = 48) => `<img src="${Art.enemyPortrait(name, size)}" alt="" width="${size}" height="${size}">`;
+// Tower and enemy pictures match the view: in 3D, pictures of the 3D models
+// (models/portraits, made by tools/make-portraits.mjs); in Flat, the flat art. The
+// flat art also stands in if a picture file is missing.
+const picSrc = (kind, name, size) => (typeof Renderer !== 'undefined' && Renderer.view === 'flat'
+    ? (kind === 't' ? Art.towerPortrait(name, size) : Art.enemyPortrait(name, size))
+    : `models/portraits/${kind === 't' ? 'tower' : 'enemy'}-${name}.webp`);
+const picFallback = (kind, name, size) => `this.onerror=null;this.src=Art.${kind === 't' ? 'towerPortrait' : 'enemyPortrait'}('${name}', ${size})`;
+const towerPic = (name, size = 64) => `<img class="pic" data-pic="t:${name}:${size}" src="${picSrc('t', name, size)}" alt="" width="${size}" height="${size}" loading="lazy" onerror="${picFallback('t', name, size)}">`;
+
+// After switching between 3D and Flat: swap the pictures already on the page
+function refreshPics() {
+    document.querySelectorAll('img[data-pic]').forEach(img => {
+        const [kind, name, size] = img.dataset.pic.split(':');
+        img.onerror = () => { img.onerror = null; img.src = kind === 't' ? Art.towerPortrait(name, +size) : Art.enemyPortrait(name, +size); };
+        img.src = picSrc(kind, name, +size);
+    });
+}
+
+// What each tower is for, in a few words (the build menu)
+const TOWER_ROLES = {
+    gun: 'Fast shots', laser: 'Steady beam', slow: 'Slows a crowd', sniper: 'Long range',
+    rocket: 'Homing splash', bomb: 'Big splash', tesla: 'Chain lightning'
+};
+const enemyPic = (name, size = 48) => `<img data-pic="e:${name}:${size}" src="${picSrc('e', name, size)}" alt="" width="${size}" height="${size}" onerror="${picFallback('e', name, size)}">`;
 
 function mapInfo(id = mapId) {
     return MAP_LIST.find(m => m.id === id) || MAP_LIST[0];
@@ -203,7 +225,7 @@ function buildStore() {
             <kbd>${i + 1}</kbd>${towerPic(name, 64)}
             <span class="name">${esc(t.title.replace(' Tower', ''))}</span>
             <span class="cost">$${t.cost}</span>
-            <span class="bars">${barsHTML(t)}</span>
+            <span class="role">${esc(TOWER_ROLES[name] || '')}</span>
         </button>`;
     }).join('');
     grid.addEventListener('click', e => {
@@ -277,15 +299,19 @@ function idleHTML() {
                 : 'Click a tower to upgrade, sell or retarget it. Scroll to zoom, drag to look around.'}</p>
             <p class="hint desk-only keys-line"><kbd>Space</kbd> pause <kbd>T</kbd> speed <kbd>N</kbd> next wave <kbd>U</kbd> upgrade <kbd>S</kbd> sell <kbd>Esc</kbd> menu</p>`;
     }
-    return `<div class="insp-head"><div><h2>Build &amp; defend</h2></div></div>
+    // Before the first wave: what this game is (the tips and the menu's help explain
+    // how to play, so this card does not repeat them)
+    const waves = gameMode === 'endless' ? 'Endless' : campaignWaves.length;
+    return `<div class="insp-head"><div><h2>${esc(mapTitle())}</h2><p>${esc(difficulty.title)} &middot; ${gameMode === 'endless' ? 'Endless' : 'Campaign'}</p></div></div>
+        <dl class="record two">
+            <div><dt>Waves</dt><dd>${waves}</dd></div>
+            <div><dt>Lives</dt><dd>${maxHealth}</dd></div>
+            <div><dt>Portals</dt><dd>${spawnpoints.length}</dd></div>
+            <div><dt>Gold</dt><dd>$${cash}</dd></div>
+        </dl>
         <p class="hint">${touch
-            ? 'Pick a tower, then tap a tile on the map. Tap a built tower to upgrade or sell it. Pinch to zoom.'
-            : 'Pick a tower (keys 1-7), then click the map. Click a built tower to upgrade or sell it. Scroll to zoom.'}</p>
-        <ul class="legend">
-            <li>${portalPic()}Enemies come out of the portals</li>
-            <li>${gatePic()}Your gate: every enemy that reaches it costs lives</li>
-            <li>${chevronPic()}Arrows show their way. On open ground towers block it, so build a maze</li>
-        </ul>
+            ? 'Pick a tower, then tap a tile on the map. Pinch to zoom.'
+            : 'Pick a tower, then click the map. Scroll to zoom.'}</p>
         <p class="hint desk-only keys-line"><kbd>Space</kbd> start / pause <kbd>T</kbd> speed <kbd>N</kbd> send wave <kbd>Esc</kbd> menu</p>`;
 }
 
@@ -740,59 +766,6 @@ $('menu-btn').addEventListener('click', e => {
 });
 
 
-// ---------- Small pictures for the legend ----------
-
-function smallCanvas(size, draw) {
-    const c = document.createElement('canvas');
-    c.width = c.height = size;
-    const g = c.getContext('2d');
-    g.translate(size / 2, size / 2);
-    g.scale(size, size);
-    draw(g);
-    return c.toDataURL();
-}
-
-let legendPics = null;
-function legend() {
-    if (legendPics) return legendPics;
-    legendPics = {
-        portal: smallCanvas(60, g => {
-            g.fillStyle = '#3b1d7a';
-            g.beginPath();
-            g.arc(0, 0, 0.42, 0, Math.PI * 2);
-            g.fill();
-            g.strokeStyle = '#c38bff';
-            g.lineWidth = 0.08;
-            for (let i = 0; i < 3; i++) {
-                g.beginPath();
-                g.arc(0, 0, 0.32, i * 2.1, i * 2.1 + 1.4);
-                g.stroke();
-            }
-        }),
-        gate: smallCanvas(60, g => Art.drawGate(g)),
-        chevron: smallCanvas(60, g => {
-            g.fillStyle = '#c9a46b';
-            g.fillRect(-0.5, -0.3, 1, 0.6);
-            g.fillStyle = '#ffffff';
-            [-0.22, 0.12].forEach(x => {
-                g.beginPath();
-                g.moveTo(x - 0.1, -0.16);
-                g.lineTo(x + 0.08, 0);
-                g.lineTo(x - 0.1, 0.16);
-                g.lineTo(x - 0.02, 0.16);
-                g.lineTo(x + 0.16, 0);
-                g.lineTo(x - 0.02, -0.16);
-                g.fill();
-            });
-        })
-    };
-    return legendPics;
-}
-const portalPic = () => `<img class="pic" src="${legend().portal}" alt="">`;
-const gatePic = () => `<img class="pic" src="${legend().gate}" alt="">`;
-const chevronPic = () => `<img class="pic" src="${legend().chevron}" alt="">`;
-
-
 // ---------- Banners ----------
 
 let bannerTimer = 0;
@@ -982,17 +955,33 @@ function openMenu() {
 
 function syncSettings() {
     $('set-sound').checked = !muteSounds;
+    $('set-volume').value = Math.round(soundVolume * 100);
+    $('set-volume').disabled = muteSounds;
     $('set-numbers').checked = damageNumbers;
     $('set-bars').checked = healthBar;
     $('set-effects').checked = showEffects;
     $('set-autosend').checked = skipToNext;
     document.querySelectorAll('[data-shake]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.shake) === shakeLevel)));
+    document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === Renderer.view)));
+    // When 3D could not run, say why next to the switch (the toast is gone after 3 s)
+    const v3 = document.querySelector('[data-view="3d"]');
+    if (v3) {
+        v3.disabled = !!Renderer.failed;
+        v3.title = Renderer.failed ? `3D could not load: ${Renderer.failed}. Reload to try again.` : '';
+    }
+    syncViewButton();
     $('set-haptics').checked = haptics;
     $('haptics-row').hidden = !('vibrate' in navigator) || !matchMedia('(pointer: coarse)').matches;
 }
 
 $('set-sound').addEventListener('change', e => {
     if (e.target.checked === muteSounds) toggleMute();
+});
+$('set-volume').addEventListener('input', e => setSoundVolume(e.target.value / 100));
+$('set-volume').addEventListener('change', e => {
+    setSoundVolume(e.target.value / 100);
+    savePrefs();
+    playSound('sniper');
 });
 $('set-numbers').addEventListener('change', e => {
     damageNumbers = e.target.checked;
@@ -1017,6 +1006,43 @@ $('shake-seg').addEventListener('click', e => {
     shakeLevel = Number(b.dataset.shake);
     FX.shakeLevel = shakeLevel;
     savePrefs();
+});
+// Switch between 3D and Flat (the menu's View setting, or the 3D/Flat button by the menu)
+function setGameView(v) {
+    if (v === '3d' && Renderer.failed) {
+        toast(`3D could not load here (${Renderer.failed}). Reload the page to try again.`, 'error');
+        return;
+    }
+    try {
+        Renderer.setView(v);
+        fitCanvas();
+    } catch (err) {
+        console.error('View switch failed:', err);
+        toast(`Could not switch to ${v === 'flat' ? 'Flat' : '3D'}: ${err && err.message || err}`, 'error');
+    }
+    try {
+        savePrefs();
+    } catch (err) { /* settings could not be saved here: the switch still holds for this visit */ }
+    syncViewButton();
+    syncSettings();
+    refreshPics();
+}
+function syncViewButton() {
+    const b = $('view-btn');
+    if (!b) return;
+    const flat = Renderer.view === 'flat';
+    b.textContent = flat ? '2D' : '3D';
+    b.setAttribute('aria-label', flat ? 'Flat view: switch to 3D' : '3D view: switch to Flat');
+    b.title = flat ? 'Flat view (click for 3D)' : '3D view (click for Flat)';
+}
+$('view-seg').addEventListener('click', e => {
+    const b = e.target.closest('[data-view]');
+    if (!b) return;
+    setGameView(b.dataset.view);
+});
+$('view-btn').addEventListener('click', e => {
+    setGameView(Renderer.view === 'flat' ? '3d' : 'flat');
+    e.currentTarget.blur();
 });
 $('set-haptics').addEventListener('change', e => {
     haptics = e.target.checked;

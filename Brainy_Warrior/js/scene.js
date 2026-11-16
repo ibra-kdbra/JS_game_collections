@@ -9,7 +9,7 @@
 //  * quality adapts to the frame rate (pixel ratio, shadow map, grass), and
 //    everything a level creates is disposed when the next one is built.
 import './color.js';
-import * as THREE from 'three';
+import * as THREE from '../vendor/three-0.150.1/three.module.min.js';
 import { DELTA, wizardAt } from './rules.js';
 import { Actor, ENEMY_KINDS, loadActors } from './actors.js';
 import { buildIsland, WATER_Y } from './island.js';

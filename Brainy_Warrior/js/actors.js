@@ -3,10 +3,10 @@
 // texture each (one draw call per character), simplified and compressed with
 // meshoptimizer's gltfpack (about 380 KB for all five). They load lazily after the page
 // is up; if they can't load, the procedural models in models.js stand in.
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
-import { mergeBufferGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import * as THREE from '../vendor/three-0.150.1/three.module.min.js';
+import { GLTFLoader } from '../vendor/three-0.150.1/addons/loaders/GLTFLoader.js';
+import { clone as cloneSkinned } from '../vendor/three-0.150.1/addons/utils/SkeletonUtils.js';
+import { mergeBufferGeometries } from '../vendor/three-0.150.1/addons/utils/BufferGeometryUtils.js';
 import { MeshoptDecoder } from '../vendor/meshoptimizer/meshopt_decoder.mjs';
 import { createWarrior, createEnemy, createWizard } from './models.js';
 

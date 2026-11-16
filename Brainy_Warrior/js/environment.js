@@ -2,7 +2,7 @@
 // (painted at start-up), depth colour from a blurred land mask, breaking foam
 // along the shore, sky reflection with Fresnel and a sun glint. The sky is a
 // gradient dome with a sun glow; the fog fades the sea into its horizon colour.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three-0.150.1/three.module.min.js';
 import { SEA, tileAt } from './rules.js';
 
 export const PALETTE = {

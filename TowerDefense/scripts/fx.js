@@ -36,7 +36,7 @@ const FX = (() => {
     }
 
     const particles = pool(() => ({ x: 0, y: 0, vx: 0, vy: 0, grav: 0, drag: 1, life: 0, max: 1, s0: 1, s1: 1, sprite: '', a0: 1, add: false, rot: 0, vr: 0, color: null, w: 0, h: 0 }));
-    const beams = pool(() => ({ kind: '', x1: 0, y1: 0, x2: 0, y2: 0, tower: null, target: null, life: 0, max: 1, w: 1, pts: null, seed: 0 }));
+    const beams = pool(() => ({ kind: '', x1: 0, y1: 0, x2: 0, y2: 0, tower: null, target: null, src: null, barrel: 0, life: 0, max: 1, w: 1, pts: null, seed: 0 }));
     const rings = pool(() => ({ x: 0, y: 0, r0: 0, r1: 1, life: 0, max: 1, sprite: '', a0: 1 }));
 
     // Screen shake: a short, small wobble of the map picture only (never the page,
@@ -158,6 +158,8 @@ const FX = (() => {
         b.life = b.max = o.life || 4;
         b.w = o.w || 1;
         b.pts = o.pts || null;
+        b.src = o.src || null;          // the tower that fired (the 3D view starts the shot at its barrel)
+        b.barrel = o.barrel || 0;
         b.seed = rnd();
         return b;
     }
@@ -185,14 +187,15 @@ const FX = (() => {
     // A tower fired at enemy e
     function fire(t, e) {
         t._recoil = 1;
+        if (typeof shotSound === 'function') shotSound(t);
         const barrel = t._barrel = ((t._barrel || 0) + 1) % 4;
-        const m = muzzle(t, barrel);
+        const m = FX.muzzle(t, barrel);     // FX.muzzle: the 3D view puts it at the barrel
         const ts_ = T();
         switch (t.name) {
             case 'gun':
             case 'machineGun': {
                 t._flash = 3;
-                beam('tracer', { x1: m.x, y1: m.y, x2: e.pos.x, y2: e.pos.y, life: 4, w: t.name === 'gun' ? 1 : 0.8 });
+                beam('tracer', { src: t, barrel, x1: m.x, y1: m.y, x2: e.pos.x, y2: e.pos.y, life: 4, w: t.name === 'gun' ? 1 : 0.8 });
                 if (rnd() < 0.5) sparks(e.pos.x, e.pos.y, count(2), 'glow_yellow', 0.05, 0.25, 8);
                 break;
             }
@@ -211,26 +214,26 @@ const FX = (() => {
             }
             case 'sniper':
                 t._flash = 5;
-                beam('snipe', { x1: m.x, y1: m.y, x2: e.pos.x, y2: e.pos.y, life: 10, w: 1 });
+                beam('snipe', { src: t, barrel, x1: m.x, y1: m.y, x2: e.pos.x, y2: e.pos.y, life: 10, w: 1 });
                 sparks(e.pos.x, e.pos.y, count(5), 'glow_red', 0.08, 0.3, 12);
                 break;
             case 'railgun':
                 t._flash = 6;
-                beam('rail', { x1: m.x, y1: m.y, x2: e.pos.x, y2: e.pos.y, life: 14, w: 1 });
+                beam('rail', { src: t, barrel, x1: m.x, y1: m.y, x2: e.pos.x, y2: e.pos.y, life: 14, w: 1 });
                 shake(0.15, true);
                 break;
             case 'bomb':
             case 'clusterBomb':
                 t._flash = 4;
                 smoke(m.x, m.y, count(2), 0.35, 18);
-                beam('shell', { x1: m.x, y1: m.y, x2: e.pos.x, y2: e.pos.y, life: 6, w: 1 });
+                beam('shell', { src: t, barrel, x1: m.x, y1: m.y, x2: e.pos.x, y2: e.pos.y, life: 6, w: 1 });
                 break;
             case 'tesla':
             case 'lightningStrike': {
                 const n = 9;
                 const top = { x: t.pos.x, y: t.pos.y - ts_ * 0.12 };
-                beam('bolt', { x1: top.x, y1: top.y, x2: e.pos.x, y2: e.pos.y, life: 9, w: t.name === 'tesla' ? 1 : 1.5, pts: bolt(n, ts_ * 0.35) });
-                beam('bolt', { x1: top.x, y1: top.y, x2: e.pos.x, y2: e.pos.y, life: 6, w: 0.6, pts: bolt(n, ts_ * 0.5) });
+                beam('bolt', { src: t, x1: top.x, y1: top.y, x2: e.pos.x, y2: e.pos.y, life: 9, w: t.name === 'tesla' ? 1 : 1.5, pts: bolt(n, ts_ * 0.35) });
+                beam('bolt', { src: t, x1: top.x, y1: top.y, x2: e.pos.x, y2: e.pos.y, life: 6, w: 0.6, pts: bolt(n, ts_ * 0.5) });
                 sparks(e.pos.x, e.pos.y, count(6), t.name === 'tesla' ? 'glow_yellow' : 'glow_cyan', 0.1, 0.35, 12);
                 ring(e.pos.x, e.pos.y, ts_ * 0.1, ts_ * 0.5, 10, t.name === 'tesla' ? 'ring_yellow' : 'ring_cyan', 0.9);
                 t._flash = 6;
@@ -242,7 +245,7 @@ const FX = (() => {
     // A rocket tower launched a missile
     function launch(t) {
         t._recoil = 1;
-        const m = muzzle(t, t._barrel = ((t._barrel || 0) + 1) % 4);
+        const m = FX.muzzle(t, t._barrel = ((t._barrel || 0) + 1) % 4);
         smoke(m.x, m.y, count(3), 0.35, 20, 0.05);
         sparks(m.x, m.y, count(3), 'glow_orange', 0.05, 0.3, 8);
     }
@@ -264,6 +267,7 @@ const FX = (() => {
             if ((t._pulse = (t._pulse || 0) - 1) > 0) return;
             t._pulse = 36;
         }
+        if (typeof shotSound === 'function') shotSound(t);
         const r = (t.range + 1) * T();
         ring(t.pos.x, t.pos.y, T() * 0.3, r, poison ? 30 : 26, poison ? 'ring_green' : 'ring_ice', poison ? 0.9 : 0.7);
         if (!enabled) return;
@@ -408,6 +412,7 @@ const FX = (() => {
             if (--b.life <= 0) {
                 if (b.tower && b.tower._beam === b) b.tower._beam = null;
                 b.tower = b.target = null;
+                b.src = null;
                 release(beams, i);
             }
         }
@@ -430,7 +435,7 @@ const FX = (() => {
         while (particles.n) release(particles, particles.n - 1);
         while (beams.n) {
             const b = beams.items[beams.n - 1];
-            b.tower = b.target = null;
+            b.tower = b.target = b.src = null;
             release(beams, beams.n - 1);
         }
         while (rings.n) release(rings, rings.n - 1);

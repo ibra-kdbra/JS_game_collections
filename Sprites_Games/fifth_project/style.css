@@ -14,3 +14,14 @@ body{
 #collisionCanvas{
     opacity: 0;
 }
+/* The hidden hit canvas sits under the visible one instead of after it in the
+   page flow (where it pushed the page wider than a phone screen). */
+body{
+    margin: 0;
+    height: 100dvh;
+}
+#collisionCanvas{
+    position: absolute;
+    top: 0;
+    left: 0;
+}

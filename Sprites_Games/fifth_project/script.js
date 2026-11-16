@@ -27,7 +27,8 @@ class Raven{
         this.height = this.spriteHeight * this.sizeModifier;
         this.x = canvas.width;
         this.y = Math.random() * (canvas.height - this.height);
-        this.directionX = Math.random() * 5 + 3;
+        // Slower on narrow screens, where a raven has less room to cross.
+        this.directionX = (Math.random() * 5 + 3) * Math.min(1, Math.max(0.45, canvas.width / 1000));
         this.directionY = Math.random() * 5 - 2.5;
         this.markedForDeletion = false;
         this.image = new Image();
@@ -102,21 +103,34 @@ class Explosion {
 
 function drawScore(){
     ctx.fillStyle = 'black';
-    ctx.fillText('Score:' + score, 50, 75);
+    ctx.fillText('Score:' + score, 50, 115);
     ctx.fillStyle = 'white';
-    ctx.fillText('Score:' + score, 55, 75);
+    ctx.fillText('Score:' + score, 55, 115);
 }
 function drawGameOver(){
     ctx.textAlign = 'center';
+    // Narrow phone screens get smaller text so the whole line fits.
+    const size = Math.max(22, Math.min(50, Math.floor(canvas.width / 13)));
+    ctx.font = size + 'px Impact';
     ctx.fillStyle = 'black';
-    ctx.fillText("GAME OVER, your score is "+ 
+    ctx.fillText("GAME OVER, your score is "+
     score, canvas.width/2, canvas.height/2);
     ctx.fillStyle = 'white';
-    ctx.fillText("GAME OVER, your score is "+ 
+    ctx.fillText("GAME OVER, your score is "+
     score, canvas.width/2 + 5, canvas.height/2 + 5);
+    ctx.font = Math.round(size * 0.6) + 'px Impact';
+    ctx.fillStyle = 'black';
+    ctx.fillText('Tap or click to play again', canvas.width/2, canvas.height/2 + size * 1.2);
+    ctx.fillStyle = 'white';
+    ctx.fillText('Tap or click to play again', canvas.width/2 + 3, canvas.height/2 + size * 1.2 + 3);
 }
 
 window.addEventListener('click', function(e){
+    if(e.target.closest && e.target.closest('a')) return;
+    if(gameOver){
+        location.reload();
+        return;
+    }
     const detectPixelColor = collisionCtx.getImageData(e.x, e.y, 1, 1);
     // console.log(detectPixelColor);
     const pc = detectPixelColor.data;
