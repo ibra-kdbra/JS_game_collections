@@ -220,16 +220,18 @@ const Renderer3D = (() => {
         canvas.after(overlay);
         octx = overlay.getContext('2d');
         gl = new T3.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-        gl.toneMapping = T3.NoToneMapping;
+        gl.toneMapping = T3.ACESFilmicToneMapping;
+        gl.toneMappingExposure = 1.05;
+        Units3D.init(T3);
         gl.shadowMap.enabled = true;
         gl.shadowMap.type = T3.PCFSoftShadowMap;
         // Shadows only change when the map or the towers do; enemies get blob shadows
         gl.shadowMap.autoUpdate = false;
         scene = new T3.Scene();
         camera = new T3.PerspectiveCamera(FOV, 1, 0.1, 400);
-        hemi = new T3.HemisphereLight(0xf2f6ff, 0x50566a, 1.25);
+        hemi = new T3.HemisphereLight(0xf2f6ff, 0x50566a, 0.55);
         scene.add(hemi);
-        sun = new T3.DirectionalLight(0xfff2de, 1.85);
+        sun = new T3.DirectionalLight(0xffeccc, 2.6);
         sun.castShadow = true;
         sun.shadow.mapSize.set(2048, 2048);
         sun.shadow.bias = -0.0008;
@@ -238,11 +240,12 @@ const Renderer3D = (() => {
         scene.add(sun.target);
         dyn = new T3.Group();
         scene.add(dyn);
+        scene.environment = makeEnvironment();
         gl.info.autoReset = false;
         if (window.PP) {
             composer = new window.PP.EffectComposer(gl);
             composer.addPass(new window.PP.RenderPass(scene, camera));
-            bloom = new window.PP.UnrealBloomPass(new T3.Vector2(256, 256), 0.75, 0.45, 1.3);
+            bloom = new window.PP.UnrealBloomPass(new T3.Vector2(256, 256), 0.6, 0.4, 1.6);
             composer.addPass(bloom);
             composer.addPass(new window.PP.OutputPass());
         }
@@ -652,9 +655,9 @@ const Renderer3D = (() => {
         'tile-spawn', 'tile-spawn-end', 'tile-hill',
         'snow-tile', 'snow-tile-dirt', 'snow-tile-straight', 'snow-tile-corner-round', 'snow-tile-end-round', 'snow-tile-split',
         'snow-tile-crossing', 'snow-tile-spawn', 'snow-tile-spawn-end', 'snow-tile-hill',
-        'detail-tree', 'detail-tree-large', 'detail-rocks', 'detail-rocks-large', 'detail-crystal', 'detail-crystal-large', 'detail-dirt', 'detail-dirt-large',
-        'snow-detail-tree', 'snow-detail-tree-large', 'snow-detail-rocks', 'snow-detail-rocks-large', 'snow-detail-crystal',
-        'tower-square-bottom-a', 'tower-square-bottom-b', 'tower-square-middle-a', 'tower-square-top-a', 'tower-round-bottom-a',
+        'detail-rocks', 'detail-rocks-large', 'detail-crystal', 'detail-crystal-large', 'detail-dirt', 'detail-dirt-large',
+        'snow-detail-rocks', 'snow-detail-rocks-large', 'snow-detail-crystal',
+        'tower-square-bottom-b', 'tower-square-middle-a', 'tower-square-top-a',
         'weapon-ammo-bullet', 'weapon-ammo-cannonball', 'selection-a'
     ];
     let kit = null;             // name -> [{ geo, m: Matrix4 (part in the model), name }]
@@ -664,12 +667,10 @@ const Renderer3D = (() => {
     let kitFailed = false;
     let kitError = '';
 
-    // Quaternius (CC0): turrets, animated monsters, and nature in models/quaternius
+    // Quaternius (CC0): rocks and flowers in models/quaternius/nature. Towers and
+    // enemies are built in code (units3d.js), so there is nothing else to load.
     const QT_DIR = 'models/quaternius/';
     const QT_MODELS = {
-        turrets: ['Gun_2', 'Gun_10', 'Laser_1', 'Laser_Doble', 'Teleporter1', 'Teleporter2', 'Gun', 'Gun_3',
-            'Bomber_1', 'Bomber_2', 'Cannon_1', 'GearCannon_2', 'Upwards_1', 'Upwards_3'],
-        monsters: ['Slime', 'Crab', 'Bat', 'Ghost', 'Mushroom', 'Yeti', 'Skeleton', 'Cyclops', 'Dragon', 'Bee'],
         nature: ['Rock_Medium_1', 'Flower_3_Group']
     };
     // Height of each nature model in tiles
@@ -679,13 +680,10 @@ const Renderer3D = (() => {
     let qt = null;
     // Kenney's map parts are in once this is true; turrets once towersReady
 
-    // Loading runs in three steps so the map shows as soon as possible: the map's
-    // models first, then the turrets (the 3D view starts once both are in), then the
-    // monsters one by one in the order the campaign brings them. An enemy whose model
-    // is still on its way is drawn as a simple stand-in until it arrives.
-    // The files are compressed with meshopt (see README: 3D models).
+    // Only the map's models are files (small, compressed with meshopt; see README:
+    // 3D models). Once they are in, every shader the battle uses is compiled before
+    // the view shows, so nothing stalls when a new enemy kind or effect first appears.
     const load = { done: 0, total: 0, mapReady: false, towersReady: false, started: 0, readyAt: 0 };
-    const MONSTER_ORDER = ['Slime', 'Crab', 'Bat', 'Ghost', 'Mushroom', 'Yeti', 'Skeleton', 'Cyclops', 'Dragon', 'Bee'];
 
     function loadKit() {
         if (kitLoading || kit) return;
@@ -695,7 +693,7 @@ const Renderer3D = (() => {
         const loader = new window.GLTFLoader();
         if (window.MeshoptDecoder) loader.setMeshoptDecoder(window.MeshoptDecoder);
         const counted = (p) => p.then(v => { load.done++; showLoading(); return v; });
-        load.total = KIT_MODELS.length + QT_MODELS.nature.length + QT_MODELS.turrets.length + 1;
+        load.total = KIT_MODELS.length + QT_MODELS.nature.length + 1;
         showLoading();
         const img = new Image();
         // Some hosts serve files from another origin: ask for CORS so the palette can be read
@@ -708,7 +706,6 @@ const Renderer3D = (() => {
             Promise.all(KIT_MODELS.map(n => get(KIT_DIR + n + '.glb').then(g => [n, g.scene]))),
             Promise.all(QT_MODELS.nature.map(n => get(`${QT_DIR}nature/${n}.glb`).then(g => [n, g.scene])))
         ]);
-        const turretLoads = Promise.all(QT_MODELS.turrets.map(n => get(`${QT_DIR}turrets/${n}.glb`).then(g => [n, g.scene])));
         qt = { turret: {}, monster: {}, nature: {} };
         mapLoads.then(([, kitList, natureList]) => {
             kitImage = img;
@@ -726,33 +723,98 @@ const Renderer3D = (() => {
                 kit[n] = parts;
             });
             natureList.forEach(([n, root]) => addNature(n, root));
+            ['Pine', 'PineLarge', 'snowPine', 'snowPineLarge'].forEach(k => {
+                const geo = Units3D.tree(k);
+                geo._shared = true;
+                kit['n:' + k] = [{ geo, m: new T3.Matrix4(), name: k, mat: Units3D.materials().solid }];
+            });
             load.mapReady = true;
             mapKey = '';
-            return turretLoads;
-        }).then(list => {
-            list.forEach(([n, scene]) => { qt.turret[n] = scene; });
             load.towersReady = true;
             load.readyAt = performance.now();
             showLoading();
-            // Monsters after, three at a time, the first waves' ones first
-            let next = 0;
-            const loadMonster = () => {
-                if (next >= MONSTER_ORDER.length) return;
-                const n = MONSTER_ORDER[next++];
-                loader.loadAsync(`${QT_DIR}monsters/${n}.glb`)
-                    .then(g => { qt.monster[n] = g; })
-                    .catch(e => console.warn(`Monster ${n} did not load; a stand-in is drawn:`, e))
-                    .finally(loadMonster);
-            };
-            loadMonster();
-            loadMonster();
-            loadMonster();
         }).catch((e) => {
             console.warn('3D models failed to load, using Flat:', e);
             kitError = 'a model did not load: ' + String(e && e.message || e).replace(/^.*\//, '').slice(0, 60);
             kitFailed = true;
             showLoading();
         }).finally(() => { kitLoading = false; });
+    }
+
+    // Build every enemy kind and every tower once and compile their shaders now, so
+    // nothing stalls mid-battle when a new kind or effect first shows up
+    let warmed = false;
+    function warmUp() {
+        Object.keys(Art.ENEMY_ART).forEach(n => {
+            const K = kindOf(n);
+            K.mesh.count = 1;
+        });
+        makeMissiles();
+        missiles.forEach(list => list.forEach(p => { p.mesh.count = 1; }));
+        const hold = new T3.Group();
+        Object.keys(Art.TOWER_ART).forEach(n => {
+            hold.add(buildTowerModel(n, false).root);
+            hold.add(buildTowerModel(n, true).root);
+        });
+        dyn.add(hold);
+        // Hidden pools (blasts, sparks, debris) count too: show everything for the compile
+        const hidden = [];
+        scene.traverse(o => { if (!o.visible) { hidden.push(o); o.visible = true; } });
+        try {
+            gl.compile(scene, camera);
+            // and one real frame, so the shadow pass and the effect variants are built too
+            // (through the same path as a frame: with bloom the scene draws into a
+            // linear target, a different shader variant from drawing to the screen)
+            hold.position.set(cols / 2, 0, rows / 2);
+            hold.traverse(o => { o.frustumCulled = false; });
+            gl.shadowMap.needsUpdate = true;
+            gl.render(scene, camera);
+            if (composer) composer.render();
+        } catch (e) {
+            console.warn('Shader warm-up:', e);
+        }
+        hidden.forEach(o => { o.visible = false; });
+        dyn.remove(hold);
+        hold.traverse(o => { if (o.material && o.material._own) o.material.dispose(); });
+        Object.keys(kinds).forEach(n => { kinds[n].mesh.count = 0; });
+        missiles.forEach(list => list.forEach(p => { p.mesh.count = 0; }));
+    }
+
+    // Image-based light: a soft sky, a warm sun patch and two fill panels, blurred
+    // into an environment map. Metal reflects it; everything gets gentle sky light.
+    function makeEnvironment() {
+        const pm = new T3.PMREMGenerator(gl);
+        const es = new T3.Scene();
+        const g = new T3.SphereGeometry(10, 32, 16);
+        const pos = g.attributes.position;
+        const col = new Float32Array(pos.count * 3);
+        const zen = new T3.Color('#6f8fb4');
+        const hor = new T3.Color('#d5dbe0');
+        const gnd = new T3.Color('#4a4538');
+        const c = new T3.Color();
+        for (let i = 0; i < pos.count; i++) {
+            const y = pos.getY(i) / 10;
+            if (y >= 0) c.copy(hor).lerp(zen, Math.pow(y, 0.6));
+            else c.copy(hor).lerp(gnd, Math.min(1, -y * 3));
+            col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+        }
+        g.setAttribute('color', new T3.BufferAttribute(col, 3));
+        es.add(new T3.Mesh(g, new T3.MeshBasicMaterial({ vertexColors: true, side: T3.BackSide })));
+        const panel = (x, y, z, w, h, hex, k) => {
+            const m = new T3.MeshBasicMaterial({ color: hex, side: T3.DoubleSide });
+            m.color.multiplyScalar(k);
+            const q = new T3.Mesh(new T3.PlaneGeometry(w, h), m);
+            q.position.set(x, y, z);
+            q.lookAt(0, 0, 0);
+            es.add(q);
+        };
+        panel(-4, 7, -4.5, 3, 3, 0xfff1d8, 5);
+        panel(6, 4, -3, 5, 2, 0xdfe8ff, 2.2);
+        panel(-6, 3, -5, 4, 2, 0xffffff, 1.4);
+        const rt = pm.fromScene(es, 0.035);
+        pm.dispose();
+        es.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+        return rt.texture;
     }
 
     // Nature models keep their own textured materials, scaled to tiles
@@ -809,8 +871,9 @@ const Renderer3D = (() => {
         const rt = new T3.WebGLRenderTarget(S, S, { samples: 4 });
         rt.texture.colorSpace = T3.SRGBColorSpace;
         const sc = new T3.Scene();
-        sc.add(new T3.HemisphereLight(0xf2f6ff, 0x50566a, 1.5));
-        const d = new T3.DirectionalLight(0xfff2de, 2.1);
+        sc.add(new T3.HemisphereLight(0xf2f6ff, 0x50566a, 0.8));
+        sc.environment = scene.environment;
+        const d = new T3.DirectionalLight(0xfff2de, 2.4);
         d.position.set(-2, 5, 3);
         sc.add(d);
         const cam = new T3.PerspectiveCamera(26, 1, 0.1, 60);
@@ -851,23 +914,18 @@ const Renderer3D = (() => {
         const towerDir = new T3.Vector3(0.9, 1.05, 1.5).normalize();
         Object.keys(Art.TOWER_ART).forEach(name => {
             const b = buildTowerModel(name, false);
-            if (b.aim) b.gun.rotation.y = b.aim.f0 - Math.PI * 0.3;
+            if (b.aim) b.gun.rotation.y = -Math.PI * 0.3;
+            if (b.glow) b.root.remove(b.glow);
             portraits[name] = shoot(b.root, towerDir, 0.98);
         });
         // Enemies a little from the front, mid-stride
         const enemyDir = new T3.Vector3(0.5, 0.55, 1.5).normalize();
         Object.keys(Art.ENEMY_ART).forEach(name => {
-            const p = enemyProto(name);
-            const body = window.SkeletonUtils.clone(p.scene);
-            const mixer = new T3.AnimationMixer(body);
-            if (p.move) {
-                mixer.clipAction(p.move).play();
-                mixer.update(p.move.duration * 0.3);
-            }
+            const u = Units3D.enemy(name);
             const root = new T3.Group();
-            root.add(body);
+            root.add(new T3.Mesh(u.geo, Units3D.materials().solid));
+            root.rotation.y = -0.35;
             enemyPortraits[name] = shoot(root, enemyDir, 0.9);
-            mixer.stopAllAction();
         });
         gl.setRenderTarget(null);
         rt.dispose();
@@ -944,12 +1002,41 @@ const Renderer3D = (() => {
         return t;
     }
 
+    // Ground grain: soft patches and fine speckle in world space, so flat kit colours
+    // read as earth, grass and stone rather than paint
+    function groundGrain(m) {
+        if (m._grain) return m;
+        m._grain = true;
+        m.envMapIntensity = Math.min(m.envMapIntensity, 0.55);
+        m.onBeforeCompile = (sh) => {
+            sh.vertexShader = 'varying vec3 vGW;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+                vec4 gwp = vec4(transformed, 1.0);
+                #ifdef USE_INSTANCING
+                gwp = instanceMatrix * gwp;
+                #endif
+                vGW = (modelMatrix * gwp).xyz;`);
+            sh.fragmentShader = `varying vec3 vGW;
+                float g3h(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+                float g3n(vec3 x) {
+                    vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 - 2.0 * f);
+                    return mix(mix(mix(g3h(i), g3h(i + vec3(1, 0, 0)), f.x), mix(g3h(i + vec3(0, 1, 0)), g3h(i + vec3(1, 1, 0)), f.x), f.y),
+                               mix(mix(g3h(i + vec3(0, 0, 1)), g3h(i + vec3(1, 0, 1)), f.x), mix(g3h(i + vec3(0, 1, 1)), g3h(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+                }
+            ` + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+                float gpat = g3n(vGW * 0.9) * 0.55 + g3n(vGW * 3.1) * 0.25 + g3n(vGW * 13.0) * 0.12 + g3n(vGW * 41.0) * 0.08;
+                diffuseColor.rgb *= 0.78 + 0.4 * gpat;
+                diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.1, 1.0, 0.78), smoothstep(0.45, 0.8, g3n(vGW * 0.45 + 7.0)) * 0.6);`);
+        };
+        m.customProgramCacheKey = () => 'grain';
+        return m;
+    }
+
     const kitMats = new Map();
     function kitMat(key, fn, o = {}) {
         const k = `${key}|${o.emissive || ''}`;
         let m = kitMats.get(k);
         if (!m) {
-            m = new T3.MeshStandardMaterial({ map: paletteTex(key, fn), roughness: 0.78, metalness: 0.04 });
+            m = groundGrain(new T3.MeshStandardMaterial({ map: paletteTex(key, fn), roughness: 0.86, metalness: 0.02, envMapIntensity: 0.55 }));
             if (o.emissive) {
                 m.emissive = new T3.Color(o.emissive);
                 m.emissiveMap = m.map;
@@ -962,7 +1049,7 @@ const Renderer3D = (() => {
 
     // Ground colours per map theme (Frost uses the kit's own snow models)
     const THEME_GROUND = {
-        meadow: null,
+        meadow: { grass: [92, 0.3, 0.36], path: [30, 0.3, 0.44] },
         frost: null,
         desert: { grass: [42, 0.5, 0.66], path: [20, 0.48, 0.58] },
         city: { grass: [128, 0.32, 0.4], path: [222, 0.07, 0.36] },
@@ -1072,7 +1159,7 @@ const Renderer3D = (() => {
         const pre = snow ? 'snow-' : '';
         const gm = groundMat(theme);
         // Props share the ground's colours on themes without green (no meadow bushes in the desert)
-        const dm = theme === 'desert' || theme === 'void' || theme === 'ash' ? gm : kitMat('base');
+        const dm = theme === 'frost' ? kitMat('base') : gm;
         scene.background = new T3.Color(th.frame);
 
         // The board the map sits on
@@ -1159,14 +1246,14 @@ const Renderer3D = (() => {
             if (name === '__pad') {
                 const g = new T3.CylinderGeometry(0.6, 0.64, 0.06, 4).rotateY(Math.PI / 4);
                 g.translate(0, 0.03, 0);
-                const mesh = new T3.InstancedMesh(g, mat('#b7b4a8', { rough: 0.9 }), list.length);
+                const mesh = new T3.InstancedMesh(g, groundGrain(mat('#8c887d', { rough: 0.9 })), list.length);
                 list.forEach((m, i) => mesh.setMatrixAt(i, m));
                 mesh.receiveShadow = true;
                 mesh.frustumCulled = false;
                 world.add(mesh);
                 const g2 = new T3.CylinderGeometry(0.5, 0.52, 0.02, 4).rotateY(Math.PI / 4);
                 g2.translate(0, 0.07, 0);
-                const inset = new T3.InstancedMesh(g2, mat('#a39f92', { rough: 0.95 }), list.length);
+                const inset = new T3.InstancedMesh(g2, groundGrain(mat('#7b776c', { rough: 0.95 })), list.length);
                 list.forEach((m, i) => inset.setMatrixAt(i, m));
                 inset.receiveShadow = true;
                 inset.frustumCulled = false;
@@ -1195,6 +1282,11 @@ const Renderer3D = (() => {
         buildGate();
         gl.shadowMap.needsUpdate = true;
         mapKey = `${theme}|${cols}x${rows}`;
+        // Once, with the map in place (so the shadow box covers the warm-up models)
+        if (!warmed) {
+            warmed = true;
+            warmUp();
+        }
     }
 
     // Trees, rocks and crystals on a wall tile, by theme
@@ -1203,19 +1295,19 @@ const Renderer3D = (() => {
         const t = theme;
         const pick = (list) => list[Math.floor(r(31) * list.length)];
         let set;
-        if (snow) set = [['snow-detail-tree-large'], ['snow-detail-tree', 'snow-detail-tree'], ['snow-detail-rocks-large'], ['snow-detail-tree', 'snow-detail-crystal']];
+        if (snow) set = [['n:snowPineLarge'], ['n:snowPine', 'n:snowPine'], ['snow-detail-rocks-large'], ['n:snowPine', 'snow-detail-crystal']];
         else if (t === 'desert') set = [['n:Rock_Medium_1'], ['detail-rocks', 'n:Rock_Medium_1'], ['detail-rocks-large'], ['n:Rock_Medium_1', 'detail-rocks'], ['detail-crystal']];
         else if (t === 'void') set = [['detail-crystal-large'], ['detail-crystal', 'detail-crystal'], ['detail-crystal-large', 'detail-rocks'], ['detail-rocks-large']];
         else if (t === 'ash') set = [['n:Rock_Medium_1'], ['n:Rock_Medium_1', 'detail-rocks'], ['detail-rocks-large', 'detail-dirt'], ['detail-rocks-large']];
-        else set = [['detail-tree-large'], ['detail-tree', 'detail-tree', 'detail-tree'], ['detail-tree-large', 'n:Rock_Medium_1'],
-            ['n:Rock_Medium_1', 'detail-tree'], ['detail-tree-large', 'n:Flower_3_Group'], ['detail-tree', 'detail-tree', 'n:Flower_3_Group']];
+        else set = [['n:PineLarge'], ['n:Pine', 'n:Pine', 'n:Pine'], ['n:PineLarge', 'n:Rock_Medium_1'],
+            ['n:Rock_Medium_1', 'n:Pine'], ['n:PineLarge', 'n:Flower_3_Group'], ['n:Pine', 'n:Pine', 'n:Flower_3_Group']];
         const group = pick(set);
         const spots = group.length === 1 ? [[0, 0]] : group.length === 2 ? [[-0.2, -0.12], [0.18, 0.16]] : [[-0.22, -0.16], [0.2, -0.1], [-0.02, 0.22]];
         group.forEach((name, i) => {
             const [sx, sz] = spots[i];
             const jx = sx + (r(40 + i) - 0.5) * 0.12;
             const jz = sz + (r(50 + i) - 0.5) * 0.12;
-            const big = /tree/.test(name) ? 1.55 : /rock|crystal/i.test(name) ? 1.25 : 1;
+            const big = /tree|Pine/.test(name) ? 1.55 : /rock|crystal/i.test(name) ? 1.25 : 1;
             const s = big * (0.85 + r(60 + i) * 0.35) * (inner ? 1.1 : 1);
             put(name, x, y, 0, top, s, jx, jz, r(70 + i) * TAU);
         });
@@ -1243,204 +1335,43 @@ const Renderer3D = (() => {
         }
     }
 
-    // ---------- Towers: Quaternius's turrets (CC0), one model per tower and upgrade ----------
+    // ---------- Towers: built to match the flat art (units3d.js), one model per tower and upgrade ----------
 
     const towerModels = new Map();      // tower -> model
     let shadowsAt = 0;
-    const TURRET = {
-        gun: 'Gun_2', machineGun: 'Gun_10', laser: 'Laser_1', beamEmitter: 'Laser_Doble',
-        slow: 'Teleporter1', poison: 'Teleporter2', sniper: 'Gun', railgun: 'Gun_3',
-        rocket: 'Bomber_1', missileSilo: 'Bomber_2', bomb: 'Cannon_1', clusterBomb: 'GearCannon_2',
-        tesla: 'Upwards_1', lightningStrike: 'Upwards_3'
-    };
-    // Sizes in tiles, set against the trees (about a tile tall) and the monsters:
-    // a tower is a little taller than a big monster and a little shorter than a tree
-    const TURRET_W = 0.5;               // the turret's base across (it sits on a plinth)
-    const TURRET_H = 0.62;              // the turret's height at most
-    const PLINTH_H = 0.2;               // height of the stone plinth under it
-    // The parts that glow: crystals on Slow and Poison, the coil on Tesla towers
+    // The parts that glow get a soft halo too
     const GLOW_PART = { slow: '#9fdcff', poison: '#9cff3a', tesla: '#ffe066', lightningStrike: '#6ff3ff', laser: '#60b8ff', beamEmitter: '#5ff0e0' };
-
-    // A part's name: its own, or its parent's when the file split it by material
-    const partName = (o) => (/^mesh_\d/.test(o.name) && o.parent ? o.parent.name : o.name);
-
-    const turretProtos = {};
-    function turretProto(file) {
-        if (turretProtos[file]) return turretProtos[file];
-        const src = qt.turret[file];
-        src.updateMatrixWorld(true);
-        const box = new T3.Box3().setFromObject(src);
-        const size = box.getSize(new T3.Vector3());
-        // Size by the base (barrels may stick out past the tile)
-        const bbox = new T3.Box3();
-        src.traverse(o => { if (o.isMesh && !/_Gun$|Top$/.test(partName(o))) bbox.expandByObject(o); });
-        const bb = bbox.isEmpty() ? size : bbox.getSize(new T3.Vector3());
-        // ...but never wider than about a tile, barrels included
-        const scale = Math.min(TURRET_W / Math.max(bb.x, bb.z), 0.95 / Math.max(size.x, size.z), TURRET_H / size.y);
-        turretProtos[file] = { src, scale, minY: box.min.y, height: size.y * scale };
-        return turretProtos[file];
-    }
-
-    const towerMats = new Map();
-    function towerMat(name, kind, ghost) {
-        const key = `${name}|${kind}|${ghost ? 1 : 0}`;
-        let m = towerMats.get(key);
-        if (m) return m;
-        const a = Art.TOWER_ART[name];
-        if (kind === 'light') m = new T3.MeshStandardMaterial({ color: a.main, roughness: 0.45, metalness: 0.35 });
-        else if (kind === 'stone') m = new T3.MeshStandardMaterial({ color: '#b9bcd6', roughness: 0.85 });
-        else if (kind === 'glow') m = new T3.MeshStandardMaterial({ color: GLOW_PART[name], emissive: GLOW_PART[name], emissiveIntensity: 1.3, roughness: 0.25 });
-        else m = new T3.MeshStandardMaterial({ color: new T3.Color(a.dark).lerp(new T3.Color('#2f3540'), 0.55), roughness: 0.5, metalness: 0.55 });
-        if (ghost) {
-            m.transparent = true;
-            m.opacity = 0.62;
-            m.depthWrite = false;
-        }
-        towerMats.set(key, m);
-        return m;
-    }
-
-    // A copy of a geometry with plain float positions, normals and uvs (the files
-    // store them quantized to small integers)
-    function floatGeometry(src) {
-        const g = new T3.BufferGeometry();
-        ['position', 'normal', 'uv'].forEach(k => {
-            const a = src.attributes[k];
-            if (!a) return;
-            const n = a.count;
-            const out = new Float32Array(n * a.itemSize);
-            for (let i = 0; i < n; i++) {
-                out[i * a.itemSize] = a.getX(i);
-                if (a.itemSize > 1) out[i * a.itemSize + 1] = a.getY(i);
-                if (a.itemSize > 2) out[i * a.itemSize + 2] = a.getZ(i);
-            }
-            g.setAttribute(k, new T3.Float32BufferAttribute(out, a.itemSize));
-        });
-        if (src.index) g.setIndex(src.index.clone());
-        return g;
-    }
-
-    // Where the shots leave a gun: the ends of its barrels, in the gun's own frame.
-    // The points furthest along the way the gun faces, grouped side by side into
-    // one tip per barrel (twin guns have two, missile pods four)
-    function barrelTips(gun, f0) {
-        const dir = [new T3.Vector3(1, 0, 0), new T3.Vector3(-1, 0, 0), new T3.Vector3(0, 0, 1), new T3.Vector3(0, 0, -1)][[0, Math.PI, Math.PI / 2, -Math.PI / 2].indexOf(f0)] || new T3.Vector3(1, 0, 0);
-        const side = new T3.Vector3(-dir.z, 0, dir.x);
-        const pts = [];
-        const v = new T3.Vector3();
-        gun.forEach(({ geo }) => {
-            const a = geo.attributes.position;
-            for (let i = 0; i < a.count; i++) pts.push(v.fromBufferAttribute(a, i).clone());
-        });
-        let far = -Infinity;
-        pts.forEach(q => { far = Math.max(far, q.dot(dir)); });
-        const end = pts.filter(q => q.dot(dir) > far - 0.035).sort((a, b) => a.dot(side) - b.dot(side));
-        const tips = [];
-        let group = [];
-        const flush = () => {
-            if (!group.length) return;
-            const c = new T3.Vector3();
-            group.forEach(q => c.add(q));
-            c.divideScalar(group.length).addScaledVector(dir, 0.015);
-            tips.push(c);
-            group = [];
-        };
-        end.forEach((q, i) => {
-            if (i && q.dot(side) - end[i - 1].dot(side) > 0.03) flush();
-            group.push(q);
-        });
-        flush();
-        return tips.length ? tips : [dir.clone().multiplyScalar(far)];
-    }
-
-    // A tower's model, built once per kind and drawn with few meshes: the plinth and
-    // the turret's fixed parts merged by material, the gun merged by material too
-    const towerProtos = new Map();
-    function towerProto(name, ghost) {
-        const key = `${name}|${ghost ? 1 : 0}`;
-        if (towerProtos.has(key)) return towerProtos.get(key);
-        const p = turretProto(TURRET[name] || 'Gun_2');
-        const root = new T3.Group();
-        const plinth = kitClone(/sniper|railgun|rocket|missile|gun$|machine/i.test(name) ? 'tower-square-bottom-a' : 'tower-round-bottom-a',
-            ghost ? towerMat(name, 'stone', true) : accentMat(Art.TOWER_ART[name].main));
-        plinth.scale.set(0.66, PLINTH_H / 0.5, 0.66);
-        root.add(plinth);
-        const body = p.src.clone(true);
-        body.scale.multiplyScalar(p.scale);
-        body.position.y = PLINTH_H - p.minY * p.scale;
-        root.add(body);
-        const glows = GLOW_PART[name] && /slow|poison|tesla|lightning/.test(name);
-        const still = /slow|poison|tesla|lightning/.test(name);
-        root.updateMatrixWorld(true);
-        // Collect geometry per (moving or not, material), baked into the tower's frame
-        const groups = new Map();
-        let gunNode = null;
-        root.traverse(o => {
-            if (!o.isMesh) return;
-            const pn = partName(o);
-            const isGun = still ? /Top$|_Gun$/.test(pn) && !/Teleporter\d$/.test(pn) : /_Gun$/.test(pn);
-            if (isGun) gunNode = o;
-            const light = /light/i.test(o.material.name);
-            const isPlinth = !o.material.name || o.material.name === '' || o.material === plinth.children[0]?.material;
-            const mat = o.material.isMeshStandardMaterial && o.material.map ? o.material
-                : towerMat(name, glows && /Top$|_Gun$/.test(pn) && light ? 'glow' : light ? 'light' : 'dark', ghost);
-            void isPlinth;
-            const g = floatGeometry(o.geometry);
-            if (!g.attributes.uv) g.setAttribute('uv', new T3.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
-            g.applyMatrix4(o.matrixWorld);
-            const gk = `${isGun ? 'gun' : 'fixed'}|${mat.uuid}`;
-            if (!groups.has(gk)) groups.set(gk, { isGun, mat, geos: [] });
-            groups.get(gk).geos.push(g.index ? g.toNonIndexed() : g);
-        });
-        const fixed = [];
-        const gun = [];
-        groups.forEach(v => {
-            const merged = window.BufferGeometryUtils.mergeGeometries(v.geos, false);
-            merged._shared = true;
-            (v.isGun ? gun : fixed).push({ geo: merged, mat: v.mat });
-        });
-        // The gun turns about the tower's upright axis (through x = z = 0); which way
-        // its barrel points at rest decides the turn
-        let f0 = 0;
-        if (gun.length) {
-            const box = new T3.Box3();
-            gun.forEach(gp => { gp.geo.computeBoundingBox(); box.union(gp.geo.boundingBox); });
-            const ext = [box.max.x, -box.min.x, box.max.z, -box.min.z];
-            f0 = [0, Math.PI, Math.PI / 2, -Math.PI / 2][ext.indexOf(Math.max(...ext))];
-        }
-        void gunNode;
-        const top = p.height + PLINTH_H;
-        const proto = { fixed, gun, f0, still, top, tips: still || !gun.length ? [new T3.Vector3(0, top * 0.95, 0)] : barrelTips(gun, f0) };
-        towerProtos.set(key, proto);
-        return proto;
-    }
+    const STILL_TOWER = /^(slow|poison|tesla|lightningStrike)$/;
+    const PLINTH_H = 0.175;
 
     function buildTowerModel(name, ghost) {
-        const proto = towerProto(name, ghost);
+        const u = Units3D.tower(name);
+        u.fixed._shared = true;
+        if (u.gun) u.gun._shared = true;
+        const mats = Units3D.materials();
+        const mat = ghost ? mats.ghost : mats.solid;
         const root = new T3.Group();
-        proto.fixed.forEach(({ geo, mat }) => {
-            const m = new T3.Mesh(geo, mat);
+        const base = new T3.Mesh(u.fixed, mat);
+        base.castShadow = !ghost;
+        base.receiveShadow = true;
+        root.add(base);
+        const still = STILL_TOWER.test(name);
+        let gun = null;
+        if (u.gun) {
+            gun = new T3.Group();
+            const m = new T3.Mesh(u.gun, mat);
             m.castShadow = !ghost;
             m.receiveShadow = true;
-            root.add(m);
-        });
-        let gun = null;
-        if (proto.gun.length) {
-            gun = new T3.Group();
-            proto.gun.forEach(({ geo, mat }) => {
-                const m = new T3.Mesh(geo, mat);
-                m.castShadow = !ghost;
-                gun.add(m);
-            });
+            gun.add(m);
             root.add(gun);
         }
         let glow = null;
-        if (GLOW_PART[name]) {
-            glow = glowSprite(new T3.Color(GLOW_PART[name]).getHex(), /laser|beam/i.test(name) ? 0.6 : 0.8, 0.6);
-            glow.position.y = PLINTH_H + (proto.top - PLINTH_H) * (/laser|beam/i.test(name) ? 0.7 : 0.92);
+        if (GLOW_PART[name] && u.glowAt && !ghost) {
+            glow = glowSprite(new T3.Color(GLOW_PART[name]).getHex(), 0.42, 0.35);
+            glow.position.copy(u.glowAt);
             root.add(glow);
         }
-        const aim = gun && !proto.still ? { f0: proto.f0 } : null;
+        const aim = gun && !still ? { f0: 0 } : null;
         // A muzzle flash that sits at the barrel that fired
         let flash = null;
         if (aim && !ghost) {
@@ -1448,7 +1379,7 @@ const Renderer3D = (() => {
             flash.visible = false;
             gun.add(flash);
         }
-        return { root, turret: root, inner: root, gun, aim, glow, orb: null, top: proto.top, still: proto.still, tips: proto.tips, flash };
+        return { root, turret: root, inner: root, gun, aim, glow, orb: null, top: u.top, still, tips: u.tips, flash };
     }
 
     // Invisible hit volume for picking a tower by its body
@@ -1518,8 +1449,8 @@ const Renderer3D = (() => {
         }
         if (m.glow) {
             const k = 0.75 + 0.25 * Math.sin(time * 5 + i) + (t._flash || 0) * 0.1;
-            m.glow.material.opacity = Math.min(1, 0.55 * k);
-            const sz = 0.55 + 0.18 * k;
+            m.glow.material.opacity = Math.min(1, 0.3 * k);
+            const sz = 0.36 + 0.1 * k;
             m.glow.scale.set(sz, sz, 1);
         }
         // Building: rise out of the ground, overshoot and settle
@@ -1644,139 +1575,65 @@ const Renderer3D = (() => {
         return typeof speed === 'number' ? speed : 1;
     }
 
-    // ---------- Enemies: Quaternius's animated monsters (CC0) ----------
+    // ---------- Enemies: built to match the flat art (units3d.js) ----------
+    //
+    // One instanced draw per enemy kind. Legs, treads, flames and rotors move on the
+    // GPU from each instance's walk phase; here each enemy gets its place, facing,
+    // lean, squash, hit flash, status glow and, once killed, how far it has burned
+    // away. Nothing is loaded or cloned, so a new kind arriving late costs nothing.
 
-    // Picked to match the flat view's enemies: a slime, a hard-shelled crawler, a fast
-    // flyer, a gliding ghost, the mushroom healer, a big furry golem, a running
-    // skeleton, a one-eyed brute for the tank, a dragon and a giant bee for the bosses
-    const ENEMY_MODEL = {
-        weak: 'Slime', strong: 'Crab', fast: 'Bat', strongFast: 'Ghost', medic: 'Mushroom',
-        stronger: 'Yeti', faster: 'Skeleton', tank: 'Cyclops', taunt: 'Dragon', spawner: 'Bee'
-    };
-    const FLYING = { Bat: 0.32, Ghost: 0.12, Dragon: 0.28, Bee: 0.3 };
-    const MONSTER_PAINT = {
-        Bat: { Main: '#2b9fc4', Black: '#16485a', Belly: '#c4f4ff', Nose: '#0b2a36' },
-        Dragon: { Main: '#7a45bd', Wings: '#4b2580', Claws: '#2a1645', Belly: '#d2aaff' },
-        Skeleton: { Skeleton: '#f0b27a' }
-    };
-    // How far each walk cycle carries the model, in tiles at its game size: the walk
-    // plays at the speed that keeps the feet from sliding
-    const STRIDE = { Slime: 0.55, Crab: 0.5, Skeleton: 0.75, Yeti: 0.5, Cyclops: 0.5, Ghost: 0.6, Mushroom: 0.45 };
-    const enemyProtos = {};
-    function enemyProto(name) {
-        const file = ENEMY_MODEL[name] || 'Slime';
-        const g = qt.monster[file];
-        if (!g) return null;
-        if (enemyProtos[name]) return enemyProtos[name];
+    const kinds = {};                   // enemy name -> { info, mesh, fx, mv, cap, n, k }
+    const enemyState = new Map();       // enemy -> its motion
+    const dying = [];                   // killed: falling, toppling, burning away
+    const clones = 0;                   // (kept for the tests: no per-enemy models now)
+    let tmpE = null;
+
+    function kindOf(name) {
+        let K = kinds[name];
+        if (K) return K;
+        const info = Units3D.enemy(name);
+        info.geo._shared = true;
         const art = Art.ENEMY_ART[name];
-        const paint = MONSTER_PAINT[file];
-        if (paint) g.scene.traverse(o => { if (o.isMesh) [].concat(o.material).forEach(m => { if (paint[m.name]) m.color.set(paint[m.name]); }); });
-        g.scene.updateMatrixWorld(true);
-        const box = new T3.Box3().setFromObject(g.scene);
-        const size = box.getSize(new T3.Vector3());
-        const across = art.r * 2 * (art.boss ? 1.25 : 1.0);
-        const scale = Math.min(across / Math.max(size.x, size.z), across * 1.25 / size.y);
-        const find = (re) => g.animations.find(a => re.test(a.name));
-        const move = find(/walk|run|fly/i) || find(/idle/i);
-        enemyProtos[name] = {
-            file, scene: g.scene, scale, minY: box.min.y, height: size.y * scale,
-            move, death: find(/death/i), hit: find(/hit/i),
-            fly: FLYING[file] || 0, bounce: !find(/walk|run|fly/i),
-            // tiles per walk cycle at this size; fliers flap at a steady rate
-            stride: STRIDE[file] ? STRIDE[file] * across / 0.6 : 0,
-            pool: []
-        };
-        return enemyProtos[name];
+        K = kinds[name] = { name, info, art, k: art.r * (art.boss ? 1.25 : 1), mesh: null, cap: 0, n: 0 };
+        growKind(K, 24);
+        return K;
     }
-
-    // Models are kept in a pool per enemy kind and reused, so a wave of 40 enemies
-    // does not clone 40 skinned models and throw them away again
-    const enemyModels = new Map();      // enemy -> model
-    const dying = [];                   // models playing their death
-    let clones = 0;                     // skinned models made so far (the pool keeps this low)
-    function makeEnemyModel(e) {
-        const p = enemyProto(e.name);
-        if (!p) return makeStandIn(e);
-        let m = p.pool.pop();
-        if (!m) {
-            clones++;
-            const root = new T3.Group();
-            const body = window.SkeletonUtils.clone(p.scene);
-            body.scale.multiplyScalar(p.scale);
-            body.position.y = -p.minY * p.scale;
-            root.add(body);
-            const mats = [];
-            body.traverse(o => {
-                if (!o.isMesh) return;
-                o.material = o.material.clone();
-                mats.push(o.material);
-                o.castShadow = false;
-                o.receiveShadow = false;
-                o.frustumCulled = false;
-            });
-            const mixer = new T3.AnimationMixer(body);
-            const act = p.move ? mixer.clipAction(p.move) : null;
-            const hit = p.hit ? mixer.clipAction(p.hit) : null;
-            if (hit) {
-                hit.setLoop(T3.LoopOnce, 1);
-                hit.setEffectiveWeight(0);
-            }
-            const die = p.death ? mixer.clipAction(p.death) : null;
-            if (die) {
-                die.setLoop(T3.LoopOnce, 1);
-                die.clampWhenFinished = true;
-            }
-            m = { root, body, mats, mixer, act, hitAct: hit, die, p };
+    function growKind(K, cap) {
+        if (K.mesh) {
+            dyn.remove(K.mesh);
+            K.mesh.dispose();
         }
-        m.mixer.stopAllAction();
-        if (m.act) {
-            m.act.reset().play();
-            m.act.time = Math.random() * p.move.duration;
-        }
-        m.root.scale.setScalar(1);
-        m.root.rotation.set(0, 0, 0);
-        m.mats.forEach(x => x.emissive.setRGB(0, 0, 0));
-        if (m.fading) {
-            m.fading = false;
-            m.mats.forEach(x => { x.transparent = false; x.depthWrite = true; x.opacity = 1; x.needsUpdate = true; });
-        }
-        m.er = m.eg = m.eb = 0;
-        m.spawn = 0;
-        m.flinch = 0;
-        m.flinchV = 0;
-        m.lastHit = 0;
-        m.vy = 0;
-        dyn.add(m.root);
-        return m;
+        const geo = K.info.geo;
+        K.fx = new T3.InstancedBufferAttribute(new Float32Array(cap * 4), 4);
+        K.mv = new T3.InstancedBufferAttribute(new Float32Array(cap * 4), 4);
+        K.fx.setUsage(T3.DynamicDrawUsage);
+        K.mv.setUsage(T3.DynamicDrawUsage);
+        geo.setAttribute('aFx', K.fx);
+        geo.setAttribute('aMove', K.mv);
+        const mesh = new T3.InstancedMesh(geo, Units3D.materials().crowd, cap);
+        mesh.instanceMatrix.setUsage(T3.DynamicDrawUsage);
+        mesh.frustumCulled = false;
+        mesh.castShadow = false;
+        mesh.receiveShadow = true;
+        mesh.count = 0;
+        dyn.add(mesh);
+        K.mesh = mesh;
+        K.cap = cap;
     }
-
-    // While a monster's file is still loading: a plain ball in its colour
-    let standInGeo = null;
-    function makeStandIn(e) {
-        if (!standInGeo) {
-            standInGeo = new T3.IcosahedronGeometry(1, 1);
-            standInGeo._shared = true;
-        }
-        const art = Art.ENEMY_ART[e.name];
-        const mat = new T3.MeshStandardMaterial({ color: art.color, roughness: 0.5, flatShading: true });
-        const mesh = new T3.Mesh(standInGeo, mat);
-        mesh.scale.setScalar(art.r * 0.8);
-        mesh.position.y = art.r * 0.8;
-        const root = new T3.Group();
-        root.add(mesh);
-        dyn.add(root);
-        return { root, mats: [mat], mixer: null, p: { fly: 0, bounce: true, stride: 0 }, standIn: true, spawn: 0, flinch: 0, flinchV: 0, lastHit: 0, vy: 0 };
-    }
-
-    function dropEnemyModel(m) {
-        dyn.remove(m.root);
-        if (m.standIn) {
-            m.mats.forEach(x => x.dispose());
-            return;
-        }
-        m.mixer.stopAllAction();
-        if (m.p.pool.length < 60) m.p.pool.push(m);
-        else m.mats.forEach(x => x.dispose());
+    // One instance: place, yaw / pitch / roll, scale, glow, dissolve, walk
+    function putUnit(K, x, y, z, yaw, pitch, roll, sx, sy, sz, r, g, b, dis, walk, seed, boost) {
+        if (K.n >= K.cap) growKind(K, K.cap * 2);
+        const i = K.n++;
+        tmpE.set(roll, yaw, pitch, 'YZX');
+        tmpQ.setFromEuler(tmpE);
+        tmpV.set(x, y, z);
+        tmpS.set(sx * K.k, sy * K.k, sz * K.k);
+        tmpM.compose(tmpV, tmpQ, tmpS);
+        K.mesh.setMatrixAt(i, tmpM);
+        const f = K.fx.array;
+        f[i * 4] = r; f[i * 4 + 1] = g; f[i * 4 + 2] = b; f[i * 4 + 3] = dis;
+        const m = K.mv.array;
+        m[i * 4] = walk; m[i * 4 + 1] = seed; m[i * 4 + 2] = boost; m[i * 4 + 3] = 1;
     }
 
     let enemyId = 0;
@@ -1817,13 +1674,13 @@ const Renderer3D = (() => {
         c.width = c.height = 64;
         const g = c.getContext('2d');
         const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-        gr.addColorStop(0, 'rgba(0,0,0,0.55)');
-        gr.addColorStop(0.6, 'rgba(0,0,0,0.3)');
+        gr.addColorStop(0, 'rgba(0,0,0,0.6)');
+        gr.addColorStop(0.6, 'rgba(0,0,0,0.32)');
         gr.addColorStop(1, 'rgba(0,0,0,0)');
         g.fillStyle = gr;
         g.fillRect(0, 0, 64, 64);
         const m = new T3.MeshBasicMaterial({ map: new T3.CanvasTexture(c), transparent: true, depthWrite: false, toneMapped: false });
-        blobs = new T3.InstancedMesh(new T3.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), m, 256);
+        blobs = new T3.InstancedMesh(new T3.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), m, 512);
         blobs.instanceMatrix.setUsage(T3.DynamicDrawUsage);
         blobs.frustumCulled = false;
         blobs.renderOrder = 1;
@@ -1833,137 +1690,131 @@ const Renderer3D = (() => {
     }
 
     const seenEnemies = new Set();
-    let animTick = 0;
     function syncEnemies(stepped, dt) {
+        if (!tmpE) tmpE = new T3.Euler();
         const bm = blobMesh();
         let nb = 0;
         const gdt = dt * gameRate();
-        // Big crowds: each skinned model updates every other frame (half the cost,
-        // still smooth at 30 updates a second)
-        const crowd = enemies.length > 45 || FX.quality === 0;
-        animTick++;
+        for (const name in kinds) kinds[name].n = 0;
         seenEnemies.clear();
+        const blob = (X, Z, size) => {
+            if (nb >= 512) return;
+            tmpV.set(X, 0.012, Z);
+            tmpS.set(size, 1, size);
+            tmpM.compose(tmpV, tmpQ.identity(), tmpS);
+            bm.setMatrixAt(nb++, tmpM);
+        };
         for (let i = 0; i < enemies.length; i++) {
             const e = enemies[i];
             const art = Art.ENEMY_ART[e.name];
             if (!art) continue;
-            trackEnemy(e, gdt);
+            const moved = trackEnemy(e, gdt);
             if (stepped) FX.status(e);
             seenEnemies.add(e);
-            let m = enemyModels.get(e);
-            // A stand-in is swapped for the real model once it has loaded
-            if (m && m.standIn && enemyProto(e.name)) {
-                dropEnemyModel(m);
-                m = null;
+            const K = kindOf(e.name);
+            const info = K.info;
+            let s = enemyState.get(e);
+            if (!s) {
+                s = { spawn: 0, flinch: 0, flinchV: 0, lastHit: 0, walk: Math.random() * TAU, roll: 0, prev: e._rot, seed: Math.random() * 50 };
+                enemyState.set(e, s);
             }
-            if (!m) {
-                m = makeEnemyModel(e);
-                enemyModels.set(e, m);
-            }
-            const p = m.p;
             // Coming out of a portal: grow from nothing and drop in
-            if (m.spawn < 1) m.spawn = Math.min(1, m.spawn + dt * 3.5);
-            const sp = m.spawn;
-            const grow = sp < 1 ? 1 - Math.pow(1 - sp, 3) : 1;
-            // Hit: a springy flinch, sideways squash and a tip backwards
-            if (e.hit > 0 && e.hit > m.lastHit) m.flinchV += 7;
-            m.lastHit = e.hit || 0;
-            m.flinchV += (-220 * m.flinch - 14 * m.flinchV) * Math.min(gdt, 0.033);
-            m.flinch += m.flinchV * Math.min(gdt, 0.033);
-            const fl = Math.max(-0.25, Math.min(0.25, m.flinch));
-            const hover = p.fly ? p.fly + Math.sin(time * 3 + e._id) * 0.05 : 0;
-            const hop = p.bounce ? Math.abs(Math.sin(e._ph * 0.5)) * 0.12 : 0;
-            const X = e.pos.x / ts;
-            const Z = e.pos.y / ts;
-            m.root.position.set(X - Math.cos(e._rot) * fl * 0.15, (hover + hop) * grow + (1 - grow) * 0.4, Z - Math.sin(e._rot) * fl * 0.15);
-            m.root.rotation.set(0, yawFor(e._rot), 0);
-            m.root.rotateX(-fl * 0.8);
-            m.root.scale.set(grow * (1 + fl * 0.4), grow * (1 - fl * 0.5), grow * (1 + fl * 0.4));
-            if (nb < 256) {
-                const bs = art.r * 2 * (p.fly ? 0.9 : 1.15) * (art.boss ? 1.25 : 1) * grow;
-                tmpV.set(X, 0.012, Z);
-                tmpS.set(bs, 1, bs);
-                tmpM.compose(tmpV, tmpQ.identity(), tmpS);
-                bm.setMatrixAt(nb++, tmpM);
+            if (s.spawn < 1) s.spawn = Math.min(1, s.spawn + dt * 3.5);
+            const grow = s.spawn < 1 ? 1 - Math.pow(1 - s.spawn, 3) : 1;
+            // Hit: a springy flinch that tips it back
+            if (e.hit > 0 && e.hit > s.lastHit) s.flinchV += art.boss ? 3 : 7;
+            s.lastHit = e.hit || 0;
+            s.flinchV += (-220 * s.flinch - 14 * s.flinchV) * Math.min(gdt, 0.033);
+            s.flinch += s.flinchV * Math.min(gdt, 0.033);
+            const fl = Math.max(-0.25, Math.min(0.25, s.flinch));
+            // Walk: legs and treads keep pace with the ground covered
+            if (info.stride) s.walk += moved / K.k / info.stride * TAU;
+            // Fliers bank into turns
+            if (gdt > 0) {
+                const turn = angDiff(e._rot - s.prev) / gdt;
+                const want = info.fly ? Math.max(-0.6, Math.min(0.6, -turn * 0.22)) : 0;
+                s.roll += (want - s.roll) * damp(5, dt);
             }
-            if (m.mixer) {
-                // Walk at the speed that matches the ground covered (slowed enemies
-                // walk slowly); fliers flap faster when they hurry
-                if (m.act) {
-                    const ts_ = p.stride ? e._spd * p.move.duration / p.stride : 1 + Math.min(1, e._spd * 0.4);
-                    m.act.timeScale = Math.max(0.25, Math.min(3, ts_));
-                }
-                if (!crowd || (animTick + e._id) % 2 === 0) m.mixer.update(crowd ? gdt * 2 : gdt);
+            s.prev = e._rot;
+            const X = e.pos.x / ts - Math.cos(e._rot) * fl * 0.1;
+            const Z = e.pos.y / ts - Math.sin(e._rot) * fl * 0.1;
+            let y = 0;
+            let sx = 1, sy = 1, sz = 1;
+            if (info.fly) y = info.fly * K.k + Math.sin(time * 2.6 + s.seed) * 0.025;
+            if (info.hop) {
+                const w = Math.sin(s.walk);
+                sy = 1 + w * 0.1;
+                sx = sz = 1 - w * 0.05;
             }
+            if (info.bob) y += Math.abs(Math.sin(s.walk)) * info.bob * K.k;
+            y = y * grow + (1 - grow) * 0.5;
+            const yaw = info.spin ? time * 0.9 + s.seed : -e._rot;
+            sx *= grow * (1 + fl * 0.3);
+            sy *= grow * (1 - fl * 0.4);
+            sz *= grow * (1 + fl * 0.3);
             // Slowed, poisoned, healing: a glow in that colour; a white flash when hit
             let er = 0, eg = 0, eb = 0;
             const efx = e.effects;
             for (let n = 0; n < efx.length; n++) {
                 const nm = efx[n].name;
-                if (nm === 'slow') { er += 0.05; eg += 0.25; eb += 0.6; }
-                else if (nm === 'poison') { er += 0.1; eg += 0.5; eb += 0.05; }
-                else if (nm === 'regen') { const w = 0.25 + 0.2 * Math.sin(time * 8); er += w; eg += w * 0.3; eb += w * 0.6; }
+                if (nm === 'slow') { er += 0.03; eg += 0.18; eb += 0.45; }
+                else if (nm === 'poison') { er += 0.06; eg += 0.35; eb += 0.03; }
+                else if (nm === 'regen') { const w = 0.2 + 0.15 * Math.sin(time * 8); er += w; eg += w * 0.3; eb += w * 0.6; }
             }
             const hit = e.hit > 0 ? Math.min(1, e.hit / 6) : 0;
-            er += hit * 0.35; eg += hit * 0.32; eb += hit * 0.3;
-            if (m.er !== er || m.eg !== eg || m.eb !== eb) {
-                m.er = er; m.eg = eg; m.eb = eb;
-                for (let k = 0; k < m.mats.length; k++) m.mats[k].emissive.setRGB(er, eg, eb);
+            er += hit * 0.5; eg += hit * 0.45; eb += hit * 0.4;
+            // Arriving: a portal-coloured shimmer while it grows
+            const arr = 1 - grow;
+            er += arr * 0.8; eg += arr * 0.4; eb += arr * 1.6;
+            putUnit(K, X, y, Z, yaw, fl * 0.7, s.roll, sx, sy, sz, er, eg, eb, 0, s.walk, s.seed, Math.min(1, e._spd / 2.5));
+            blob(X, Z, art.r * 2 * (info.fly ? 0.85 : 1.15) * (art.boss ? 1.25 : 1) * grow * (info.fly ? 1 / (1 + y) : 1));
+        }
+        // Gone: killed ones fall, topple and burn away; ones that reached the gate vanish
+        enemyState.forEach((s, e) => {
+            if (seenEnemies.has(e)) return;
+            enemyState.delete(e);
+            if (e.health <= 0 && dying.length < 80) {
+                const K = kindOf(e.name);
+                dying.push({
+                    K, x: e.pos.x / ts, z: e.pos.y / ts, yaw: K.info.spin ? time * 0.9 + s.seed : -e._rot,
+                    y: K.info.fly ? K.info.fly * K.k : 0, vy: K.info.fly ? 0 : 1.2,
+                    roll: s.roll, side: Math.random() < 0.5 ? -1 : 1, t: 0, walk: s.walk, seed: s.seed,
+                    boss: !!K.art.boss, fly: !!K.info.fly
+                });
+            }
+        });
+        for (let i = dying.length - 1; i >= 0; i--) {
+            const d = dying[i];
+            d.t += gdt;
+            // A little hop, then gravity; fliers drop out of the air and bounce once
+            d.vy -= 9.8 * gdt;
+            d.y += d.vy * gdt;
+            if (d.y <= 0) {
+                d.y = 0;
+                d.vy = d.vy < -1.2 ? -d.vy * 0.3 : 0;
+            }
+            // Topple onto its side (bosses just sag), then burn away from the edges
+            const tip = Math.min(1, d.t / 0.35);
+            const roll = d.roll + d.side * tip * tip * (d.boss ? 0.2 : d.fly ? 0.9 : 1.15);
+            const pitch = d.fly ? -tip * 0.5 : tip * 0.15;
+            const dis = Math.max(0, Math.min(1, (d.t - 0.28) / 0.7));
+            const w = d.t < 0.14 ? 1 - d.t / 0.14 : 0;
+            const sink = dis * dis * 0.12 * d.K.k;
+            putUnit(d.K, d.x, d.y - sink, d.z, d.yaw, pitch, roll, 1, 1, 1, w * 1.1, w * 1.0, w * 0.9, dis, d.walk, d.seed, 0);
+            if (dis < 0.6) blob(d.x, d.z, d.K.art.r * 2 * (1 - dis));
+            if (dis >= 1) dying.splice(i, 1);
+        }
+        for (const name in kinds) {
+            const K = kinds[name];
+            K.mesh.count = K.n;
+            if (K.n) {
+                K.mesh.instanceMatrix.needsUpdate = true;
+                K.fx.needsUpdate = true;
+                K.mv.needsUpdate = true;
             }
         }
         bm.count = nb;
         bm.instanceMatrix.needsUpdate = true;
-        // Gone: killed ones play their death (fliers fall and bounce), ones that
-        // reached the gate just vanish
-        enemyModels.forEach((m, e) => {
-            if (seenEnemies.has(e)) return;
-            enemyModels.delete(e);
-            if (e.health <= 0 && dying.length < 40) {
-                if (m.die) {
-                    m.mixer.stopAllAction();
-                    m.die.reset().play();
-                }
-                m.mats.forEach(x => x.emissive.setRGB(0, 0, 0));
-                m.er = m.eg = m.eb = 0;
-                m.dieT = 0;
-                m.vy = m.p.fly ? 0 : 1.6;
-                dying.push(m);
-            } else {
-                dropEnemyModel(m);
-            }
-        });
-        for (let i = dying.length - 1; i >= 0; i--) {
-            const m = dying[i];
-            m.dieT += gdt;
-            if (m.mixer) m.mixer.update(gdt);
-            // A little hop up, then gravity; fliers drop and bounce once
-            m.vy -= 9.8 * gdt;
-            let y = m.root.position.y + m.vy * gdt;
-            if (y <= 0) {
-                y = 0;
-                m.vy = m.vy < -1.2 ? -m.vy * 0.3 : 0;
-            }
-            m.root.position.y = y;
-            if (m.standIn || !m.die) m.root.rotation.z += gdt * 6;
-            // A white flash on the hit that killed it, then it fades into the ground
-            if (m.dieT < 0.12) {
-                const w = 1 - m.dieT / 0.12;
-                for (let k = 0; k < m.mats.length; k++) m.mats[k].emissive.setRGB(w * 0.6, w * 0.6, w * 0.6);
-            }
-            if (m.dieT > 0.7) {
-                if (!m.fading) {
-                    m.fading = true;
-                    m.mats.forEach(x => { x.transparent = true; x.depthWrite = false; x.needsUpdate = true; });
-                }
-                const f = Math.min(1, (m.dieT - 0.7) / 0.45);
-                m.mats.forEach(x => { x.opacity = 1 - f; });
-                m.root.position.y -= f * 0.15;
-                if (f >= 1) {
-                    dropEnemyModel(m);
-                    dying.splice(i, 1);
-                }
-            }
-        }
     }
 
     // ---------- Effects in the scene: sparks, smoke, beams, rings, debris, embers ----------
@@ -2705,7 +2556,7 @@ const Renderer3D = (() => {
         });
     }
 
-    function syncMissiles(gdt) {
+    function makeMissiles() {
         if (!missiles) {
             missiles = [['weapon-ammo-bullet', '#e0313b'], ['weapon-ammo-cannonball', '#3d7fe0']].map(([name, c]) => {
                 const parts = kit[name] || [];
@@ -2720,6 +2571,10 @@ const Renderer3D = (() => {
                 });
             });
         }
+    }
+
+    function syncMissiles(gdt) {
+        makeMissiles();
         const n = [0, 0];
         const q = new T3.Quaternion();
         const e = new T3.Euler();
@@ -3128,6 +2983,7 @@ const Renderer3D = (() => {
         const dt = Math.min(100, now - last);
         last = now;
         time += dt / 1000;
+        Units3D.uTime.value = time;
         trackQuality(dt);
         if (!inited || !cols) return;
         if (kitFailed) {
@@ -3271,8 +3127,9 @@ const Renderer3D = (() => {
         renderPortraits: () => { makePortraits(); return { towers: { ...portraits }, enemies: { ...enemyPortraits } }; },
         // How far each turret is from the game's aim, in radians (for tests)
         aimErrors: () => [...towerModels.entries()].filter(([, m]) => m.aim).map(([t, m]) => Math.abs(angDiff(m.yaw - (m.aim.f0 - t.angle)))),
-        get loadState() { return { ...load, failed: kitFailed, monsters: Object.keys(qt ? qt.monster : {}) }; },
-        get counts() { return { clones, frameMs: perf.lastFrameMs || 0, enemyModels: enemyModels.size, dying: dying.length, towers: towerModels.size, leaving: leaving.length, calls: gl ? gl.info.render.calls : 0, tris: gl ? gl.info.render.triangles : 0 }; }, resize: () => resize(false), mapChanged, frame, reveal, logicTime,
+        get loadState() { return { ...load, failed: kitFailed, monsters: load.towersReady ? Object.keys(Art.ENEMY_ART) : [] }; },
+        programs: () => gl ? gl.info.programs.length : 0,
+        get counts() { return { clones, frameMs: perf.lastFrameMs || 0, enemyModels: enemyState.size, dying: dying.length, towers: towerModels.size, leaving: leaving.length, calls: gl ? gl.info.render.calls : 0, tris: gl ? gl.info.render.triangles : 0 }; }, resize: () => resize(false), mapChanged, frame, reveal, logicTime,
         setQualityAuto: (v) => { qualityAuto = v; }, setZoom, togglePerf, toScreen,
         get hover() { return hover; },
         get zoom() { return zoom; },

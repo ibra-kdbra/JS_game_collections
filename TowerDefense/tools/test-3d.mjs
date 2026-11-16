@@ -3,8 +3,9 @@
  *
  * - it starts in 3D with no page errors, the map and towers are in within the time
  *   budget, and the model files stay under the size budget
- * - a battle: every enemy on the map has a model, killed ones play out and go, the
- *   skinned models are reused (not cloned per enemy), towers turn to their aim
+ * - a battle: every enemy on the map has a model, killed ones play out and go,
+ *   towers turn to their aim, and no shader is compiled mid-battle (each new one
+ *   is a stall: they are all built while loading)
  * - selling a tower takes its model away; a game restart leaves nothing behind
  * - draw calls and triangles stay under budget with 24 towers and 60 enemies
  * - if a model file fails, the game falls back to Flat for that visit, says why,
@@ -18,10 +19,10 @@ import { serve, launch } from './browser.mjs';
 
 const BUDGET = {
     readyMs: 20000,         // map and towers drawn (software WebGL is slow; real devices are far faster)
-    modelKB: 3200,          // every model file the 3D view loads
-    calls: 500,             // draw calls in a busy frame
+    modelKB: 900,           // every model file the 3D view loads
+    calls: 260,             // draw calls in a busy frame
     tris: 1200000,          // triangles in a busy frame
-    reuse: 4                // new skinned models for a second crowd like the first (the rest come from the pool)
+    programs: 0             // shaders compiled after loading
 };
 
 const failures = [];
@@ -62,6 +63,8 @@ async function open(query = 'switchback', block) {
     check(await page.evaluate(() => document.querySelector('.load3d') ? document.querySelector('.load3d').hidden : true), 'loading bar gone once ready');
 
     // ---- Battle ----
+    await page.waitForTimeout(800);
+    const progs0 = await page.evaluate(() => Renderer3D.programs());
     await page.evaluate(() => {
         closeOverlay('levels');
         godMode = true;
@@ -123,7 +126,7 @@ async function open(query = 'switchback', block) {
     await settled(() => enemies.length === 0 && Renderer3D.counts.enemyModels === 0 && Renderer3D.counts.dying === 0);
     const after = await page.evaluate(() => ({ ...Renderer3D.counts, alive: enemies.length }));
     check(after.alive === 0 && after.enemyModels === 0 && after.dying === 0, `killed enemies play out and go (${after.enemyModels} models, ${after.dying} dying left)`);
-    // The same crowd again: its models come from the pool
+    // A second crowd of every kind: still nothing new to compile
     await page.evaluate(() => {
         const names = Object.keys(enemy);
         for (let i = 0; i < 40; i++) {
@@ -133,10 +136,10 @@ async function open(query = 'switchback', block) {
         }
     });
     await settled(() => Renderer3D.counts.enemyModels >= enemies.length);
-    const again = await page.evaluate(() => Renderer3D.counts.clones);
-    check(again - after.clones <= BUDGET.reuse, `a second crowd reuses models: ${again - after.clones} new (budget ${BUDGET.reuse})`);
-    await page.evaluate(() => { enemies.length = 0; });
-    await settled(() => Renderer3D.counts.enemyModels === 0);
+    await page.evaluate(() => { enemies.forEach(e => { e.health = 0; }); });
+    await settled(() => enemies.length === 0 && Renderer3D.counts.dying === 0);
+    const progs1 = await page.evaluate(() => Renderer3D.programs());
+    check(progs1 - progs0 <= BUDGET.programs, `no shaders compiled mid-battle: ${progs1 - progs0} new (budget ${BUDGET.programs})`);
 
     // Towers turn towards their aim: give each a new angle (nothing to shoot now)
     // and check they have turned to it a second later

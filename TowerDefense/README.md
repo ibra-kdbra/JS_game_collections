@@ -62,19 +62,26 @@ draw calls.
 
 The default view is 3D: the map as a small lit diorama seen at an angle, like
 mobile tower defense games, drawn with WebGL (three.js) at the screen's real
-resolution. All models are CC0 (see `CREDITS.md`):
+resolution. The look aims at a strategy game rather than a cartoon: filmic tone
+mapping, light from a sky environment map that metal reflects, natural ground
+colours with world-space grain, and pines in deep greens.
 
-- Map: Kenney's *Tower Defense Kit* (`models/kenney-tower-defense/`): grass and
-  path tiles that follow the roads, build pads, trees and rocks on the walls. Its
-  palette is recoloured per map theme; Frost uses the kit's snow models.
-- Towers: Quaternius's steampunk turrets (`models/quaternius/turrets/`), one per
-  tower and upgrade, on a stone plinth, in the tower's colour. Guns turn to aim and
-  recoil; crystals and coils glow.
-- Enemies: Quaternius's animated monsters (`models/quaternius/monsters/`), picked
-  to match the flat view (Slime, Crab for the Beetle, Bat for the Dart, Ghost,
-  Mushroom for the Medic, Yeti for the Golem, Skeleton for the Racer, Cyclops for
-  the Tank, Dragon and Bee for the bosses). They walk, flash when hit and play
-  their death.
+- Map: Kenney's *Tower Defense Kit* (`models/kenney-tower-defense/`, CC0): grass
+  and path tiles that follow the roads, build pads, rocks and crystals. Its palette
+  is recoloured per map theme; Frost uses the kit's snow models. Rocks and flowers
+  from Quaternius (CC0); the pines are built in code.
+- Towers and enemies are built in code (`scripts/units3d.js`) to match the flat
+  view's art part for part: each tower's base shape and colour band, its turret
+  (twin barrels, rails, missile pods, mortar tubes, coils, fans), and each enemy
+  (the blob, the six-legged beetle, the dart and interceptor, the medic disc, the
+  two-legged walker, the rocket racer, the tank, and the two bosses). Painted
+  metal, steel, glass and glowing parts share one material that carries colour,
+  metalness, roughness, glow and wear per vertex.
+- Motion runs on the GPU: beetle and walker legs step in time with the ground they
+  cover, tank treads roll and the turret looks about, engine flames flicker and
+  stretch with speed, the boss's spike ring turns and pods pulse. Fliers hover and
+  bank into turns. A hit makes an enemy flinch and flash; slowed, poisoned and
+  healing enemies glow in that colour.
 - Effects: fireballs, smoke, shockwaves and a flash of light for explosions, a pop
   for each kill, beams and bolts. Damage numbers only show big hits.
 
@@ -85,9 +92,11 @@ sparks, smoke that rises from barrels and blasts, and blast rings on the ground.
 Explosions throw chunks of ground that tumble, bounce and settle, and embers that
 arc and fall. A killed monster flashes, plays its death, fades into the ground and
 leaves a burst of pieces in its colour with wisps rising; bosses burst bigger.
+Killed enemies topple (fliers drop out of the air) and burn away from their edges
+with a glowing rim.
 
-Shots leave from the barrels: each turret's barrel ends are measured from its
-model (one per barrel on twin guns and missile pods), so tracers, sniper and rail
+Shots leave from the barrels: each turret's model names its barrel ends (one per
+barrel on twin guns and missile pods), so tracers, sniper and rail
 shots, laser beams, mortar shells, missiles and the muzzle flash start there and
 follow the gun as it turns and recoils; lightning starts at the top of the coil.
 Towers are sized against the scenery: a little taller than a big monster and a
@@ -100,24 +109,22 @@ an upgrade pops with a gold ring, a sold tower sinks. Monsters grow out of the
 portals, walk at the pace that matches the ground they cover (slowed ones walk
 slowly), flinch when hit, and on death hop up and fall under gravity.
 
-Loading: the map and the towers come first (a "Loading 3D" bar shows over the
-map), then the monsters three at a time, the first waves' ones first; an enemy
-whose model is not in yet is drawn as a ball in its colour. Skinned monster
-models are reused from a pool instead of being made for every enemy.
-
-3D models: the Quaternius files were converted from FBX to GLB (faces grouped by
-material, so each part is one draw call) and all models are compressed with
-glTF-Transform (`optimize --compress meshopt --texture-compress webp`, keeping
-node names), about 1.7 MB in all; the game loads them with the meshopt decoder in
-`vendor/meshoptimizer/`. The build menu, the tower panel and the wave preview
+Performance: each enemy kind is one instanced draw however many are on the map,
+so late waves cost little more than early ones. Only the map is loaded from files
+(about 390 KB, compressed with glTF-Transform `optimize --compress meshopt
+--texture-compress webp` and read with the meshopt decoder in
+`vendor/meshoptimizer/`); a "Loading 3D" bar shows until it is in. Before the view
+shows, every shader the battle will use (all towers, all enemy kinds, explosions,
+missiles, shadows, bloom) is compiled once, so nothing stalls when a new enemy kind
+or effect first appears in a late wave. The build menu, the tower panel and the wave preview
 show pictures of the models from `models/portraits/`, made by
 `node TowerDefense/tools/make-portraits.mjs`.
 
 `node TowerDefense/tools/test-3d.mjs` (Playwright, software WebGL; runs in CI)
 checks that the game starts in 3D without errors, the load time and model size
-budgets, that every enemy gets a model and killed ones play out and go, that a
-second crowd reuses models, that turrets turn to their aim, that sold towers go,
-the draw call and triangle budgets with 24 towers and 60 enemies, and that a
+budgets, that every enemy gets a model and killed ones play out and go, that turrets turn to their aim, that sold towers go,
+the draw call and triangle budgets with 24 towers and 60 enemies, that no shader
+is compiled mid-battle, and that a
 model that fails to load falls back to Flat for that visit. Flat (in the menu) is the original top-down view, and the only one
 without WebGL. `scripts/renderer.js` passes the game's calls to the view in use.
 
