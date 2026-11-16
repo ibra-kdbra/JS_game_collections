@@ -37,7 +37,7 @@ export const games = [
     slug: 'tower-defense',
     title: 'Tower Defense Game',
     href: 'TowerDefense/index.html',
-    blurb: 'A tower defense game with many options built with p5.js, with a few enhancements, many modes, playgrounds provided.',
+    blurb: 'Hold the gate against 30-wave campaigns or endless waves on 18 maps with 7 upgradable towers and bosses, in a lit 3D view or the classic flat one.',
     genre: 'strategy',
     inputs: ['mouse', 'keyboard', 'touch'],
     mobile: true,

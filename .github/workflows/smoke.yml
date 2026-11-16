@@ -1,11 +1,21 @@
 name: Checks
 
+# Pull requests, and pushes to main. A branch with an open pull request runs once
+# per push (not once for the push and again for the PR). Run by hand from the
+# Actions tab for a branch without a PR.
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+# A newer push cancels the run still going for the same PR or branch
+concurrency:
+  group: checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   levels:
@@ -24,31 +34,56 @@ jobs:
         run: node Sokoban/tools/verify-levels.mjs
       - name: Breakout levels
         run: node Breakout/tools/verify-levels.mjs
-      - name: Snake
-        run: node Snake/tools/verify.mjs
       - name: Volt Flip courses
         run: node Volt_Flip/tools/verify.mjs
       - name: Minesweeper solver
         run: node Minesweeper/test/solver.test.mjs
       - name: Souls Bumper levels
         run: node Souls-Bumper/tools/verify-levels.mjs
-      - name: Gravity Wells puzzles
-        run: node Gravity_Wells/tools/verify-puzzles.mjs
       - name: Reef Keeper balance
         run: node Reef_Keeper/tools/verify.mjs
       - name: ReWire levels
         run: node ReWire/tools/verify-levels.mjs
+      - name: Insaniquarium levels
+        run: node Insaniquarium/tools/bot.mjs
+
+  # The slower level checks, alongside the job above
+  levels-slow:
+    name: Level checks (bots)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Raven levels
         run: node Raven/tools/verify-levels.mjs
       - name: Tower Defense campaign maps
         run: node TowerDefense/tools/verify-maps.mjs
-      - name: Insaniquarium levels
-        run: node Insaniquarium/tools/bot.mjs
+      - name: Gravity Wells puzzles
+        run: node Gravity_Wells/tools/verify-puzzles.mjs
+      - name: Snake
+        run: node Snake/tools/verify.mjs
 
-  smoke:
-    name: Browser smoke test
+  # Browser checks, each in its own job so they run at the same time
+  browser:
+    name: ${{ matrix.name }}
     # Playwright 1.56.1 has no Chromium build for ubuntu-latest (26.04); keep the runner it supports.
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Browser smoke test
+            run: node tools/smoke.mjs
+          - name: Tower Defense aiming during explosions (subtle shake)
+            run: node TowerDefense/tools/aim-test.mjs --scenario 1
+          - name: Tower Defense aiming during explosions (full shake)
+            run: node TowerDefense/tools/aim-test.mjs --scenario 2
+          - name: Tower Defense aiming during explosions (full shake, zoomed in)
+            run: node TowerDefense/tools/aim-test.mjs --scenario 3
+          - name: Tower Defense 3D view
+            run: node TowerDefense/tools/test-3d.mjs
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -58,9 +93,5 @@ jobs:
         run: |
           npm install --no-save --no-package-lock playwright@1.56.1
           npx playwright install --with-deps chromium
-      - name: Open every page at phone and desktop size
-        run: node tools/smoke.mjs
-      - name: Tower Defense aiming during explosions
-        run: node TowerDefense/tools/aim-test.mjs
-      - name: Tower Defense 3D view (loading, models, budgets, fallback)
-        run: node TowerDefense/tools/test-3d.mjs
+      - name: ${{ matrix.name }}
+        run: ${{ matrix.run }}
