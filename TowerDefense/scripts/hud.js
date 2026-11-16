@@ -1009,8 +1009,17 @@ $('shake-seg').addEventListener('click', e => {
 });
 // Switch between 3D and Flat (the menu's View setting, or the 3D/Flat button by the menu)
 function setGameView(v) {
-    Renderer.setView(v);
-    fitCanvas();
+    if (v === '3d' && Renderer.failed) {
+        toast(`3D could not load here (${Renderer.failed}). Reload the page to try again.`, 'error');
+        return;
+    }
+    try {
+        Renderer.setView(v);
+        fitCanvas();
+    } catch (err) {
+        console.error('View switch failed:', err);
+        toast(`Could not switch to ${v === 'flat' ? 'Flat' : '3D'}: ${err && err.message || err}`, 'error');
+    }
     try {
         savePrefs();
     } catch (err) { /* settings could not be saved here: the switch still holds for this visit */ }
@@ -1025,7 +1034,6 @@ function syncViewButton() {
     b.textContent = flat ? '2D' : '3D';
     b.setAttribute('aria-label', flat ? 'Flat view: switch to 3D' : '3D view: switch to Flat');
     b.title = flat ? 'Flat view (click for 3D)' : '3D view (click for Flat)';
-    b.disabled = flat && !!Renderer.failed;
 }
 $('view-seg').addEventListener('click', e => {
     const b = e.target.closest('[data-view]');
