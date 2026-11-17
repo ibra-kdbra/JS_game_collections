@@ -364,6 +364,30 @@ svg {
     }
 }
 
+/* Phones: the board fills the middle of the screen, so a hint there would hide
+   the very tiles it points at. Show it just under the HUD instead. */
+@media (max-width: 720px), (max-height: 500px) {
+    .toast {
+        top: calc(var(--hud-bottom, 60px) + 8px);
+        transform: translateX(-50%);
+        max-width: calc(100vw - 32px);
+        padding: 9px 16px;
+        font-size: 15px;
+    }
+
+    @keyframes toast-in {
+        from {
+            opacity: 0;
+            transform: translate(-50%, -6px);
+        }
+    }
+}
+
+/* Touch pad buttons a little more solid, so scenery under them doesn't show through. */
+.gk-touch {
+    --gk-glass: rgba(14, 15, 20, 0.86);
+}
+
 /* ---------- Buttons ---------- */
 
 .btn {
@@ -556,6 +580,11 @@ svg {
     padding: 16px;
     background: rgba(5, 6, 9, 0.7);
     animation: fade-in 200ms ease-out;
+}
+
+/* Levels opened from the win card: hide the card underneath so it can't show through. */
+#won:has(~ #levels:not([hidden])) {
+    visibility: hidden;
 }
 
 .overlay-soft {

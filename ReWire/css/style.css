@@ -746,6 +746,8 @@ body::after {
     max-width: 560px;
     padding: 10px 12px;
     backdrop-filter: none;
+    /* No blur here, so the panel itself hides the board behind the numbers. */
+    background: rgba(5, 8, 14, 0.95);
 }
 
 [data-layout="below"] #levelSelect h2,

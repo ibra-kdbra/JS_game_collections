@@ -700,8 +700,13 @@ kbd {
     padding: 8px 14px;
   }
 
+  /* Up to four tiles in a row; a two-tile result (level clear) fills the row instead of leaving empty cells. */
   .card--small .result {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  }
+
+  .card--title .tagline {
+    align-self: start;
   }
 
   .card--small {
@@ -710,6 +715,11 @@ kbd {
 
   .card--small .stack {
     grid-template-columns: 1fr 1fr;
+  }
+
+  /* Pause has three choices: one row of three, no orphan button. */
+  [data-screen='paused'] .card--small .stack {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -1301,9 +1311,16 @@ kbd {
   }
 
   .card--small .stars {
-    grid-template-columns: repeat(3, auto);
-    justify-content: start;
-    column-gap: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 16px;
+    row-gap: 4px;
+  }
+
+  .card--small .stars li {
+    gap: 6px;
+    font-size: 13px;
+    white-space: nowrap;
   }
 
   .story-lines p {

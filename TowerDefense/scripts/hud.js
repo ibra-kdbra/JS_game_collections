@@ -646,6 +646,22 @@ $('preview').addEventListener('click', e => {
     if (info) toast(`${info.title}: ${info.blurb}`, 'info');
 });
 
+// Narrow HUDs (phones held sideways): when big numbers no longer fit, drop the
+// wave total and tighten the pills instead of letting the last one be cut off.
+function fitStats() {
+    const key = `${String(wave).length}|${String(health).length}|${String(cash).length}|${innerWidth}`;
+    if (shown.fitKey === key) return;
+    shown.fitKey = key;
+    const el = document.querySelector('#hud .stats');
+    if (!el) return;
+    el.classList.remove('tight');
+    if (el.scrollWidth > el.clientWidth + 1) el.classList.add('tight');
+}
+addEventListener('resize', () => {
+    shown.fitKey = '';
+    fitStats();
+});
+
 function updateStatus() {
     const total = gameMode === 'campaign' ? campaignWaves.length : 0;
     setText('wave', String(wave));
@@ -653,6 +669,7 @@ function updateStatus() {
     setText('health', String(health));
     setText('cash', String(cash));
     $('lives-stat').classList.toggle('low', health <= maxHealth * 0.25);
+    fitStats();
 
     // Wave preview
     const small = compactView.matches;
