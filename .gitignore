@@ -4,7 +4,4 @@ source-material
 Bosco-3d
 non-materials
 node_modules/
-# Insaniquarium: made locally from the player's own copy of the game, never committed.
-Insaniquarium/assets/
-Insaniquarium/game.js
 __pycache__/

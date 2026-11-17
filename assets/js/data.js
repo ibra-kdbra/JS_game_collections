@@ -196,15 +196,6 @@ export const games = [
     mobile: true,
   },
   {
-    slug: 'reef-keeper',
-    title: 'Reef Keeper',
-    href: 'Reef_Keeper/index.html',
-    blurb: 'An aquarium game in the style of Insaniquarium: feed your fish, grab their coins, zap six kinds of alien and hatch ten pets. 100 levels, endless mode and a free tank.',
-    genre: 'strategy',
-    inputs: ['mouse', 'touch', 'keyboard'],
-    mobile: true,
-  },
-  {
     slug: 'breakout',
     title: 'Breakout',
     href: 'Breakout/index.html',

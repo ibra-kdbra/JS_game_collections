@@ -37,7 +37,7 @@
 
 ## Overview
 
-A collection of 22 browser games and 8 visual experiments, written in plain **JavaScript**,
+A collection of 21 browser games and 8 visual experiments, written in plain **JavaScript**,
 **HTML5** and **CSS3**: no framework and no build step. Every page is a static file you can
 open from any web server. Every game works on phones (touch controls, phone-sized
 layouts) as well as with a keyboard and mouse.
@@ -53,7 +53,6 @@ loaded from a CDN and the site works the same everywhere.
 | [Tower Defense](https://jsgamelab.ibrakdbra.me/TowerDefense/index.html) | Strategy | 30-wave campaigns and an endless mode on 18 maps, 7 towers that upgrade, bosses. Plays in a lit 3D view (models built in code to match the 2D art, animated on the GPU) or the classic flat view; a 3D/2D button switches. |
 | [Brainy Warrior 3D](https://jsgamelab.ibrakdbra.me/Brainy_Warrior/index.html) | Puzzle | Slide your warrior into every enemy without falling into the sea, and move the wizard to make your own walls. 34 levels on a 3D island, each with a solver-proven par. |
 | [Volt Flip](https://jsgamelab.ibrakdbra.me/Volt_Flip/index.html) | Arcade | A one-button runner: flip gravity between floor and ceiling. Endless mode plus a 25-level story campaign. |
-| [Reef Keeper](https://jsgamelab.ibrakdbra.me/Reef_Keeper/index.html) | Strategy | An aquarium money game: feed your fish, grab their coins, fight off aliens, hatch pets. 100 levels, endless mode and a free tank. |
 | [2048 with AI](https://jsgamelab.ibrakdbra.me/2048/index.html) | Puzzle | The tile-merging puzzle with a built-in AI player. |
 | [Crate Lab](https://jsgamelab.ibrakdbra.me/Sokoban/index.html) | Puzzle | Sokoban-style crate pushing across 40 original levels with solver-proven pars. |
 | [Minesweeper](https://jsgamelab.ibrakdbra.me/Minesweeper/index.html) | Puzzle | Every board solvable by logic, with a daily board, a puzzle ladder, hints and stats. |
@@ -72,10 +71,6 @@ loaded from a CDN and the site works the same everywhere.
 | [HuggersFight](https://jsgamelab.ibrakdbra.me/HuggersFight/index.html) | Action | Fight the empire's outposts on remote planets. |
 | [InterLaced](https://jsgamelab.ibrakdbra.me/InterLaced/index.html) | Strategy | A tactical network intrusion and sabotage simulator. |
 | [Wahdatio](https://jsgamelab.ibrakdbra.me/Wahdatio/index.html) | Strategy | A 3D strategy game about unity and connection. |
-
-The `Insaniquarium/` folder holds code only: a remaster that runs on the art and sounds from
-the player's own copy of the original game, built locally by its `tools/convert.py`. None of
-the game's files are in the repository, and it is not published on the site.
 
 [Back to top](#javascript-game-collection)
 
@@ -141,7 +136,7 @@ Every pull request and every push to `main` runs the checks in
 
 - **Level checks**: each puzzle and level game has a solver or bot that proves every level
   can be won (Brainy Warrior, Crate Lab, Breakout, Snake, Volt Flip, Minesweeper, Souls Bumper,
-  Gravity Wells, Reef Keeper, ReWire, Raven, Tower Defense maps, Insaniquarium), and the hub
+  Gravity Wells, ReWire, Raven, Tower Defense maps), and the hub
   pages must match `data.js`.
 - **Browser smoke test**: `node tools/smoke.mjs` opens every page at phone and desktop size in
   Chromium and fails on any script error or missing file.
