@@ -97,8 +97,8 @@ let add = (game, canvas) => {
         left = viewportOffset.left;
         top = viewportOffset.top;
         adjust = game.canvas.zoom / resizeSystem.ratio();
-        pointerX = e.changedTouches[0].clientX / adjust;
-        pointerY = e.changedTouches[0].clientY / adjust;
+        pointerX = (e.changedTouches[0].clientX - left) / adjust;
+        pointerY = (e.changedTouches[0].clientY - top) / adjust;
         handlePointerUp(pointerX, pointerY);
     });
 

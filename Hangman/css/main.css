@@ -1656,7 +1656,8 @@ button {
 		height: auto;
 		max-height: calc(100dvh - 24px);
 		padding: 20px 16px;
-		overflow: auto;
+		/* The menu fits; an open category list may hang below the card */
+		overflow: visible;
 	}
 
 	/* The keyboard sizes itself; keys are 40px+ tall and as wide as fit */
@@ -1790,5 +1791,29 @@ button {
 	canvas {
 		margin-top: -12%;
 		margin-right: 34%;
+	}
+}
+
+/* Touch: the "Swipe Left" hint stays readable and the hand sits under the words
+   instead of on top of them; HUD numbers stay legible over the moon */
+@media (pointer: coarse) {
+	body.swipe::before {
+		opacity: 0.85;
+		color: #fff;
+		filter: none;
+		text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9), 0 0 10px rgba(176, 102, 211, 0.8);
+	}
+	body.swipe::after {
+		margin-top: 1.9rem;
+	}
+}
+.score-container span {
+	text-shadow: 0 1px 3px rgba(17, 3, 32, 0.95);
+}
+@media (pointer: coarse) and (max-width: 480px) and (max-height: 700px) {
+	/* Short portrait phones: the word row sits near 60%, so the hint goes higher */
+	body.swipe::before,
+	body.swipe::after {
+		top: 44%;
 	}
 }

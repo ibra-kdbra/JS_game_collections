@@ -955,3 +955,42 @@ dialog[open] .star.on:nth-child(2) {
     transition: none !important;
   }
 }
+
+/* ---------- Touch: keep the board clear of messages and the replay bar ---------- */
+
+/* Toasts drop in over the header instead of covering the board. */
+.gk-has-touch .toast {
+  top: max(10px, env(safe-area-inset-top));
+  bottom: auto;
+  translate: -50% -12px;
+}
+
+.gk-has-touch .toast.show {
+  translate: -50% 0;
+}
+
+/* During a replay the d-pad has nothing to do, so the bar sits over it. */
+.gk-has-touch .replay-bar {
+  position: fixed;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 2147482001;
+}
+
+@media (orientation: landscape) and (max-height: 560px) {
+  .gk-has-touch .replay-bar {
+    top: max(8px, env(safe-area-inset-top));
+    bottom: auto;
+  }
+}
+
+/* Narrow phones: long level names wrap instead of being cut off. */
+@media (max-width: 400px) {
+  .level-title {
+    white-space: normal;
+    line-height: 1.02;
+  }
+
+  .eyebrow {
+    letter-spacing: 0.08em;
+  }
+}

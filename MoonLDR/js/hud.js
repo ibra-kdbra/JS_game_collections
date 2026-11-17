@@ -122,7 +122,8 @@ function drawMultipliers() {
     hudContext.fillStyle = multiplierFontColor;
 
     let fontSize = multiplierFontSize * Math.min(1.2, Math.max(0.85, viewScale));
-    if(isZoomed) fontSize *= zoom;
+    // Zoomed labels grow with the world, but stay a size that fits a phone screen.
+    if(isZoomed) fontSize = Math.min(fontSize * zoom, Math.max(24, hudWidth / 14));
     hudContext.font = "Normal " + fontSize + "px 'Courier New', monospace";
     for(let i = 0; i < scoreMultipliers.length; i++) {
         let mul = scoreMultipliers[i];
@@ -134,6 +135,8 @@ function drawMultipliers() {
         // Labels sit under their pad, or above it when the pad is at the bottom edge.
         let labelY = hudPoint[1] + fontSize;
         if(labelY > hudHeight - 2) labelY = hudPoint[1] - fontSize * 0.4;
+        // Never write over the readouts along the top edge.
+        if(labelY - fontSize < infoLineY(3) + 6) continue;
         hudContext.fillText("X" + mul, hudPoint[0], labelY);
     }
 }

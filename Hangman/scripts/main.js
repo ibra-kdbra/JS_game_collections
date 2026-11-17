@@ -683,6 +683,16 @@ const toggleMenuList = (name) => {
 	let list = document.querySelector(`.${name}-list .list`);
 	list.classList.toggle("closed-list");
 	list.classList.toggle("opened-list");
+	if (list.classList.contains("opened-list")) {
+		// Keep the open list inside the screen; on short phones it scrolls instead.
+		list.style.maxHeight = "";
+		const room = Math.floor(innerHeight - list.parentElement.getBoundingClientRect().bottom - 8);
+		if (room < list.offsetHeight) list.style.maxHeight = `${Math.max(room, 88)}px`;
+	}
+};
+const closeMenuList = (name) => {
+	const list = document.querySelector(`.${name}-list .list`);
+	if (list.classList.contains("opened-list")) toggleMenuList(name);
 };
 let catButton = document.querySelector(".category-button");
 let diffButton = document.querySelector(".difficulty-button");
@@ -751,20 +761,20 @@ bonusButton.addEventListener("click", () => {
 catButton.addEventListener("click", () => {
 	toggleMenuList("category");
 });
-catButton.addEventListener("focusout", () => {
-	let catList = catButton.nextElementSibling;
-	if (catList.classList.contains("opened-list")) {
-		toggleMenuList("category");
-	}
+catButton.addEventListener("focusout", (e) => {
+	if (e.relatedTarget) closeMenuList("category");
 });
 diffButton.addEventListener("click", () => {
 	toggleMenuList("difficulty");
 });
-diffButton.addEventListener("focusout", () => {
-	let diffList = diffButton.nextElementSibling;
-	if (diffList.classList.contains("opened-list")) {
-		toggleMenuList("difficulty");
-	}
+diffButton.addEventListener("focusout", (e) => {
+	if (e.relatedTarget) closeMenuList("difficulty");
+});
+// A press anywhere outside an open list closes it. Items are picked on click, so a
+// finger can scroll a long list without choosing whatever it first touched.
+document.addEventListener("pointerdown", (e) => {
+	if (!e.target.closest(".category-list")) closeMenuList("category");
+	if (!e.target.closest(".difficulty-list")) closeMenuList("difficulty");
 });
 const goHome = () => {
 	nextButtonTl.pause().progress(0);
@@ -788,19 +798,21 @@ const catList = document.querySelector(".category-list .list");
 CATEGORIES.forEach((cat) => {
 	const li = document.createElement("li");
 	li.innerText = cat.label;
-	li.addEventListener("pointerdown", () => {
+	li.addEventListener("click", () => {
 		category = cat.id;
 		store.set("category", category);
 		catButton.innerText = cat.label;
+		closeMenuList("category");
 	});
 	catList.append(li);
 });
 let diffItems = document.querySelectorAll(".difficulty-list li");
 diffItems.forEach((li) => {
-	li.addEventListener("pointerdown", () => {
+	li.addEventListener("click", () => {
 		diffButton.innerText = li.innerText;
 		difficulty = li.innerText.toLowerCase();
 		store.set("difficulty", difficulty);
+		closeMenuList("difficulty");
 	});
 });
 catButton.innerText = categoryLabel(category);
