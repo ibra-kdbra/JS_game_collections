@@ -1011,3 +1011,10 @@ kbd {
     min-height: 44px;
   }
 }
+
+/* Touch-only screens have no keyboard: drop the key hints on buttons. */
+@media (hover: none) and (pointer: coarse) {
+  .btn kbd {
+    display: none;
+  }
+}

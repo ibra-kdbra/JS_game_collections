@@ -312,7 +312,16 @@ p {
   background: #000;
   color: #fff;
   font: 400 26px 'Audiowide', sans-serif;
+  white-space: nowrap;
   cursor: pointer;
+}
+
+/* Narrow phones: NEXT ROUND stays on one line. */
+@media (max-width: 360px) {
+  .big-btn {
+    padding-inline: 20px;
+    font-size: 22px;
+  }
 }
 
 .big-btn:hover,
@@ -379,6 +388,14 @@ body.live .stage {
   .gk-has-touch body.live .stage {
     padding-left: calc(186px + max(16px, env(safe-area-inset-left)));
     padding-right: calc(96px + max(16px, env(safe-area-inset-right)));
+  }
+
+  /* The pause panel stays between the pad and Boost too. */
+  .gk-has-touch body.live .panel {
+    left: calc(186px + max(16px, env(safe-area-inset-left)));
+    right: calc(96px + max(16px, env(safe-area-inset-right)));
+    width: auto;
+    max-width: 640px;
   }
 
   .top {

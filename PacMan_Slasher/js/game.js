@@ -103,6 +103,7 @@ let engine = (function (){
 
   let player = {}, enemies = [], enemyPositions = [];
 
+  let backing = 1, landscape = false;
   let realWidth  = canvasM.scrollWidth;
   let realHeight = canvasM.scrollHeight;
 
@@ -223,7 +224,7 @@ let engine = (function (){
       }
       x = 0; y += tileYsize*map.scale;
     }
-    if (!map.orient){ ctxM.setTransform(1,0,0,1,0,0); }
+    if (!map.orient){ ctxM.setTransform(backing,0,0,backing,0,0); }
   }
 
   // Symbols are drawn this far (map units) above a Pac-Man.
@@ -245,12 +246,19 @@ let engine = (function (){
       let pixelRatio = window.devicePixelRatio;
       let i;
 
+      // Back the canvases with whole device pixels so the pixel art stays sharp on
+      // high-DPI screens; drawing code keeps working in CSS pixels.
+      backing = Math.min(3, Math.max(1, Math.ceil(pixelRatio - 0.01)));
       for (i=0; i<canvasArray.length; i++){
-        canvasArray[i].width  = realWidth;
-        canvasArray[i].height = realHeight;
+        canvasArray[i].width  = realWidth*backing;
+        canvasArray[i].height = realHeight*backing;
+        let g = canvasArray[i].getContext('2d');
+        g.setTransform(backing, 0, 0, backing, 0, 0);
+        g.imageSmoothingEnabled = false;
       }
 
-      map.scale = pixelRatio + Math.floor(realWidth/1000);
+      // Whole CSS pixels per map unit: fractional ratios (2.625, 1.75...) smear the pixel art.
+      map.scale = Math.round(pixelRatio) + Math.floor(realWidth/1000);
       if (map.scale < 2){ map.scale = 2;}
 
       // Keep the maze, and the symbols above Pac-Men on its top row, below the HUD
@@ -285,10 +293,14 @@ let engine = (function (){
     }
   }
 
+  // Turn the maze a quarter when the screen flips between portrait and landscape.
+  // Safe to call on every resize: it only acts when the orientation really changed.
   function rotate(){
     realWidth  = canvasM.scrollWidth;
     realHeight = canvasM.scrollHeight;
-    if (isActive){
+    let nowLandscape = realWidth > realHeight;
+    if (isActive && realWidth && realHeight && nowLandscape != landscape){
+      landscape = nowLandscape;
       let i;
       i = map.width; map.width = map.height; map.height = i;
       map.orient ^= 1;
@@ -676,7 +688,8 @@ let engine = (function (){
     let pixelRatio = window.devicePixelRatio;
 
     map.orient = 1;
-    map.scale = pixelRatio + Math.floor(realWidth/1000);
+    landscape = realWidth > realHeight;
+    map.scale = Math.round(pixelRatio) + Math.floor(realWidth/1000);
     if (pixelRatio == 3 && realWidth > realHeight){ map.scale--; }
     if (map.scale < 2){ map.scale = 2;}
 
@@ -825,14 +838,12 @@ function scheduleResize(){
   if (resizeFrame){ return; }
   resizeFrame = requestAnimationFrame(() => {
     resizeFrame = 0;
+    engine.onrotate();
     engine.onresize();
   });
 }
 // Some browsers report the new size before the orientation change: lay out again after it.
-window.addEventListener("orientationchange", () => {
-  engine.onrotate();
-  scheduleResize();
-});
+window.addEventListener("orientationchange", scheduleResize);
 window.addEventListener("resize", scheduleResize);
 
 document.addEventListener("visibilitychange", () => {

@@ -1,7 +1,7 @@
 import { initShell } from '../../assets/kit/shell.js';
 import { createStore, recordBest } from '../../assets/kit/storage.js';
 import { createLoop } from '../../assets/kit/loop.js';
-import { createTouchControls, onSwipe, isTouchFirst } from '../../assets/kit/input.js';
+import { createTouchControls, isTouchFirst } from '../../assets/kit/input.js';
 import { Round } from './round.js';
 import { ARENAS } from './board.js';
 import { View } from './view.js';
@@ -375,7 +375,33 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-onSwipe(stage, (dir) => steer({ up: 'N', right: 'E', down: 'S', left: 'W' }[dir]), { preventScroll: false });
+// Swipes steer as soon as the finger has travelled far enough, not when it lifts:
+// at full speed a cycle covers several cells during a swipe. The stroke then
+// re-anchors, so one L-shaped stroke makes two turns.
+const SWIPE_PX = 24;
+let swipe = null;
+stage.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'mouse' || e.target.closest('button, a, .panel')) return;
+  swipe = { id: e.pointerId, x: e.clientX, y: e.clientY };
+});
+function swipeTo(e) {
+  if (!swipe || e.pointerId !== swipe.id) return;
+  const dx = e.clientX - swipe.x;
+  const dy = e.clientY - swipe.y;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < SWIPE_PX) return;
+  steer(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'E' : 'W') : dy > 0 ? 'S' : 'N');
+  swipe.x = e.clientX;
+  swipe.y = e.clientY;
+}
+stage.addEventListener('pointermove', swipeTo);
+// A quick flick can end before its moves are delivered: finish it on release.
+const endSwipe = (e) => {
+  if (!swipe || e.pointerId !== swipe.id) return;
+  if (e.type === 'pointerup') swipeTo(e);
+  swipe = null;
+};
+stage.addEventListener('pointerup', endSwipe);
+stage.addEventListener('pointercancel', endSwipe);
 
 $('#start').addEventListener('click', startMatch);
 $('#resume').addEventListener('click', resume);
