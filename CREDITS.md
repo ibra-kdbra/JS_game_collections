@@ -30,9 +30,7 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | Tower Defense map editor (`td-editor/`) | [selenebun/td-editor](https://github.com/selenebun/td-editor) | selenebun | **unknown** (the repository has no detected licence); `td-editor/LICENSE` here names only ibra-kdbra |
 | Tron | [momajd/Tron](https://github.com/momajd/Tron) (the original DOM version; the arena, AI and soundtrack were rewritten here) | momajd | **unknown** (no licence file found) |
 | Wahdatio | [monsterkodi/konnekt](https://github.com/monsterkodi/konnekt) (CoffeeScript sources in `Wahdatio/src/`) | monsterkodi | Unlicense |
-| Breakout, Snake, Minesweeper, Crate Lab, Reef Keeper, Volt Flip | Written for this collection (Reef Keeper's genre comes from PopCap's 2001 *Insaniquarium*; its sprites are credited below, the rest of its art, music and sounds are original) | ibra-kdbra | MIT |
-| Reef Keeper sprites: guppies, carnivore, coins, diamond, jellyfish, first tank (`Reef_Keeper/sprites/`) | [Fish Set](https://opengameart.org/content/fish-set) | Andrew Tidey | CC0 |
-| Reef Keeper sprites: breeder, muncher, leviathan (`Reef_Keeper/sprites/fish-*.webp`) | [Cartoon fish](https://opengameart.org/content/cartoon-fish) | Robert Brooks, [Game Developer Studio](https://www.gamedeveloperstudio.com) | CC-BY 3.0 |
+| Breakout, Snake, Minesweeper, Crate Lab, Volt Flip | Written for this collection | ibra-kdbra | MIT |
 
 ## Art Lab
 
@@ -112,5 +110,5 @@ its licence file.
 | `ARCADE_R.TTF` ("Arcade" font) | `PacMan/font/`: licence **unknown**; the upstream author removed an earlier copy of this font over its licence |
 | Clear Sans (Intel) | `2048/style/fonts/`: Apache 2.0 |
 | Source Code Pro (Adobe) | `TowerDefense/fonts/`, `td-editor/fonts/` (no licence file shipped) |
-| Balsamiq Sans, Luckiest Guy | `Hangman/fonts/`, `Reef_Keeper/fonts/` |
+| Balsamiq Sans, Luckiest Guy | `Hangman/fonts/` |
 | `Art_Lab/Adaptive/font.otf` | **unknown** |
