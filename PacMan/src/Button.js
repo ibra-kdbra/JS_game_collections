@@ -18,8 +18,8 @@ var getPointerPos = function(evt) {
     mouseY /= (renderScale / ratio);
 
     // offset
-    mouseX -= mapMargin;
-    mouseY -= mapMargin;
+    mouseX -= mapMarginX;
+    mouseY -= mapMarginTop;
 
     return { x: mouseX, y: mouseY };
 };

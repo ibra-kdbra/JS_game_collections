@@ -355,7 +355,9 @@ const loop = (now) => {
 		);
 		context.restore();
 	}
-	animateRope();
+	// Schedule the next frame directly: going through animateRope() would reset the
+	// fixed-step clock every frame and the rope would never simulate.
+	requestId = requestAnimationFrame(loop);
 };
 // Animation...
 const animateRope = () => {

@@ -85,6 +85,8 @@ function layout() {
         }
     }
     world.setInsets({ top: hud.bottom + 6, bottom, left, right });
+    // Phones show toasts just under the HUD, clear of the board.
+    document.documentElement.style.setProperty('--hud-bottom', `${Math.round(hud.bottom)}px`);
 }
 let layoutFrame = 0;
 addEventListener('resize', () => {

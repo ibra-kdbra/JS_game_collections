@@ -44,6 +44,7 @@ let mainCanvas=0, mainContext=0, mainCanvasSize=vec2();
 let engineObjects=[], engineCollideObjects=[];
 let frame=0, time=0, realTime=0, paused=0, frameTimeLastMS=0, frameTimeBufferMS=0, debugFPS=0;
 let cameraPos=vec2(), cameraScale=4*max(defaultTileSize.x, defaultTileSize.y);
+let pixelRatio=1; // canvas pixels per CSS pixel
 let tileImageSize, tileImageSizeInverse, shrinkTilesX, shrinkTilesY, drawCount;
 
 const tileImage = new Image(); // the tile image used by everything
@@ -138,9 +139,15 @@ function engineInit(appInit, appUpdate, appUpdatePost, appRender, appRenderPost)
         }
         else
         {
-            // fill the window
-            mainCanvas.width = min(innerWidth, maxWidth);
-            mainCanvas.height = min(innerHeight, maxHeight);
+            // fill the window, at up to 2 device pixels per CSS pixel so text and
+            // edges stay sharp on high density screens
+            pixelRatio = min(devicePixelRatio || 1, 2);
+            const cssWidth = min(innerWidth, maxWidth), cssHeight = min(innerHeight, maxHeight);
+            mainCanvas.width = Math.round(cssWidth * pixelRatio);
+            mainCanvas.height = Math.round(cssHeight * pixelRatio);
+            if (mainCanvas.style.width != cssWidth + 'px' || mainCanvas.style.height != cssHeight + 'px')
+                for (const c of [mainCanvas, glOverlay && glCanvas])
+                    c && (c.style.width = cssWidth + 'px', c.style.height = cssHeight + 'px');
         }
 
         // save canvas size

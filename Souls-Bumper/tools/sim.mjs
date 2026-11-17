@@ -18,6 +18,7 @@ const noop = () => {};
 const ctx2d = {};
 for (const k of ["arc", "beginPath", "clearRect", "clip", "drawImage", "fill", "fillRect", "fillText", "rect",
   "restore", "rotate", "save", "scale", "setTransform", "strokeRect", "translate"]) ctx2d[k] = noop;
+ctx2d.measureText = () => ({ width: 0 });
 const element = () => ({
   style: {}, classList: { add: noop, toggle: noop, remove: noop }, addEventListener: noop,
   setAttribute: noop, append: noop, prepend: noop, getContext: () => ctx2d, textContent: "", innerText: "",

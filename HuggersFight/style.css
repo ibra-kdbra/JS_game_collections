@@ -148,6 +148,8 @@ kbd {
 .gk-touch .gk-btn {
     width: 62px;
     height: 62px;
+    padding: 0;
+    font-size: 14px;
 }
 
 .gk-touch .gk-btn--small {

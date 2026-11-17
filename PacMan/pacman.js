@@ -3051,14 +3051,17 @@ var renderer;
 
 var renderScale;
 
-var mapMargin = 4*tileSize; // margin between the map and the screen
+var mapMargin = 4*tileSize; // margin between the map and the bottom of the screen (holds the MENU button)
+// The top and side margins hold nothing, so they stay thin: the maze gets the room on a phone.
+var mapMarginTop = tileSize;
+var mapMarginX = tileSize/2;
 var mapPad = tileSize/8; // padding between the map and its clipping
 
 var mapWidth = 28*tileSize+mapPad*2;
 var mapHeight = 36*tileSize+mapPad*2;
 
-var screenWidth = mapWidth+mapMargin*2;
-var screenHeight = mapHeight+mapMargin*2;
+var screenWidth = mapWidth+mapMarginX*2;
+var screenHeight = mapHeight+mapMarginTop+mapMargin;
 
 // all rendering will be shown on this canvas
 var canvas;
@@ -3070,10 +3073,10 @@ var switchRenderer = function(i) {
 };
 
 var getDevicePixelRatio = function() {
-    // Draw at one canvas pixel per CSS pixel. Matching high-density screens looks a
-    // little sharper but quadruples the fill cost (measured: main-thread time per
-    // frame nearly doubles on a throttled phone), so the browser scales it instead.
-    return 1;
+    // Match high-density screens up to 2x: at one canvas pixel per CSS pixel the
+    // browser stretches the frame and the maze and text turn soft on phones.
+    // Beyond 2x the extra fill cost buys little visible sharpness.
+    return Math.min(2, window.devicePixelRatio || 1);
 };
 
 var initRenderer = function(){
@@ -3280,12 +3283,12 @@ var initRenderer = function(){
 
             // clear margin area
             ctx.fillStyle = "#000";
-            (function(w,h,p){
-                ctx.fillRect(0,0,w,p+1);
-                ctx.fillRect(0,p,p,h-2*p);
-                ctx.fillRect(w-p-2,p,p+2,h-2*p);
+            (function(w,h,p,px,pt){
+                ctx.fillRect(0,0,w,pt+1);
+                ctx.fillRect(0,pt,px,h-pt-p);
+                ctx.fillRect(w-px-2,pt,px+2,h-pt-p);
                 ctx.fillRect(0,h-p-2,w,p+2);
-            })(screenWidth, screenHeight, mapMargin);
+            })(screenWidth, screenHeight, mapMargin, mapMarginX, mapMarginTop);
 
             // draw fps
             if (DEBUG) {
@@ -3297,7 +3300,7 @@ var initRenderer = function(){
             }
 
             // translate to map space
-            ctx.translate(mapMargin+mapPad, mapMargin+mapPad);
+            ctx.translate(mapMarginX+mapPad, mapMarginTop+mapPad);
         },
 
         endFrame: function() {
@@ -4298,8 +4301,8 @@ var getPointerPos = function(evt) {
     mouseY /= (renderScale / ratio);
 
     // offset
-    mouseX -= mapMargin;
-    mouseY -= mapMargin;
+    mouseX -= mapMarginX;
+    mouseY -= mapMarginTop;
 
     return { x: mouseX, y: mouseY };
 };

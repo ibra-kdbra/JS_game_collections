@@ -348,6 +348,9 @@ function drawStars()
             color = (new Color).setHSLA(randSeeded(), randSeeded(), randSeeded(1,.5)).add(levelSkyColor.scale(.5)).clamp();
         }
         
+        // star sizes and speeds are in CSS pixels
+        size *= pixelRatio;
+        speed *= pixelRatio;
         const w = mainCanvas.width+400, h = mainCanvas.height+400;
         const screenPos = vec2(
             (randSeeded(w)+time*speed)%w-200,
@@ -357,7 +360,7 @@ function drawStars()
         {
             // drawing stars with gl wont work in low graphics mode, just draw rects
             mainContext.fillStyle = color.rgba();
-            if (size < 9)
+            if (size < 9 * pixelRatio)
                 mainContext.fillRect(screenPos.x, screenPos.y, size, size);
             else
                 mainContext.beginPath(mainContext.fill(mainContext.arc(screenPos.x, screenPos.y, size, 0, 9)));
@@ -427,10 +430,12 @@ function updateParallaxLayers()
         const distance = 4+i;
         const parallax = vec2(150,30).scale((i*i+1));
         const cameraDeltaFromCenter = cameraPos.subtract(levelSize.scale(.5)).divide(levelSize.scale(-.5).divide(parallax));
-        tileParallaxLayer.scale = vec2(distance/cameraScale);
+        // the layers are sized in CSS pixels
+        const scale = pixelRatio/cameraScale;
+        tileParallaxLayer.scale = vec2(distance*scale);
         tileParallaxLayer.pos = cameraPos
             .subtract(tileParallaxLayer.size.multiply(tileParallaxLayer.scale).scale(.5))
-            .add(cameraDeltaFromCenter.scale(1/cameraScale))
-            .subtract(vec2(0,150/cameraScale))
+            .add(cameraDeltaFromCenter.scale(scale))
+            .subtract(vec2(0,150*scale))
     });
 }

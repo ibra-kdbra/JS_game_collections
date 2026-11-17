@@ -185,7 +185,7 @@ var settings = {
   Buttons: 0,
   Sound: 0,
   Volume: 100,
-  Block: 0,
+  Block: 5,
   Ghost: 0,
   Grid: 0,
   Outline: 0,
@@ -193,7 +193,7 @@ var settings = {
 };
 
 var setting = {
-  Theme: ['Water Drop', 'Cyberpunk', 'Neon', 'Matrix', 'Retro'],
+  Theme: ['Rain', 'Obsidian', 'Aurora', 'Synthwave', 'Code Rain'],
   DAS: range(0, 31),
   ARR: range(0, 11),
   Gravity: (function() {
@@ -215,7 +215,7 @@ var setting = {
   Buttons: ['On', 'Off'],
   Sound: ['Off', 'On'],
   Volume: range(0, 101),
-  Block: ['Shaded', 'Solid', 'Glossy', 'Arika', 'World'],
+  Block: ['Shaded', 'Solid', 'Glossy', 'Arika', 'World', 'Modern'],
   Ghost: ['Normal', 'Colored', 'Off'],
   Grid: ['Off', 'On'],
   Outline: ['Off', 'On'],
@@ -334,50 +334,7 @@ function resize() {
   if (document.documentElement.classList.contains('tt-touch')) {
     layoutTouch(a, b, c, d, dpr, px);
   } else {
-    var narrow = window.innerWidth < 700;
-    var top = 12;
-    var bottom = 12;
-    var availW = window.innerWidth - 16;
-    var availH = window.innerHeight - top - bottom;
-
-    // Side panels are 4 cells wide, scaled down on narrow screens.
-    var sideScale = narrow ? 0.6 : 1;
-    var cssCell = Math.min(availH / 20, availW / (10 + 8 * sideScale + 0.5));
-    cssCell = Math.max(Math.floor(capCellSize(cssCell)), 8);
-    cellSize = Math.round(cssCell * dpr);
-
-    var boardW = cssCell * 10;
-    var boardH = cssCell * 20;
-    var sideW = Math.round(cssCell * 4 * sideScale);
-    sizeBoard(b, boardW, boardH, px);
-
-    holdCanvas.width = cellSize * 4;
-    holdCanvas.height = cellSize * 2;
-    holdCanvas.style.width = px(sideW);
-    holdCanvas.style.height = px(sideW / 2);
-    a.style.width = px(sideW);
-    a.style.height = px(sideW / 2);
-    d.style.width = px(sideW);
-    d.style.height = px(boardH);
-
-    previewCanvas.width = cellSize * 4;
-    previewCanvas.height = cellSize * 20;
-    previewCanvas.style.width = px(sideW);
-    previewCanvas.style.height = px(Math.round(boardH * sideScale));
-    c.style.width = px(sideW);
-    c.style.height = px(boardH);
-
-    var content = document.getElementById('content');
-    content.style.marginTop = px(top);
-    content.style.marginBottom = px(bottom);
-
-    // Scale the text with the playfield.
-    stats.style.fontSize = Math.max(~~((sideW / 4) * (narrow ? 0.9 : 0.68)), 9) + 'px';
-    stats.style.width = px(sideW);
-    document.documentElement.style.fontSize = Math.max(~~(boardW / 16), 12) + 'px';
-    for (var i = 0, len = h3.length; i < len; i++) {
-      h3[i].style.fontSize = Math.max(~~(sideW / 5), 10) + 'px';
-    }
+    layoutDesktop(a, b, c, d, dpr, px);
   }
 
   // Redraw graphics
@@ -396,6 +353,66 @@ function resize() {
     piece.drawGhost();
     piece.draw();
   }
+}
+
+/**
+ * Keyboard and mouse layout: the board in the middle, a column of cards on each
+ * side (Hold and the stats on the left, Next on the right). The cards are sized
+ * in cells, with room around the pieces so the I piece never touches an edge.
+ */
+function layoutDesktop(a, b, c, d, dpr, px) {
+  var narrow = window.innerWidth < 760;
+  var margin = Math.max(10, Math.min(28, Math.round(window.innerHeight * 0.025)));
+  var availW = window.innerWidth - margin * 2;
+  var availH = window.innerHeight - margin * 2;
+  var sideCells = narrow ? 3.4 : 4.8;
+  var gapCells = narrow ? 0.3 : 0.5;
+  var cssCell = Math.min(availH / 20, availW / (10 + sideCells * 2 + gapCells * 2));
+  cssCell = Math.max(Math.floor(capCellSize(cssCell)), 8);
+  cellSize = Math.round(cssCell * dpr);
+
+  var boardW = cssCell * 10;
+  var boardH = cssCell * 20;
+  var sideW = Math.round(cssCell * sideCells);
+  var gap = Math.round(cssCell * gapCells);
+  var pad = Math.max(8, Math.round(cssCell * 0.4));
+  var inner = sideW - pad * 2;
+  sizeBoard(b, boardW, boardH, px);
+
+  var root = document.documentElement;
+  root.style.setProperty('--card-pad', px(pad));
+  root.style.setProperty('--gap', px(gap));
+  root.style.setProperty('--side-w', px(sideW));
+  root.style.setProperty('--board-h', px(boardH));
+
+  holdCanvas.width = cellSize * 4;
+  holdCanvas.height = cellSize * 2;
+  holdCanvas.style.width = px(inner);
+  holdCanvas.style.height = px(inner / 2);
+  a.style.width = px(inner);
+  a.style.height = px(inner / 2);
+  d.style.width = px(sideW);
+  d.style.height = px(boardH);
+
+  // The queue keeps its 1:5 shape; it shrinks if the card is too short for it
+  var headH = Math.round(Math.max(18, sideW / 4.5) * 1.6);
+  var qH = Math.min(inner * 5, boardH - headH - pad * 2);
+  previewCanvas.width = cellSize * 4;
+  previewCanvas.height = cellSize * 20;
+  previewCanvas.style.width = px(qH / 5);
+  previewCanvas.style.height = px(qH);
+  c.style.width = px(sideW);
+  c.style.height = px(boardH);
+
+  var content = document.getElementById('content');
+  content.style.marginTop = '';
+  content.style.marginBottom = '';
+
+  // Text follows the board size
+  root.style.fontSize = Math.min(Math.max(Math.round(boardH / 38), 13), 22) + 'px';
+  stats.style.fontSize = '';
+  stats.style.width = '';
+  for (var i = 0, len = h3.length; i < len; i++) h3[i].style.fontSize = '';
 }
 
 /** Applies the Size setting (Auto, Small, Medium, Large) to a cell size. */
@@ -455,8 +472,9 @@ function layoutTouch(a, b, c, d, dpr, px) {
   var strip = false;
   var stripH = 60;
   var cell, side, row, availW, availH;
+  // Side panels grow with the board (tablets get room for a readable queue)
   var sideFor = function(cell) {
-    return Math.min(Math.max(Math.round(cell * 2.6), 56), 84);
+    return Math.min(Math.max(Math.round(cell * 2.8), 56), 128);
   };
   var fit = function(w, h) {
     var c = h / 20;
@@ -469,7 +487,9 @@ function layoutTouch(a, b, c, d, dpr, px) {
     availW = vw - pad * 2;
     availH = vh - pad * 2 - (buttons ? row * 2 + gap * 2 : 0);
     cell = fit(availW, availH);
-    var cellStrip = Math.min((availH - stripH) / 20, (availW - 56) / 10);
+    // Tall phones: the queue gets a column wide enough to read (up to 84 px)
+    var stripSide = Math.min(84, Math.max(64, Math.round(vw * 0.18)));
+    var cellStrip = Math.min((availH - stripH) / 20, (availW - stripSide) / 10);
     if (cellStrip > cell * 1.06) {
       strip = true;
       cell = cellStrip;
@@ -481,7 +501,7 @@ function layoutTouch(a, b, c, d, dpr, px) {
     cell = fit(availW, availH);
   }
   cell = Math.max(Math.floor(capCellSize(cell)), 8);
-  side = strip ? 56 : sideFor(cell);
+  side = strip ? Math.min(84, Math.max(64, Math.round(vw * 0.18))) : sideFor(cell);
   cellSize = Math.round(cell * dpr);
 
   var boardW = cell * 10;
@@ -506,8 +526,10 @@ function layoutTouch(a, b, c, d, dpr, px) {
 
   previewCanvas.width = cellSize * 4;
   previewCanvas.height = cellSize * 20;
-  previewCanvas.style.width = px(side);
-  previewCanvas.style.height = px(Math.min(side * 5, boardH - 30));
+  // A little margin so the I piece does not touch the panel edges
+  var qH = Math.min((side - 12) * 5, boardH - 36);
+  previewCanvas.style.width = px(qH / 5);
+  previewCanvas.style.height = px(qH);
   c.style.width = px(side);
   c.style.height = px(boardH);
 
@@ -852,12 +874,14 @@ function renderBests() {
  */
 function bg(ctx) {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  ctx.fillStyle = '#1c1c1c';
-  for (var x = -1; x < ctx.canvas.width + 1; x += cellSize) {
-    ctx.fillRect(x, 0, 2, ctx.canvas.height);
+  // Hairline grid in the theme's colour (see liveBackground.js)
+  ctx.fillStyle = window.TT_GRID || 'rgba(255, 255, 255, 0.06)';
+  var t = Math.max(1, Math.round(renderScale));
+  for (var x = cellSize; x < ctx.canvas.width; x += cellSize) {
+    ctx.fillRect(x, 0, t, ctx.canvas.height);
   }
-  for (var y = -1; y < ctx.canvas.height + 1; y += cellSize) {
-    ctx.fillRect(0, y, ctx.canvas.width, 2);
+  for (var y = cellSize; y < ctx.canvas.height; y += cellSize) {
+    ctx.fillRect(0, y, ctx.canvas.width, t);
   }
 }
 
@@ -988,6 +1012,34 @@ function makeSprite() {
       grad.addColorStop(1, glossy[i][0]);
       spriteCtx.fillStyle = grad;
       spriteCtx.fillRect(x + k, k, cellSize - k * 2, cellSize - k * 2);
+    } else if (settings.Block === 5) {
+      // Modern: a rounded tile with a gap, lit from above, a soft edge below
+      var gp = Math.max(1, Math.round(cellSize * 0.06));
+      var r = Math.max(2, Math.round(cellSize * 0.18));
+      var bx = x + gp;
+      var by = gp;
+      var bw = cellSize - gp * 2;
+      spriteCtx.beginPath();
+      if (spriteCtx.roundRect) spriteCtx.roundRect(bx, by, bw, bw, r);
+      else spriteCtx.rect(bx, by, bw, bw);
+      var grad = spriteCtx.createLinearGradient(0, by, 0, by + bw);
+      grad.addColorStop(0, shaded[i][1]);
+      grad.addColorStop(0.55, shaded[i][0]);
+      grad.addColorStop(1, shaded[i][2]);
+      spriteCtx.fillStyle = grad;
+      spriteCtx.fill();
+      // shadow edge along the bottom
+      spriteCtx.save();
+      spriteCtx.clip();
+      spriteCtx.fillStyle = shaded[i][3];
+      spriteCtx.fillRect(bx, by + bw - Math.max(2, Math.round(bw * 0.12)), bw, bw);
+      // top light
+      var hl = spriteCtx.createLinearGradient(0, by, 0, by + bw * 0.5);
+      hl.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+      hl.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      spriteCtx.fillStyle = hl;
+      spriteCtx.fillRect(bx + gp, by + gp, bw - gp * 2, bw * 0.45);
+      spriteCtx.restore();
     } else if (settings.Block === 3 || settings.Block === 4) {
       // Arika
       if (settings.Block === 4) tgm = world;

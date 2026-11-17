@@ -11,6 +11,8 @@ function toast(text, kind = 'info') {
         holder.setAttribute('aria-live', 'polite');
         document.body.append(holder);
     }
+    // The same message again (a repeated tap) replaces the old one instead of stacking
+    for (const old of holder.children) if (old.textContent === text) old.remove();
     const el = document.createElement('div');
     el.className = `toast toast-${kind}`;
     el.textContent = text;

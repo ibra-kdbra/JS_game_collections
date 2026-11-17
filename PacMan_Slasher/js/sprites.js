@@ -89,6 +89,13 @@ function drawTokenRow(sprite){
   sprite.tokensOffsetX = Math.ceil((width - tileXsize)/2);
   x = sprite.x - sprite.tokensOffsetX;
   y = sprite.y - sprite.tokensOffsetY;
+  // Pac-Men enter at the screen edges on narrow screens: keep their whole chain
+  // of symbols on screen so it can be read.
+  let minX = Math.ceil((4 - map.offsetX)/map.scale);
+  let maxX = Math.floor((canvasA.clientWidth - 4 - map.offsetX)/map.scale) - width;
+  let shifted = Math.max(minX, Math.min(maxX, x));
+  sprite.tokensShift = minX <= maxX ? shifted - x : 0;
+  x += sprite.tokensShift;
   for (i = sprite.tokens.length - 1; i >= 0; i--) {
     drawSymbol(ctxA, sprite.tokens[i], map.offsetX + x*map.scale, map.offsetY + y*map.scale, map.scale);
     x += symbolWidth(sprite.tokens[i]);
@@ -249,6 +256,13 @@ class Pacman extends Sprite{
     else{
       x = this.x; width = this.width;
     }
+    // A symbol row nudged back on screen sticks out on one side.
+    if (this.tokensShift > 0){
+      width += this.tokensShift;
+    }
+    else if (this.tokensShift < 0){
+      x += this.tokensShift; width -= this.tokensShift;
+    }
     if (this.tokensOffsetY>0){
       y = this.y - this.tokensOffsetY;
       height = this.height + this.tokensOffsetY;
@@ -356,6 +370,13 @@ class Bonus extends Sprite{
     }
     else{
       x = this.x; width = this.width;
+    }
+    // A symbol row nudged back on screen sticks out on one side.
+    if (this.tokensShift > 0){
+      width += this.tokensShift;
+    }
+    else if (this.tokensShift < 0){
+      x += this.tokensShift; width -= this.tokensShift;
     }
     if (this.tokensOffsetY>0){
       y = this.y - this.tokensOffsetY;

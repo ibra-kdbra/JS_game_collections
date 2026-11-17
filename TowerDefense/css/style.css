@@ -301,6 +301,20 @@ header {
     min-width: 0;
 }
 
+/* Set by fitStats() when the numbers outgrow a narrow HUD: drop the wave total, tighten the pills */
+.stats.tight {
+    gap: 3px;
+}
+
+.stats.tight .stat {
+    padding-left: 3px;
+    padding-right: 5px;
+}
+
+.stats.tight .stat small {
+    display: none;
+}
+
 .stat {
     display: inline-flex;
     align-items: center;
@@ -729,6 +743,8 @@ body.is-placing #sketch-holder canvas {
     padding: 10px 22px 12px;
     opacity: 0;
     transition: opacity 0.25s, transform 0.25s;
+    /* Sized to its text: placed at left 50%, it would otherwise wrap at half the map width */
+    width: max-content;
     max-width: calc(100% - 24px);
 }
 
@@ -1856,6 +1872,9 @@ body.game-over .store-grid {
     gap: 6px;
     z-index: 2147483100;
     pointer-events: none;
+    /* Sized to the messages: placed at left 50%, it would otherwise wrap them at half the screen */
+    width: max-content;
+    max-width: calc(100vw - 32px);
 }
 
 .toast {
@@ -1870,6 +1889,30 @@ body.game-over .store-grid {
 
 .toast-error {
     border-color: var(--red);
+}
+
+/* Phones: the bottom of the screen holds the wave and build buttons, so notices
+   show at the top of the map instead of covering them. */
+@media (max-width: 899px) and (orientation: portrait) {
+    #toasts {
+        top: calc(max(6px, env(safe-area-inset-top)) + 62px);
+        bottom: auto;
+    }
+}
+
+/* Phones held sideways: centred over the map column (the side column is 268px),
+   near its top, clear of the hints and zoom buttons along its bottom edge. */
+@media (max-height: 560px) and (orientation: landscape) {
+    #toasts {
+        top: max(10px, env(safe-area-inset-top));
+        bottom: auto;
+        left: calc(50% + 136px);
+        max-width: calc(100vw - 300px);
+    }
+
+    #toasts .toast {
+        max-width: calc(100vw - 300px);
+    }
 }
 
 /* Small screens: one line of stats, the next upgrade in a line, a row to switch tower */
@@ -2182,7 +2225,7 @@ body.game-over .store-grid {
 
 @media (max-height: 560px) and (orientation: landscape) {
     body {
-        grid-template-columns: 252px minmax(0, 1fr);
+        grid-template-columns: 268px minmax(0, 1fr);
         grid-template-rows: auto minmax(0, 1fr);
         grid-template-areas: "hud sketch" "side sketch";
         gap: 5px;
@@ -2209,8 +2252,13 @@ body.game-over .store-grid {
 
     .stat {
         font-size: 14px;
-        padding: 3px 7px 3px 5px;
-        gap: 3px;
+        padding: 3px 6px 3px 4px;
+        gap: 2px;
+    }
+
+    /* Room for three stats and two buttons in the side column, even with 4-digit gold */
+    .hud-buttons .icon-btn {
+        width: 40px;
     }
 
     .stat svg {
@@ -2362,6 +2410,12 @@ body.game-over .store-grid {
 
     .record dd {
         font-size: 13px;
+    }
+
+    /* Three boxes in the narrow column: long labels wrap instead of running into the next box */
+    .record dt {
+        white-space: normal;
+        line-height: 1.15;
     }
 
     .place-status {

@@ -1567,6 +1567,14 @@ function Mesh({
         const retry = 'Restart';
         const sure = 'You sure?';
 
+        // A tap on a touch screen also sends mouseover and mouseout around its click,
+        // which would forget the first tap: there the confirmation lasts a few seconds instead.
+        let touchTap = false;
+        let quitTimer = 0, retryTimer = 0;
+        self.elements.quit.onpointerdown = self.elements.retry.onpointerdown = function(event) {
+          touchTap = event.pointerType !== 'mouse';
+        };
+
         let quitState = 0;
         self.elements.quit.onmouseover = function() {
           if (quitState) {
@@ -1577,6 +1585,9 @@ function Mesh({
         };
 
         self.elements.quit.onmouseout = function() {
+          if (touchTap) {
+            return;
+          }
           quitState = 0;
           self.elements.quitText.innerHTML = '';
         };
@@ -1591,6 +1602,11 @@ function Mesh({
           } else {
             quitState = 1;
             self.elements.quitText.innerHTML = sure;
+            clearTimeout(quitTimer);
+            quitTimer = touchTap && setTimeout(function() {
+              quitState = 0;
+              self.elements.quitText.innerHTML = '';
+            }, 3000);
           }
         };
 
@@ -1604,13 +1620,18 @@ function Mesh({
         };
 
         self.elements.retry.onmouseout = function() {
+          if (touchTap) {
+            return;
+          }
           retryState = 0;
           self.elements.retryText.innerHTML = '';
         };
 
         self.elements.retry.onclick = function() {
           if (retryState) {
-            self.elements.retry.onmouseout();
+            clearTimeout(retryTimer);
+            retryState = 0;
+            self.elements.retryText.innerHTML = '';
             self.crashed = true;
             if (self.router) {
               clearInterval(self.router);
@@ -1620,6 +1641,11 @@ function Mesh({
           } else {
             retryState = 1;
             self.elements.retryText.innerHTML = sure;
+            clearTimeout(retryTimer);
+            retryTimer = touchTap && setTimeout(function() {
+              retryState = 0;
+              self.elements.retryText.innerHTML = '';
+            }, 3000);
           }
         };
       }

@@ -82,7 +82,7 @@ export const games = [
     slug: 'tetris',
     title: 'Tetris',
     href: 'Tetris/index.html',
-    blurb: 'The original Tetris game, with a few enhancements, many options included.',
+    blurb: 'The block-stacking classic with Sprint, Marathon, Ultra, Dig Race and Zen, five animated themes from city rain to aurora, touch controls and replays.',
     genre: 'puzzle',
     inputs: ['keyboard', 'touch'],
     mobile: true,

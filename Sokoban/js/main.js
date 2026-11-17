@@ -1,7 +1,7 @@
 import { initShell } from '../../assets/kit/shell.js';
 import { createLoop } from '../../assets/kit/loop.js';
 import { createStore, recordBest } from '../../assets/kit/storage.js';
-import { createTouchControls } from '../../assets/kit/input.js';
+import { createTouchControls, isTouchFirst } from '../../assets/kit/input.js';
 import { parseCollection, Puzzle, DIRS, lurdToDirs } from './puzzle.js';
 import { createRenderer } from './render.js';
 import { createAudio } from './audio.js';
@@ -165,7 +165,7 @@ function afterStep(record = true) {
       for (const k of stuck) {
         if (!stuckBefore.has(k)) {
           audio.stuck();
-          if (!stuckHintShown) toast('Striped crates are stuck for good. Undo (Z) takes the push back.', 3400);
+          if (!stuckHintShown) toast(`Striped crates are stuck for good. ${undoName()} takes the push back.`, 3400);
           stuckHintShown = true;
           break;
         }
@@ -259,6 +259,9 @@ function stars(i) {
 }
 
 let toastTimer = 0;
+// Name the undo control the player can see: the Undo button on touch, the Z key otherwise.
+const undoName = () => (isTouchFirst() ? 'Undo' : 'Undo (Z)');
+
 function toast(msg, ms = 2600) {
   const el = $('toast');
   el.textContent = msg;
@@ -322,7 +325,7 @@ function restart() {
   if (puzzle.restart()) {
     audio.undo();
     stuckBefore = new Set();
-    toast('Restarted. Undo (Z) brings your moves back.');
+    toast(`Restarted. ${undoName()} brings your moves back.`);
     updateHud();
   }
 }

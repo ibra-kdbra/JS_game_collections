@@ -114,7 +114,7 @@ let mg = {
       mg.keys[e.keyCode] = false;
       if (e.keyCode == R && gameStarted && !isPaused) RELOAD = true;
       if (e.keyCode == M) toggleMusic();
-      if (e.keyCode == T) cart.tips = !cart.tips;
+      if (e.keyCode == T) toggleTips();
     });
     window.addEventListener("blur", () => { mg.keys = []; });
     document.addEventListener("visibilitychange", () => {
@@ -334,14 +334,53 @@ function onLevelRestart() {
 function setPaused(value) {
   isPaused = value;
   document.getElementById("pause-menu").classList.toggle("hidden", !isPaused);
+  document.body.classList.toggle("paused", isPaused);
+  if (isPaused) guardPauseMenu();
   if (isPaused) mg.keys = [];
+  syncPauseToggles();
   syncMusic();
+}
+
+// The touch Pause button sits where the menu's buttons appear: the click a phone sends
+// after lifting that finger must not land on them. The menu takes taps again once the
+// finger is up (or after a moment, when Esc opened it).
+let pauseGuard = 0;
+function guardPauseMenu() {
+  const menu = document.getElementById("pause-menu");
+  if (typeof window.setTimeout != "function") return; // headless tools
+  menu.classList.add("guard");
+  clearTimeout(pauseGuard);
+  const open = () => {
+    clearTimeout(pauseGuard);
+    menu.classList.remove("guard");
+    window.removeEventListener("pointerup", onUp, true);
+  };
+  const onUp = () => {
+    clearTimeout(pauseGuard);
+    pauseGuard = setTimeout(open, 80);
+  };
+  window.addEventListener("pointerup", onUp, true);
+  pauseGuard = setTimeout(open, 400);
+}
+
+// Music and tips have keys ([M], [T]); the pause menu has the same switches for touch screens.
+function syncPauseToggles() {
+  const music = document.getElementById("music-btn");
+  if (!music) return;
+  music.textContent = "MUSIC: " + (musicOff ? "OFF" : "ON");
+  document.getElementById("tips-btn").textContent = "TIPS: " + (cart.tips ? "ON" : "OFF");
 }
 
 function toggleMusic() {
   musicOff = !musicOff;
   if (store) store.set("musicOff", musicOff);
+  syncPauseToggles();
   syncMusic();
+}
+
+function toggleTips() {
+  cart.tips = !cart.tips;
+  syncPauseToggles();
 }
 
 function syncMusic() {
@@ -401,8 +440,8 @@ function updateGameArea() {
 
 function drawHud(lvl) {
   // World text is 32px on the 800x600 screen; when the world is shrunk onto a phone,
-  // grow it so it stays at least 13 CSS pixels.
-  const size = Math.max(32, Math.ceil(13 / view.scale));
+  // grow it so it stays at least 15 CSS pixels.
+  const size = Math.max(32, Math.ceil(15 / view.scale));
   const k = size / 32;
   let font = size + "px 'VT323'";
   const touch = !controls.el.hidden;
@@ -420,9 +459,26 @@ function drawHud(lvl) {
   const tips = LEVELS[lvl].tips;
   if (cart.tips || lvl == lastLevel()) {
     const finale = lvl == lastLevel();
+    let y = finale ? 100 : 80 + 30 * k;
     tips.forEach((tip, i) => {
       const big = finale && i == 0;
-      writeTxt(ctx, 1, big ? "80px 'VT323'" : font, "WHITE", tip, 400, finale ? 100 + i * 50 * k : 80 + 30 * k + i * 22 * k, "center", 780);
+      // On touch screens the tips name the on-screen buttons instead of the keys.
+      if (touch) tip = tip.replace(/\[E\]/g, "[Soul]").replace(/\[R\]/g, "[Reset]");
+      if (big) {
+        writeTxt(ctx, 1, "80px 'VT323'", "WHITE", tip, 400, y, "center", 780);
+        y += 50 * k;
+        return;
+      }
+      // Long tips wrap rather than squeeze when the text is grown for a phone, on a
+      // dark band so the bigger letters stay readable over the level.
+      ctx.font = font;
+      const lines = wrapText(ctx, tip, 780);
+      const lineH = (finale ? 50 : 22) * k;
+      if (k > 1 && !finale) drawBox(ctx, 0.45, "#000", 0, y - 18 * k, WORLD_W, lines.length * lineH + 6 * k);
+      lines.forEach((line) => {
+        writeTxt(ctx, 1, font, "WHITE", line, 400, y, "center", 780);
+        y += lineH;
+      });
     });
   }
 
@@ -435,6 +491,23 @@ function drawHud(lvl) {
     ctx.globalAlpha = 1;
     if (banner.t <= 0) banner = null;
   }
+}
+
+// Split text into lines no wider than maxW in the current font.
+function wrapText(ctx, text, maxW) {
+  const lines = [];
+  let line = "";
+  for (const word of text.split(" ")) {
+    const next = line ? line + " " + word : word;
+    if (line && ctx.measureText(next).width > maxW) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = next;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
 }
 
 function drawBox(ctx, a, colour, x, y, w, h) {
@@ -461,6 +534,8 @@ document.addEventListener("DOMContentLoaded", () => {
     setPaused(false);
   };
   document.getElementById("select-btn").onclick = () => showIntro();
+  document.getElementById("music-btn").onclick = () => toggleMusic();
+  document.getElementById("tips-btn").onclick = () => toggleTips();
 });
 
 function left() {

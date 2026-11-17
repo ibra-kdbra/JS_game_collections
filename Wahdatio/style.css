@@ -72,6 +72,10 @@ a:hover {
 .menur .button {
   display: block;
 }
+.group {
+  display: inline-block;
+  white-space: nowrap;
+}
 .world {
   stroke: #222;
   stroke-width: 1;
@@ -241,6 +245,11 @@ body {
     right: 0;
     background: rgba(0, 0, 0, 0.88);
     border-bottom: 1px solid #222;
+  }
+
+  /* During a level the node counts sit at the right: keep the menu clear of them */
+  #main:has(.menur .button:not(:empty)) .menul:has(.choice) {
+    padding-right: calc(64px + env(safe-area-inset-right));
   }
 
   .button,

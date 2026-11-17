@@ -202,18 +202,21 @@ html {
 }
 
 .pause-content {
+  box-sizing: border-box;
   padding: 30px;
   text-align: center;
-  min-width: 300px;
+  width: 364px;
+  max-width: calc(100vw - 24px);
 }
 
 .pause-content h2 {
   margin-top: 0;
-  font-size: 56px;
+  font-size: min(56px, 14vw);
   color: #05f2db;
 }
 
 .pause-content button {
+  -webkit-tap-highlight-color: transparent;
   display: block;
   width: 100%;
   min-height: 48px;
@@ -228,16 +231,46 @@ html {
   margin-top: 10px;
 }
 
+.pause-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 10px;
+}
+
+.pause-toggles button {
+  flex: 1 1 130px;
+  padding: 10px 12px;
+  white-space: nowrap;
+}
+
 .pause-content button.secondary {
   font-size: 26px;
   background-color: transparent;
   border: 2px solid #990099;
 }
 
-.pause-content button:hover,
 .pause-content button:focus-visible {
   background-color: #05f2db;
   color: black;
+}
+
+/* Hover only where there is a real pointer: on touch screens it sticks after a tap. */
+@media (hover: hover) {
+  .pause-content button:hover {
+    background-color: #05f2db;
+    color: black;
+  }
+}
+
+/* Ignores taps for a moment after opening (see guardPauseMenu). */
+#pause-menu.guard,
+#pause-menu.guard * {
+  pointer-events: none !important;
+}
+
+/* The pause menu has its own buttons: hide the touch pad under it. */
+body.paused .gk-touch {
+  visibility: hidden;
 }
 
 /* The controls card only fits beside the play area on wide screens. */
@@ -293,7 +326,22 @@ html {
   display: none;
 }
 
+@media (max-width: 400px) {
+  .pause-content {
+    padding: 24px 18px;
+  }
+}
+
 @media (max-height: 560px) {
+  .pause-content {
+    padding: 14px 24px 18px;
+  }
+
+  .pause-content h2 {
+    font-size: 44px;
+    margin-bottom: 8px;
+  }
+
   .intro-overlay {
     bottom: 8px;
     gap: 6px;
