@@ -609,13 +609,36 @@ export function createRenderer(canvas) {
     const k = Math.min(1, Math.max(0, (y - ceilY) / (floorY - ceilY)));
     const angle = Math.PI * (1 - k);
 
-    // Trail.
-    for (let i = 0; i < fx.trail.length; i++) {
-      const tr = fx.trail[i];
-      const a = (i + 1) / (fx.trail.length + 1);
-      ctx.fillStyle = `rgba(250, 204, 21, ${0.22 * a})`;
-      const sz = s * (0.35 + 0.5 * a);
-      ctx.fillRect(tr.x - sz / 2, tr.y - sz / 2, sz, sz);
+    // Trail: one smooth ribbon through the recent path, thin and faint at the tail,
+    // as wide as the body at the head. Drawn as a single filled shape, so it has
+    // no seams or steps whatever the frame rate.
+    const pts = fx.trail;
+    if (pts.length > 1) {
+      const n = pts.length;
+      const left = [];
+      const right = [];
+      for (let i = 0; i < n; i++) {
+        const a = pts[Math.max(0, i - 1)];
+        const b = pts[Math.min(n - 1, i + 1)];
+        let dx = b.x - a.x;
+        let dy = b.y - a.y;
+        const len = Math.hypot(dx, dy) || 1;
+        dx /= len;
+        dy /= len;
+        const w = (s * 0.42) * Math.pow(i / (n - 1), 0.8);
+        left.push(pts[i].x - dy * w, pts[i].y + dx * w);
+        right.push(pts[i].x + dy * w, pts[i].y - dx * w);
+      }
+      const grd = ctx.createLinearGradient(pts[0].x, 0, pts[n - 1].x, 0);
+      grd.addColorStop(0, 'rgba(250, 204, 21, 0)');
+      grd.addColorStop(1, 'rgba(250, 204, 21, 0.34)');
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.moveTo(left[0], left[1]);
+      for (let i = 2; i < left.length; i += 2) ctx.lineTo(left[i], left[i + 1]);
+      for (let i = right.length - 2; i >= 0; i -= 2) ctx.lineTo(right[i], right[i + 1]);
+      ctx.closePath();
+      ctx.fill();
     }
     if (!alive) return;
 
@@ -730,10 +753,19 @@ export function createRenderer(canvas) {
 
     // Trail samples, in view space.
     const alive = !world.over || world.won;
+    // The trail keeps the last 0.14 s of the path (less with reduced motion),
+    // ageing points by real time so it looks the same at 30, 60 or 144 Hz.
+    const trailLife = reduced ? 0.06 : 0.14;
+    for (const tr of fx.trail) {
+      tr.x -= world.speed * dt;
+      tr.age += dt;
+    }
+    while (fx.trail.length && fx.trail[0].age > trailLife) fx.trail.shift();
     if (!world.over) {
-      fx.trail.push({ x: WORLD.playerX, y });
-      for (const tr of fx.trail) tr.x -= world.speed * dt;
-      if (fx.trail.length > (reduced ? 4 : 9)) fx.trail.shift();
+      const last = fx.trail[fx.trail.length - 1];
+      if (dt > 0 || !last) fx.trail.push({ x: WORLD.playerX, y, age: 0 });
+      else last.y = y;
+      if (fx.trail.length > 48) fx.trail.shift();
     } else if (fx.trail.length) fx.trail.shift();
     drawPlayer(world, y, alive);
 

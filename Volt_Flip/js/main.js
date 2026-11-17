@@ -135,7 +135,7 @@ function pause(reason = '') {
   if (screen !== 'playing') return;
   wantFlip = false;
   $('#pause-sub').textContent = reason;
-  $('#pause-quit').textContent = level ? 'Level map' : 'Quit to title';
+  $('#pause-quit').textContent = level ? 'Level map' : 'Main menu';
   show('paused');
 }
 
