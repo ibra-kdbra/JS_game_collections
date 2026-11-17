@@ -53,12 +53,28 @@ On-screen buttons sit below the board in portrait and on both sides in landscape
 
 ## Settings
 
-DAS, ARR, gravity, soft drop speed, lock delay, playfield size, on-screen buttons, sound and volume, block style, ghost piece, grid, outlines and background theme. Settings and key bindings are saved in the browser.
+DAS, ARR, gravity, soft drop speed, lock delay, playfield size, on-screen buttons, sound and volume, block style, ghost piece, grid, outlines and theme. Settings and key bindings are saved in the browser.
+
+## Themes
+
+A theme changes the animated scene behind the game and the colours of everything in front of it (cards, board, accent, buttons, menus) together. Change it under Settings or press **T**.
+
+| Theme | Scene |
+| --- | --- |
+| **Rain** (default) | Rain on a night window over the city: falling rain at two depths, drops that cling to the glass and run down it, lightning now and then |
+| **Obsidian** | The Game Lab's yellow on black, with tetromino outlines drifting down |
+| **Aurora** | Northern lights over a starry sky and a dark ridge |
+| **Synthwave** | A striped sun setting over a neon grid that rolls towards you |
+| **Code Rain** | Columns of falling green glyphs |
+
+The scenes react to play: clearing lines brightens them, and a Tetris sets off lightning in Rain and sends a ring out in Obsidian. They run at up to 60 frames a second at a capped pixel density, stop while the tab is hidden, and hold still if the system asks for reduced motion.
+
+Blocks come in six styles; **Modern** (rounded tiles lit from above) is the default, and Shaded, Solid, Glossy, Arika and World are still there.
 
 ## How it works
 
 - Game logic runs in fixed 60 Hz steps (DAS, ARR, gravity and lock delay are counted in those steps), so it plays the same on 60 Hz and 120 Hz screens. The clock counts steps too, so it stops while paused and replays show the same time.
-- The playfield, hold and preview canvases are drawn at the screen's pixel density, capped at 2x. On narrow screens the side panels shrink. On touch screens the board is sized to fit around the buttons and the safe areas; tall phones get the hold box and stats in a strip above the board. Layout runs once per frame at most while the window is resized or rotated.
+- The playfield, hold and preview canvases are drawn at the screen's pixel density, capped at 2x. With a keyboard and mouse the board sits between two cards, Hold and the stats on the left and Next on the right, sized in cells with room around the pieces; on narrow screens the cards shrink. On touch screens the board is sized to fit around the buttons and the safe areas; tall phones get the hold box and stats in a strip above the board. Layout runs once per frame at most while the window is resized or rotated.
 - Replays store the keys pressed on each step together with the random seed, and the touch gestures applied on each step.
 
 ## Files
@@ -75,7 +91,7 @@ Tetris/
 │   ├── preview.js       seven-piece bag and next queue
 │   ├── menu.js          menus, settings, key bindings, saving, touch controls
 │   ├── responsive.js    touch gestures and on-screen buttons
-│   ├── liveBackground.js animated background themes
+│   ├── liveBackground.js themes: the animated scenes and the interface colours
 │   ├── audio.js         sound effects and music (Web Audio)
 │   ├── particles.js     line clear sparks
 │   └── init.js          loading screen and theme shortcut

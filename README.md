@@ -60,7 +60,7 @@ loaded from a CDN and the site works the same everywhere.
 | [Gravity Wells](https://jsgamelab.ibrakdbra.me/Gravity_Wells/index.html) | Puzzle | A space puzzle game of 25 puzzles, each solvable within its move limit. |
 | [ReWire](https://jsgamelab.ibrakdbra.me/ReWire/index.html) | Puzzle | Drag the cable around the power nodes and plug it in. 22 levels. |
 | [Hangman](https://jsgamelab.ibrakdbra.me/Hangman/index.html) | Puzzle | Classic word guessing with word categories and options. |
-| [Tetris](https://jsgamelab.ibrakdbra.me/Tetris/index.html) | Puzzle | The block-stacking classic, with options. |
+| [Tetris](https://jsgamelab.ibrakdbra.me/Tetris/index.html) | Puzzle | The block-stacking classic: Sprint, Marathon, Ultra, Dig Race and Zen, five animated themes (Rain, Obsidian, Aurora, Synthwave, Code Rain), touch controls and replays. |
 | [Breakout](https://jsgamelab.ibrakdbra.me/Breakout/index.html) | Arcade | Brick breaker with 27 levels, special bricks, six power-ups and an endless mode. |
 | [Snake](https://jsgamelab.ibrakdbra.me/Snake/index.html) | Arcade | Classic, Wrap, Zen and daily modes, plus 20 arenas with portals. |
 | [PacMan](https://jsgamelab.ibrakdbra.me/PacMan/index.html) | Arcade | The arcade classic, with modes and playgrounds. |
