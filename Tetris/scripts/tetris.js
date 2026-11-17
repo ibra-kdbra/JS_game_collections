@@ -487,7 +487,9 @@ function layoutTouch(a, b, c, d, dpr, px) {
     availW = vw - pad * 2;
     availH = vh - pad * 2 - (buttons ? row * 2 + gap * 2 : 0);
     cell = fit(availW, availH);
-    var cellStrip = Math.min((availH - stripH) / 20, (availW - 56) / 10);
+    // Tall phones: the queue gets a column wide enough to read (up to 84 px)
+    var stripSide = Math.min(84, Math.max(64, Math.round(vw * 0.18)));
+    var cellStrip = Math.min((availH - stripH) / 20, (availW - stripSide) / 10);
     if (cellStrip > cell * 1.06) {
       strip = true;
       cell = cellStrip;
@@ -499,7 +501,7 @@ function layoutTouch(a, b, c, d, dpr, px) {
     cell = fit(availW, availH);
   }
   cell = Math.max(Math.floor(capCellSize(cell)), 8);
-  side = strip ? 56 : sideFor(cell);
+  side = strip ? Math.min(84, Math.max(64, Math.round(vw * 0.18))) : sideFor(cell);
   cellSize = Math.round(cell * dpr);
 
   var boardW = cell * 10;
