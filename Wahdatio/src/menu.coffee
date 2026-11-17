@@ -176,7 +176,9 @@ popup = (p,t) ->
 
 choice = (info) ->
     
-    menu.buttons[info.text] = elem 'div', info, menu.left
+    # the label and its values stay together on one line when the menu wraps
+    group = menu.buttons[info.text + ' group'] = elem 'div', class:'group', menu.left
+    menu.buttons[info.text] = elem 'div', info, group
     
     for c in info.values
         chose = (info,c) -> (e) -> 
@@ -189,7 +191,7 @@ choice = (info) ->
                 info.cb c
             e.stopPropagation()
             
-        menu.buttons[c] = elem 'div', class:'button', text:c, click:chose(info, c), menu.left
+        menu.buttons[c] = elem 'div', class:'button', text:c, click:chose(info, c), group
         
         if c == 'VOL'
             menuVolume snd.vol

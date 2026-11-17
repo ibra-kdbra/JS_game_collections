@@ -1593,8 +1593,12 @@
 
   
   choice = function(info) {
-    var c, chose, j, len, ref, results;
-    menu.buttons[info.text] = elem('div', info, menu.left);
+    var c, chose, group, j, len, ref, results;
+    // The label and its values stay together on one line when the menu wraps
+    group = menu.buttons[info.text + ' group'] = elem('div', {
+      class: 'group'
+    }, menu.left);
+    menu.buttons[info.text] = elem('div', info, group);
     ref = info.values;
     results = [];
     for (j = 0, len = ref.length; j < len; j++) {
@@ -1620,7 +1624,7 @@
         class: 'button',
         text: c,
         click: chose(info, c)
-      }, menu.left);
+      }, group);
       if (info.selected && info.selected() === c) {
         menu.buttons[c].classList.add('highlight');
       }

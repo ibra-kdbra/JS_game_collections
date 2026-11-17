@@ -18,21 +18,35 @@ class Menu {
         if (this.scale > 0) this.scale -= 1;
     }
 
+    // Long lists (Select Level) that can't fit one finger-sized column on a short
+    // landscape view are laid out in two columns.
+    columns() {
+        const n = this._options.length;
+        return n > 6 && n * 36 * game.textScale > game.viewH - 60 && game.viewW > game.viewH ? 2 : 1;
+    }
+
+    rows() {
+        return Math.ceil(this._options.length / this.columns());
+    }
+
     // Row pitch in view pixels: 36 normally, more on zoomed-out phone views so each
     // entry is close to a 44px finger target, as long as the list still fits.
     entryHeight() {
         const k = game.textScale;
         const finger = 44 / game.zoom;
-        return Math.max(36 * k, Math.min(finger, (game.viewH - 80) / this._options.length));
+        return Math.max(36 * k, Math.min(finger, (game.viewH - 80) / this.rows()));
     }
 
     render() {
         let entryHeight = this.entryHeight();
+        const cols = this.columns();
+        const rows = this.rows();
 
         game.ctx.fillStyle = 'rgba(0,0,0,0.7)';
         game.ctx.fillRect(0, 0, game.viewW, game.viewH);
 
-        let menuTop = game.viewH / 2 - this._options.length * (entryHeight * 0.75);
+        // The list is centred on the view; each entry's baseline sits low in its row
+        let menuTop = game.viewH / 2 - rows * entryHeight / 2 + entryHeight * 0.72;
 
         game.ctx.save();
         game.ctx.translate(game.viewW / 2, game.viewH / 2);
@@ -43,8 +57,9 @@ class Menu {
             game.ctx.font = Asset.getFontString(18 * game.textScale);
 
             entry.w = game.ctx.measureText(entry.text).width;
-            entry.x = game.viewW / 2 - entry.w / 2;
-            entry.y = menuTop + idx * entryHeight;
+            const col = Math.floor(idx / rows);
+            entry.x = game.viewW * (2 * col + 1) / (2 * cols) - entry.w / 2;
+            entry.y = menuTop + (idx % rows) * entryHeight;
 
             if (idx === this._selected && this.scale === 0) {
                 game.ctx.fillStyle = 'rgba(255,255,255,1)';

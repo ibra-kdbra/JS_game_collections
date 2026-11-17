@@ -20,7 +20,7 @@ Pick any level you have unlocked from the level select. Your best time and fewes
 - **[R]**: Reset the level · **[Esc]**: Pause
 - **[M]**: Music on/off · **[T]**: Tips on/off
 
-On a phone or tablet, use the on-screen pad and the Jump, Soul, Reset and Pause buttons. Tap a level to start.
+On a phone or tablet, use the on-screen pad and the Jump, Soul, Reset and Pause buttons. Tap a level to start. Music and tips are switched on and off from the pause menu.
 
 ## Code
 

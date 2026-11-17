@@ -455,10 +455,18 @@ class Game {
 
                 let size = Math.min(80, 20 + this.deathFrame / 5);
                 let opacity = Math.min(0.5, this.deathFrame / 50);
-                this.ctx.font = Asset.getFontString(size);
+                this.fitFont('YOU ARE DEAD', size, this.viewW - 36);
                 let x = this.viewW / 2 - this.ctx.measureText('YOU ARE DEAD').width / 2;
                 this.ctx.fillStyle = 'rgba(255, 255, 255, ' + opacity + ')';
                 this.ctx.fillText('YOU ARE DEAD', x, this.viewH / 2);
+
+                // Once the splatter has settled, say how to go again
+                if (this.deathFrame > 90) {
+                    const retry = this.touch.active ? 'TAP TO TRY AGAIN' : 'CLICK OR PRESS SPACE TO TRY AGAIN';
+                    this.fitFont(retry, 18 * this.textScale, this.viewW - 36);
+                    this.ctx.fillStyle = 'rgba(255, 255, 255, ' + Math.min(0.8, (this.deathFrame - 90) / 40) + ')';
+                    this.ctx.fillText(retry, this.viewW / 2 - this.ctx.measureText(retry).width / 2, this.viewH / 2 + 56 * this.textScale);
+                }
             }
 
             if (this.levelComplete) {
