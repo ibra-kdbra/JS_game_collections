@@ -54,6 +54,8 @@ jobs:
           node-version: 22
       - name: Raven levels
         run: node Raven/tools/verify-levels.mjs
+      - name: Raven diagonal speed
+        run: node Raven/tools/verify-diagonal-speed.mjs
       - name: Tower Defense campaign maps
         run: node TowerDefense/tools/verify-maps.mjs
       - name: Gravity Wells puzzles
