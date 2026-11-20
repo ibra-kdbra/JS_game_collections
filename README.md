@@ -52,7 +52,7 @@ loaded from a CDN and the site works the same everywhere.
 |---|---|---|
 | [Tower Defense](https://jsgamelab.ibrakdbra.me/TowerDefense/index.html) | Strategy | 30-wave campaigns and an endless mode on 18 maps, 7 towers that upgrade, bosses. Plays in a lit 3D view (models built in code to match the 2D art, animated on the GPU) or the classic flat view; a 3D/2D button switches. |
 | [Brainy Warrior 3D](https://jsgamelab.ibrakdbra.me/Brainy_Warrior/index.html) | Puzzle | Slide your warrior into every enemy without falling into the sea, and move the wizard to make your own walls. 34 levels on a 3D island, each with a solver-proven par. |
-| [Volt Flip](https://jsgamelab.ibrakdbra.me/Volt_Flip/index.html) | Arcade | A one-button runner: flip gravity between floor and ceiling. Endless mode plus a 25-level story campaign. |
+| [Volt Flip](https://jsgamelab.ibrakdbra.me/Volt_Flip/index.html) | Arcade | A one-button runner: flip gravity between floor and ceiling. Endless, Overdrive and daily runs through five city sectors, plus a 30-level story campaign. |
 | [2048 with AI](https://jsgamelab.ibrakdbra.me/2048/index.html) | Puzzle | The tile-merging puzzle with a built-in AI player. |
 | [Crate Lab](https://jsgamelab.ibrakdbra.me/Sokoban/index.html) | Puzzle | Sokoban-style crate pushing across 40 original levels with solver-proven pars. |
 | [Minesweeper](https://jsgamelab.ibrakdbra.me/Minesweeper/index.html) | Puzzle | Every board solvable by logic, with a daily board, a puzzle ladder, hints and stats. |

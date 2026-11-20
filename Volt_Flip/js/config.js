@@ -55,7 +55,31 @@ export const UNLOCK = {
   tunnels: 950,
   combos: 1250,
   sweepers: 1700,
+  pistons: 2100,
 };
+
+/**
+ * Overdrive: endless, but the corridor is built and timed as if the run were
+ * already this many metres in, so it starts fast, tight and with every
+ * obstacle unlocked.
+ */
+export const OVERDRIVE = { head: 2500 };
+
+/** Piston spikes rise out of a rail and sink back on a cycle. */
+export const PISTON = {
+  height: 34, // fully raised
+  lethal: 8, // raised past this, they hurt
+};
+
+/** Every 1000 m the city outside the corridor changes. Names are shown as you enter. */
+export const SECTORS = [
+  { name: 'Service Rails', tint: [250, 204, 21] },
+  { name: 'Neon Row', tint: [232, 121, 249] },
+  { name: 'Cold Storage', tint: [56, 189, 248] },
+  { name: 'Redline', tint: [251, 113, 133] },
+  { name: 'The Core', tint: [190, 242, 100] },
+];
+export const SECTOR_LENGTH = 1000; // metres
 
 export const SCORE = {
   perMetre: 1,

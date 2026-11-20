@@ -6,7 +6,8 @@
 import { initShell } from '../../assets/kit/shell.js';
 import { createLoop } from '../../assets/kit/loop.js';
 import { createStore, recordBest } from '../../assets/kit/storage.js';
-import { SCORE, STEPS_PER_SECOND, WORLD } from './config.js';
+import { OVERDRIVE, SCORE, STEPS_PER_SECOND, WORLD } from './config.js';
+import { hashString } from './rng.js';
 import { createWorld, metres, step } from './sim.js';
 import { botWantsFlip } from './bot.js';
 import { createRenderer } from './render.js';
@@ -39,6 +40,7 @@ applyMotion();
 let screen = 'title';
 let world = null; // the player's run
 let level = null; // the campaign level being played, or null in endless
+let mode = 'endless'; // endless | overdrive | daily (when level is null)
 let demo = null; // the autopilot run behind the title
 let demoRestart = 0;
 let wantFlip = false;
@@ -47,16 +49,44 @@ let beat = 0.3; // seconds per count-in number
 let endingFor = 0;
 let shownAt = 0;
 let prev = { dist: 0, y: 0 };
-let best = readBest();
+let best = readBest('best');
+let bestOverdrive = readBest('best-overdrive');
+let daily = readDaily();
 let mapChapter = progress.current().chapter;
 let storyDone = null; // what the chapter card's Continue does
 
 /** Screens drawn over the autopilot demo rather than the player's run. */
 const DEMO_SCREENS = new Set(['title', 'help', 'map', 'story']);
 
-function readBest() {
-  const b = store.get('best', null);
+function readBest(key) {
+  const b = store.get(key, null);
   return b && typeof b.score === 'number' ? b : { score: 0, metres: 0 };
+}
+
+/** Today's date in UTC: everyone gets the same daily course on the same day. */
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function readDaily() {
+  const d = store.get('daily', null);
+  return d && d.date === today() && typeof d.score === 'number' ? d : { date: today(), score: 0, metres: 0, tries: 0 };
+}
+
+/** The best for the endless mode being played. */
+function bestFor(m = mode) {
+  if (m === 'overdrive') return bestOverdrive;
+  if (m === 'daily') return daily;
+  return best;
+}
+
+const MODE_NAMES = { endless: 'Endless', overdrive: 'Overdrive', daily: 'Daily run' };
+
+/** A short buzz on phones that support it. */
+function buzz(ms) {
+  try {
+    if (coarse()) navigator.vibrate?.(ms);
+  } catch {}
 }
 
 const randomSeed = () => (Math.random() * 2 ** 32) >>> 0;
@@ -89,8 +119,11 @@ function show(name, focusSel) {
 }
 
 function updateTitle() {
+  if (daily.date !== today()) daily = readDaily();
   $('#title-best').textContent = best.score.toLocaleString('en-US');
   $('#title-far').textContent = `${best.metres.toLocaleString('en-US')} m`;
+  $('#title-od').textContent = bestOverdrive.score ? bestOverdrive.score.toLocaleString('en-US') : 'Hard';
+  $('#title-daily').textContent = daily.score ? daily.score.toLocaleString('en-US') : 'New';
   const stars = progress.total();
   $('#title-stars').textContent = stars ? `★ ${stars} / ${progress.max}` : `${LEVELS.length} levels`;
 }
@@ -104,11 +137,21 @@ function begin(w) {
   wantFlip = false;
 }
 
-/** An endless run. */
-function start() {
+/** An endless run: plain, Overdrive (a head start of speed and density), or today's shared course. */
+function start(m = mode) {
   level = null;
-  begin(createWorld({ seed: randomSeed() }));
+  mode = m;
+  if (m === 'daily') {
+    if (daily.date !== today()) daily = readDaily();
+    begin(createWorld({ seed: hashString(`volt-flip-daily-${daily.date}`) }));
+  } else begin(createWorld({ seed: randomSeed(), head: m === 'overdrive' ? OVERDRIVE.head : 0 }));
   countdown = 0;
+  if (m !== 'endless') {
+    // A short count-in, so a fast start isn't a surprise.
+    beat = 0.3;
+    countdown = beat * 3;
+    audio.play('tick');
+  }
   show('playing');
 }
 
@@ -149,7 +192,7 @@ function resume() {
 
 function restart() {
   if (level) startLevel(level);
-  else start();
+  else start(mode);
 }
 
 function toDemo() {
@@ -176,6 +219,7 @@ const CAUSES = {
   pylon: 'Ran into a pylon',
   drone: 'Clipped by a drone',
   shutter: 'Cut by a shutter',
+  piston: 'Caught by a piston',
   void: 'Fell through a hole',
   edge: 'Fell into a hole',
 };
@@ -184,22 +228,39 @@ const CAUSES = {
 function finish() {
   const score = Math.floor(world.score);
   const far = metres(world);
-  const isNew = score > best.score;
-  if (isNew || far > best.metres) {
-    best = { score: Math.max(score, best.score), metres: Math.max(far, best.metres) };
-    store.set('best', best);
+  const was = bestFor();
+  const isNew = score > was.score;
+  if (isNew || far > was.metres) {
+    const next = { ...was, score: Math.max(score, was.score), metres: Math.max(far, was.metres) };
+    if (mode === 'overdrive') bestOverdrive = next;
+    else if (mode === 'daily') daily = next;
+    else best = next;
   }
+  if (mode === 'daily') daily = { ...daily, tries: (daily.tries || 0) + 1 };
+  store.set(mode === 'overdrive' ? 'best-overdrive' : mode === 'daily' ? 'daily' : 'best', bestFor());
   store.set('runs', store.get('runs', 0) + 1);
-  recordBest(SLUG, score, { label: `${score.toLocaleString('en-US')} pts` });
-  recordBest(SLUG, far, { mode: 'distance', label: `${far.toLocaleString('en-US')} m` });
+  if (mode === 'endless') {
+    recordBest(SLUG, score, { label: `${score.toLocaleString('en-US')} pts` });
+    recordBest(SLUG, far, { mode: 'distance', label: `${far.toLocaleString('en-US')} m` });
+  } else if (mode === 'overdrive') {
+    recordBest(SLUG, score, { mode: 'overdrive', label: `${score.toLocaleString('en-US')} pts in Overdrive` });
+  }
 
+  const b = bestFor();
+  $('#over-eyebrow').textContent = mode === 'daily' ? `Daily run · ${daily.date}` : `${MODE_NAMES[mode]} · signal lost`;
   $('#over-h').textContent = CAUSES[world.cause] || 'Signal lost';
   $('#res-score').textContent = score.toLocaleString('en-US');
   $('#res-dist').textContent = `${far.toLocaleString('en-US')} m`;
   $('#res-shards').textContent = String(world.shards);
   $('#res-mult').textContent = `×${world.bestMult}`;
+  $('#res-grazes').textContent = String(world.grazes);
+  $('#res-flips').textContent = String(world.flips);
   $('#new-best').hidden = !(isNew && score > 0);
-  $('#res-best').textContent = `Best ${best.score.toLocaleString('en-US')} · furthest ${best.metres.toLocaleString('en-US')} m`;
+  $('#new-best').textContent = mode === 'daily' ? 'New best today' : 'New personal best';
+  $('#res-best').textContent =
+    mode === 'daily'
+      ? `Today: best ${b.score.toLocaleString('en-US')} · ${b.tries} ${b.tries === 1 ? 'try' : 'tries'} · a new course tomorrow`
+      : `Best ${b.score.toLocaleString('en-US')} · furthest ${b.metres.toLocaleString('en-US')} m`;
   $('#announce').textContent = `Run over. ${CAUSES[world.cause] || ''}. Score ${score}, ${far} metres.`;
   if (isNew && score > 0) audio.play('best');
   show('over');
@@ -442,7 +503,7 @@ function press() {
   audio.unlock();
   switch (screen) {
     case 'title':
-      start();
+      start('endless');
       break;
     case 'playing':
       if (countdown <= 0) wantFlip = true;
@@ -451,7 +512,7 @@ function press() {
       resume();
       break;
     case 'over':
-      if (performance.now() - shownAt > 550) start();
+      if (performance.now() - shownAt > 550) start(mode);
       break;
     case 'story':
       storyContinue();
@@ -512,7 +573,9 @@ for (const btn of $$('[data-action]')) {
     audio.unlock();
     audio.play('ui');
     const a = btn.dataset.action;
-    if (a === 'start') start();
+    if (a === 'start') start('endless');
+    else if (a === 'overdrive') start('overdrive');
+    else if (a === 'daily') start('daily');
     else if (a === 'restart') restart();
     else if (a === 'campaign') openMap(progress.current().chapter);
     else if (a === 'help') show('help');
@@ -639,7 +702,7 @@ function updateHud(w) {
   setText('score', Math.floor(live.score).toLocaleString('en-US'));
   setText('mult', `×${live.mult}`);
   setText('dist', Math.floor(live.dist / 10).toLocaleString('en-US'));
-  setText('best', best.score.toLocaleString('en-US'));
+  setText('best', bestFor().score.toLocaleString('en-US'));
   if (shown.multLevel !== live.mult) {
     shown.multLevel = live.mult;
     hudEls.multBox.dataset.level = String(live.mult);
@@ -676,6 +739,7 @@ function handleEvents(w, sound) {
         break;
       case 'mult':
         audio.play('mult', e.mult);
+        buzz(12);
         break;
       case 'miss':
         audio.play('miss');
@@ -685,6 +749,7 @@ function handleEvents(w, sound) {
         break;
       case 'shieldBreak':
         audio.play('shieldBreak');
+        buzz(30);
         break;
       case 'magnet':
         audio.play('magnet');
@@ -697,9 +762,7 @@ function handleEvents(w, sound) {
         break;
       case 'die':
         audio.play('die');
-        try {
-          if (coarse()) navigator.vibrate?.(40);
-        } catch {}
+        buzz(60);
         break;
     }
   }
@@ -759,7 +822,8 @@ function render(alpha) {
   const a = moving ? alpha : 1;
   const dist = prev.dist + (showing.dist - prev.dist) * a;
   const y = prev.y + (showing.p.y - prev.y) * a;
-  renderer.draw(showing, dist, y, screen === 'paused' ? 0 : dt, { dim: showing === demo ? 0.25 : 0 });
+  const mark = showing !== demo && !showing.level ? bestFor().metres : 0;
+  renderer.draw(showing, dist, y, screen === 'paused' ? 0 : dt, { dim: showing === demo ? 0.25 : 0, best: mark });
   updateHud(showing === demo ? null : showing);
   if (screen === 'playing') {
     updateHint();

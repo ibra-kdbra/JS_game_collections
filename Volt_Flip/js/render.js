@@ -4,8 +4,8 @@
  * sharp at any size. Effects (sparks, trail, popups, shake) live here and run
  * on real frame time; they never touch the simulation.
  */
-import { PLAYER, WORLD } from './config.js';
-import { CEIL, FLOOR, droneY, shutterPhase, surfaceY } from './course.js';
+import { PISTON, PLAYER, SECTORS, SECTOR_LENGTH, UNITS_PER_METRE, WORLD } from './config.js';
+import { CEIL, FLOOR, droneY, pistonHeight, pistonRaise, shutterPhase, surfaceY } from './course.js';
 
 const H = WORLD.height;
 
@@ -75,7 +75,16 @@ export function createRenderer(canvas) {
     shake: 0,
     squash: 0,
     time: 0,
+    banner: null, // { title, sub, life }
+    tint: [...SECTORS[0].tint], // the city's colour, eased towards the current sector's
   };
+
+  /** The sector a run is in: by distance in endless, by chapter in the campaign. */
+  function sectorOf(world, dist) {
+    if (world.level) return SECTORS[(world.level.chapter.id - 1) % SECTORS.length];
+    return SECTORS[Math.floor(dist / UNITS_PER_METRE / SECTOR_LENGTH) % SECTORS.length];
+  }
+  const rgba = (c, a) => `rgba(${c[0] | 0}, ${c[1] | 0}, ${c[2] | 0}, ${a})`;
 
   function resize(w, h, view) {
     cssW = w;
@@ -170,7 +179,11 @@ export function createRenderer(canvas) {
         if (!reduced) fx.shake = 6;
         break;
       case 'milestone':
-        popup(world, `${e.metre} m`, H / 2 - 40, PALETTE.text);
+        if (e.metre % SECTOR_LENGTH === 0) {
+          const n = e.metre / SECTOR_LENGTH;
+          const sec = SECTORS[n % SECTORS.length];
+          fx.banner = { title: sec.name.toUpperCase(), sub: `SECTOR ${n + 1} · ${e.metre.toLocaleString('en-US')} M`, life: 0, color: sec.tint };
+        } else popup(world, `${e.metre} m`, H / 2 - 40, PALETTE.text);
         break;
       case 'finish':
         burst(world.dist, world.p.y, 40, [PALETTE.accent, '#fff7cc', '#ffffff'], 380, 4);
@@ -199,6 +212,10 @@ export function createRenderer(canvas) {
     fx.particles = fx.particles.filter((p) => p.life < p.max);
     for (const p of fx.popups) p.life += dt;
     fx.popups = fx.popups.filter((p) => p.life < 0.9);
+    if (fx.banner) {
+      fx.banner.life += dt;
+      if (fx.banner.life > 2.4) fx.banner = null;
+    }
     fx.flash = Math.max(0, fx.flash - dt);
     fx.shake = Math.max(0, fx.shake - dt * 40);
     fx.squash = Math.max(0, fx.squash - dt * 7);
@@ -210,7 +227,10 @@ export function createRenderer(canvas) {
     fx.trail.length = 0;
     fx.flash = 0;
     fx.shake = 0;
+    fx.banner = null;
+    tintSnap = true;
   }
+  let tintSnap = true;
 
   /* ------------------------------------------------------------- drawing */
 
@@ -220,11 +240,27 @@ export function createRenderer(canvas) {
     ctx.globalAlpha = 1;
   }
 
-  /** Far skyline above the ceiling and below the floor, scrolling slowly. */
+  /**
+   * The city outside the corridor, above the ceiling and below the floor:
+   * a glow on the horizon, three layers of towers scrolling at different
+   * speeds, lit windows and blinking beacons, all in the sector's colour.
+   */
   function drawBackdrop(camX, viewW, yTop, yBottom) {
+    const tint = fx.tint;
+    // Horizon glow, strongest right against the rails.
+    for (const [from, to] of [[-24, yTop], [H + 24, yBottom]]) {
+      if ((to - from) * (from < 0 ? -1 : 1) <= 0) continue;
+      const g = ctx.createLinearGradient(0, from, 0, to);
+      g.addColorStop(0, rgba(tint, 0.1));
+      g.addColorStop(0.5, rgba(tint, 0.025));
+      g.addColorStop(1, 'rgba(9, 9, 11, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, Math.min(from, to), viewW, Math.abs(to - from));
+    }
     const layers = [
-      { f: 0.18, w: 46, color: '#0f0f13', lit: 0.07, seed: 11 },
-      { f: 0.42, w: 34, color: '#131317', lit: 0.12, seed: 37 },
+      { f: 0.08, w: 64, color: '#0c0c10', lit: 0.05, seed: 5, rise: 70, beacon: true },
+      { f: 0.18, w: 46, color: '#0f0f13', lit: 0.08, seed: 11, rise: 40 },
+      { f: 0.42, w: 34, color: '#131317', lit: 0.13, seed: 37, rise: 40 },
     ];
     for (const L of layers) {
       const off = camX * L.f;
@@ -233,18 +269,27 @@ export function createRenderer(canvas) {
       for (let i = first; i <= last; i++) {
         const x = i * L.w - off;
         const r = hash(i * 31 + L.seed);
-        const below = H + 26 + (1 - r) * 40;
-        const above = -26 - hash(i * 17 + L.seed) * 40;
+        const below = H + 26 + (1 - r) * L.rise;
+        const above = -26 - hash(i * 17 + L.seed) * L.rise;
         ctx.fillStyle = L.color;
         ctx.fillRect(x + 2, below, L.w - 4, yBottom - below);
         ctx.fillRect(x + 2, yTop, L.w - 4, above - yTop);
-        // A few lit windows.
-        ctx.fillStyle = `rgba(250, 204, 21, ${L.lit})`;
-        for (let k = 0; k < 3; k++) {
+        // Lit windows, a few of them flickering.
+        for (let k = 0; k < 4; k++) {
           const h1 = hash(i * 7 + k * 101 + L.seed);
-          if (h1 < 0.55) continue;
+          if (h1 < 0.5) continue;
+          const flick = !reduced && h1 > 0.93 ? 0.5 + 0.5 * Math.sin(fx.time * 3 + i) : 1;
+          ctx.fillStyle = rgba(tint, L.lit * flick);
           ctx.fillRect(x + 6 + (k % 2) * 12, below + 10 + k * 14, 5, 3);
           ctx.fillRect(x + 6 + ((k + 1) % 2) * 12, above - 14 - k * 14, 5, 3);
+        }
+        // Beacons on the tallest far towers.
+        if (L.beacon && r < 0.25) {
+          const on = reduced || (fx.time * 0.8 + r * 7) % 1 < 0.5;
+          if (on) {
+            drawGlow(glow.danger, x + L.w / 2, below - 4, 10, 0.5);
+            drawGlow(glow.danger, x + L.w / 2, above + 4, 10, 0.5);
+          }
         }
       }
     }
@@ -254,7 +299,7 @@ export function createRenderer(canvas) {
     ctx.fillStyle = PALETTE.corridor;
     ctx.fillRect(0, 0, viewW, H);
     // Grid that moves at the courier's pace, so speed is felt.
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.028)';
+    ctx.fillStyle = rgba(fx.tint.map((v) => 200 + v * 0.2), 0.03);
     const step = 60;
     for (let x = -(camX % step); x < viewW; x += step) ctx.fillRect(x, 0, 1, H);
     // The polarity line down the middle.
@@ -265,7 +310,7 @@ export function createRenderer(canvas) {
     if (!reduced) {
       const k = Math.min(1, Math.max(0, (speed - 300) / 180));
       if (k > 0) {
-        ctx.fillStyle = `rgba(250, 204, 21, ${0.05 * k})`;
+        ctx.fillStyle = rgba(fx.tint, 0.06 * k);
         for (let i = 0; i < 6; i++) {
           const y = 30 + hash(i + 3) * (H - 60);
           const len = 60 + hash(i + 9) * 120;
@@ -405,6 +450,54 @@ export function createRenderer(canvas) {
     drawGlow(glow.danger, sx + o.w / 2, tipY, 26, 0.35 + 0.25 * pulse);
     ctx.fillStyle = '#ffe4e6';
     ctx.fillRect(sx - 2, tipY - 2, o.w + 4, 4);
+  }
+
+  /** Teeth on a rail that rise, hold and sink; a lit slot shows where they come up. */
+  function drawPiston(o, camX, t) {
+    const sx = o.x - camX;
+    const fl = o.surf === FLOOR;
+    const base = fl ? H : 0;
+    const up = pistonHeight(o, t);
+    const k = pistonRaise(o, t);
+    // The slot in the rail, warming up just before the teeth rise.
+    let u = ((t + o.phase) % o.period) / o.period;
+    if (u < 0) u += 1;
+    const warn = u > 0.8 ? (u - 0.8) / 0.2 : 0;
+    ctx.fillStyle = '#27272a';
+    ctx.fillRect(sx, fl ? H - 3 : 0, o.w, 3);
+    ctx.fillStyle = `rgba(251, 113, 133, ${0.25 + 0.75 * Math.max(warn, k)})`;
+    ctx.fillRect(sx + 2, fl ? H - 2 : 0, o.w - 4, 2);
+    if (warn > 0 && !reduced) drawGlow(glow.danger, sx + o.w / 2, base, o.w * 0.6, 0.35 * warn);
+    if (up < 1) return;
+    const lethal = up >= PISTON.lethal;
+    drawGlow(glow.danger, sx + o.w / 2, base - (fl ? up / 2 : -up / 2), Math.max(24, o.w * 0.7), lethal ? 0.3 : 0.12);
+    const teeth = Math.max(1, Math.round(o.w / 26));
+    const tw = o.w / teeth;
+    const tip = fl ? H - up : up;
+    // Shaft, then teeth on top.
+    const shaft = Math.max(0, up - 14);
+    ctx.fillStyle = PALETTE.dangerDeep;
+    ctx.fillRect(sx + 3, fl ? H - shaft : 0, o.w - 6, shaft);
+    ctx.fillStyle = lethal ? PALETTE.danger : 'rgba(251, 113, 133, 0.55)';
+    ctx.beginPath();
+    for (let i = 0; i < teeth; i++) {
+      const x = sx + i * tw;
+      const foot = fl ? tip + 14 : tip - 14;
+      ctx.moveTo(x + 1, foot);
+      ctx.lineTo(x + tw / 2, tip);
+      ctx.lineTo(x + tw - 1, foot);
+    }
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.beginPath();
+    for (let i = 0; i < teeth; i++) {
+      const x = sx + i * tw;
+      const foot = fl ? tip + 14 : tip - 14;
+      ctx.moveTo(x + tw / 2, tip);
+      ctx.lineTo(x + tw / 2 + 3, foot);
+      ctx.lineTo(x + tw - 1, foot);
+    }
+    ctx.fill();
   }
 
   function drawDrone(o, camX, t) {
@@ -600,6 +693,26 @@ export function createRenderer(canvas) {
     }
   }
 
+  /** Your furthest run so far, as a dashed gate across the corridor. */
+  function drawBest(x, camX, viewW) {
+    const sx = x - camX;
+    if (sx < -60 || sx > viewW + 60) return;
+    ctx.strokeStyle = 'rgba(250, 250, 250, 0.35)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 8]);
+    ctx.beginPath();
+    ctx.moveTo(sx, 0);
+    ctx.lineTo(sx, H);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(250, 250, 250, 0.7)';
+    ctx.font = '700 15px "Chakra Petch", system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('BEST', sx + 6, 8);
+    ctx.textBaseline = 'middle';
+  }
+
   function drawPlayer(world, y, alive) {
     const p = world.p;
     const x = WORLD.playerX;
@@ -707,8 +820,12 @@ export function createRenderer(canvas) {
    * @param {number} y      interpolated courier height
    * @param {number} dt     real seconds since the last frame (effects only)
    */
-  function draw(world, dist, y, dt, { dim = 0 } = {}) {
+  function draw(world, dist, y, dt, { dim = 0, best = 0 } = {}) {
     updateFx(dt);
+    const target = sectorOf(world, dist).tint;
+    const ease = tintSnap ? 1 : Math.min(1, dt * 1.5);
+    tintSnap = false;
+    for (let i = 0; i < 3; i++) fx.tint[i] += (target[i] - fx.tint[i]) * ease;
     const camX = dist - WORLD.playerX;
     const viewW = cssW / scale;
     const yTop = -top / scale;
@@ -731,6 +848,7 @@ export function createRenderer(canvas) {
     drawCorridor(camX, viewW, world.speed);
     drawRails(world, camX, viewW);
     if (world.course.finish) drawFinish(world.course.finish, camX, viewW);
+    if (best > 0) drawBest(best * UNITS_PER_METRE, camX, viewW);
 
     const left = camX - 60;
     const right = camX + viewW + 60;
@@ -742,6 +860,7 @@ export function createRenderer(canvas) {
       else if (o.kind === 'pylon') drawPylon(o, camX);
       else if (o.kind === 'drone') drawDrone(o, camX, t);
       else if (o.kind === 'shutter') drawShutter(o, camX, t);
+      else if (o.kind === 'piston') drawPiston(o, camX, t);
       ctx.globalAlpha = 1;
     }
     for (const o of world.course.pickups) {
@@ -789,6 +908,26 @@ export function createRenderer(canvas) {
       ctx.fillText(p.text, p.x, p.y - p.life * 40);
     }
     ctx.globalAlpha = 1;
+
+    // Sector banner, mid-corridor: slides in, holds, fades.
+    if (fx.banner) {
+      const b = fx.banner;
+      const a = Math.min(1, b.life / 0.25, (2.4 - b.life) / 0.5);
+      const slide = reduced ? 0 : (1 - Math.min(1, b.life / 0.3)) * 24;
+      const cx = viewW / 2 + slide;
+      ctx.globalAlpha = Math.max(0, a);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = rgba(b.color, 0.9);
+      ctx.font = '700 12px "Chakra Petch", system-ui, sans-serif';
+      ctx.fillText(b.sub, cx, H / 2 - 30);
+      ctx.fillStyle = PALETTE.text;
+      ctx.font = '700 30px "Chakra Petch", system-ui, sans-serif';
+      ctx.fillText(b.title, cx, H / 2);
+      ctx.fillStyle = rgba(b.color, 0.8);
+      ctx.fillRect(cx - 40, H / 2 + 22, 80, 2);
+      ctx.globalAlpha = 1;
+      ctx.textAlign = 'left';
+    }
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (fx.flash > 0) {

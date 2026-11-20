@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#09090b" />
-    <meta name="description" content="Volt Flip for Game Lab: a one-button endless runner with a 25-level campaign. Flip gravity between the floor and the ceiling, dodge spikes, holes, drones and shutters, and chain volt shards for a multiplier." />
+    <meta name="description" content="Volt Flip for Game Lab: a one-button endless runner with Overdrive and daily modes and a 30-level campaign. Flip gravity between the floor and the ceiling, dodge spikes, holes, drones, shutters and pistons, and chain volt shards for a multiplier." />
     <title>Volt Flip · Game Lab</title>
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
     <link rel="preload" href="../assets/fonts/chakra-petch-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin />
@@ -74,6 +74,10 @@
           </dl>
           <div class="stack">
             <button type="button" class="btn btn--primary" data-action="start">Endless run <kbd>Space</kbd></button>
+            <div class="stack stack--pair">
+              <button type="button" class="btn btn--mode" data-action="overdrive">Overdrive <span class="btn-meta" id="title-od">Hard</span></button>
+              <button type="button" class="btn btn--mode" data-action="daily">Daily run <span class="btn-meta" id="title-daily">New</span></button>
+            </div>
             <button type="button" class="btn btn--campaign" data-action="campaign">Campaign <span class="btn-meta" id="title-stars"></span></button>
             <button type="button" class="btn btn--ghost" data-action="help">How to play</button>
           </div>
@@ -88,10 +92,12 @@
             <div>
               <h3>One button</h3>
               <p>Tap, click or press <kbd>Space</kbd> to flip gravity. The courier falls to the other rail and keeps running. You can flip only from a rail; a tap just before landing is kept and flips you on touchdown.</p>
-              <p>The run speeds up the further you get, and the gaps between obstacles shrink. New obstacles join at 120, 220, 420, 700, 950, 1250 and 1700 m.</p>
+              <p>The run speeds up the further you get, and the gaps between obstacles shrink. New obstacles join at 120, 220, 420, 700, 950, 1250, 1700 and 2100 m. Every 1000 m you enter a new sector of the city.</p>
+              <h3>Modes</h3>
+              <p><strong>Overdrive</strong> starts at full pace with every obstacle in play. <strong>Daily run</strong> is one course a day, the same for everyone; beat your own best before it changes at midnight UTC. A dashed <em>BEST</em> line marks your furthest run.</p>
               <p><kbd>P</kbd> or <kbd>Esc</kbd> pause · <kbd>M</kbd> mute. The run pauses by itself when you switch tabs.</p>
               <h3>Campaign</h3>
-              <p>Five chapters of fixed courses, each ending at a finish line. You start every level with a shield. Each level has three stars: reach the finish, collect most of its shards, and finish without breaking your shield.</p>
+              <p>Six chapters of fixed courses, each ending at a finish line. You start every level with a shield. Each level has three stars: reach the finish, collect most of its shards, and finish without breaking your shield.</p>
             </div>
             <div>
               <h3>In the corridor</h3>
@@ -100,6 +106,7 @@
                 <li><span class="sw sw--hole" aria-hidden="true"></span>Holes: a rail with red caps has no floor. Don't run into them.</li>
                 <li><span class="sw sw--drone" aria-hidden="true"></span>Drones patrol up and down their dotted track. Double-ringed ones reach the rails.</li>
                 <li><span class="sw sw--shutter" aria-hidden="true"></span>Shutters burn one half at a time, then pause while the other half charges.</li>
+                <li><span class="sw sw--piston" aria-hidden="true"></span>Pistons rise out of a rail and sink again. Their slot glows just before they rise: pass while they're down, or take the other rail.</li>
                 <li><span class="sw sw--shard" aria-hidden="true"></span>Volt shards: 25 points × multiplier. Eight in a row (or close calls) raise it, up to ×5. Missing a row lowers it.</li>
                 <li><span class="sw sw--shield" aria-hidden="true"></span>Shield: takes one hit or throws you out of a hole. Resets the multiplier.</li>
                 <li><span class="sw sw--magnet" aria-hidden="true"></span>Magnet: pulls nearby shards in for 7 s.</li>
@@ -202,13 +209,15 @@
       <!-- Game over -->
       <section class="screen screen--over" data-screen="over" aria-labelledby="over-h" hidden>
         <div class="card card--small">
-          <p class="eyebrow">Signal lost</p>
+          <p class="eyebrow" id="over-eyebrow">Signal lost</p>
           <h2 id="over-h"></h2>
-          <dl class="result">
+          <dl class="result result--six">
             <div><dt>Score</dt><dd id="res-score"></dd></div>
             <div><dt>Distance</dt><dd id="res-dist"></dd></div>
             <div><dt>Shards</dt><dd id="res-shards"></dd></div>
             <div><dt>Top multiplier</dt><dd id="res-mult"></dd></div>
+            <div><dt>Close calls</dt><dd id="res-grazes"></dd></div>
+            <div><dt>Flips</dt><dd id="res-flips"></dd></div>
           </dl>
           <p class="new-best" id="new-best" hidden>New personal best</p>
           <p class="muted best-line" id="res-best"></p>
