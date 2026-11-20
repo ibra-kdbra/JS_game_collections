@@ -7,7 +7,7 @@
  * the same length, so the courier can be on either surface when one begins.
  * tools/verify.mjs plays generated courses with a bot to prove this holds.
  */
-import { FLIP_TIME, PICKUPS, PLAYER, UNITS_PER_METRE, UNLOCK, WORLD, marginAt, speedAt } from './config.js';
+import { FLIP_TIME, PICKUPS, PISTON, PLAYER, UNITS_PER_METRE, UNLOCK, WORLD, marginAt, speedAt } from './config.js';
 import { createRng, hashString } from './rng.js';
 
 const H = WORLD.height;
@@ -37,6 +37,21 @@ export function shutterPhase(o, t) {
 
 export const droneY = (o, t) => o.y0 + o.amp * Math.sin((t * 2 * Math.PI) / o.period + o.phase);
 
+/**
+ * Pistons: teeth that rise out of a rail, hold, sink and rest, once per period.
+ * Returns how far they are raised, 0 to 1. Up 10% of the cycle, held 35%,
+ * down 10%, sunk 45%.
+ */
+export function pistonRaise(o, t) {
+  let u = ((t + o.phase) % o.period) / o.period;
+  if (u < 0) u += 1;
+  if (u < 0.1) return u / 0.1;
+  if (u < 0.45) return 1;
+  if (u < 0.55) return 1 - (u - 0.45) / 0.1;
+  return 0;
+}
+export const pistonHeight = (o, t) => PISTON.height * pistonRaise(o, t);
+
 /* ---------------------------------------------------------------- generator */
 
 const PATTERNS = [
@@ -50,9 +65,17 @@ const PATTERNS = [
   { key: 'tunnel', unlock: UNLOCK.tunnels, weight: () => 1.4 },
   { key: 'combo', unlock: UNLOCK.combos, weight: (m) => Math.min(3, 1 + (m - UNLOCK.combos) / 600) },
   { key: 'sweeper', unlock: UNLOCK.sweepers, weight: () => 1.2 },
+  { key: 'pistons', unlock: UNLOCK.pistons, weight: () => 1.5 },
 ];
 
-export function createCourse(seed, { pickups = true } = {}) {
+/**
+ * @param {number} seed
+ * @param {object} [o]
+ * @param {boolean} [o.pickups=true]
+ * @param {number} [o.head=0]  metres of head start: the course is built and
+ *   timed as if the run were that far in (Overdrive)
+ */
+export function createCourse(seed, { pickups = true, head = 0 } = {}) {
   const rng = createRng(seed);
   const c = {
     seed,
@@ -67,15 +90,16 @@ export function createCourse(seed, { pickups = true } = {}) {
     last: '',
     patternLog: [],
     withPickups: pickups,
-    nextShield: 380 + rng() * 200,
-    nextMagnet: 240 + rng() * 200,
+    head,
+    nextShield: head + 380 + rng() * 200,
+    nextMagnet: head + 240 + rng() * 200,
   };
   return c;
 }
 
 /** Speed, reaction margin and the minimum distance between two forced flips at x. */
-export function context(x) {
-  const m = x / UNITS_PER_METRE;
+export function context(c, x) {
+  const m = x / UNITS_PER_METRE + (c.head || 0);
   const v = speedAt(m + 40); // a little ahead, since the pattern takes time to pass
   const margin = marginAt(m);
   return { m, v, margin, D: v * (FLIP_TIME + margin) + 34 };
@@ -107,6 +131,10 @@ function drone(c, x, { amp, period, y0 = H / 2, sweeper = false, phase }) {
     r: 15,
     sweeper,
   });
+}
+
+function piston(c, x, w, surf, period, phase) {
+  return add(c, c.hazards, { kind: 'piston', x, w, surf, period, phase: phase ?? c.rng() * period });
 }
 
 function shutter(c, x, period, { phase, first } = {}) {
@@ -265,6 +293,35 @@ const BUILD = {
     drone(c, x, { amp: 120, period: 2.4 - Math.min(0.5, ctx.m / 6000) - c.rng() * 0.3, sweeper: true });
     return x + 16;
   },
+  pistons(c, x, ctx) {
+    const period = Math.max(0.9, 1.5 - ctx.m / 8000 - c.rng() * 0.25);
+    if (c.rng() < 0.5) {
+      // A run of pistons on one rail, rising one after another, with shards
+      // along that rail: stay and time it for the shards, or flip away.
+      const n = randInt(c.rng, 3, 4);
+      const s = side(c.rng);
+      const phase = c.rng() * period;
+      const w = 52;
+      for (let i = 0; i < n; i++) {
+        piston(c, x, w, s, period, phase - (i * w) / ctx.v);
+        x += w;
+      }
+      shardRow(c, x - n * w, x, s);
+      return x;
+    }
+    // Pistons on alternating rails, like a zigzag that sometimes lets you through.
+    const n = randInt(c.rng, 3, 4);
+    let s = side(c.rng);
+    for (let i = 0; i < n; i++) {
+      const w = 26 * randInt(c.rng, 2, 3);
+      piston(c, x, w, s, period);
+      if (c.rng() < 0.5) shardRow(c, x - 6, x + w + 6, -s);
+      x += w;
+      if (i < n - 1) x += ctx.D;
+      s = -s;
+    }
+    return x;
+  },
 };
 
 function choosePattern(c, m) {
@@ -280,7 +337,7 @@ function choosePattern(c, m) {
 
 /** Add one pattern and its lead-in to the course. */
 function next(c) {
-  const lead = context(c.cursor);
+  const lead = context(c, c.cursor);
   // The lead-in: room to reach either surface, and a little extra breathing space early on.
   let x = c.cursor + lead.D + c.rng() * 90 * Math.exp(-lead.m / 900);
   if (c.withPickups) {
@@ -293,8 +350,8 @@ function next(c) {
       c.nextMagnet = lead.m + PICKUPS.magnetEvery[0] + c.rng() * (PICKUPS.magnetEvery[1] - PICKUPS.magnetEvery[0]);
     }
   }
-  const key = choosePattern(c, x / UNITS_PER_METRE);
-  const ctx = context(x);
+  const ctx = context(c, x);
+  const key = choosePattern(c, ctx.m);
   const end = BUILD[key](c, x, ctx);
   c.patternLog.push({ key, x, end });
   if (c.patternLog.length > 400) c.patternLog.shift();
@@ -308,6 +365,7 @@ export function extend(c, x) {
 }
 
 const endOf = (o) => o.x + (o.w || 0) + (o.r || 0) + 20;
+
 
 /** Forget everything that is well behind x. */
 export function prune(c, x) {
@@ -349,6 +407,7 @@ export function fingerprint(c, x) {
  *   drone [amp=60] [period=2] [phase=0] [offset=0]
  *   sweep [period=2.2] [phase=0]          a drone whose track reaches the rails
  *   shutter [period=1.4] [F|C first=F] [phase=0]
+ *   piston F|C [teeth=2] [period=1.3] [phase=0]   teeth that rise and sink
  *   arc F|C                  shards along the path of a flip from that rail
  *   row F|C [width=200]      shards along a rail (no room added after)
  *   run <seconds>            empty corridor
@@ -450,6 +509,15 @@ function layLevel(level, finish) {
         x += 16;
         break;
       }
+      case 'piston': {
+        const g = surf(0);
+        const w = 26 * num(1, 2);
+        const period = num(2, 1.3);
+        piston(c, x, w, g, period, num(3, 0) * period - at(x));
+        if (shards) shardRow(c, x - 6, x + w + 6, -g);
+        x += w;
+        break;
+      }
       case 'shutter': {
         const period = num(0, 1.4);
         const cycle = 2 * (period + SHUTTER_OFF);
@@ -506,7 +574,7 @@ export function buildLevel(level) {
 
 /** Courier speed at x: the endless ramp, or a level's own speed ramping to its finish. */
 export function courseSpeed(c, x) {
-  if (!c.level) return speedAt(x / UNITS_PER_METRE);
+  if (!c.level) return speedAt(x / UNITS_PER_METRE + (c.head || 0));
   if (!c.finish) return c.v0;
   const k = Math.min(1, Math.max(0, x / c.finish));
   return c.v0 + (c.v1 - c.v0) * k;

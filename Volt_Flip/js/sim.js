@@ -5,7 +5,8 @@
  * verifier can replay it in Node.
  */
 import { DT, PICKUPS, PLAYER, SCORE, UNITS_PER_METRE, WORLD } from './config.js';
-import { CEIL, FLOOR, buildLevel, courseSpeed, createCourse, droneY, extend, prune, shutterPhase, solidAt, surfaceY } from './course.js';
+import { PISTON } from './config.js';
+import { CEIL, FLOOR, buildLevel, courseSpeed, createCourse, droneY, extend, pistonHeight, prune, shutterPhase, solidAt, surfaceY } from './course.js';
 
 const H = WORLD.height;
 const AHEAD = 1900; // course is always built this far past the courier
@@ -18,8 +19,8 @@ export function createPlayer() {
  * A run: endless from a seed, or a campaign level (see buildLevel in course.js).
  * A level run starts with a shield charged and ends with w.won at the finish line.
  */
-export function createWorld({ seed = 1, pickups = true, level = null } = {}) {
-  const course = level ? buildLevel(level) : createCourse(seed, { pickups });
+export function createWorld({ seed = 1, pickups = true, level = null, head = 0 } = {}) {
+  const course = level ? buildLevel(level) : createCourse(seed, { pickups, head });
   extend(course, AHEAD);
   return {
     seed,
@@ -123,6 +124,13 @@ export function touches(o, px, py, t, h) {
       return o.surf === FLOOR
         ? boxHitsRect(px, py, h, o.x + 3, H - o.h, o.x + o.w - 3, H + 40)
         : boxHitsRect(px, py, h, o.x + 3, -40, o.x + o.w - 3, o.h);
+    case 'piston': {
+      const up = pistonHeight(o, t);
+      if (up < PISTON.lethal) return false;
+      return o.surf === FLOOR
+        ? boxHitsRect(px, py, h, o.x + 4, H - up, o.x + o.w - 4, H + 40)
+        : boxHitsRect(px, py, h, o.x + 4, -40, o.x + o.w - 4, up);
+    }
     case 'drone':
       return boxHitsCircle(px, py, h, o.x, droneY(o, t), o.r - 2);
     case 'shutter': {

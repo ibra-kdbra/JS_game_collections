@@ -11,6 +11,8 @@
  * 4. The ramp: speed rises and the reaction margin shrinks band by band, and
  *    a casual bot (short look-ahead, late reactions) dies further out on
  *    average than a casual bot that only meets the first band. Prints a table.
+ * 4b. Overdrive: the bot survives the head-start course too, and a casual
+ *    bot dies sooner there than in plain endless.
  * 5. The campaign: every level builds, leaves fair room at every forced
  *    flip, and the look-ahead bot finishes it without a hit (the no-hit star);
  *    a shard-seeking version also takes the shard star in the same run. A
@@ -18,7 +20,7 @@
  *    level and chapter shows the ramp. Prints a table.
  * Exits non-zero on any failure.
  */
-import { DT, FLIP_TIME, PLAYER, SPEED, UNITS_PER_METRE, WORLD, marginAt, speedAt } from '../js/config.js';
+import { DT, FLIP_TIME, OVERDRIVE, PLAYER, SPEED, UNITS_PER_METRE, WORLD, marginAt, speedAt } from '../js/config.js';
 import { CEIL, FLOOR, buildLevel, courseSpeed, createCourse, extend, fingerprint, surfaceY } from '../js/course.js';
 import { CHAPTERS, LEVELS, shardTarget } from '../js/levels.js';
 import { canFlip, createPlayer, createWorld, metres, step, stepPlayer } from '../js/sim.js';
@@ -205,6 +207,32 @@ console.log('4. Difficulty ramp');
   console.log(`  casual bot median: ${median} m (24 runs)`);
   if (median < 250) fail(`the casual bot's median run is only ${median} m; the opening is too hard`);
   if (median >= TARGET) fail('the casual bot never dies; the ramp is too gentle');
+
+  /* ------------------------------------------------------ 4b. overdrive */
+  console.log('4b. Overdrive');
+  let died = 0;
+  for (let s = 1; s <= Math.max(4, SEEDS >> 1); s++) {
+    const w = createWorld({ seed: s * 6007, pickups: false, head: OVERDRIVE.head });
+    while (!w.over && metres(w) < TARGET) step(w, botWantsFlip(w));
+    if (w.over) {
+      died++;
+      const pat = w.course.patternLog.findLast((p) => p.x <= w.dist + 30);
+      fail(`bot died in Overdrive on seed ${s * 6007} at ${metres(w)} m (${w.cause}, pattern ${pat?.key})`);
+    }
+  }
+  if (!died) ok(`the bot survives ${TARGET} m of Overdrive on every seed, with no shield`);
+  const od = [];
+  for (let s = 1; s <= 24; s++) {
+    const w = createWorld({ seed: s * 104729, pickups: false, head: OVERDRIVE.head });
+    playCasual(w, createRng(s ^ 0x2545f491), (w) => metres(w) >= TARGET);
+    od.push(metres(w));
+  }
+  od.sort((a, b) => a - b);
+  const early = (runs) => runs.filter((m) => m < 500).length;
+  console.log(
+    `  Overdrive starts at ${speedAt(OVERDRIVE.head).toFixed(0)} units/s with a ${marginAt(OVERDRIVE.head).toFixed(2)} s margin; casual runs over inside 500 m: ${early(od)} of 24 (endless ${early(casualRuns)}), median ${od[od.length >> 1]} m`,
+  );
+  if (early(od) <= early(casualRuns)) fail('the Overdrive opening is not harder than the endless one for the casual bot');
 }
 
 }
