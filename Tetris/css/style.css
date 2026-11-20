@@ -1254,3 +1254,275 @@ html.tt-touch #content.tt-strip {
 .tt-touch .menu.on:not(#go):not(#pause) {
   background: rgba(5, 7, 11, 0.94);
 }
+
+/* ============================
+   Hard modes, effects and the results card
+=============================== */
+
+/* Survival and Master share one row, marked in the danger colour. */
+.menu-hard a {
+  border-color: rgba(248, 113, 113, 0.45) !important;
+}
+
+.menu-hard a:hover,
+.menu-hard a:focus-visible {
+  border-color: #f87171 !important;
+}
+
+.menu-hard a::before {
+  content: 'HARD';
+  display: block;
+  font-size: 0.55em;
+  letter-spacing: 0.2em;
+  color: #f87171;
+  font-weight: 700;
+}
+
+/* Effects layer over the stack, under the messages. */
+#fx {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+#fx i {
+  position: absolute;
+  display: block;
+}
+
+.fx-row {
+  left: 0;
+  right: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85) 20%, #fff 50%, rgba(255, 255, 255, 0.85) 80%, transparent);
+  box-shadow: 0 0 18px var(--tt-glow, rgba(255, 255, 255, 0.6));
+  animation: fx-row 0.32s ease-out forwards;
+}
+
+.fx-row.fx-big {
+  background: linear-gradient(90deg, transparent, var(--tt-accent, #fff) 15%, #fff 50%, var(--tt-accent, #fff) 85%, transparent);
+  box-shadow: 0 0 30px var(--tt-accent, #fff);
+  animation-duration: 0.5s;
+}
+
+@keyframes fx-row {
+  0% { opacity: 1; transform: scaleY(1); }
+  100% { opacity: 0; transform: scaleY(0.15) scaleX(1.08); }
+}
+
+.fx-trail {
+  background: linear-gradient(to bottom, transparent, var(--fx-color, #fff));
+  opacity: 0.45;
+  animation: fx-trail 0.24s ease-out forwards;
+}
+
+@keyframes fx-trail {
+  0% { opacity: 0.5; }
+  100% { opacity: 0; transform: scaleX(0.4); }
+}
+
+/* Board edge pulses: level up, garbage rising, Tetris or T-spin. */
+#b.fx-pulse-level {
+  animation: fx-pulse-level 0.6s ease-out;
+}
+
+#b.fx-pulse-big {
+  animation: fx-pulse-big 0.45s ease-out;
+}
+
+#b.fx-pulse-rise {
+  animation: fx-pulse-rise 0.3s ease-out;
+}
+
+@keyframes fx-pulse-level {
+  0% { box-shadow: 0 0 0 2px var(--tt-accent), 0 0 60px var(--tt-accent); }
+  100% { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), 0 24px 60px rgba(0, 0, 0, 0.5), 0 0 48px var(--tt-glow); }
+}
+
+@keyframes fx-pulse-big {
+  0% { transform: scale(1.012); box-shadow: 0 0 0 2px #fff, 0 0 70px var(--tt-accent); }
+  100% { transform: scale(1); }
+}
+
+@keyframes fx-pulse-rise {
+  0% { transform: translateY(-3px); }
+  100% { transform: translateY(0); }
+}
+
+/* Danger: the stack reaches into the top rows. */
+#b.tt-danger {
+  border-color: #f87171;
+  box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.6), 0 24px 60px rgba(0, 0, 0, 0.5), 0 0 48px rgba(248, 113, 113, 0.45);
+  animation: tt-danger 1.1s ease-in-out infinite;
+}
+
+#b.tt-danger::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 22%;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(rgba(248, 113, 113, 0.18), transparent);
+}
+
+@keyframes tt-danger {
+  50% { box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.9), 0 24px 60px rgba(0, 0, 0, 0.5), 0 0 70px rgba(248, 113, 113, 0.7); }
+}
+
+/* Survival: a meter along the floor fills until the next garbage row rises. */
+#rise {
+  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 4px;
+  z-index: 4;
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+#b.tt-survival #rise {
+  display: block;
+}
+
+#rise i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--tt-accent);
+  box-shadow: 0 0 10px var(--tt-accent);
+}
+
+#rise.near i {
+  background: #f87171;
+  box-shadow: 0 0 12px #f87171;
+}
+
+/* Results card on the game over screen. */
+.go-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  width: min(100%, 420px);
+  margin: 0 auto 10px;
+  padding: 0;
+  background: var(--tt-edge, rgba(255, 255, 255, 0.15));
+  border: 1px solid var(--tt-edge, rgba(255, 255, 255, 0.15));
+  border-radius: 8px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.go-stats:empty {
+  display: none;
+}
+
+.go-stats div {
+  padding: 6px 8px;
+  background: rgba(8, 10, 14, 0.92);
+  text-align: left;
+}
+
+.go-stats dt {
+  margin: 0;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tt-muted);
+}
+
+.go-stats dd {
+  margin: 1px 0 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--tt-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.go-stats div:first-child dd {
+  color: var(--tt-accent);
+}
+
+html:not(.tt-touch) #go .go-stats {
+  position: absolute;
+  top: 3%;
+  left: 5%;
+  right: 5%;
+  width: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-row,
+  .fx-trail,
+  #b.tt-danger,
+  #b[class*='fx-pulse'] {
+    animation: none;
+  }
+}
+
+/* The two hard modes side by side, each a small card with its label on top. */
+.menu li.menu-hard,
+.tt-touch .menu li.menu-hard {
+  display: flex;
+  justify-content: center;
+  gap: 0.6em;
+  width: 75%;
+  margin: 0 auto;
+}
+
+.tt-touch .menu li.menu-hard {
+  width: 86%;
+}
+
+.menu li.menu-hard a,
+.tt-touch .menu li.menu-hard a,
+.tt-landscape .menu li.menu-hard a {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  margin: 0.3em 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu li.menu-hard a small {
+  display: block;
+}
+
+.tt-landscape .menu li.menu-hard {
+  width: 100%;
+  gap: 6px;
+}
+
+/* Controls and Settings side by side too, so the longer menu still fits the board. */
+html:not(.tt-touch) .menu li.menu-row {
+  display: flex;
+  justify-content: center;
+  gap: 0.6em;
+  width: calc(75% + 0.6em);
+  margin: 0 auto;
+}
+
+html:not(.tt-touch) .menu li.menu-row a {
+  flex: 1 1 0;
+  width: auto;
+  margin: 0.3em 0;
+}
+
+/* Callouts can stack (T-SPIN DOUBLE, BACK-TO-BACK, COMBO 2): keep them as one centred block. */
+#msg .action {
+  display: inline-block;
+  line-height: 1.25;
+  vertical-align: middle;
+}
+
+/* Keyboard and mouse: the best-score note sits under the results card, clear of the buttons. */
+html:not(.tt-touch) #go .go-note {
+  top: 31%;
+  bottom: auto;
+}

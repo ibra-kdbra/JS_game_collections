@@ -11,14 +11,21 @@ A guideline-style Tetris in plain JavaScript and canvas, based on tetr.js: hold,
 | **Ultra** | Score as much as you can in 2 minutes | Highest score |
 | **Dig Race** | Clear 10 rows of garbage | Fastest time |
 | **Zen** | No gravity and no game over: if the stack tops out, the board is cleared and you carry on | - |
+| **Survival** (hard) | Garbage rows rise from the floor, every 9 seconds at first and every 2.2 seconds at the end, each with one hole that usually stays in the same column. The level and gravity go up every 20 seconds. A meter along the floor fills up before each row rises | Longest time |
+| **Master** (hard) | Pieces fall instantly (20G) from the first piece, and the lock delay shrinks every level, from half a second to a sixth. 150 lines to finish | Highest score |
 
 Personal bests are shown in the main menu and on the game over screen.
 
-### Scoring (Marathon and Ultra)
+### Scoring (Marathon, Ultra and Master)
 
-- Single 100, double 300, triple 500, Tetris 800, all multiplied by the level
-- Back-to-back Tetrises score 1.5 times
-- Soft drop: 1 point per row, hard drop: 2 points per row
+- Single 100, double 300, triple 500, Tetris 800
+- T-spins (a T rotated into place with three of its four corners blocked): 400 with no lines, then 800, 1200 and 1600 for a single, double and triple. A T-spin mini scores 100, 200 or 400
+- Back-to-back: a Tetris or a T-spin that clears lines, right after another one, scores 1.5 times
+- Combo: every clear right after another clear adds 50 × the combo count
+- All clear: emptying the whole board adds 800, 1200, 1800 or 2000 for a single, double, triple or Tetris
+- Everything is multiplied by the level. Soft drop: 1 point per row, hard drop: 2 points per row
+
+T-spins, combos, back-to-backs and all clears are called out in every mode, and the game over screen shows a results card: time, score, level, lines, pieces, pieces per second, Tetrises, T-spins, best combo (and garbage rows in Survival).
 
 ## Controls
 
@@ -67,7 +74,7 @@ A theme changes the animated scene behind the game and the colours of everything
 | **Synthwave** | A striped sun setting over a neon grid that rolls towards you |
 | **Code Rain** | Columns of falling green glyphs |
 
-The scenes react to play: clearing lines brightens them, and a Tetris sets off lightning in Rain and sends a ring out in Obsidian. They run at up to 60 frames a second at a capped pixel density, stop while the tab is hidden, and hold still if the system asks for reduced motion.
+Cleared rows flash (brighter for a Tetris or a T-spin), hard drops leave a short streak, the board's edge pulses when the level goes up, and it glows red while the stack reaches into the top rows. The scenes react to play too: clearing lines brightens them, and a Tetris sets off lightning in Rain and sends a ring out in Obsidian. They run at up to 60 frames a second at a capped pixel density, stop while the tab is hidden, and hold still if the system asks for reduced motion.
 
 Blocks come in six styles; **Modern** (rounded tiles lit from above) is the default, and Shaded, Solid, Glossy, Arika and World are still there.
 
@@ -94,6 +101,7 @@ Tetris/
 │   ├── liveBackground.js themes: the animated scenes and the interface colours
 │   ├── audio.js         sound effects and music (Web Audio)
 │   ├── particles.js     line clear sparks
+│   ├── fx.js            row flashes, drop streaks, board pulses, the Survival meter
 │   └── init.js          loading screen and theme shortcut
 ├── fonts/               icon font for the menus
 ├── vendor/fonts/        Source Sans Pro and Lato (SIL OFL), self-hosted

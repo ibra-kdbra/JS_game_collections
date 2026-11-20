@@ -68,6 +68,8 @@
       <canvas id="bgStack"></canvas>
       <canvas id="stack"></canvas>
       <canvas id="active"></canvas>
+      <div id="fx" aria-hidden="true"></div>
+      <div id="rise" aria-hidden="true"><i></i></div>
       <p id="msg"></p>
 
       <!-- Main Menu -->
@@ -79,6 +81,7 @@
           <li><a href="#" onclick="init(5)">Ultra<small>Top score in 2 minutes</small><small class="best" data-best="5"></small></a></li>
           <li><a href="#" onclick="init(3)">Dig Race<small>Clear 10 garbage lines</small><small class="best" data-best="3"></small></a></li>
           <li><a href="#" onclick="init(6)">Zen<small>No gravity, no game over</small></a></li>
+          <li class="menu-row menu-hard"><a href="#" onclick="init(7)">Survival<small>Garbage rises faster and faster</small><small class="best" data-best="7"></small></a><a href="#" onclick="init(8)">Master<small>Instant drop, 150 lines</small><small class="best" data-best="8"></small></a></li>
           <li class="menu-row"><a href="#" onclick="menu(2)">Controls</a><a href="#" onclick="menu(1)"><i class="icon-cog"></i>Settings</a></li>
         </ul>
       </nav>
@@ -121,6 +124,7 @@
       <!-- Game Over Menu -->
       <nav id="go" class="menu">
         <p id="goNote" class="go-note"></p>
+        <dl id="goStats" class="go-stats"></dl>
         <ul>
           <li><a href="#" onclick="init(gametype)">Retry</a></li>
           <li><a href="#" onclick="init('replay')">Watch Replay</a></li>
@@ -165,6 +169,7 @@
   <!-- Scripts -->
   <script type="module" src="../assets/kit/index.js"></script>
   <script src="./scripts/tetris.js"></script>
+  <script src="./scripts/fx.js"></script>
   <script src="./scripts/piece.js"></script>
   <script src="./scripts/stack.js"></script>
   <script src="./scripts/hold.js"></script>

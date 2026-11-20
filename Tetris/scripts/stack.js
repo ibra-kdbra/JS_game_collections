@@ -16,6 +16,7 @@ Stack.prototype.new = function(x, y) {
  */
 Stack.prototype.addPiece = function(tetro) {
   var once = false;
+  var tspin = this.tSpin(tetro);
 
   // Add the piece to the stack.
   var range = [];
@@ -57,6 +58,7 @@ Stack.prototype.addPiece = function(tetro) {
     return a - b;
   });
   var totalLinesCleared = 0;
+  var clearedRows = [];
   for (var row = range[0], len = row + range.length; row < len; row++) {
     var count = 0;
     for (var x = 0; x < 10; x++) {
@@ -67,6 +69,7 @@ Stack.prototype.addPiece = function(tetro) {
     if (count === 10) {
       lines++; // NOTE stats
       totalLinesCleared++; // Track for effects
+      clearedRows.push(row);
 
       if (gametype === 3) {
         if (digLines.indexOf(row) !== -1) {
@@ -101,7 +104,8 @@ Stack.prototype.addPiece = function(tetro) {
     }
   }
 
-  onLinesCleared(totalLinesCleared);
+  if (clearedRows.length) Fx.rows(clearedRows, totalLinesCleared === 4 || Boolean(tspin));
+  onLinesCleared(totalLinesCleared, { tspin: tspin, perfect: totalLinesCleared > 0 && this.empty() });
 
   statsFinesse += piece.finesse - finesse[piece.index][piece.pos][column];
   piecesSet++; // NOTE Stats
@@ -112,6 +116,93 @@ Stack.prototype.addPiece = function(tetro) {
   updateLineStat();
 
   this.draw();
+  this.checkDanger();
+};
+
+/**
+ * T-spin check for the piece about to lock: a T whose last move was a
+ *  rotation, with three of the four corners around its centre filled. It is a
+ *  full T-spin when both corners beside its nose are filled (or the last
+ *  rotation used the far kick), otherwise a mini. Returns '', 'mini' or 'full'.
+ */
+Stack.prototype.tSpin = function(tetro) {
+  if (piece.index !== 5 || !piece.lastRotate) return '';
+  var px = piece.x;
+  var py = Math.floor(piece.y);
+  var grid = this.grid;
+  var filled = function(cx, cy) {
+    var x = px + cx;
+    var y = py + cy;
+    return x < 0 || x > 9 || y > 21 || (y >= 0 && Boolean(grid[x][y]));
+  };
+  // The nose: the cell beside the centre whose opposite side is empty.
+  var nx = 0;
+  var ny = 0;
+  var dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+  for (var i = 0; i < 4; i++) {
+    var d = dirs[i];
+    if (tetro[1 + d[0]][1 + d[1]] && !tetro[1 - d[0]][1 - d[1]]) {
+      nx = d[0];
+      ny = d[1];
+    }
+  }
+  var corners = 0;
+  var front = 0;
+  var cs = [[0, 0], [2, 0], [0, 2], [2, 2]];
+  for (var k = 0; k < 4; k++) {
+    if (!filled(cs[k][0], cs[k][1])) continue;
+    corners++;
+    if (nx !== 0 ? cs[k][0] === 1 + nx : cs[k][1] === 1 + ny) front++;
+  }
+  if (corners < 3) return '';
+  return front === 2 || piece.lastKick === 4 ? 'full' : 'mini';
+};
+
+/** True if the playfield is completely empty (an all clear). */
+Stack.prototype.empty = function() {
+  for (var x = 0; x < 10; x++) {
+    for (var y = 0; y < 22; y++) if (this.grid[x][y]) return false;
+  }
+  return true;
+};
+
+/** The board glows red while the stack reaches into the top rows. */
+Stack.prototype.checkDanger = function() {
+  var top = 22;
+  for (var x = 0; x < 10 && top > 0; x++) {
+    for (var y = 0; y < top; y++) {
+      if (this.grid[x][y]) {
+        top = y;
+        break;
+      }
+    }
+  }
+  document.getElementById('b').classList.toggle('tt-danger', gameState === 0 && top < 7);
+};
+
+/**
+ * Pushes the stack up one row and fills the floor with garbage, open at the
+ *  hole column. Returns false if that tops the stack out.
+ */
+Stack.prototype.rise = function(hole) {
+  for (var x = 0; x < 10; x++) {
+    if (this.grid[x][0]) return false;
+  }
+  for (var y = 0; y < 21; y++) {
+    for (var x = 0; x < 10; x++) this.grid[x][y] = this.grid[x][y + 1];
+  }
+  for (var x = 0; x < 10; x++) this.grid[x][21] = x === hole ? void 0 : 8;
+  // Lift the falling piece with the stack if it is now inside it.
+  if (!piece.moveValid(0, 0, piece.tetro)) {
+    piece.y -= 1;
+    if (!piece.moveValid(0, 0, piece.tetro)) return false;
+  }
+  piece.dirty = true;
+  this.draw();
+  this.checkDanger();
+  Fx.pulse('rise');
+  if (typeof audioManager !== 'undefined') audioManager.playSound('place');
+  return true;
 };
 /**
  * Draws the stack.
