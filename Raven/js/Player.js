@@ -23,9 +23,6 @@ class Player {
     }
 
     update(delta) {
-        // TODO: yes, the player suffers from the classic "fast diagonal" problem.
-        // This time around, I don't care enough to fix it :)
-
         if (this.dead) {
             return;
         }
@@ -76,6 +73,15 @@ class Player {
             if (this.vx < 0 && dir === -1 || this.vx > 0 && dir === 1) {
                 this.vx = 0;
             }
+        }
+
+        // Clamp the length of the velocity vector, not each axis, so holding
+        // two directions isn't faster than moving in a straight line.
+        let speed = Math.hypot(this.vx, this.vy);
+        if (speed > this._maxSpeed) {
+            let scale = this._maxSpeed / speed;
+            this.vx *= scale;
+            this.vy *= scale;
         }
 
         let oldX = this.x, oldY = this.y;
