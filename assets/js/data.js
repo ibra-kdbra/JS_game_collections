@@ -82,7 +82,7 @@ export const games = [
     slug: 'tetris',
     title: 'Tetris',
     href: 'Tetris/index.html',
-    blurb: 'The block-stacking classic with Sprint, Marathon, Ultra, Dig Race and Zen, five animated themes from city rain to aurora, touch controls and replays.',
+    blurb: 'The block-stacking classic with Sprint, Marathon, Ultra, Dig Race and Zen, plus two hard modes: Survival with rising garbage and Master at instant gravity. T-spins, combos, five animated themes, touch controls and replays.',
     genre: 'puzzle',
     inputs: ['keyboard', 'touch'],
     mobile: true,

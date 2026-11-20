@@ -23,6 +23,8 @@ Piece.prototype.new = function(index) {
   this.held = false;
   this.finesse = 0;
   this.dirty = true;
+  this.lastRotate = false;
+  this.lastKick = 0;
   landed = false;
 
   this.tetro = pieces[index].tetro;
@@ -82,6 +84,9 @@ Piece.prototype.rotate = function(direction) {
       this.y += this.kickData[curPos][x][1] - this.kickData[newPos][x][1];
       this.tetro = rotated;
       this.pos = newPos;
+      this.lastRotate = true;
+      this.lastKick = x;
+      this.dirty = true;
       break;
     }
   }
@@ -178,6 +183,7 @@ Piece.prototype.shift = function(direction) {
     }
   } else if (this.moveValid(direction, 0, this.tetro)) {
     this.x += direction;
+    this.lastRotate = false;
   }
 };
 Piece.prototype.shiftDown = function() {
@@ -186,14 +192,19 @@ Piece.prototype.shiftDown = function() {
     var grav = gravityArr[settings['Soft Drop'] + 1];
     if (grav > 1) this.y += this.getDrop(grav);
     else this.y += grav;
+    if (Math.floor(this.y) !== row) this.lastRotate = false;
     addDropScore(Math.floor(this.y) - row);
   }
 };
 Piece.prototype.hardDrop = function() {
   var rows = this.getDrop(20);
+  if (rows > 0) {
+    this.lastRotate = false;
+    Fx.trail(this.tetro, this.x, Math.floor(this.y), rows, this.index);
+  }
   this.y += rows;
   addDropScore(rows * 2);
-  this.lockDelay = settings['Lock Delay'];
+  this.lockDelay = lockLimit();
 };
 Piece.prototype.getDrop = function(distance) {
   for (var i = 1; i <= distance; i++) {
@@ -248,6 +259,7 @@ Piece.prototype.moveValid = function(cx, cy, tetro) {
 Piece.prototype.update = function() {
   if (this.moveValid(0, 1, this.tetro)) {
     landed = false;
+    var before = Math.floor(this.y);
     var forced = modeGravity();
     if (forced !== null) {
       if (forced > 1) this.y += this.getDrop(forced);
@@ -259,10 +271,11 @@ Piece.prototype.update = function() {
     } else {
       this.y += gravity;
     }
+    if (Math.floor(this.y) !== before) this.lastRotate = false;
   } else {
     landed = true;
     this.y = Math.floor(this.y);
-    if (this.lockDelay >= settings['Lock Delay']) {
+    if (this.lockDelay >= lockLimit()) {
       // Audio: Play place/drop sound
       if (typeof audioManager !== 'undefined') {
         audioManager.playSound('place');
@@ -271,7 +284,7 @@ Piece.prototype.update = function() {
       stack.addPiece(this.tetro);
       this.new(preview.next());
     } else {
-      var a = 1 / setting['Lock Delay'][settings['Lock Delay']];
+      var a = 1 / Math.max(1, lockLimit());
       activeCtx.globalCompositeOperation = 'source-atop';
       activeCtx.fillStyle = 'rgba(0,0,0,' + a + ')';
       activeCtx.fillRect(0, 0, activeCanvas.width, activeCanvas.height);

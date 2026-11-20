@@ -230,6 +230,8 @@ var frame;
  *   4 Marathon: levels 1-15, speeding up every 10 lines, scored.
  *   5 Ultra: score as much as possible in 2 minutes.
  *   6 Zen: no gravity, no game over.
+ *   7 Survival: garbage rises from the floor faster and faster; last as long as you can.
+ *   8 Master: pieces fall instantly (20G) and lock sooner every level; 150 lines to finish.
  */
 var MODES = {
   0: { key: 'sprint', name: 'Sprint' },
@@ -237,12 +239,39 @@ var MODES = {
   4: { key: 'marathon', name: 'Marathon' },
   5: { key: 'ultra', name: 'Ultra' },
   6: { key: 'zen', name: 'Zen' },
+  7: { key: 'survival', name: 'Survival' },
+  8: { key: 'master', name: 'Master' },
 };
 var FPS = 60; // Logic steps per second; every frame count below is in these steps.
 var ULTRA_FRAMES = 2 * 60 * FPS;
 var MARATHON_MAX_LEVEL = 15;
 var LINES_PER_LEVEL = 10;
 var LINE_SCORES = [0, 100, 300, 500, 800];
+var TSPIN_SCORES = [400, 800, 1200, 1600];
+var TSPIN_MINI_SCORES = [100, 200, 400];
+var ALL_CLEAR_SCORES = [0, 800, 1200, 1800, 2000];
+var MASTER_MAX_LEVEL = 15;
+// Survival: a garbage row rises every SURVIVAL_RISE seconds at the start,
+//  down to SURVIVAL_RISE_MIN; the level (and gravity) goes up every SURVIVAL_LEVEL seconds.
+var SURVIVAL_RISE = 9;
+var SURVIVAL_RISE_MIN = 2.2;
+var SURVIVAL_LEVEL = 20;
+
+/** Modes that keep a score. */
+function scoredMode(type) {
+  return type === 4 || type === 5 || type === 8;
+}
+
+// Run stats for the results card.
+var combo;
+var maxCombo;
+var tetrises;
+var tspins;
+var allClears;
+// Survival
+var riseFrames;
+var garbageHole;
+var garbageRows;
 
 // Scoring state (Marathon and Ultra).
 var score;
@@ -581,6 +610,14 @@ function init(gt) {
   score = 0;
   level = 1;
   backToBack = false;
+  combo = -1;
+  maxCombo = 0;
+  tetrises = 0;
+  tspins = 0;
+  allClears = 0;
+  riseFrames = 0;
+  garbageRows = 0;
+  Fx.reset();
 
   //Reset
   column = 0;
@@ -622,6 +659,8 @@ function init(gt) {
   clear(stackCtx);
   clear(activeCtx);
   clear(holdCtx);
+
+  if (gametype === 7) garbageHole = ~~(rng.next() * 10);
 
   if (gametype === 3) {
     // Dig Race
@@ -744,9 +783,10 @@ function updateLineStat() {
 }
 
 function setupStatsForMode() {
-  var scored = gametype === 4 || gametype === 5;
+  var scored = scoredMode(gametype);
   document.getElementById('scoreRow').style.display = scored ? '' : 'none';
-  document.getElementById('levelRow').style.display = gametype === 4 ? '' : 'none';
+  document.getElementById('levelRow').style.display = gametype === 4 || gametype === 7 || gametype === 8 ? '' : 'none';
+  document.getElementById('b').classList.toggle('tt-survival', gametype === 7);
   statsLineLabel.innerHTML = gametype === 0 || gametype === 3 ? 'Left' : 'Lines';
   statsScore.innerHTML = score;
   statsLevel.innerHTML = level;
@@ -758,7 +798,8 @@ function setupStatsForMode() {
  */
 function modeGravity() {
   if (gametype === 6) return 0;
-  if (gametype === 4) {
+  if (gametype === 8) return 20;
+  if (gametype === 4 || gametype === 7) {
     var secondsPerRow = Math.pow(0.8 - (level - 1) * 0.007, level - 1);
     return 1 / (secondsPerRow * FPS);
   }
@@ -766,29 +807,95 @@ function modeGravity() {
 }
 
 /**
+ * Lock delay in steps: the Lock Delay setting, except in Master, where it
+ *  starts at half a second and shrinks every level.
+ */
+function lockLimit() {
+  if (gametype === 8) return Math.max(10, Math.round(30 - (level - 1) * 1.5));
+  return settings['Lock Delay'];
+}
+
+/**
+ * Survival: every few seconds a row of garbage with one hole rises from the
+ *  floor. The hole usually stays in the same column, so the rows can be dug
+ *  out with one well. Runs once per logic step.
+ */
+function survivalStep() {
+  var seconds = elapsedMs() / 1000;
+  var newLevel = Math.min(MARATHON_MAX_LEVEL, 1 + Math.floor(seconds / SURVIVAL_LEVEL));
+  if (newLevel > level) {
+    level = newLevel;
+    statsLevel.innerHTML = level;
+    showAction('LEVEL ' + level);
+    Fx.pulse('level');
+    if (typeof audioManager !== 'undefined') audioManager.playSound('level-up');
+  }
+  var every = Math.max(SURVIVAL_RISE_MIN, SURVIVAL_RISE - seconds / 25) * FPS;
+  riseFrames++;
+  Fx.rise(riseFrames / every);
+  if (riseFrames < every) return;
+  riseFrames = 0;
+  if (rng.next() > 0.7) garbageHole = (garbageHole + 1 + ~~(rng.next() * 9)) % 10;
+  garbageRows++;
+  if (!stack.rise(garbageHole)) endGame(9, 'TOPPED OUT');
+}
+
+/**
  * Called by the stack after a piece locks. Scores line clears in the scored
  *  modes, tracks back-to-back Tetrises and levels, and drives the effects.
  */
-function onLinesCleared(count) {
-  if (count > 0) {
-    if (gametype === 4 || gametype === 5) {
-      var points = LINE_SCORES[count] * level;
-      if (count === 4 && backToBack) points = Math.floor(points * 1.5);
-      score += points;
-      if (count === 4 && backToBack) showAction('BACK-TO-BACK');
-      backToBack = count === 4;
+function onLinesCleared(count, info) {
+  info = info || {};
+  var calls = [];
+  var difficult = count === 4 || (info.tspin && count > 0);
+  var points = 0; // times the level
+  var bonus = 0; // already scaled
+  if (info.tspin) {
+    tspins++;
+    points = (info.tspin === 'mini' ? TSPIN_MINI_SCORES : TSPIN_SCORES)[Math.min(count, 3)];
+    calls.push((info.tspin === 'mini' ? 'T-SPIN MINI' : 'T-SPIN') + ['', ' SINGLE', ' DOUBLE', ' TRIPLE'][count]);
+  } else if (count > 0) {
+    points = LINE_SCORES[count];
+    if (count === 4) {
+      tetrises++;
+      calls.push('TETRIS');
     }
-    if (gametype === 4) {
-      var newLevel = Math.min(MARATHON_MAX_LEVEL, 1 + Math.floor(lines / LINES_PER_LEVEL));
+  }
+  if (count > 0) {
+    if (difficult && backToBack) {
+      points = Math.floor(points * 1.5);
+      calls.push('BACK-TO-BACK');
+    }
+    backToBack = difficult;
+    combo++;
+    if (combo > maxCombo) maxCombo = combo;
+    if (combo > 0) {
+      bonus = 50 * combo * level;
+      calls.push('COMBO ' + combo);
+    }
+    if (info.perfect) {
+      allClears++;
+      points += ALL_CLEAR_SCORES[count];
+      calls.push('ALL CLEAR');
+    }
+  } else {
+    combo = -1;
+  }
+  if (scoredMode(gametype)) score += points * level + bonus;
+  if (count > 0) {
+    if (gametype === 4 || gametype === 8) {
+      var top = gametype === 8 ? MASTER_MAX_LEVEL : MARATHON_MAX_LEVEL;
+      var newLevel = Math.min(top, 1 + Math.floor(lines / LINES_PER_LEVEL));
       if (newLevel > level) {
         level = newLevel;
-        showAction('LEVEL ' + level);
+        calls.push('LEVEL ' + level);
+        Fx.pulse('level');
         if (typeof audioManager !== 'undefined') audioManager.playSound('level-up');
       }
     }
     if (typeof LiveBackground !== 'undefined') LiveBackground.onLinesCleared(count);
-    if (count === 4) showAction('TETRIS');
   }
+  if (calls.length) showAction(calls.join('<br>'));
   statsScore.innerHTML = score;
   statsLevel.innerHTML = level;
 }
@@ -797,7 +904,7 @@ function onLinesCleared(count) {
  * Points for dropping: 1 per row soft dropped, 2 per row hard dropped.
  */
 function addDropScore(rows) {
-  if ((gametype === 4 || gametype === 5) && rows > 0) {
+  if (scoredMode(gametype) && rows > 0) {
     score += rows;
     statsScore.innerHTML = score;
   }
@@ -813,7 +920,7 @@ function showAction(text) {
   clearTimeout(actionTimer);
   actionTimer = setTimeout(function() {
     if (gameState === 0 && !paused) msg.innerHTML = '';
-  }, 900);
+  }, text.indexOf('<br>') !== -1 ? 1300 : 900);
 }
 
 /**
@@ -822,9 +929,33 @@ function showAction(text) {
 function endGame(state, text) {
   gameState = state;
   msg.innerHTML = text;
+  Fx.rise(0);
+  document.getElementById('b').classList.remove('tt-danger');
   if (typeof audioManager !== 'undefined') audioManager.stopMusic();
   if (!watchingReplay) saveBest(state);
+  else document.getElementById('goNote').innerHTML = '';
+  renderRunStats();
   menu(3);
+}
+
+/** The results card on the game over screen. */
+function renderRunStats() {
+  var ms = elapsedMs();
+  var secs = Math.max(1, ms / 1000);
+  var rows = [['Time', formatTime(gametype === 5 ? Math.min(ms, ULTRA_FRAMES * (1000 / FPS)) : ms)]];
+  if (scoredMode(gametype)) rows.push(['Score', score.toLocaleString('en-US')]);
+  if (gametype === 4 || gametype === 7 || gametype === 8) rows.push(['Level', level]);
+  rows.push(['Lines', lines]);
+  rows.push(['Pieces', piecesSet]);
+  rows.push(['Per second', (piecesSet / secs).toFixed(2)]);
+  if (gametype === 7) rows.push(['Garbage', garbageRows]);
+  rows.push(['Tetrises', tetrises]);
+  rows.push(['T-spins', tspins]);
+  rows.push(['Best combo', Math.max(0, maxCombo)]);
+  if (allClears) rows.push(['All clears', allClears]);
+  var html = '';
+  for (var i = 0; i < rows.length; i++) html += '<div><dt>' + rows[i][0] + '</dt><dd>' + rows[i][1] + '</dd></div>';
+  document.getElementById('goStats').innerHTML = html;
 }
 
 function saveBest(state) {
@@ -838,7 +969,13 @@ function saveBest(state) {
       mode: mode.key,
       label: mode.name + ' ' + formatTime(time),
     });
-  } else if (gametype === 4 || gametype === 5) {
+  } else if (gametype === 7) {
+    var lasted = elapsedMs();
+    result = GameKit.recordBest('tetris', Math.round(lasted), {
+      mode: mode.key,
+      label: mode.name + ' ' + formatTime(lasted),
+    });
+  } else if (scoredMode(gametype)) {
     result = GameKit.recordBest('tetris', score, {
       mode: mode.key,
       label: mode.name + ' ' + score + ' pts',
@@ -853,7 +990,8 @@ function bestLabel(type) {
   if (typeof GameKit === 'undefined') return '';
   var best = GameKit.readBests('tetris')[MODES[type].key];
   if (!best) return '';
-  return type === 0 || type === 3 ? formatTime(best.value) : best.value + ' pts';
+  if (type === 7) return formatTime(best.value);
+  return type === 0 || type === 3 ? formatTime(best.value) : best.value.toLocaleString('en-US') + ' pts';
 }
 
 /**
@@ -1202,6 +1340,7 @@ function update() {
   }
 
   piece.update();
+  if (gametype === 7 && gameState === 0) survivalStep();
 
   // Win and finish conditions.
   if (gameState === 0) {
@@ -1211,6 +1350,8 @@ function update() {
       endGame(1, 'GREAT!');
     } else if (gametype === 4 && lines >= MARATHON_MAX_LEVEL * LINES_PER_LEVEL) {
       endGame(1, 'GREAT!');
+    } else if (gametype === 8 && lines >= MASTER_MAX_LEVEL * LINES_PER_LEVEL) {
+      endGame(1, 'MASTER!');
     } else if (gametype === 5 && elapsedMs() >= ULTRA_FRAMES * (1000 / FPS)) {
       endGame(1, 'TIME!');
     }
