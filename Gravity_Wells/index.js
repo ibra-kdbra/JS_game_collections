@@ -9,6 +9,11 @@ let entities;
 try {
   const response = await fetch('./assets/entities.json');
   entities = await response.json();
+  if (window.matchMedia('(pointer: coarse)').matches) {
+    const intro = entities.startscreen.puzzle;
+    intro.text = intro.text.map((line) =>
+      line === 'Keys: arrows, R to reset.' ? 'Tap squares to make a move.' : line);
+  }
 } catch (error) {
   console.error('Error loading entities.json:', error);
   entities = {};
