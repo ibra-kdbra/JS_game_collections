@@ -43,6 +43,7 @@ class Game {
         this.touch = new TouchControls(this);
 
         this._startLevel = parseInt(this.store.get('level', 0), 10) || 0;
+        this._moveSwappedBests();
         this.levelTime = 0;
 
         this.level = undefined;
@@ -221,6 +222,33 @@ class Game {
         this.paused = true;
         this.openMenu(this._pauseMenu);
         if (document.pointerLockElement) document.exitPointerLock();
+    }
+
+    /**
+     * Levels 11 and 12 swapped places (Server Vault is now the harder of the
+     * two), and best times are saved by level number. Swap the two saved times
+     * once so each still belongs to its level.
+     */
+    _moveSwappedBests() {
+        if (this.store.get('swapped-11-12', false)) return;
+        try {
+            const key = 'gamelab.best.raven';
+            const all = JSON.parse(localStorage.getItem(key) || 'null');
+            if (all && (all.level11 || all.level12)) {
+                const renumber = (entry, n) => {
+                    if (entry && typeof entry.label === 'string') entry.label = entry.label.replace(/^1[12] /, n + ' ');
+                    return entry;
+                };
+                const eleven = renumber(all.level11, 12);
+                const twelve = renumber(all.level12, 11);
+                if (twelve) all.level11 = twelve; else delete all.level11;
+                if (eleven) all.level12 = eleven; else delete all.level12;
+                localStorage.setItem(key, JSON.stringify(all));
+            }
+        } catch (e) {
+            // Storage blocked: nothing saved to move.
+        }
+        this.store.set('swapped-11-12', true);
     }
 
     _levelCleared() {
