@@ -291,9 +291,45 @@ const LevelCache = [
   },
   {
     width: 30,
+    height: 19,
+    data: '<tt;$-$tt;$-$tt;$-uuLvvM,vvMuu,E4vvM,vvM4Euu,vvM,vvMuu,E4vvM,vvMuuD-,tt3$-$tt;$-$tt;<#',
+    name: '11 Cooling Tunnels',
+    hint: '! Patrols keep moving until someone sees them.',
+    chx: 0,
+    chy: 32,
+    enter: { p1: { x: 32, y: 32 }, p2: { x: 96, y: 96 } },
+    exit: { p1: { x: 832, y: 512 }, p2: { x: 896, y: 576 } },
+    d: [
+      { u: 1, v: 3, entranceDoor: true },
+      { u: 26, v: 15, exitDoor: true }
+    ],
+    e: [
+      { x: 400, y: 160, patrolDX: 288, patrolDY: 0 },
+      { x: 656, y: 176, wake: 'los' },
+      { x: 848, y: 144, wakeRadius: 256 },
+      { x: 304, y: 256, patrolDX: 320, patrolDY: 0, patrolStart: 800 },
+      { x: 720, y: 272, wake: 'los' },
+      { x: 144, y: 304, wake: 'los' },
+      { x: 496, y: 352, patrolDX: -256, patrolDY: 0 },
+      { x: 272, y: 464, wake: 'los' },
+      { x: 592, y: 448, patrolDX: 192, patrolDY: 0, patrolStart: 1500 }
+    ],
+    t: [
+      { u: 6, v: 4, control: 'A' },
+      { u: 28, v: 7, control: 'B' },
+      { u: 1, v: 11, control: 'C' }
+    ],
+    c: [
+      { u: 28, v: 5, control: 'A', facing: 180, enabled: false },
+      { u: 1, v: 8, control: 'B', facing: 0, enabled: false },
+      { u: 28, v: 10, control: 'C', facing: 180, enabled: false }
+    ]
+  },
+  {
+    width: 30,
     height: 20,
     data: '<tt;$-$tt;$-$tt;$-uuLvvM,vvM,-<-<-<-<=,-$+$-$+$-$+$-$+$=,-<-<-<-<=,vvM,vvM,-<-<-<-<=,-$+$-$+$-$+$-$+$=,-<-<-<-<=,vvM,vvMu4-u<t#$-$tt;$-$tt;<t3',
-    name: '11 Server Vault',
+    name: '12 Server Vault',
     hint: '! A camera can hold one Raven while you watch another.',
     enter: { p1: { x: 416, y: 544 }, p2: { x: 480, y: 608 } },
     exit: { p1: { x: 32, y: 32 }, p2: { x: 96, y: 96 } },
@@ -329,42 +365,6 @@ const LevelCache = [
       { u: 28, v: 15, control: 'A', facing: 200, enabled: false },
       { u: 1, v: 4, control: 'B', facing: 30, enabled: false },
       { u: 12, v: 10, control: 'C', facing: 0, enabled: false }
-    ]
-  },
-  {
-    width: 30,
-    height: 19,
-    data: '<tt;$-$tt;$-$tt;$-uuLvvM,vvMuu,E4vvM,vvM4Euu,vvM,vvMuu,E4vvM,vvMuuD-,tt3$-$tt;$-$tt;<#',
-    name: '12 Cooling Tunnels',
-    hint: '! Patrols keep moving until someone sees them.',
-    chx: 0,
-    chy: 32,
-    enter: { p1: { x: 32, y: 32 }, p2: { x: 96, y: 96 } },
-    exit: { p1: { x: 832, y: 512 }, p2: { x: 896, y: 576 } },
-    d: [
-      { u: 1, v: 3, entranceDoor: true },
-      { u: 26, v: 15, exitDoor: true }
-    ],
-    e: [
-      { x: 400, y: 160, patrolDX: 288, patrolDY: 0 },
-      { x: 656, y: 176, wake: 'los' },
-      { x: 848, y: 144, wakeRadius: 256 },
-      { x: 304, y: 256, patrolDX: 320, patrolDY: 0, patrolStart: 800 },
-      { x: 720, y: 272, wake: 'los' },
-      { x: 144, y: 304, wake: 'los' },
-      { x: 496, y: 352, patrolDX: -256, patrolDY: 0 },
-      { x: 272, y: 464, wake: 'los' },
-      { x: 592, y: 448, patrolDX: 192, patrolDY: 0, patrolStart: 1500 }
-    ],
-    t: [
-      { u: 6, v: 4, control: 'A' },
-      { u: 28, v: 7, control: 'B' },
-      { u: 1, v: 11, control: 'C' }
-    ],
-    c: [
-      { u: 28, v: 5, control: 'A', facing: 180, enabled: false },
-      { u: 1, v: 8, control: 'B', facing: 0, enabled: false },
-      { u: 28, v: 10, control: 'C', facing: 180, enabled: false }
     ]
   },
   {

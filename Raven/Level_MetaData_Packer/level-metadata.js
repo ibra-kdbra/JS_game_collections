@@ -62,14 +62,14 @@ const LevelMetadata = {
         hint: '! So many choices...'
     },
     level11: {
-        name: '11 Server Vault',
-        hint: '! A camera can hold one Raven while you watch another.'
-    },
-    level12: {
-        name: '12 Cooling Tunnels',
+        name: '11 Cooling Tunnels',
         hint: '! Patrols keep moving until someone sees them.',
         chx: 0,
         chy: 32
+    },
+    level12: {
+        name: '12 Server Vault',
+        hint: '! A camera can hold one Raven while you watch another.'
     },
     level13: {
         name: '13 Uplink Array',
