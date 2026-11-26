@@ -204,7 +204,7 @@ magnet pickups. Courses are generated from seeded patterns sized to the current 
   source folders out of the published site.
 - `CREDITS.md` names the upstream project, author and licence of every forked game and Art Lab
   experiment, and lists third-party sounds, music, libraries and fonts. Open licence questions
-  (GPL-3.0 upstreams for PacMan and HuggersFight, the commercial LSD track, Namco sounds,
+  (GPL-3.0 upstreams for PacMan and HuggersFight, the commercial LSD track (since replaced by a generated soundtrack), Namco sounds,
   non-commercial Hangman sounds) are listed there for the owner.
 - Adaptive Fields loads p5.js from the repo instead of a CDN.
 - `tools/smoke.mjs` opens the hub, the Art Lab and every registered page at 390x844 (touch) and

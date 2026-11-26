@@ -25,6 +25,10 @@ Use this to create:
 - **Completely free** - No paywalls, no premium options
 - **Open source** - MIT licensed for personal and commercial use
 
+## Soundtrack
+
+The music is generated live in the browser by `js/soundtrack.js` with the Web Audio API, so there is no audio file to download: a slow ambient electronic piece (84 BPM, D minor) with chord pads, a sub bass, a bell arpeggio through a ping-pong delay and a light beat. It is arranged in sections that bring the layers in and out, and the arpeggio comes from a seeded random sequence, so it doesn't repeat a short loop. It starts with the Go button; [M] or 🔊 pauses and resumes it.
+
 ## Controls
 
 | Control | Keyboard | Description |
@@ -33,7 +37,7 @@ Use this to create:
 | ⏯️ | [Space] | Pause/play the animation |
 | 📷 | [S] | Save a screenshot image |
 | 🎥 | [V] | Start/stop video export |
-| 🔊 | [M] | Toggle background music |
+| 🔊 | [M] | Toggle the soundtrack |
 
 Additional keyboard shortcuts:
 - [Tab] - Refresh pattern with a new random seed
