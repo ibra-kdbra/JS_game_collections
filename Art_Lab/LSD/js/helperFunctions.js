@@ -159,32 +159,22 @@ document.getElementById('zen-mode-button').addEventListener('click', () => toggl
 
 //intro overlay info screen
 
-let musicPlaying = true;
-const backgroundMusic = new Audio('assets/fahrenheitFairEnough.mp3');
-
+// The soundtrack is generated live by js/soundtrack.js; the Go button starts it.
 document.addEventListener('DOMContentLoaded', () => {
   const overlay = document.getElementById('intro-overlay');
   const startButton = document.getElementById('start-button');
-  
+
   startButton.addEventListener('click', () => {
-
-    // Play background music
-    backgroundMusic.loop = true;
-    backgroundMusic.volume = 0.7;        
-    const playPromise = backgroundMusic.play();
-
+    LsdSoundtrack.start();
     overlay.style.display = 'none';
   });
 });
 
 function toggleMusic(){
-  if(musicPlaying){
-    backgroundMusic.pause();
-    musicPlaying = false;
-  } else {
-    const playPromise = backgroundMusic.play();
-    musicPlaying = true;
-  }
+  if (LsdSoundtrack.playing) LsdSoundtrack.pause();
+  else LsdSoundtrack.start();
+  const btn = document.getElementById('toggleMusicBtn');
+  if (btn) btn.textContent = LsdSoundtrack.playing ? '🔊' : '🔇';
 }
 
 let isZenMode = false;

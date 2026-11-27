@@ -48,7 +48,7 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 
 | File | What it is | Source | Licence |
 | --- | --- | --- | --- |
-| `Art_Lab/LSD/assets/fahrenheitFairEnough.mp3` | "Fahrenheit Fair Enough" by Telefon Tel Aviv (from the file's tags) | Commercial release (Hefty Records, 2001) | **All rights reserved**; no licence to host is known |
+| LSD soundtrack (`Art_Lab/LSD/js/soundtrack.js`) | An ambient electronic piece generated live with the Web Audio API; no audio file. It replaced a commercial track ("Fahrenheit Fair Enough", Telefon Tel Aviv) that could not be hosted | Written for Game Lab | MIT, with the rest of the repository |
 | `Hangman/audio/correct.mp3`, `hang.mp3`, `pullup.mp3` | Sound effects | Tags say "Copyright Alan McKinney" | **unknown** |
 | `Hangman/audio/rotate.mp3` | Cable winch rotation | salamisound.com (Sebastian Karpp) | Tag says "for non commercial use only" |
 | `Hangman/audio/win.mp3`, `lose.mp3`, `wrong.mp3` | Sound effects | **unknown** | **unknown** |
