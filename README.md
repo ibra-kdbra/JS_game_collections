@@ -155,6 +155,9 @@ Every pull request and every push to `main` runs the checks in
 - **Tetris**: `node Tetris/tools/verify-replays.mjs` plays 19 seeded games across every mode and
   handling setting and checks each replay ends exactly like its game, and
   `node Tetris/tools/verify-dig-race.mjs` checks a Dig Race ends once its garbage is cleared, in any order.
+  `node Tetris/tools/verify-master.mjs` checks that at Master's top lock delay a piece can be
+  moved from spawn to both walls with the keyboard and with the on-screen buttons, and that the
+  move reset is capped.
 - **Tower Defense**: `node TowerDefense/tools/test-3d.mjs` checks the 3D view (load time, model
   size, draw-call budget, no stalls mid-battle, fallback to Flat), and
   `node TowerDefense/tools/aim-test.mjs` clicks towers during heavy explosions.

@@ -12,9 +12,53 @@ A guideline-style Tetris in plain JavaScript and canvas, based on [tetr.js](http
 | **Dig Race** | Clear 10 rows of garbage | Fastest time |
 | **Zen** | No gravity and no game over: if the stack tops out, the board is cleared and you carry on | - |
 | **Survival** (hard) | Garbage rows rise from the floor, every 9 seconds at first and every 2.2 seconds at the end, each with one hole that usually stays in the same column. The level and gravity go up every 20 seconds. A meter along the floor fills up before each row rises | Longest time |
-| **Master** (hard) | Pieces fall instantly (20G) from the first piece, and the lock delay shrinks every level, from half a second to a sixth. 150 lines to finish | Highest score |
+| **Master** (hard) | Gravity climbs to 20G (pieces fall instantly) by level 4, and the lock delay shrinks every level, from half a second to a quarter. 150 lines to finish. See below | Highest score |
 
 Personal bests are shown in the main menu and on the game over screen.
+
+### Master
+
+| Level | Gravity | Lock delay (steps of 1/60 s) |
+| --- | --- | --- |
+| 1 | 1/4G | 30 |
+| 2 | 1G | 29 |
+| 3 | 5G | 28 |
+| 4-15 | 20G | 27, 26, 25, 24, 22, 21, 20, 19, 18, 17, 16, 15 |
+
+A move or rotation restarts the lock delay at most 15 times per piece (the guideline's
+"move reset"); the count starts over when the piece falls to a lower row than it has been.
+The other modes keep tetr.js's rule: every move restarts it, with no limit.
+
+The curve used to be 20G from the first piece, lock delay 30 dropping 1.5 per level to a
+floor of 10, and unlimited restarts. Nobody had played it past level 2, so it was measured
+with `node Tetris/tools/playtest-master.mjs`: a bot that plays through the real input path
+(key events; touch events on the on-screen buttons of an emulated phone) with human timing
+profiles, in steps: a fast keyboard player (DAS 6 = 100 ms, ARR 0 or 1, first press 6 steps
+after the drop, 4 to switch keys) and a touch player at the buttons' default repeat (DAS 10,
+ARR 1, first press 12 steps after the drop, 10 to switch buttons, 9 between taps on one
+button), plus a slower touch player (16 and 14). What it found, and what changed:
+
+- **Every move restarted the lock delay, with no limit**, in every mode (tetr.js resets it
+  in `moveValid`). Rotating back and forth on the floor never locked, at any level (20 s
+  tried). So the time limit is not on the whole placement but on each gap between two
+  presses: the first press has to come within lock delay + 1 steps of the spawn, and every
+  next one within the lock delay of the last move. Master now caps the restarts at 15; the
+  bot never needed more than 5 for one piece.
+- **The floor of 10 was too short for the buttons.** Holding a button to a wall waits DAS
+  (10 steps) between the first and second move, and pressing Drop after the piece arrives
+  takes a reaction. On an empty board the touch player got every piece and rotation to both
+  walls (56 of 56) down to lock delay 14, but 48 at 12, 28 at 11 and 5 at 10; the slower one
+  failed from 15 down (20 of 56 at 15, none at 12). The keyboard player reached 56 of 56 at
+  every level. The floor is now 15 (250 ms), reached at the last level.
+- **20G from the first piece was the whole difficulty.** The keyboard bot, with no timing
+  trouble at all (no piece locked early, 15+ steps to spare on every piece), topped out at
+  level 3 to 8 at 20G (median level 6, 48 lines, 0 of 6 games won). The same bot at 1/64G
+  cleared all 150 lines in 6 of 6 games. At 20G a piece cannot climb the stack, so the
+  stack's shape decides where pieces can go, from the very first one. Master now gives
+  three levels (30 lines) at 1/4G, 1G and 5G to get into it, and is 20G from level 4.
+
+A bot is not a person: these numbers bound the timing, they do not say how 20G feels. The
+gravity ramp and the floor are worth a real playtest on a phone.
 
 ### Scoring (Marathon, Ultra and Master)
 
@@ -109,3 +153,14 @@ Tetris/
 ```
 
 Open the page with `?debug` to show a frame rate readout.
+
+## Checks
+
+- `node Tetris/tools/verify-play.mjs`: a seeded Sprint played with the keyboard clears 40 lines.
+- `node Tetris/tools/verify-replays.mjs`: 19 seeded games in every mode replay exactly.
+- `node Tetris/tools/verify-dig-race.mjs`: a Dig Race ends once its garbage is cleared, in any order.
+- `node Tetris/tools/verify-master.mjs`: at Master's top lock delay every piece can be taken
+  from spawn to both walls with the keyboard and with the on-screen buttons, and the move
+  reset runs out after 15 restarts (and is still unlimited in Marathon).
+- `node Tetris/tools/playtest-master.mjs`: not a check; prints the Master measurements above
+  (slow: several minutes per player).
