@@ -74,6 +74,11 @@ await check.run(async () => {
   await page.waitForTimeout(400);
   await page.keyboard.press('Enter');
   const again = await waitFor(page, () => document.querySelector('.gameover-modal').style.visibility === 'collapse' && document.querySelector('.guesses-left span').innerText === '5/5', null, { timeout: 5000 });
-  check.ok(again, 'Enter on the panel starts a new game');
+  // On a failure, say where the game got stuck: the panel, the counter, the box's fade.
+  const after = again ? '' : await page.evaluate(() => {
+    const box = getComputedStyle(document.querySelector('.gameover-box'));
+    return ` (panel ${document.querySelector('.gameover-modal').style.visibility}, guesses ${document.querySelector('.guesses-left span').innerText}, box opacity ${box.opacity}, round over ${roundOver})`;
+  });
+  check.ok(again, `Enter on the panel starts a new game${after}`);
   check.noErrors(page);
 });

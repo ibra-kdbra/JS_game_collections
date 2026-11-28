@@ -25,10 +25,10 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | Raven | [elliot-nelson/js13k-2018-raven](https://github.com/elliot-nelson/js13k-2018-raven), a js13k 2018 entry | Elliot Nelson | ISC (stated in its `package.json`; the repository has no licence file) |
 | ReWire | [jmankopf/js13k-rewire](https://github.com/jmankopf/js13k-rewire), a js13k 2018 entry | Jan Mankopf | MIT |
 | Souls Bumper | [tyler6699/js13k2022](https://github.com/tyler6699/js13k2022), a js13k 2022 entry (theme "Death") | tyler6699 | ISC (stated in its `package.json`; no licence file) |
-| Tetris | tetr.js (named in `Tetris/README.md`) | Simon Laroche | **unknown** |
-| Tower Defense | [selenebun/towerdefense](https://github.com/selenebun/towerdefense) | selenebun | MIT |
-| Tower Defense map editor (`td-editor/`) | [selenebun/td-editor](https://github.com/selenebun/td-editor) | selenebun | **unknown** (the repository has no detected licence); `td-editor/LICENSE` here names only ibra-kdbra |
-| Tron | [momajd/Tron](https://github.com/momajd/Tron) (the original DOM version; the arena, AI and soundtrack were rewritten here) | momajd | **unknown** (no licence file found) |
+| Tetris | [simonlc/tetr.js](https://github.com/simonlc/tetr.js) | Simon M. Laroche | MIT (notice in `Tetris/LICENSE`) |
+| Tower Defense | [selenebun/towerdefense](https://github.com/selenebun/towerdefense) | Amelia Clarke (selenebun) | MIT (notice in `TowerDefense/LICENSE`) |
+| Tower Defense map editor (`td-editor/`) | [selenebun/td-editor](https://github.com/selenebun/td-editor) | Amelia Clarke (selenebun) | MIT (its `LICENSE` file; both notices in `td-editor/LICENSE`) |
+| Tron | Started from [momajd/Tron](https://github.com/momajd/Tron), a DOM light-cycle game. Everything has been rewritten here since: the canvas arena, rounds, AI, controls and soundtrack. Only the file names (`bike.js`, `board.js`, `view.js`) and the idea are left; a line-by-line comparison finds no shared code beyond braces and two property assignments | momajd (original) | The original has no licence file. No code from it remains |
 | Wahdatio | [monsterkodi/konnekt](https://github.com/monsterkodi/konnekt) (the original CoffeeScript sources are there; `Wahdatio/script.js` is the compiled game, edited directly since) | monsterkodi | Unlicense |
 | Breakout, Snake, Minesweeper, Crate Lab, Volt Flip | Written for this collection | ibra-kdbra | MIT |
 
@@ -38,10 +38,10 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | --- | --- | --- | --- |
 | LSD | [collidingScopes/liquid-shape-distortions](https://github.com/collidingScopes/liquid-shape-distortions) | collidingScopes | MIT (stated in its README) |
 | Particular Drift | [collidingScopes/particular-drift](https://github.com/collidingScopes/particular-drift) | collidingScopes | MIT (stated in its README) |
-| Adaptive Fields | [ChevalMonsieur/AdaptiveFlowField](https://github.com/ChevalMonsieur/AdaptiveFlowField) | ChevalMonsieur | **unknown** (its README has a licence section that could not be read) |
-| Experimental Math | Probably [thatsKevinJain/flowfields](https://github.com/thatsKevinJain/flowfields) (same `microcan` and `vec` helpers) | thatsKevinJain | **unknown** |
+| Adaptive Fields | [ChevalMonsieur/AdaptiveFlowField](https://github.com/ChevalMonsieur/AdaptiveFlowField) (`script.js` is its `main.js` with changes; `font.otf` is the same file) | Justin Hurson (ChevalMonsieur) | **Permission needed.** Its README licence allows personal and commercial use but says "Do not resell or redistribute in any way without the consent of creator Justin HURSON aka @ChevalMonsieur" |
+| Experimental Math | [thatsKevinJain/flowfields](https://github.com/thatsKevinJain/flowfields) (confirmed: `script.js` is its `index.js` reworked, and both helper files match it apart from whitespace) | Kevin Jain | Sketch: no licence file in the repository. Helpers `microcan.window.js` and `vec.window.js` are [microcan](https://github.com/francisrstokes/microcan) and [vec-la](https://github.com/francisrstokes/vec) by Francis Stokes: MIT |
 | Flow Fields, Text Fields | Flow-field technique from Frank's Laboratory tutorials (likely) | **unknown** | **unknown** |
-| Blossoming Flowers | A CSS animation, origin **unknown** | **unknown** | **unknown** |
+| Blossoming Flowers | "CSS Blossoming Flowers at Magical Night", [codepen.io/fikkkhdyt/pen/GRGVmOo](https://codepen.io/fikkkhdyt/pen/GRGVmOo) (2022, also in [a gist by the same author](https://gist.github.com/fikkkhdyt/8d6e85fff6a608e990f547e5f8bca889); the same class names and structure) | fikkkhdyt | MIT: public CodePen pens are MIT-licensed unless the author says otherwise ([codepen.io/license/pen/GRGVmOo](https://codepen.io/license/pen/GRGVmOo)) |
 | Sprite Lab (`Sprites_Games/`: lessons 1-8 in `*_project`, the page in `index.html` and `lab/`) | The JavaScript game development tutorials by [Franks Laboratory](https://www.youtube.com/c/Frankslaboratory) and their sprite sheets; `lab/dog-run.webp` is the run row cut from lesson 1's `shadow_dog.png`. Phone layouts, touch controls and the lab page were added here | Franks Laboratory | code and art: **unknown** terms |
 
 ## Music and sound
@@ -49,9 +49,7 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | File | What it is | Source | Licence |
 | --- | --- | --- | --- |
 | LSD soundtrack (`Art_Lab/LSD/js/soundtrack.js`) | An ambient electronic piece generated live with the Web Audio API; no audio file. It replaced a commercial track ("Fahrenheit Fair Enough", Telefon Tel Aviv) that could not be hosted | Written for Game Lab | MIT, with the rest of the repository |
-| `Hangman/audio/correct.mp3`, `hang.mp3`, `pullup.mp3` | Sound effects | Tags say "Copyright Alan McKinney" | **unknown** |
-| `Hangman/audio/rotate.mp3` | Cable winch rotation | salamisound.com (Sebastian Karpp) | Tag says "for non commercial use only" |
-| `Hangman/audio/win.mp3`, `lose.mp3`, `wrong.mp3` | Sound effects | **unknown** | **unknown** |
+| Hangman sounds (`Hangman/scripts/sounds.js`) | Every effect (guesses, winch, rope, drop, win, lose) generated live with the Web Audio API; no audio files. They replaced seven mp3s that could not be cleared (three tagged "Copyright Alan McKinney", a salamisound.com winch "for non commercial use only", and three of unknown origin); those are still in the git history | Written for Game Lab | MIT, with the rest of the repository |
 | `PacMan/sounds/*.mp3` | Sounds from the *Pac-Man* arcade game | Namco (via the upstream project) | Copyright Namco / Bandai Namco |
 | `PacMan_Slasher/audio/*.mp3` | Pac-Man-style jingles and effects | Upstream project; original source **unknown** | **unknown** |
 | `MoonLDR/audio/*.mp3` | Thruster, alarm, crash, morse | Upstream project; original source **unknown** | **unknown** |
