@@ -34,26 +34,27 @@ KeyboardInputManager.prototype.emit = function (event, data) {
 KeyboardInputManager.prototype.listen = function () {
   var self = this;
 
+  // Keyed by event.code (the physical key), so WASD and HJKL stay put on any layout
   var map = {
-    38: 0, // Up
-    39: 1, // Right
-    40: 2, // Down
-    37: 3, // Left
-    75: 0, // Vim up
-    76: 1, // Vim right
-    74: 2, // Vim down
-    72: 3, // Vim left
-    87: 0, // W
-    68: 1, // D
-    83: 2, // S
-    65: 3  // A
+    ArrowUp: 0,
+    ArrowRight: 1,
+    ArrowDown: 2,
+    ArrowLeft: 3,
+    KeyK: 0, // Vim up
+    KeyL: 1, // Vim right
+    KeyJ: 2, // Vim down
+    KeyH: 3, // Vim left
+    KeyW: 0,
+    KeyD: 1,
+    KeyS: 2,
+    KeyA: 3
   };
 
   // Respond to direction keys
   document.addEventListener("keydown", function (event) {
     var modifiers = event.altKey || event.ctrlKey || event.metaKey ||
                     event.shiftKey;
-    var mapped    = map[event.which];
+    var mapped    = map.hasOwnProperty(event.code) ? map[event.code] : undefined;
     var target    = event.target;
 
     // Let people type in the settings fields.
@@ -62,9 +63,10 @@ KeyboardInputManager.prototype.listen = function () {
       return;
     }
 
-    // U or Ctrl/Cmd+Z undoes the last move
-    if ((!modifiers && event.which === 85) ||
-        ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.which === 90)) {
+    // U or Ctrl/Cmd+Z undoes the last move (Z as labelled, like the usual undo shortcut)
+    if ((!modifiers && event.code === "KeyU") ||
+        ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey &&
+         (event.key === "z" || event.key === "Z"))) {
       event.preventDefault();
       self.emit("undo");
       return;
@@ -78,7 +80,7 @@ KeyboardInputManager.prototype.listen = function () {
     }
 
     // R key restarts the game
-    if (!modifiers && event.which === 82) {
+    if (!modifiers && event.code === "KeyR") {
       self.restart.call(self, event);
     }
   });

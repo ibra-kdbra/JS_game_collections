@@ -147,6 +147,9 @@ function updateCanvasSize() {
 }
 
 window.addEventListener('resize', function() {
+  // main.js (loaded after this file) creates gl; a resize can arrive before it
+  // has run, and gl is null where WebGL is unavailable.
+  if (typeof gl === 'undefined' || !gl) return;
   gl.viewport(0, 0, canvas.width, canvas.height);
 });
 

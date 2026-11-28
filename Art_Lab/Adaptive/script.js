@@ -165,7 +165,7 @@ function reset() {
 
 function inputNbParticle(event) {
     // check if enter is pressed
-    if (event.keyCode === 13) {
+    if (event.key === 'Enter') {
 
         points = []; // destroy all points
         nbPoints = document.getElementById("nbPoints").value; // get new amount of points
@@ -180,14 +180,14 @@ function inputNbParticle(event) {
 }
 
 function inputSpeed(event) {
-    if (event.keyCode === 13) { // check if enter is pressed
+    if (event.key === 'Enter') { // check if enter is pressed
         speed = document.getElementById("speed").value; // change speed
         reset();
     }
 }
 
 function inputSize(event) {
-    if (event.keyCode === 13) { // check if enter is pressed
+    if (event.key === 'Enter') { // check if enter is pressed
         size = document.getElementById("size").value; // change size
         strokeWeight(size); // apply size to stroke
         reset();
@@ -195,21 +195,21 @@ function inputSize(event) {
 }
 
 function inputPositionScale(event) {
-    if (event.keyCode === 13) { // check if enter is pressed
+    if (event.key === 'Enter') { // check if enter is pressed
         positionScale = document.getElementById("positionScale").value; // change positionScale
         reset();
     }
 }
 
 function inputRotationScale(event) {
-    if (event.keyCode === 13) { // check if enter is pressed
+    if (event.key === 'Enter') { // check if enter is pressed
         rotationScale = document.getElementById("rotationScale").value; // change rotationScale
         reset();
     }
 }
 
 function inputOpacity(event) {
-    if (event.keyCode === 13) { // check if enter is pressed
+    if (event.key === 'Enter') { // check if enter is pressed
         opacity = Math.floor(document.getElementById("opacity").value); // change opacity (USE MATH.FLOOR BECAUSE STROKE DOESN'T ACCEPT FLOATS)
         currentColor.setAlpha(opacity); // set opacity in color
         if (currentColor2 != null) currentColor2.setAlpha(opacity); // set opacity in color2 (if needed)
@@ -219,7 +219,7 @@ function inputOpacity(event) {
 }
 
 function inputFade(event) {
-    if (event.keyCode === 13) { // check if enter is pressed
+    if (event.key === 'Enter') { // check if enter is pressed
         fadeSpeed = Math.floor(document.getElementById("fadeSpeed").value); // change fadeSpeed (USE MATH.FLOOR BECAUSE STROKE DOESN'T ACCEPT FLOATS)
         reset();
     }
@@ -246,14 +246,14 @@ function applyAllInputs(newBorderRule, newColor, newColor2) {
     inputBorderRule(newBorderRule);
     inputColor(newColor, newColor2);
     
-    // calls all inputsFunctions with correct event.keycode (enter)
-    inputNbParticle({keyCode: 13});
-    inputSpeed({keyCode: 13});
-    inputSize({keyCode: 13});
-    inputPositionScale({keyCode: 13});
-    inputRotationScale({keyCode: 13});
-    inputOpacity({keyCode: 13});
-    inputFade({keyCode: 13});
+    // calls all inputsFunctions with correct event.key (Enter)
+    inputNbParticle({key: 'Enter'});
+    inputSpeed({key: 'Enter'});
+    inputSize({key: 'Enter'});
+    inputPositionScale({key: 'Enter'});
+    inputRotationScale({key: 'Enter'});
+    inputOpacity({key: 'Enter'});
+    inputFade({key: 'Enter'});
 
     reset();
 }

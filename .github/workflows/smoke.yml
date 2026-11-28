@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+# One place to change the Playwright version used by every browser check.
+env:
+  PLAYWRIGHT_VERSION: 1.65.1
+
 # A newer push cancels the run still going for the same PR or branch
 concurrency:
   group: checks-${{ github.event.pull_request.number || github.ref }}
@@ -68,21 +72,28 @@ jobs:
   # Browser checks, each in its own job so they run at the same time
   browser:
     name: ${{ matrix.name }}
-    # Playwright 1.56.1 has no Chromium build for ubuntu-latest (26.04); keep the runner it supports.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: Browser smoke test
+            engine: chromium
             run: node tools/smoke.mjs
+          - name: Browser smoke test (WebKit)
+            engine: webkit
+            run: node tools/smoke.mjs --engine webkit
           - name: Tower Defense aiming during explosions (subtle shake)
+            engine: chromium
             run: node TowerDefense/tools/aim-test.mjs --scenario 1
           - name: Tower Defense aiming during explosions (full shake)
+            engine: chromium
             run: node TowerDefense/tools/aim-test.mjs --scenario 2
           - name: Tower Defense aiming during explosions (full shake, zoomed in)
+            engine: chromium
             run: node TowerDefense/tools/aim-test.mjs --scenario 3
           - name: Tower Defense 3D view
+            engine: chromium
             run: node TowerDefense/tools/test-3d.mjs
           - name: Gameplay checks (2048, Hangman, HuggersFight, InterLaced, MoonLDR, PacMan, PacMan Slasher, Tetris, Wahdatio)
             run: node tools/play-checks.mjs
@@ -91,9 +102,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install Playwright and Chromium
-        run: |
-          npm install --no-save --no-package-lock playwright@1.56.1
-          npx playwright install --with-deps chromium
+      - name: Cache the Playwright browser
+        id: browser-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}-${{ matrix.engine }}
+      - name: Install Playwright
+        run: npm install --no-save --no-package-lock playwright@${{ env.PLAYWRIGHT_VERSION }}
+      - name: Install ${{ matrix.engine }}
+        if: steps.browser-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps ${{ matrix.engine }}
+      - name: Install ${{ matrix.engine }}'s system libraries
+        if: steps.browser-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps ${{ matrix.engine }}
       - name: ${{ matrix.name }}
         run: ${{ matrix.run }}

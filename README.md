@@ -30,6 +30,7 @@
   - [The Games](#the-games)
   - [Art Lab](#art-lab)
   - [Why Plain JavaScript and the Canvas?](#why-plain-javascript-and-the-canvas)
+  - [Licence](#licence)
   - [Getting Started](#getting-started)
   - [Checks](#checks)
   - [Game Development Process](#game-development-process)
@@ -90,6 +91,15 @@ Franks Laboratory).
 3. **Complete control**: every system (loops, input, collisions, rendering, sound) is written
    for the game it serves, and can be tuned for it.
 
+## Licence
+
+The repository is under the [MIT licence](LICENSE), except two folders that keep the licence of the project they came from:
+
+- `PacMan/`: GPL-3.0 ([`PacMan/LICENSE`](PacMan/LICENSE))
+- `HuggersFight/`: GPL-3.0 ([`HuggersFight/LICENSE`](HuggersFight/LICENSE)); its engine in `HuggersFight/engine/` is LittleJS, MIT
+
+[CREDITS.md](CREDITS.md) lists the original author and licence of every forked game, model, sound, library and font.
+
 ## Getting Started
 
 To explore and run the games in this collection:
@@ -136,10 +146,12 @@ Every pull request and every push to `main` runs the checks in
 
 - **Level checks**: each puzzle and level game has a solver or bot that proves every level
   can be won (Brainy Warrior, Crate Lab, Breakout, Snake, Volt Flip, Minesweeper, Souls Bumper,
-  Gravity Wells, ReWire, Raven, Tower Defense maps), and the hub
-  pages must match `data.js`.
+  Gravity Wells, ReWire, Raven, Tower Defense maps), and the hub pages must match `data.js`.
+  `node tools/render-pages.mjs` also sets the service worker's cache version from a hash of the
+  hub files, so a changed hub reaches returning visitors; CI fails if the version is stale.
 - **Browser smoke test**: `node tools/smoke.mjs` opens every page at phone and desktop size in
-  Chromium and fails on any script error or missing file.
+  Chromium and fails on any script error or missing file. A second job runs the same test in
+  WebKit, Safari's engine (`node tools/smoke.mjs --engine webkit`).
 - **Tower Defense**: `node TowerDefense/tools/test-3d.mjs` checks the 3D view (load time, model
   size, draw-call budget, no stalls mid-battle, fallback to Flat), and
   `node TowerDefense/tools/aim-test.mjs` clicks towers during heavy explosions.
@@ -159,8 +171,9 @@ Every pull request and every push to `main` runs the checks in
   - Wahdatio: a mouse-driven bot wins level 1 and EASY.
 
 The browser checks need Playwright (`npm install --no-save playwright`, then
-`npx playwright install chromium`). The workflow file lists the command for every check, to run
-any of them locally.
+`npx playwright install chromium`, plus `webkit` for the WebKit run). The Playwright version CI
+uses is set once, as `PLAYWRIGHT_VERSION` at the top of the workflow, and the browsers are cached
+between runs. The workflow file lists the command for every check, to run any of them locally.
 
 [Back to top](#javascript-game-collection)
 

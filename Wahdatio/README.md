@@ -78,7 +78,7 @@ The game is built using vanilla JavaScript with advanced mathematical concepts i
 
 `script.js` is the source of truth and is edited directly; there is no build step.
 
-The original CoffeeScript sources are kept in `src/` for the record only. `script.js` was regenerated from them once with CoffeeScript 2.7.0 (all files joined in this order and compiled as one unit: vec, quat, pref, synt, snd, glob, sprk, line, dot, grph, bot, menu, lvls, load, main), after fixing a stray quote in `menu.coffee`. Everything since then (touch input, time-based unit growth, bot difficulty, storage) exists only in `script.js`.
+`script.js` was compiled once from the original CoffeeScript sources of [monsterkodi/konnekt](https://github.com/monsterkodi/konnekt) with CoffeeScript 2.7.0 (all files joined in this order and compiled as one unit: vec, quat, pref, synt, snd, glob, sprk, line, dot, grph, bot, menu, lvls, load, main), after fixing a stray quote in `menu.coffee`. Everything since then (touch input, time-based unit growth, bot difficulty, storage, the menu layout on phones) was written directly in `script.js`, so the CoffeeScript copy that used to sit in `src/` no longer matched the game and was removed: recompiling it would have undone that work. The originals are still in the upstream repository.
 
 ---
 

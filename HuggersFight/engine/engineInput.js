@@ -34,12 +34,12 @@ const mouseWasReleased = keyWasReleased;
 onkeydown   = e=>
 {
     if (debug && e.target != document.body) return;
-    e.repeat || (inputData[isUsingGamepad = 0][remapKeyCode(e.keyCode)] = {d:hadInput=1, p:1});
+    e.repeat || (inputData[isUsingGamepad = 0][remapKeyCode(codeToKeyCode(e.code))] = {d:hadInput=1, p:1});
 }
 onkeyup     = e=>
 {
     if (debug && e.target != document.body) return;
-    const c = remapKeyCode(e.keyCode); inputData[0][c] && (inputData[0][c].d = 0, inputData[0][c].r = 1);
+    const c = remapKeyCode(codeToKeyCode(e.code)); inputData[0][c] && (inputData[0][c].d = 0, inputData[0][c].r = 1);
 }
 onmousedown = e=> (inputData[0][e.button] = {d:hadInput=1, p:1}, onmousemove(e));
 onmouseup   = e=> inputData[0][e.button] && (inputData[0][e.button].d = 0, inputData[0][e.button].r = 1);
@@ -57,6 +57,15 @@ if(debug)
     onwheel = e=> e.ctrlKey || (mouseWheel = sign(e.deltaY));
 oncontextmenu = e=> !1; // prevent right click menu
 const remapKeyCode = c=> copyWASDToDpad ? c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c;
+
+// Patched for this game: keys come from KeyboardEvent.code (the physical key) instead of the
+// deprecated keyCode, turned back into the old key numbers so keyIsDown(38) etc. still work
+// and WASD stays WASD on any layout. Keys not listed here are stored under their code name.
+const keyCodesByCode = {Backspace:8, Tab:9, Enter:13, NumpadEnter:13, ShiftLeft:16, ShiftRight:16,
+    ControlLeft:17, ControlRight:17, AltLeft:18, AltRight:18, Escape:27, Space:32,
+    ArrowLeft:37, ArrowUp:38, ArrowRight:39, ArrowDown:40, NumpadAdd:107, NumpadSubtract:109, Backquote:192};
+const codeToKeyCode = code=> /^(Key[A-Z]|Digit\d)$/.test(code) ? code.charCodeAt(code.length-1) :
+    /^Numpad\d$/.test(code) ? 48 + code.charCodeAt(6) : keyCodesByCode[code] || code;
 
 // gamepad
 

@@ -2877,11 +2877,11 @@
 
   
   win.addEventListener('keydown', function(e) {
-    switch (e.keyCode) {
-      case 32:
-      case 27:
-        return pause(); // space, esc
-      case 82:
+    switch (e.code) {
+      case 'Space':
+      case 'Escape':
+        return pause();
+      case 'KeyR':
         return forceLevel(world.level.name);
     }
   });

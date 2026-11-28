@@ -579,7 +579,7 @@ document.addEventListener('keydown', e => {
     if (document.querySelector('dialog[open]')) return;
     if (e.target.closest && e.target.closest('input, textarea, select')) return;
     if (e.key === ' ') e.preventDefault();
-    onKey(e.keyCode, e.shiftKey);
+    onKey(e.code, e.shiftKey); // the physical key, whatever the keyboard layout
 });
 
 document.getElementById('theme').addEventListener('change', e => {
@@ -595,119 +595,119 @@ document.querySelectorAll('[data-deco]').forEach(b => {
 
 function onKey(code, shift) {
     switch (code) {
-        case 32:
+        case 'Space':
             // Spacebar
             toggleDispMode();
             break;
-        case 37:
+        case 'ArrowLeft':
             // Left arrow
             selectTile('left');
             break;
-        case 38:
+        case 'ArrowUp':
             // Up arrow
             selectTile('up');
             break;
-        case 39:
+        case 'ArrowRight':
             // Right arrow
             selectTile('right');
             break;
-        case 40:
+        case 'ArrowDown':
             // Down arrow
             selectTile('down');
             break;
-        case 48:
+        case 'Digit0':
             // 0
             selectTile('none');
             break;
-        case 49:
+        case 'Digit1':
             // 1
             selectTile('empty');
             break;
-        case 50:
+        case 'Digit2':
             // 2
             selectTile('wall');
             break;
-        case 51:
+        case 'Digit3':
             // 3
             selectTile('path', 'tower');
             break;
-        case 52:
+        case 'Digit4':
             // 4
             selectTile('tower', 'grass');
             break;
-        case 53:
+        case 'Digit5':
             // 5
             selectTile('enemy', 'road');
             break;
-        case 54:
+        case 'Digit6':
             // 6
             selectTile('spawn', 'lCorner');
             break;
-        case 55:
+        case 'Digit7':
             // 7
             selectTile('exit', 'rCorner');
             break;
-        case 56:
+        case 'Digit8':
             // 8
             if (dispMode) {
                 deco = 'sidewalk';
                 markSelected();
             }
             break;
-        case 67:
+        case 'KeyC':
             // C
             display = buildArray(cols, rows, 'empty');
             displayDir = buildArray(cols, rows, 0);
             break;
-        case 68:
+        case 'KeyD':
             // D
             toggleAutogen();
             break;
-        case 70:
+        case 'KeyF':
             // F
             userFill();
             break;
-        case 76:
+        case 'KeyL':
             // L
             displayDir = copyArray(paths);
             break;
-        case 77:
+        case 'KeyM':
             // M
             showImportMapPrompt();
             break;
-        case 80:
+        case 'KeyP':
             // P
             recalculate();
             break;
-        case 81:
+        case 'KeyQ':
             // Q
             paths = buildArray(cols, rows, 0);
             break;
-        case 82:
+        case 'KeyR':
             // R
             resetMap(0);
             break;
-        case 83:
+        case 'KeyS':
             // S
             spawnpoints = [];
             break;
-        case 85:
+        case 'KeyU':
             // U
             genDisplay();
             break;
-        case 88:
+        case 'KeyX':
             // X
             showExportMap();
             break;
-        case 90:
+        case 'KeyZ':
             // Z
             resetZoom();
             break;
-        case 219:
+        case 'BracketLeft':
             // Left bracket
             shift ? changeSize(0, -1) : changeSize(-1, 0);
             break;
-        case 221:
+        case 'BracketRight':
             // Right bracket
             shift ? changeSize(0, 1) : changeSize(1, 0);
             break;

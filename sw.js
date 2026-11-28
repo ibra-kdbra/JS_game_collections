@@ -2,13 +2,14 @@
  * Game Lab service worker.
  *
  * - The hub shell (pages, CSS, JS, fonts, icons) is precached per version, so the
- *   collection opens instantly and offline. Bump VERSION whenever a shell file changes.
+ *   collection opens instantly and offline. VERSION is a hash of the SHELL files,
+ *   written by `node tools/render-pages.mjs`; CI fails if it is out of date.
  * - Everything else same-origin is served network-first and cached as it is used,
  *   capped by entry count and file size so heavy games can't fill the disk.
  * - Navigations always try the network first, so a deploy shows up on the next visit.
  */
 
-const VERSION = 'v10';
+const VERSION = 'shell-efd432e7cf2b';
 const SHELL_CACHE = `gamelab-shell-${VERSION}`;
 const RUNTIME_CACHE = `gamelab-runtime-${VERSION}`;
 const RUNTIME_MAX_ENTRIES = 300;
