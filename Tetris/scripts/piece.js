@@ -156,25 +156,25 @@ Piece.prototype.checkShift = function() {
       this.shiftDelay++;
       this.shiftReleased = false;
       // 2. Apply DAS delay
-    } else if (this.shiftDelay < settings.DAS) {
+    } else if (this.shiftDelay < handling.DAS) {
       this.shiftDelay++;
       // 3. Once the delay is complete, move over once.
       //     Increment delay so this doesn't run again.
-    } else if (this.shiftDelay === settings.DAS && settings.DAS !== 0) {
+    } else if (this.shiftDelay === handling.DAS && handling.DAS !== 0) {
       this.shift(this.shiftDir);
-      if (settings.ARR !== 0) this.shiftDelay++;
+      if (handling.ARR !== 0) this.shiftDelay++;
       // 4. Apply ARR delay
-    } else if (this.arrDelay < settings.ARR) {
+    } else if (this.arrDelay < handling.ARR) {
       this.arrDelay++;
       // 5. If ARR Delay is full, move piece, and reset delay and repeat.
-    } else if (this.arrDelay === settings.ARR && settings.ARR !== 0) {
+    } else if (this.arrDelay === handling.ARR && handling.ARR !== 0) {
       this.shift(this.shiftDir);
     }
   }
 };
 Piece.prototype.shift = function(direction) {
   this.arrDelay = 0;
-  if (settings.ARR === 0 && this.shiftDelay === settings.DAS) {
+  if (handling.ARR === 0 && this.shiftDelay === handling.DAS) {
     for (var i = 1; i < 10; i++) {
       if (!this.moveValid(i * direction, 0, this.tetro)) {
         this.x += i * direction - direction;
@@ -189,7 +189,7 @@ Piece.prototype.shift = function(direction) {
 Piece.prototype.shiftDown = function() {
   if (this.moveValid(0, 1, this.tetro)) {
     var row = Math.floor(this.y);
-    var grav = gravityArr[settings['Soft Drop'] + 1];
+    var grav = gravityArr[handling['Soft Drop'] + 1];
     if (grav > 1) this.y += this.getDrop(grav);
     else this.y += grav;
     if (Math.floor(this.y) !== row) this.lastRotate = false;
@@ -264,8 +264,8 @@ Piece.prototype.update = function() {
     if (forced !== null) {
       if (forced > 1) this.y += this.getDrop(forced);
       else this.y += forced;
-    } else if (settings.Gravity) {
-      var grav = gravityArr[settings.Gravity - 1];
+    } else if (handling.Gravity) {
+      var grav = gravityArr[handling.Gravity - 1];
       if (grav > 1) this.y += this.getDrop(grav);
       else this.y += grav;
     } else {

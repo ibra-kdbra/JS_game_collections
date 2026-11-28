@@ -152,6 +152,9 @@ Every pull request and every push to `main` runs the checks in
 - **Browser smoke test**: `node tools/smoke.mjs` opens every page at phone and desktop size in
   Chromium and fails on any script error or missing file. A second job runs the same test in
   WebKit, Safari's engine (`node tools/smoke.mjs --engine webkit`).
+- **Tetris**: `node Tetris/tools/verify-replays.mjs` plays 19 seeded games across every mode and
+  handling setting and checks each replay ends exactly like its game, and
+  `node Tetris/tools/verify-dig-race.mjs` checks a Dig Race ends once its garbage is cleared, in any order.
 - **Tower Defense**: `node TowerDefense/tools/test-3d.mjs` checks the 3D view (load time, model
   size, draw-call budget, no stalls mid-battle, fallback to Flat), and
   `node TowerDefense/tools/aim-test.mjs` clicks towers during heavy explosions.

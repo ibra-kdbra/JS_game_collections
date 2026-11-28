@@ -4,7 +4,6 @@
  * Playfield.
  */
 var cellSize;
-var column;
 
 /**
  * Get html elements.
@@ -52,8 +51,6 @@ var kickDataI = [
   [[-1, -1], [1, -1], [-2, -1], [1, 0], [-2, 0]],
   [[0, -1], [0, -1], [0, -1], [0, 1], [0, -2]],
 ];
-// TODO get rid of this lol.
-var kickDataO = [[[0, 0]], [[0, 0]], [[0, 0]], [[0, 0]]];
 
 // Define shapes and spawns.
 var PieceI = {
@@ -87,7 +84,9 @@ var PieceO = {
   index: 3,
   x: 4,
   y: 0,
-  kickData: kickDataO,
+  // An O turns in place: the first test of every kick table is no offset,
+  //  and it always fits, since the O covers the same cells in every orientation.
+  kickData: kickData,
   tetro: [[4, 4], [4, 4]],
 };
 var PieceS = {
@@ -113,10 +112,14 @@ var PieceZ = {
 };
 var pieces = [PieceI, PieceJ, PieceL, PieceO, PieceS, PieceT, PieceZ];
 
-// Finesse data
-// index x orientatio x column = finesse
-// finesse[0][0][4] = 1
-// TODO double check these.
+/**
+ * Finesse: the fewest key presses that place a piece, from its spawn, in a
+ *  given orientation and column on an empty board. finesse[piece][orientation][column],
+ *  where column is the piece's leftmost cell, and moving to a wall with DAS,
+ *  each rotation (180 included) and each tap all count as one press. For the
+ *  I, S, Z and O, orientations that give the same shape count as one (an O is
+ *  never worth rotating). Checked against a search over the game's own moves.
+ */
 var finesse = [
   [
     [1, 2, 1, 0, 1, 2, 1],
@@ -297,8 +300,20 @@ var gameState = 3;
 var paused = false;
 var lineLimit;
 
+/**
+ * Replays. A game is a seed plus its input: replayKeys[frame] holds keysDown
+ *  for every step where it changed, replayKeys.t[frame] the touch gestures
+ *  applied that step (see Touch.apply), replayKeys.seed the rng seed and
+ *  replayKeys.handling the handling settings the game was played with.
+ */
 var replayKeys;
+var replayHeld; // keysDown as last recorded (live) or played back (replay)
 var watchingReplay = false;
+// The settings that change how the game plays. A game reads them from
+//  `handling`, a copy taken at the start, so a replay plays with the
+//  settings of its game whatever they are set to now.
+var HANDLING = ['DAS', 'ARR', 'Gravity', 'Soft Drop', 'Lock Delay'];
+var handling = {};
 var toGreyRow;
 var gametype;
 var lastX, lastY, lastPos, landed;
@@ -312,19 +327,19 @@ var digLines;
 // Keys
 var keysDown;
 var lastKeys;
-var released;
 
+// Controls, as key ids (see keyId in menu.js). Saved under "tetris.binds".
 var binds = {
-  pause: 27,
-  moveLeft: 37,
-  moveRight: 39,
-  moveDown: 40,
-  hardDrop: 32,
-  holdPiece: 67,
-  rotRight: 88,
-  rotLeft: 90,
-  rot180: 16,
-  retry: 82,
+  pause: 'Escape',
+  moveLeft: 'ArrowLeft',
+  moveRight: 'ArrowRight',
+  moveDown: 'ArrowDown',
+  hardDrop: 'Space',
+  holdPiece: 'KeyC',
+  rotRight: 'KeyX',
+  rotLeft: 'KeyZ',
+  rot180: 'Shift',
+  retry: 'KeyR',
 };
 var flags = {
   hardDrop: 1,
@@ -600,11 +615,11 @@ function init(gt) {
     watchingReplay = true;
   } else {
     watchingReplay = false;
-    replayKeys = {};
-    // TODO Make new seed and rng method.
-    replayKeys.seed = ~~(Math.random() * 2147483645) + 1;
+    replayKeys = { seed: rng.newSeed(), handling: {} };
+    for (var i = 0; i < HANDLING.length; i++) replayKeys.handling[HANDLING[i]] = settings[HANDLING[i]];
     gametype = gt;
   }
+  handling = replayKeys.handling;
 
   lineLimit = gametype === 0 ? 40 : Infinity;
   score = 0;
@@ -619,15 +634,19 @@ function init(gt) {
   garbageRows = 0;
   Fx.reset();
 
-  //Reset
-  column = 0;
+  // Input and handling state. The piece object outlives games, so its DAS
+  //  state is reset too, or a game (and its replay) would start with what the
+  //  last one left.
   keysDown = 0;
-  Touch.reset();
   lastKeys = 0;
-  released = 255;
-  //TODO Check if needed.
+  replayHeld = 0;
+  pendingRelease = 0;
+  Touch.reset();
   piece.shiftDir = 0;
   piece.shiftReleased = true;
+  piece.shiftDelay = 0;
+  piece.arrDelay = 0;
+  piece.lockDelay = 0;
 
   paused = false;
 
@@ -643,7 +662,7 @@ function init(gt) {
   lastPos = 'reset';
   stack.new(10, 22);
   hold.piece = void 0;
-  if (settings.Gravity === 0) gravity = gravityUnit * 4;
+  if (handling.Gravity === 0) gravity = gravityUnit * 4;
   playStartFrame = 100;
 
   preview.init();
@@ -661,28 +680,7 @@ function init(gt) {
   clear(holdCtx);
 
   if (gametype === 7) garbageHole = ~~(rng.next() * 10);
-
-  if (gametype === 3) {
-    // Dig Race
-    // make ten random numbers, make sure next isn't the same as last?
-    //TODO make into function or own file.
-
-    digLines = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
-
-    statsLines.innerHTML = 10;
-    var randomNums = [];
-    for (var i = 0; i < 10; i++) {
-      var random = ~~(rng.next() * 10);
-      if (random !== randomNums[i - 1]) randomNums.push(random);
-      else i--;
-    }
-    for (var y = 21; y > 11; y--) {
-      for (var x = 0; x < 10; x++) {
-        if (randomNums[y - 12] !== x) stack.grid[x][y] = 8;
-      }
-    }
-    stack.draw();
-  }
+  if (gametype === 3) setupDigRace();
 
   menu();
 
@@ -695,6 +693,26 @@ function init(gt) {
     gameState = 2;
     stepper.reset();
   }
+}
+
+/**
+ * Dig Race: ten rows of garbage at the bottom, each with one hole, never in
+ *  the same column in two rows next to each other.
+ */
+function setupDigRace() {
+  digLines = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
+  statsLines.innerHTML = 10;
+  var holes = [];
+  while (holes.length < 10) {
+    var hole = ~~(rng.next() * 10);
+    if (hole !== holes[holes.length - 1]) holes.push(hole);
+  }
+  for (var y = 21; y > 11; y--) {
+    for (var x = 0; x < 10; x++) {
+      if (holes[y - 12] !== x) stack.grid[x][y] = 8;
+    }
+  }
+  stack.draw();
 }
 
 function range(start, end, inc) {
@@ -736,11 +754,17 @@ function unpause() {
 }
 
 /**
- * Park Miller "Minimal Standard" PRNG.
+ * Park Miller "Minimal Standard" PRNG. Every random choice in a game (the
+ *  piece bags, Dig Race and Survival garbage) comes from it, so a game is
+ *  replayed from its seed. init() seeds it with newSeed(), or with the seed of
+ *  the game being replayed.
  */
-//TODO put random seed method in here.
 var rng = new function() {
   this.seed = 1;
+  // A fresh seed, between 1 and 2147483645.
+  this.newSeed = function() {
+    return ~~(Math.random() * 2147483645) + 1;
+  };
   this.next = function() {
     // Returns a float between 0.0, and 1.0
     return this.gen() / 2147483647;
@@ -812,7 +836,7 @@ function modeGravity() {
  */
 function lockLimit() {
   if (gametype === 8) return Math.max(10, Math.round(30 - (level - 1) * 1.5));
-  return settings['Lock Delay'];
+  return handling['Lock Delay'];
 }
 
 /**
@@ -1230,38 +1254,34 @@ function draw(tetro, cx, cy, ctx, color) {
 
 // ========================== Controller ======================================
 
+/**
+ * Keys are matched by KeyboardEvent.code, the physical key, so the controls
+ *  stay in the same place on any keyboard layout. keyId() (menu.js) also
+ *  treats the left and right Shift, Control, Alt and Meta keys as one key.
+ */
+var SCROLL_KEYS = ['Space', 'ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'];
+
 addEventListener(
   'keydown',
   function(e) {
-    if ([32, 37, 38, 39, 40].indexOf(e.keyCode) !== -1) e.preventDefault();
-    if (e.keyCode === binds.pause) {
+    var id = keyId(e);
+    if (SCROLL_KEYS.indexOf(id) !== -1) e.preventDefault();
+    if (id === binds.pause) {
       if (paused) {
         unpause();
       } else {
         pause();
       }
     }
-    if (e.keyCode === binds.retry && gametype !== void 0 && !document.querySelector('.menu.on:not(#go):not(#pause)')) {
+    if (id === binds.retry && gametype !== void 0 && !document.querySelector('.menu.on:not(#go):not(#pause)')) {
       init(gametype);
     }
     if (!watchingReplay) {
-      if (e.keyCode === binds.moveLeft) {
-        keysDown |= flags.moveLeft;
-        //piece.finesse++
-      } else if (e.keyCode === binds.moveRight) {
-        keysDown |= flags.moveRight;
-      } else if (e.keyCode === binds.moveDown) {
-        keysDown |= flags.moveDown;
-      } else if (e.keyCode === binds.hardDrop) {
-        keysDown |= flags.hardDrop;
-      } else if (e.keyCode === binds.rotRight) {
-        keysDown |= flags.rotRight;
-      } else if (e.keyCode === binds.rotLeft) {
-        keysDown |= flags.rotLeft;
-      } else if (e.keyCode === binds.rot180) {
-        keysDown |= flags.rot180;
-      } else if (e.keyCode === binds.holdPiece) {
-        keysDown |= flags.holdPiece;
+      for (var name in flags) {
+        if (id === binds[name]) {
+          keysDown |= flags[name];
+          break;
+        }
       }
     }
   },
@@ -1274,7 +1294,7 @@ addEventListener(
 var seenKeys = 0;
 var pendingRelease = 0;
 function releaseKey(flag) {
-  if (!(keysDown & flag)) return;
+  if (watchingReplay || !(keysDown & flag)) return;
   if (seenKeys & flag) keysDown &= ~flag;
   else pendingRelease |= flag;
 }
@@ -1283,8 +1303,9 @@ addEventListener(
   'keyup',
   function(e) {
     if (watchingReplay) return;
+    var id = keyId(e);
     for (var name in flags) {
-      if (e.keyCode === binds[name]) releaseKey(flags[name]);
+      if (id === binds[name]) releaseKey(flags[name]);
     }
   },
   false,
@@ -1300,20 +1321,40 @@ addEventListener('blur', function() {
 
 // ========================== Loop ============================================
 
-//TODO Cleanup gameloop and update.
 /**
- * Runs every frame.
+ * Reads the keys for this step, at the start of every countdown and play step.
+ *  Live, keysDown is recorded whenever it differs from what was recorded last.
+ *  In a replay keysDown is set from the recording on every step, so nothing
+ *  else that touches it (pausing, an on-screen button let go) changes the game.
+ */
+function readKeys() {
+  if (watchingReplay) {
+    if (frame in replayKeys) replayHeld = replayKeys[frame];
+    keysDown = replayHeld;
+  } else if (keysDown !== replayHeld) {
+    replayKeys[frame] = replayHeld = keysDown;
+  }
+}
+
+/**
+ * One step of play.
  */
 function update() {
-  //TODO Das preservation broken.
-  if (lastKeys !== keysDown && !watchingReplay) {
-    replayKeys[frame] = keysDown;
-  } else if (frame in replayKeys) {
-    keysDown = replayKeys[frame];
-  }
-
+  readKeys();
   Touch.apply();
+  applyKeys();
+  piece.update();
+  if (gametype === 7 && gameState === 0) survivalStep();
+  checkFinish();
+  statistics();
+  lastKeys = keysDown;
+}
 
+/**
+ * Hold, rotations, shifting and drops. Hold, rotations and hard drop act when
+ *  their key goes down; shifting and soft drop while their key is held.
+ */
+function applyKeys() {
   if (!(lastKeys & flags.holdPiece) && flags.holdPiece & keysDown) {
     piece.hold();
   }
@@ -1338,29 +1379,21 @@ function update() {
   if (!(lastKeys & flags.hardDrop) && flags.hardDrop & keysDown) {
     piece.hardDrop();
   }
+}
 
-  piece.update();
-  if (gametype === 7 && gameState === 0) survivalStep();
-
-  // Win and finish conditions.
-  if (gameState === 0) {
-    if (gametype === 0 && lines >= lineLimit) {
-      endGame(1, 'GREAT!');
-    } else if (gametype === 3 && digLines.length === 0) {
-      endGame(1, 'GREAT!');
-    } else if (gametype === 4 && lines >= MARATHON_MAX_LEVEL * LINES_PER_LEVEL) {
-      endGame(1, 'GREAT!');
-    } else if (gametype === 8 && lines >= MASTER_MAX_LEVEL * LINES_PER_LEVEL) {
-      endGame(1, 'MASTER!');
-    } else if (gametype === 5 && elapsedMs() >= ULTRA_FRAMES * (1000 / FPS)) {
-      endGame(1, 'TIME!');
-    }
-  }
-
-  statistics();
-
-  if (lastKeys !== keysDown) {
-    lastKeys = keysDown;
+/** Win and finish conditions. */
+function checkFinish() {
+  if (gameState !== 0) return;
+  if (gametype === 0 && lines >= lineLimit) {
+    endGame(1, 'GREAT!');
+  } else if (gametype === 3 && digLines.length === 0) {
+    endGame(1, 'GREAT!');
+  } else if (gametype === 4 && lines >= MARATHON_MAX_LEVEL * LINES_PER_LEVEL) {
+    endGame(1, 'GREAT!');
+  } else if (gametype === 8 && lines >= MASTER_MAX_LEVEL * LINES_PER_LEVEL) {
+    endGame(1, 'MASTER!');
+  } else if (gametype === 5 && elapsedMs() >= ULTRA_FRAMES * (1000 / FPS)) {
+    endGame(1, 'TIME!');
   }
 }
 
@@ -1413,53 +1446,60 @@ function step() {
 
 function stepGame() {
   if (gameState === 0) {
-    // Playing
     if (!paused) {
       frame++;
       update();
     }
   } else if (gameState === 2) {
-    // Count Down
     frame++;
-    if (frame < 50) {
-      if (msg.innerHTML !== 'READY') msg.innerHTML = 'READY';
-    } else if (frame < 100) {
-      if (msg.innerHTML !== 'GO!') msg.innerHTML = 'GO!';
-    } else {
-      msg.innerHTML = '';
-      gameState = 0;
-      playStartFrame = frame;
-      piece.new(preview.next());
-    }
-    // DAS Preload
-    if (lastKeys !== keysDown && !watchingReplay) {
-      replayKeys[frame] = keysDown;
-    } else if (frame in replayKeys) {
-      keysDown = replayKeys[frame];
-    }
-    if (keysDown & flags.moveLeft) {
-      lastKeys = keysDown;
-      piece.shiftDelay = settings.DAS;
-      piece.shiftReleased = false;
-      piece.shiftDir = -1;
-    } else if (keysDown & flags.moveRight) {
-      lastKeys = keysDown;
-      piece.shiftDelay = settings.DAS;
-      piece.shiftReleased = false;
-      piece.shiftDir = 1;
-    }
+    countdownStep();
   } else if (toGreyRow >= 2) {
-    /**
-     * Fade to grey animation played when the game ends.
-     */
     frame++;
-    if (toGreyRow === 21) clear(activeCtx);
-    if (frame % 2) {
-      for (var x = 0; x < 10; x++) {
-        if (stack.grid[x][toGreyRow]) stack.grid[x][toGreyRow] = gameState - 1;
-      }
-      stack.draw();
-      toGreyRow--;
+    fadeStep();
+  }
+}
+
+/**
+ * READY, GO!, then the first piece. Keys are read (and recorded) during the
+ *  countdown too. An arrow held at the end of it starts the game with the DAS
+ *  already charged (DAS preload). lastKeys only follows the keys while an
+ *  arrow is held, so a rotation or hold held through GO acts on the first piece.
+ */
+function countdownStep() {
+  if (frame < 50) {
+    if (msg.innerHTML !== 'READY') msg.innerHTML = 'READY';
+  } else if (frame < 100) {
+    if (msg.innerHTML !== 'GO!') msg.innerHTML = 'GO!';
+  } else {
+    msg.innerHTML = '';
+    gameState = 0;
+    playStartFrame = frame;
+    piece.new(preview.next());
+  }
+  readKeys();
+  if (keysDown & flags.moveLeft) {
+    lastKeys = keysDown;
+    piece.shiftDelay = handling.DAS;
+    piece.shiftReleased = false;
+    piece.shiftDir = -1;
+  } else if (keysDown & flags.moveRight) {
+    lastKeys = keysDown;
+    piece.shiftDelay = handling.DAS;
+    piece.shiftReleased = false;
+    piece.shiftDir = 1;
+  }
+}
+
+/**
+ * Fade to grey, a row every other step, played when the game ends.
+ */
+function fadeStep() {
+  if (toGreyRow === 21) clear(activeCtx);
+  if (frame % 2) {
+    for (var x = 0; x < 10; x++) {
+      if (stack.grid[x][toGreyRow]) stack.grid[x][toGreyRow] = gameState - 1;
     }
+    stack.draw();
+    toGreyRow--;
   }
 }

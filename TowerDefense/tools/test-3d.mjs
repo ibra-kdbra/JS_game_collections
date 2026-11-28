@@ -119,6 +119,12 @@ async function open(query = 'switchback', block) {
 
     // Everything dies: models play out and go, and are reused
     await page.evaluate(() => {
+        // Nothing new may arrive while the dead play out: drop the rest of the
+        // wave and stop further waves (at 3x speed the next one starts within
+        // seconds, and its enemies kept this check from ever settling).
+        newEnemies = [];
+        tempSpawns = [];
+        nextWave = () => {};
         paused = false;
         enemies.forEach(e => { e.health = 0; });
     });
