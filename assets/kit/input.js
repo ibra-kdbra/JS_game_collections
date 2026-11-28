@@ -2,8 +2,8 @@
  * Touch controls that speak keyboard.
  *
  * Most games here already handle keyboard input. Rather than rewriting their
- * input code, the on-screen controls dispatch real KeyboardEvents (with `key`,
- * `code`, `keyCode` and `which` set), so existing handlers just work.
+ * input code, the on-screen controls dispatch real KeyboardEvents (with `key` and
+ * `code` set, as a US keyboard would), so existing handlers just work.
  *
  *   createTouchControls({
  *     dpad: { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' },
@@ -15,39 +15,27 @@
 
 import { ensureKitStyles } from './shell.js';
 
-const KEY_INFO = {
-  ArrowUp: { code: 'ArrowUp', keyCode: 38 },
-  ArrowDown: { code: 'ArrowDown', keyCode: 40 },
-  ArrowLeft: { code: 'ArrowLeft', keyCode: 37 },
-  ArrowRight: { code: 'ArrowRight', keyCode: 39 },
-  ' ': { code: 'Space', keyCode: 32 },
-  Enter: { code: 'Enter', keyCode: 13 },
-  Escape: { code: 'Escape', keyCode: 27 },
-  Shift: { code: 'ShiftLeft', keyCode: 16 },
-  Control: { code: 'ControlLeft', keyCode: 17 },
+const KEY_CODES = {
+  ' ': 'Space',
+  Shift: 'ShiftLeft',
+  Control: 'ControlLeft',
 };
 
-function keyInfo(key) {
-  if (KEY_INFO[key]) return { key, ...KEY_INFO[key] };
-  if (/^[a-z]$/i.test(key)) {
-    const upper = key.toUpperCase();
-    return { key, code: `Key${upper}`, keyCode: upper.charCodeAt(0) };
-  }
-  if (/^[0-9]$/.test(key)) return { key, code: `Digit${key}`, keyCode: key.charCodeAt(0) };
-  return { key, code: key, keyCode: 0 };
+function codeFor(key) {
+  if (KEY_CODES[key]) return KEY_CODES[key];
+  if (/^[a-z]$/i.test(key)) return `Key${key.toUpperCase()}`;
+  if (/^[0-9]$/.test(key)) return `Digit${key}`;
+  return key; // ArrowUp, Enter, Escape, ... have the same `key` and `code`
 }
 
 /**
- * Dispatch a synthetic key event that legacy `keyCode` handlers understand.
+ * Dispatch a synthetic key event, with `code` set to the key's place on a US keyboard.
  * @param {'keydown'|'keyup'} type
  * @param {string} key  A KeyboardEvent.key value, e.g. 'ArrowLeft', ' ', 'z'.
  * @param {EventTarget} [target=document]  Events bubble from document to window.
  */
 export function sendKey(type, key, target = document) {
-  const info = keyInfo(key);
-  const event = new KeyboardEvent(type, { key: info.key, code: info.code, bubbles: true, cancelable: true });
-  Object.defineProperty(event, 'keyCode', { get: () => info.keyCode });
-  Object.defineProperty(event, 'which', { get: () => info.keyCode });
+  const event = new KeyboardEvent(type, { key, code: codeFor(key), bubbles: true, cancelable: true });
   target.dispatchEvent(event);
 }
 

@@ -2,7 +2,7 @@
 
 const SLUG = "souls-bumper";
 const STEP_MS = 20; // Movement was tuned for 50 logic steps a second.
-const ESC = 27;
+const ESC = "Escape";
 const COL1 = "990099";
 
 let ctx = null;
@@ -102,19 +102,22 @@ let mg = {
 
     // Keyboard
     window.addEventListener("keydown", function(e) {
-      if ([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) e.preventDefault();
-      if (e.keyCode == ESC) {
+      if ([SPACE, LEFT, UP, RIGHT, DOWN].indexOf(e.code) > -1) e.preventDefault();
+      if (e.code == ESC) {
         if (gameStarted) setPaused(!isPaused);
         return;
       }
-      mg.keys[e.keyCode] = true;
+      mg.keys[e.code] = true;
       if (!gameStarted) introKey(e);
     });
     window.addEventListener("keyup", function(e) {
-      mg.keys[e.keyCode] = false;
-      if (e.keyCode == R && gameStarted && !isPaused) RELOAD = true;
-      if (e.keyCode == M) toggleMusic();
-      if (e.keyCode == T) toggleTips();
+      mg.keys[e.code] = false;
+      // Shortcuts named after a letter follow the letter printed on the key (so M
+      // is music on AZERTY too); movement keys above follow the physical key.
+      const letter = shortcutLetter(e);
+      if (letter == "r" && gameStarted && !isPaused) RELOAD = true;
+      if (letter == "m") toggleMusic();
+      if (letter == "t") toggleTips();
     });
     window.addEventListener("blur", () => { mg.keys = []; });
     document.addEventListener("visibilitychange", () => {
@@ -258,14 +261,19 @@ function renderLevelSelect() {
     : GameKit.isTouchFirst() || touch ? "TAP A LEVEL TO BEGIN" : "PRESS ANY KEY TO BEGIN";
 }
 
+/** The letter a key types, lower case ("" for keys that don't type one). */
+function shortcutLetter(e) {
+  return typeof e.key == "string" && e.key.length == 1 ? e.key.toLowerCase() : "";
+}
+
 function introKey(e) {
-  if ([LEFT, A].includes(e.keyCode)) {
+  if ([LEFT, A].includes(e.code)) {
     selected = Math.max(0, selected - 1);
     renderLevelSelect();
-  } else if ([RIGHT, D].includes(e.keyCode)) {
+  } else if ([RIGHT, D].includes(e.code)) {
     selected = Math.min(progress.unlocked, lastLevel() - 1, selected + 1);
     renderLevelSelect();
-  } else if (![M, T, R, 16, 17, 18, 91, 9].includes(e.keyCode)) {
+  } else if (!["m", "t", "r"].includes(shortcutLetter(e)) && !["ShiftLeft", "ShiftRight", "ControlLeft", "ControlRight", "AltLeft", "AltRight", "MetaLeft", "MetaRight", "Tab"].includes(e.code)) {
     startLevel(selected);
   }
 }
