@@ -29,7 +29,7 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | Tower Defense | [selenebun/towerdefense](https://github.com/selenebun/towerdefense) | selenebun | MIT |
 | Tower Defense map editor (`td-editor/`) | [selenebun/td-editor](https://github.com/selenebun/td-editor) | selenebun | **unknown** (the repository has no detected licence); `td-editor/LICENSE` here names only ibra-kdbra |
 | Tron | [momajd/Tron](https://github.com/momajd/Tron) (the original DOM version; the arena, AI and soundtrack were rewritten here) | momajd | **unknown** (no licence file found) |
-| Wahdatio | [monsterkodi/konnekt](https://github.com/monsterkodi/konnekt) (CoffeeScript sources in `Wahdatio/src/`) | monsterkodi | Unlicense |
+| Wahdatio | [monsterkodi/konnekt](https://github.com/monsterkodi/konnekt) (the original CoffeeScript sources are there; `Wahdatio/script.js` is the compiled game, edited directly since) | monsterkodi | Unlicense |
 | Breakout, Snake, Minesweeper, Crate Lab, Volt Flip | Written for this collection | ibra-kdbra | MIT |
 
 ## Art Lab
