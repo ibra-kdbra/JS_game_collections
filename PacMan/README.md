@@ -116,3 +116,10 @@ Credits
 
 Many Thanks to the original Pac-Man team at Namco for creating such wonnderful game.
 
+## Licence
+
+This folder is a modified version of [masonicGIT/pacman](https://github.com/masonicGIT/pacman) (formerly shaunew/Pac-Man) by Shaun Williams and Mason Borda, which is licensed under the **GNU General Public License v3.0**. The code in this folder, including the changes made for Game Lab, stays under that licence: see [`LICENSE`](LICENSE). The rest of the repository is MIT; this folder is the exception.
+
+Changes made here since 2025: on-screen controls and phone layouts, a sharper canvas on high-DPI screens, saved high scores, and sound loaded and played through Web Audio (`src/sound.js`, mirrored in `pacman.js`).
+
+The sound effects in `sounds/` come from Namco's *Pac-Man* arcade game via the upstream project. They are not covered by the GPL; see [CREDITS.md](../CREDITS.md).

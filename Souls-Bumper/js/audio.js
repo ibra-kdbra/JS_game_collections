@@ -749,12 +749,62 @@ function genAudio() {
         songLoaded = player.generate() >= 1;
         if (songLoaded) {
             clearInterval(timer);
-            var wave = player.createWave();
-            audio = document.createElement("audio");
-            audio.loop = true;
-            audio.src = URL.createObjectURL(new Blob([wave], {
-                type: "audio/wav"
-            }));
+            audio = new SongMusic(player.createWave());
         }
     }, 0);
+}
+
+/**
+ * The generated song, looping through the Web Audio context the sound effects
+ * use (audioCtx in sound.js). It replaces an <audio> element fed from a blob:
+ * URL, which kept a second copy of the whole song as a WAV file and whose
+ * request the browser aborted and restarted. The game uses the same small
+ * interface as before: paused, play() and pause().
+ *
+ * @param {Uint8Array} wave  the song as a 16-bit stereo WAV at 44.1 kHz
+ */
+function SongMusic(wave) {
+    var buffer = null;
+    var source = null;
+    var offset = 0;     // where to resume, in seconds
+    var startedAt = 0;  // context time that matches position 0
+    this.paused = true;
+
+    // Copy the WAV's samples into an AudioBuffer, at the same level the WAV played at.
+    function decode(ctx) {
+        var frames = (wave.length - 44) >> 2;
+        var b = ctx.createBuffer(2, frames, 44100);
+        var left = b.getChannelData(0);
+        var right = b.getChannelData(1);
+        var view = new DataView(wave.buffer, wave.byteOffset + 44);
+        for (var i = 0; i < frames; i++) {
+            left[i] = view.getInt16(i * 4, true) / 32768;
+            right[i] = view.getInt16(i * 4 + 2, true) / 32768;
+        }
+        wave = null; // the WAV bytes are no longer needed
+        return b;
+    }
+
+    this.play = function() {
+        if (!this.paused) return Promise.resolve();
+        if (audioCtx == null) audioCtx = new AudioContext();
+        if (audioCtx.state == "suspended") audioCtx.resume();
+        if (!buffer) buffer = decode(audioCtx);
+        source = audioCtx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+        source.connect(audioCtx.destination);
+        source.start(0, offset % buffer.duration);
+        startedAt = audioCtx.currentTime - offset;
+        this.paused = false;
+        return Promise.resolve();
+    };
+
+    this.pause = function() {
+        if (this.paused) return;
+        offset = (audioCtx.currentTime - startedAt) % buffer.duration;
+        try { source.stop(); } catch (e) {}
+        source = null;
+        this.paused = true;
+    };
 }

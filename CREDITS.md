@@ -17,10 +17,10 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | Brainy Warrior 3D | Rules and levels follow the mobile game *Brainy Warrior* and the C++ terminal version in [susalulmumaO12/cppMiniPrograms](https://github.com/susalulmumaO12/cppMiniPrograms) (folder `Brainy_Warrior`) | susalulmumaO12 (C++ version) | **unknown** for the C++ version |
 | Gravity Wells | [Quinten/black-hole-square](https://github.com/Quinten/black-hole-square), a js13k 2021 entry | Quinten Clause | MIT |
 | Hangman | [abdoutech19/hangman-game](https://github.com/abdoutech19/hangman-game) | abdoutech19 | MIT |
-| HuggersFight | *Space Huggers* ([KilledByAPixel/SpaceHuggers](https://github.com/KilledByAPixel/SpaceHuggers)), a js13k 2021 entry, on the [LittleJS](https://github.com/KilledByAPixel/LittleJS) engine (v0.74, in `engine/`) | Frank Force | Space Huggers: GPL-3.0. LittleJS: MIT |
+| HuggersFight | *Space Huggers* ([KilledByAPixel/SpaceHuggers](https://github.com/KilledByAPixel/SpaceHuggers)), a js13k 2021 entry, on the [LittleJS](https://github.com/KilledByAPixel/LittleJS) engine (v0.74, in `engine/`) | Frank Force | Space Huggers: GPL-3.0 (text in `HuggersFight/LICENSE`). LittleJS: MIT (`HuggersFight/engine/LICENSE`) |
 | InterLaced | [mdbarr/enmeshed](https://github.com/mdbarr/enmeshed), a js13k 2018 entry | Mark Barr | MIT |
 | MoonLDR | [tblazevic/moonlander](https://github.com/tblazevic/moonlander) | Tin Blažević | MIT |
-| PacMan | [masonicGIT/pacman](https://github.com/masonicGIT/pacman) (formerly shaunew/Pac-Man), a tribute to Namco's *Pac-Man* and GCC/Midway's *Ms. Pac-Man* | Shaun Williams, Mason Borda | GPL-3.0 |
+| PacMan | [masonicGIT/pacman](https://github.com/masonicGIT/pacman) (formerly shaunew/Pac-Man), a tribute to Namco's *Pac-Man* and GCC/Midway's *Ms. Pac-Man* | Shaun Williams, Mason Borda | GPL-3.0 (text in `PacMan/LICENSE`) |
 | PacMan Slasher | [vmikhav/AntiPacMan](https://github.com/vmikhav/AntiPacMan) | Volodymyr Mikhav | MIT |
 | Raven | [elliot-nelson/js13k-2018-raven](https://github.com/elliot-nelson/js13k-2018-raven), a js13k 2018 entry | Elliot Nelson | ISC (stated in its `package.json`; the repository has no licence file) |
 | ReWire | [jmankopf/js13k-rewire](https://github.com/jmankopf/js13k-rewire), a js13k 2018 entry | Jan Mankopf | MIT |
@@ -29,7 +29,7 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | Tower Defense | [selenebun/towerdefense](https://github.com/selenebun/towerdefense) | selenebun | MIT |
 | Tower Defense map editor (`td-editor/`) | [selenebun/td-editor](https://github.com/selenebun/td-editor) | selenebun | **unknown** (the repository has no detected licence); `td-editor/LICENSE` here names only ibra-kdbra |
 | Tron | [momajd/Tron](https://github.com/momajd/Tron) (the original DOM version; the arena, AI and soundtrack were rewritten here) | momajd | **unknown** (no licence file found) |
-| Wahdatio | [monsterkodi/konnekt](https://github.com/monsterkodi/konnekt) (CoffeeScript sources in `Wahdatio/src/`) | monsterkodi | Unlicense |
+| Wahdatio | [monsterkodi/konnekt](https://github.com/monsterkodi/konnekt) (the original CoffeeScript sources are there; `Wahdatio/script.js` is the compiled game, edited directly since) | monsterkodi | Unlicense |
 | Breakout, Snake, Minesweeper, Crate Lab, Volt Flip | Written for this collection | ibra-kdbra | MIT |
 
 ## Art Lab
