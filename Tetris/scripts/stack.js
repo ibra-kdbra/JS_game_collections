@@ -70,8 +70,15 @@ Stack.prototype.addPiece = function(tetro) {
       clearedRows.push(row);
 
       if (gametype === 3) {
-        if (digLines.indexOf(row) !== -1) {
-          digLines.splice(digLines.indexOf(row), 1);
+        // Dig Race keeps the row of each garbage line still to clear. This
+        //  one is gone, and the garbage above it moves down a row with
+        //  everything else, so its rows shift by one. (Without that, garbage
+        //  cleared after the first line was never counted and the race never
+        //  ended.)
+        var at = digLines.indexOf(row);
+        if (at !== -1) digLines.splice(at, 1);
+        for (var i = 0; i < digLines.length; i++) {
+          if (digLines[i] < row) digLines[i]++;
         }
       }
       for (var x = 0; x < 10; x++) {
