@@ -58,7 +58,7 @@ export function createPack({ onComplete }) {
     .map((p) => `<img src="${p.thumb}" width="480" height="300" alt="" decoding="async">`)
     .join('');
 
-  // ---------- Layout: one row, or two rows (4 + 4 for eight cards) on an upright phone ----------
+  // ---------- Layout: one row, or two rows (4 + 3 for seven cards) on an upright phone ----------
   function layout() {
     const W = stage.clientWidth;
     const H = stage.clientHeight;

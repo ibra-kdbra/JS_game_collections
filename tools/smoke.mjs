@@ -14,7 +14,6 @@
  * Usage: node tools/smoke.mjs [--only <slug,...>] [--viewport phone|desktop] [--engine chromium|webkit]
  *        (--engine webkit runs the pages in Safari's engine; pages listed in
  *        WEBKIT_SKIP below are left out there, each with the reason)
- *        (--only sprite-lab also runs its eight lessons, sprite-lab-1 to sprite-lab-8)
  *
  * Environment:
  *   PLAYWRIGHT_MODULE   path to the playwright package when it isn't resolvable from here
@@ -186,13 +185,7 @@ const pages = [
   { slug: 'art-lab', title: 'Art Lab', href: 'Art_Lab/index.html' },
   ...games,
   ...experiments,
-  // The Sprite Lab's lessons are reached from its own page, not the registry.
-  ...['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eigth'].map((n, i) => ({
-    slug: `sprite-lab-${i + 1}`,
-    title: `Sprite Lab lesson ${i + 1}`,
-    href: `Sprites_Games/${n}_project/index.html`,
-  })),
-].filter((p) => !only || only.includes(p.slug) || (only.includes('sprite-lab') && p.slug.startsWith('sprite-lab-')));
+].filter((p) => !only || only.includes(p.slug));
 
 const sameOrigin = (url) => url.startsWith(origin);
 const short = (url) => (sameOrigin(url) ? url.slice(origin.length) : url);

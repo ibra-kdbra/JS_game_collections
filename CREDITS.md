@@ -42,7 +42,6 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | Experimental Math | [thatsKevinJain/flowfields](https://github.com/thatsKevinJain/flowfields) (confirmed: `script.js` is its `index.js` reworked, and both helper files match it apart from whitespace) | Kevin Jain | Sketch: no licence file in the repository. Helpers `microcan.window.js` and `vec.window.js` are [microcan](https://github.com/francisrstokes/microcan) and [vec-la](https://github.com/francisrstokes/vec) by Francis Stokes: MIT |
 | Flow Fields, Text Fields | Flow-field technique from Frank's Laboratory tutorials (likely) | **unknown** | **unknown** |
 | Blossoming Flowers | "CSS Blossoming Flowers at Magical Night", [codepen.io/fikkkhdyt/pen/GRGVmOo](https://codepen.io/fikkkhdyt/pen/GRGVmOo) (2022, also in [a gist by the same author](https://gist.github.com/fikkkhdyt/8d6e85fff6a608e990f547e5f8bca889); the same class names and structure) | fikkkhdyt | MIT: public CodePen pens are MIT-licensed unless the author says otherwise ([codepen.io/license/pen/GRGVmOo](https://codepen.io/license/pen/GRGVmOo)) |
-| Sprite Lab (`Sprites_Games/`: lessons 1-8 in `*_project`, the page in `index.html` and `lab/`) | The JavaScript game development tutorials by [Franks Laboratory](https://www.youtube.com/c/Frankslaboratory) and their sprite sheets; `lab/dog-run.webp` is the run row cut from lesson 1's `shadow_dog.png`. Phone layouts, touch controls and the lab page were added here | Franks Laboratory | code and art: **unknown** terms |
 
 ## Music and sound
 
@@ -54,7 +53,6 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | `PacMan_Slasher/audio/*.mp3` | Pac-Man-style jingles and effects | Upstream project; original source **unknown** | **unknown** |
 | `MoonLDR/audio/*.mp3` | Thruster, alarm, crash, morse | Upstream project; original source **unknown** | **unknown** |
 | `TowerDefense/sounds/*.wav` | Weapon sounds | SoundBible and freesoundeffects.com, see [TowerDefense/sounds/README.md](TowerDefense/sounds/README.md) | CC BY 3.0, public domain, or site terms |
-| `Sprites_Games/*/audio/boom.wav` | Explosion | Frank's Laboratory tutorial assets | **unknown** |
 | Tron soundtrack | Generated in the browser (`Tron/js/audio.js`). The earlier `derezzed.mp3` (Daft Punk, *TRON: Legacy*) was removed from the game, but it is still in the git history | — | — |
 | Souls Bumper music | Generated with the Sonant-X player in `js/audio.js` | Marcus Geelnard (player) | zlib licence (in the file header) |
 | HuggersFight, ReWire sounds | Generated with [ZzFX](https://github.com/KilledByAPixel/ZzFX) | Frank Force | MIT |

@@ -9,7 +9,7 @@
  * - Navigations always try the network first, so a deploy shows up on the next visit.
  */
 
-const VERSION = 'shell-efd432e7cf2b';
+const VERSION = 'shell-d78205fd150e';
 const SHELL_CACHE = `gamelab-shell-${VERSION}`;
 const RUNTIME_CACHE = `gamelab-runtime-${VERSION}`;
 const RUNTIME_MAX_ENTRIES = 300;

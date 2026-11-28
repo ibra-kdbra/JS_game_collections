@@ -38,7 +38,7 @@
 
 ## Overview
 
-A collection of 21 browser games and 8 visual experiments, written in plain **JavaScript**,
+A collection of 21 browser games and 7 visual experiments, written in plain **JavaScript**,
 **HTML5** and **CSS3**: no framework and no build step. Every page is a static file you can
 open from any web server. Every game works on phones (touch controls, phone-sized
 layouts) as well as with a keyboard and mouse.
@@ -79,8 +79,7 @@ loaded from a CDN and the site works the same everywhere.
 
 Visual experiments, on the hub's [Art Lab](https://jsgamelab.ibrakdbra.me/Art_Lab/index.html)
 page: Blossoming Flowers (pure CSS), Flow Fields, Text Fields, Experimental Math, Adaptive
-Fields, LSD, Particular Drift, and Sprite Lab (eight sprite and game-loop lessons from
-Franks Laboratory).
+Fields, LSD and Particular Drift.
 
 ## Why Plain JavaScript and the Canvas?
 

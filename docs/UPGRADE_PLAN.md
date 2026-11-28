@@ -146,6 +146,8 @@ Each wave adds the shared kit, fixes responsiveness, adds touch, saves bests, th
   game over, lesson 7's full-screen button moved clear of the back button, and lesson 8 got an
   on-screen arrow pad. The smoke test runs the eight lessons too (`--only sprite-lab`). The pack
   opening lays out two rows of N/2 on upright phones (4 + 4).
+  *Later removed (#24): the lessons' code and sprite sheets came without a stated licence, so
+  `Sprites_Games/` and its card were deleted.*
 - **Text Fields**: the canvas matches its on-screen size times the pixel ratio (capped at 2), so
   the text keeps its proportions instead of a 1500x720 canvas stretched to the window; the font
   size fits the text to the screen, cells and line count follow the screen size, respawning lines
@@ -214,7 +216,7 @@ magnet pickups. Courses are generated from seeded patterns sized to the current 
 
 **Follow-up, done:** dat.GUI 0.7.9, Pickr 1.8.2, Modak and Montserrat are self-hosted (f5ee5a0) and
 Font Awesome comes from `assets/vendor/fontawesome/`. Every Art Lab piece and the Sprite Lab
-pass `SMOKE_OFFLINE=1 SMOKE_STRICT=1 node tools/smoke.mjs` (no network, no cross-origin loads).
+(since removed) pass `SMOKE_OFFLINE=1 SMOKE_STRICT=1 node tools/smoke.mjs` (no network, no cross-origin loads).
 
 ## Tracking
 
