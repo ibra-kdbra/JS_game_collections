@@ -8,6 +8,8 @@
  *    by 10 per letter, the Next button appears, and Enter brings a new word.
  * 3. Typing five letters that are not in the word loses: 0/5 guesses left and the
  *    GAME OVER panel showing the word; Enter starts again.
+ * 4. Every sound effect has been rendered into a buffer, so a busy round plays a few
+ *    buffers instead of hundreds of live audio nodes (those starved slow machines).
  * Exits non-zero on any failure.
  */
 import { readFileSync } from 'node:fs';
@@ -80,5 +82,7 @@ await check.run(async () => {
     return ` (panel ${document.querySelector('.gameover-modal').style.visibility}, guesses ${document.querySelector('.guesses-left span').innerText}, box opacity ${box.opacity}, round over ${roundOver})`;
   });
   check.ok(again, `Enter on the panel starts a new game${after}`);
+  const baked = await page.evaluate(() => HangmanSounds.ready());
+  check.ok(baked === 7, `every sound effect is pre-rendered (${baked}/${7})`);
   check.noErrors(page);
 });

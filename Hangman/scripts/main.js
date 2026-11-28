@@ -329,6 +329,8 @@ const CreateNextButton = () => {
 };
 
 const gameoverVisible = () => gameoverModal.style.visibility === "visible";
+// The panel's opening animation, so closing it can stop it first.
+let resultTimeline = null;
 const showResult = (title, delay) => {
 	document.querySelector(".gameover-box .text").innerText = title;
 	document.querySelector(".gameover-word b").innerText = currentWord.toUpperCase();
@@ -343,7 +345,7 @@ const showResult = (title, delay) => {
 	setTimeout(() => {
 		gsap.set(".gameover-box", { scale: 1.6 });
 		gsap.set(gameoverModal, { opacity: 0 });
-		gsap
+		resultTimeline = gsap
 			.timeline({ defaults: { duration: 0.25, ease: "none" } })
 			.to(gameoverModal, { visibility: "visible" })
 			.to(gameoverModal, { opacity: 1 })
@@ -821,13 +823,19 @@ diffButton.innerText = difficulty[0].toUpperCase() + difficulty.slice(1);
 updateSoundButton();
 updateBonusButton();
 updateDailyButton();
-const closeGameover = () =>
-	gsap.to(".gameover-box", {
+const closeGameover = () => {
+	// If the panel is still opening, stop that first: two tweens on the same
+	// box fight, and the close only finishes once the opening has.
+	if (resultTimeline) resultTimeline.progress(1).kill();
+	resultTimeline = null;
+	gsap.set(gameoverModal, { opacity: 1 });
+	return gsap.to(".gameover-box", {
 		duration: 0.25,
 		scale: 1.6,
 		opacity: 0,
 		ease: "none",
 	});
+};
 document
 	.querySelector(".gameover-box .main-menu")
 	.addEventListener("click", () => {
