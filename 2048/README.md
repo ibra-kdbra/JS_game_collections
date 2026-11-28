@@ -16,3 +16,7 @@ For more information on the strategies, check [this](https://github.com/ibra-kdb
 [model.bmp](/model.bmp) is actually a binary data file (46 MB) for the Machine Learning strategy.
 It has a .bmp extension so that GitHub pages will compress it while serving it.
 The page shows download progress while it loads.
+
+## Credits
+
+This game is based on [qpwoeirut/2048](https://github.com/qpwoeirut/2048) by Stanley Zhong, a version of [Gabriele Cirulli's 2048](https://github.com/gabrielecirulli/2048) that plays itself. The AI strategies come from his [qpwoeirut/2048-solver](https://github.com/qpwoeirut/2048-solver), compiled to WebAssembly (`js/players.js`, `js/players.wasm`), and `model.bmp` holds the weights of its n-tuple network. All of it is under the MIT licence; the notices are in [`LICENSE`](LICENSE).
