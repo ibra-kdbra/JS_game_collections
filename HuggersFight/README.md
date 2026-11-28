@@ -13,7 +13,8 @@ Good luck, have fun, and give space a hug for me.
 - X or Middle click - Roll - brief invulnerability, does damage, gives a boost, puts out fire
 - C or Right click - Grenade - 3 per life, use wisely
 - You can also use a Xbox or SNES style controller, connect up to 4 for co-op play!
-- On touch screens, use the on-screen D-pad plus Jump, Shoot, Roll and Grenade buttons
+- On touch screens, use the on-screen D-pad plus Jump, Shoot, Roll and Grenade buttons. The D-pad follows your thumb as it slides, diagonals included
+- Touch aim assist: shots fired from the on-screen Shoot button turn towards the nearest enemy in front of you, if it is on screen, within range (8 tiles), within 35 degrees of straight ahead and not behind a wall. It only helps touch play: keyboard, mouse and gamepad shots still fly straight, and a real key press switches it off until you touch the controls again
 - P or Esc pauses (the game also pauses when the tab is hidden); the furthest level you reach is saved
 - Kill all enemies to complete the level
 - A radar along the bottom of the screen shows nearby enemies
@@ -85,4 +86,4 @@ This folder is a modified version of *Space Huggers* ([KilledByAPixel/SpaceHugge
 
 The engine in `engine/` is [LittleJS](https://github.com/KilledByAPixel/LittleJS) v0.74 by Frank Force, under the MIT licence: see [`engine/LICENSE`](engine/LICENSE).
 
-Changes made here since 2025: on-screen touch controls, a title and pause menu, the furthest level saved, a sharper canvas on high-DPI screens and a readable HUD on phones.
+Changes made here since 2025: on-screen touch controls with a sliding D-pad and aim assist, a title and pause menu, the furthest level saved, a sharper canvas on high-DPI screens and a readable HUD on phones.

@@ -164,7 +164,9 @@ Every pull request and every push to `main` runs the checks in
   - 2048: 300 random moves checked against the slide-and-merge rules, an AI hint, Watch AI.
   - Hangman: wins a word and loses one with the built-in word list, offline.
   - HuggersFight: level 1's core loop: move, jump, shoot, kill an enemy, lose a life to a
-    grenade, Game Over and restart.
+    grenade, Game Over and restart; then on a phone-sized page with real touches, the touch aim
+    assist hits an enemy a little above the line (keyboard shots miss it), stays inside its cone,
+    and the D-pad follows a sliding thumb.
   - InterLaced: from the terminal into story mesh 1, crashes nodes until it goes offline.
   - MoonLDR: an autopilot lands on flat pads three rounds in a row; no input crashes.
   - PacMan: the maze loads, the ghosts move, a bot eats 120 dots without dying.
