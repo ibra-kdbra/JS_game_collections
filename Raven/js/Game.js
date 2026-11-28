@@ -626,8 +626,22 @@ class Game {
         if (this.touch.active || this.freeMouse) {
             this.paused = false;
             this.menu = undefined;
-        } else {
-            this.canvas.requestPointerLock();
+            return;
+        }
+        // Without pointer lock the game aims at the cursor instead (see the pointerlockerror
+        // handler). iOS Safari has no requestPointerLock at all, and Safari throws right away
+        // (rather than firing pointerlockerror) when the window doesn't have focus.
+        const lockFailed = () => {
+            this.freeMouse = true;
+            this.paused = false;
+            this.menu = undefined;
+        };
+        if (typeof this.canvas.requestPointerLock !== 'function') return lockFailed();
+        try {
+            const request = this.canvas.requestPointerLock();
+            if (request && typeof request.catch === 'function') request.catch(lockFailed);
+        } catch (e) {
+            lockFailed();
         }
     }
 

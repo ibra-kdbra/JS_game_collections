@@ -9,8 +9,13 @@
  *
  * Each page holds marker pairs like <!-- render:games --> ... <!-- /render:games -->
  * and only the content between them is replaced.
+ *
+ * It also sets the service worker's VERSION (sw.js) to a hash of the hub shell
+ * files it precaches, so returning visitors get a changed shell on their next
+ * visit without anyone remembering to bump it. --check fails when it is stale.
  */
 import { readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
@@ -147,6 +152,7 @@ const pages = [
 
 const check = process.argv.includes('--check');
 let stale = false;
+const rendered = new Map(); // page path -> its content after rendering
 
 for (const page of pages) {
   const file = path.join(root, page.file);
@@ -156,6 +162,7 @@ for (const page of pages) {
     const re = new RegExp(`(<!-- render:${name} -->)[\\s\\S]*?(<!-- /render:${name} -->)`, 'g');
     after = after.replace(re, (_, open, close) => open + html.replaceAll('{base}', page.base) + close);
   }
+  rendered.set(page.file, after);
   if (after !== before) {
     stale = true;
     if (!check) {
@@ -164,6 +171,29 @@ for (const page of pages) {
     } else {
       console.error(`${page.file} is out of date; run: node tools/render-pages.mjs`);
     }
+  }
+}
+
+// The service worker's cache version: a hash of every file in its SHELL list, as
+// rendered above, so any change to the hub shell gives it a new cache.
+const swFile = path.join(root, 'sw.js');
+const sw = await readFile(swFile, 'utf8');
+const list = sw.slice(sw.indexOf('const SHELL = ['), sw.indexOf('];', sw.indexOf('const SHELL = [')));
+const shell = [...list.matchAll(/'\.\/([^']*)'/g)].map((m) => (m[1] === '' || m[1].endsWith('/') ? m[1] + 'index.html' : m[1]));
+const hash = createHash('sha256');
+for (const rel of [...new Set(shell)].sort()) {
+  hash.update(rel + '\0');
+  hash.update(rendered.get(rel) ?? (await readFile(path.join(root, rel))));
+}
+const version = 'shell-' + hash.digest('hex').slice(0, 12);
+const swAfter = sw.replace(/const VERSION = '[^']*';/, `const VERSION = '${version}';`);
+if (swAfter !== sw) {
+  stale = true;
+  if (!check) {
+    await writeFile(swFile, swAfter);
+    console.log(`sw.js cache version: ${version}`);
+  } else {
+    console.error(`sw.js VERSION is out of date (the hub shell changed); run: node tools/render-pages.mjs`);
   }
 }
 
