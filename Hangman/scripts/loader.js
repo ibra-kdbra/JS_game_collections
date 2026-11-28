@@ -45,26 +45,11 @@ const animateLoading = () => {
 };
 animateLoading();
 
-// Sounds start as silent placeholders so gameplay never waits on (or crashes over) audio.
-const sounds = {
-	correct: new Audio(),
-	wrong: new Audio(),
-	win: new Audio(),
-	lose: new Audio(),
-	rotate: new Audio(),
-	pullup: new Audio(),
-	hang: new Audio(),
-};
+// Sound effects are synthesised in scripts/sounds.js; there are no audio files to load.
 const playSound = (name, volume = 1) => {
-	const audio = sounds[name];
-	if (!allowAudio || !audio.src) return;
-	audio.volume = volume;
-	audio.currentTime = 0;
-	audio.play().catch(() => {});
+	if (allowAudio) HangmanSounds.play(name, volume);
 };
-const stopSound = (name) => {
-	sounds[name].pause();
-};
+const stopSound = (name) => HangmanSounds.stop(name);
 
 const ASSET_TIMEOUT_MS = 8000;
 const LAYER_IMAGES = {
@@ -75,7 +60,7 @@ const LAYER_IMAGES = {
 	"hill-right": "./images/right.png",
 };
 
-// Resolves either way: a missing image or sound degrades the scene, it never blocks the game.
+// Resolves either way: a missing image degrades the scene, it never blocks the game.
 const withTimeout = (promise) =>
 	Promise.race([
 		promise,
@@ -91,20 +76,6 @@ const loadImage = (src) =>
 			img.src = src;
 		})
 	);
-const loadSound = (name) =>
-	withTimeout(
-		new Promise((resolve) => {
-			const audio = sounds[name];
-			const done = () => resolve(audio);
-			audio.preload = "auto";
-			audio.addEventListener("canplaythrough", done, { once: true });
-			audio.addEventListener("error", () => resolve(null), { once: true });
-			audio.src = `./audio/${name}.mp3`;
-			// Mobile browsers often refuse to buffer audio before a tap; don't wait for them.
-			setTimeout(done, 1500);
-		})
-	);
-
 const loadData = () => {
 	const bgContainer = document.querySelector(".bg-container");
 	const images = [
@@ -117,8 +88,7 @@ const loadData = () => {
 			})
 		),
 	];
-	const audio = Object.keys(sounds).map(loadSound);
-	Promise.all([...images, ...audio]).then(() => {
+	Promise.all(images).then(() => {
 		loaded = true;
 	});
 };

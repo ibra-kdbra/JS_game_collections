@@ -1,6 +1,6 @@
 # Tetris
 
-A guideline-style Tetris in plain JavaScript and canvas, based on tetr.js: hold, ghost piece, a seven-piece bag with a six-piece preview, SRS wall kicks, replays and fully adjustable handling.
+A guideline-style Tetris in plain JavaScript and canvas, based on [tetr.js](https://github.com/simonlc/tetr.js) by Simon M. Laroche (MIT, see `LICENSE`): hold, ghost piece, a seven-piece bag with a six-piece preview, SRS wall kicks, replays and fully adjustable handling.
 
 ## Modes
 

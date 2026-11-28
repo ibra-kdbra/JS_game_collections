@@ -63,7 +63,12 @@ You can tweak the following parameters (declared at the beginning of the file) t
 ---
 
 ### **`loader.js`**
-Handles the loading animation while preloading all media assets (images and sounds) with plain `Image`/`Audio` objects. Each asset has a timeout, and a missing file never blocks the game.
+Handles the loading animation while preloading the background images. Each image has a timeout, and a missing file never blocks the game.
+
+---
+
+### **`sounds.js`**
+Every sound effect (right and wrong guesses, the winch, the rope, the drop, winning and losing) is synthesised with the Web Audio API, so the game ships no audio files.
 
 ---
 

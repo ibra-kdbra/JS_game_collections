@@ -792,6 +792,7 @@ const updateSoundButton = () => {
 soundButton.addEventListener("click", () => {
 	allowAudio = !allowAudio;
 	store.set("sound", allowAudio);
+	if (!allowAudio) HangmanSounds.stopAll();
 	updateSoundButton();
 });
 const catList = document.querySelector(".category-list .list");
