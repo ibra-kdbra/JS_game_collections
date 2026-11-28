@@ -98,6 +98,9 @@ jobs:
           - name: Gameplay checks (2048, Hangman, HuggersFight, InterLaced, MoonLDR, PacMan, PacMan Slasher, Tetris, Wahdatio)
             engine: chromium
             run: node tools/play-checks.mjs
+          - name: Tetris replays and Dig Race
+            engine: chromium
+            run: node Tetris/tools/verify-replays.mjs && node Tetris/tools/verify-dig-race.mjs
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

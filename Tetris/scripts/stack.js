@@ -15,8 +15,9 @@ Stack.prototype.new = function(x, y) {
  * Adds tetro to the stack, and clears lines if they fill up.
  */
 Stack.prototype.addPiece = function(tetro) {
-  var once = false;
   var tspin = this.tSpin(tetro);
+  // The leftmost column the piece covers, for finesse.
+  var column = 10;
 
   // Add the piece to the stack.
   var range = [];
@@ -25,11 +26,7 @@ Stack.prototype.addPiece = function(tetro) {
     for (var y = 0; y < tetro[x].length; y++) {
       if (tetro[x][y]) {
         this.grid[x + piece.x][y + piece.y] = tetro[x][y];
-        // Get column for finesse
-        if (!once || x + piece.x < column) {
-          column = x + piece.x;
-          once = true;
-        }
+        if (x + piece.x < column) column = x + piece.x;
         // Check which lines get modified
         if (range.indexOf(y + piece.y) === -1) {
           range.push(y + piece.y);
@@ -64,22 +61,29 @@ Stack.prototype.addPiece = function(tetro) {
     for (var x = 0; x < 10; x++) {
       if (this.grid[x][row]) count++;
     }
-    // Clear the line. This basically just moves down the stack.
-    // TODO Ponder during the day and see if there is a more elegant solution.
+    // A full line: take the row out of every column and add an empty one at
+    //  the top, so everything above it moves down a row. The rows are checked
+    //  top to bottom, so the rows still to check (below) don't move.
     if (count === 10) {
       lines++; // NOTE stats
       totalLinesCleared++; // Track for effects
       clearedRows.push(row);
 
       if (gametype === 3) {
-        if (digLines.indexOf(row) !== -1) {
-          digLines.splice(digLines.indexOf(row), 1);
+        // Dig Race keeps the row of each garbage line still to clear. This
+        //  one is gone, and the garbage above it moves down a row with
+        //  everything else, so its rows shift by one. (Without that, garbage
+        //  cleared after the first line was never counted and the race never
+        //  ended.)
+        var at = digLines.indexOf(row);
+        if (at !== -1) digLines.splice(at, 1);
+        for (var i = 0; i < digLines.length; i++) {
+          if (digLines[i] < row) digLines[i]++;
         }
       }
-      for (var y = row; y >= -1; y--) {
-        for (var x = 0; x < 10; x++) {
-          this.grid[x][y] = this.grid[x][y - 1];
-        }
+      for (var x = 0; x < 10; x++) {
+        this.grid[x].splice(row, 1);
+        this.grid[x].unshift(void 0);
       }
     }
   }
@@ -109,8 +113,6 @@ Stack.prototype.addPiece = function(tetro) {
 
   statsFinesse += piece.finesse - finesse[piece.index][piece.pos][column];
   piecesSet++; // NOTE Stats
-  // TODO Might not need this (same for in init)
-  column = 0;
 
   statsPiece.innerHTML = piecesSet;
   updateLineStat();
@@ -211,8 +213,8 @@ Stack.prototype.draw = function() {
   clear(stackCtx);
   draw(this.grid, 0, 0, stackCtx);
 
-  // Darken Stack
-  // TODO wrap this with an option.
+  // Locked blocks are drawn 30% darker than the falling piece, so the piece
+  //  stands out against the stack. On purpose, for every block style.
   stackCtx.globalCompositeOperation = 'source-atop';
   stackCtx.fillStyle = 'rgba(0,0,0,0.3)';
   stackCtx.fillRect(0, 0, stackCanvas.width, stackCanvas.height);

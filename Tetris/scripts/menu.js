@@ -4,103 +4,61 @@ let setLoop;
 let arrowReleased = true;
 let arrowDelay = 0;
 
-const key = {
-  8: 'Backspace',
-  9: 'Tab',
-  13: 'Enter',
-  16: 'Shift',
-  17: 'Ctrl',
-  18: 'Alt',
-  19: 'Pause',
-  20: 'Caps Lock',
-  27: 'Esc',
-  32: 'Space',
-  33: 'PgUp',
-  34: 'PgDn',
-  35: 'End',
-  36: 'Home',
-  37: '←',
-  38: '↑',
-  39: '→',
-  40: '↓',
-  45: 'Insert',
-  46: 'Delete',
-  48: '0',
-  49: '1',
-  50: '2',
-  51: '3',
-  52: '4',
-  53: '5',
-  54: '6',
-  55: '7',
-  56: '8',
-  57: '9',
-  59: ';',
-  61: '=',
-  65: 'A',
-  66: 'B',
-  67: 'C',
-  68: 'D',
-  69: 'E',
-  70: 'F',
-  71: 'G',
-  72: 'H',
-  73: 'I',
-  74: 'J',
-  75: 'K',
-  76: 'L',
-  77: 'M',
-  78: 'N',
-  79: 'O',
-  80: 'P',
-  81: 'Q',
-  82: 'R',
-  83: 'S',
-  84: 'T',
-  85: 'U',
-  86: 'V',
-  87: 'W',
-  88: 'X',
-  89: 'Y',
-  90: 'Z',
-  96: '0kpad',
-  97: '1kpad',
-  98: '2kpad',
-  99: '3kpad',
-  100: '4kpad',
-  101: '5kpad',
-  102: '6kpad',
-  103: '7kpad',
-  104: '8kpad',
-  105: '9kpad',
-  106: '*',
-  107: '+',
-  109: '-',
-  110: '.',
-  111: '/',
-  112: 'F1',
-  113: 'F2',
-  114: 'F3',
-  115: 'F4',
-  116: 'F5',
-  117: 'F6',
-  118: 'F7',
-  119: 'F8',
-  120: 'F9',
-  121: 'F10',
-  122: 'F11',
-  123: 'F12',
-  173: '-',
-  187: '=',
-  188: ',',
-  190: '.',
-  191: '/',
-  192: '`',
-  219: '[',
-  220: '\\',
-  221: ']',
-  222: "'",
+/**
+ * Keys. The controls are saved as key ids: KeyboardEvent.code, the physical
+ *  key, with the left and right Shift, Control, Alt and Meta keys counted as
+ *  one (so either Shift spins 180, as before).
+ */
+const SIDED_KEYS = /^(Shift|Control|Alt|Meta)(Left|Right)$/;
+
+/**
+ * KeyboardEvent.keyCode to code, for the keys that could be bound. Older
+ *  versions saved the controls as keyCodes; they are moved over on load.
+ *  59, 61 and 173 are what Firefox gave for ; = and -.
+ */
+const KEYCODE_TO_CODE = {
+  8: 'Backspace', 9: 'Tab', 13: 'Enter', 16: 'Shift', 17: 'Control', 18: 'Alt', 19: 'Pause',
+  20: 'CapsLock', 27: 'Escape', 32: 'Space', 33: 'PageUp', 34: 'PageDown', 35: 'End', 36: 'Home',
+  37: 'ArrowLeft', 38: 'ArrowUp', 39: 'ArrowRight', 40: 'ArrowDown', 45: 'Insert', 46: 'Delete',
+  59: 'Semicolon', 61: 'Equal', 106: 'NumpadMultiply', 107: 'NumpadAdd', 109: 'NumpadSubtract',
+  110: 'NumpadDecimal', 111: 'NumpadDivide', 173: 'Minus', 186: 'Semicolon', 187: 'Equal',
+  188: 'Comma', 189: 'Minus', 190: 'Period', 191: 'Slash', 192: 'Backquote', 219: 'BracketLeft',
+  220: 'Backslash', 221: 'BracketRight', 222: 'Quote',
 };
+for (let i = 0; i < 10; i++) {
+  KEYCODE_TO_CODE[48 + i] = 'Digit' + i;
+  KEYCODE_TO_CODE[96 + i] = 'Numpad' + i;
+}
+for (let i = 0; i < 26; i++) KEYCODE_TO_CODE[65 + i] = 'Key' + String.fromCharCode(65 + i);
+for (let i = 1; i <= 12; i++) KEYCODE_TO_CODE[111 + i] = 'F' + i;
+
+/**
+ * The key id of a keyboard event, '' if there is none. Some on-screen
+ *  keyboards give no code; only then the legacy keyCode is looked up.
+ */
+function keyId(e) {
+  const code = e.code || KEYCODE_TO_CODE[e.keyCode] || '';
+  return code.replace(SIDED_KEYS, '$1');
+}
+
+// Names shown in the Controls menu for keys that don't read well as codes.
+const KEY_NAMES = {
+  ArrowLeft: '←', ArrowUp: '↑', ArrowRight: '→', ArrowDown: '↓', Escape: 'Esc', Control: 'Ctrl',
+  CapsLock: 'Caps Lock', PageUp: 'PgUp', PageDown: 'PgDn', Backquote: '`', Minus: '-',
+  Equal: '=', BracketLeft: '[', BracketRight: ']', Backslash: '\\', Semicolon: ';', Quote: "'",
+  Comma: ',', Period: '.', Slash: '/', IntlBackslash: '\\', NumpadMultiply: 'Num *', NumpadAdd: 'Num +',
+  NumpadSubtract: 'Num -', NumpadDecimal: 'Num .', NumpadDivide: 'Num /', NumpadEnter: 'Num Enter',
+  ContextMenu: 'Menu',
+};
+
+/** A readable name for a key id: 'KeyC' is C, 'Digit1' is 1, 'Numpad1' is Num 1. */
+function keyName(id) {
+  if (!id) return '';
+  if (KEY_NAMES[id]) return KEY_NAMES[id];
+  const m = /^(Key|Digit)(.)$/.exec(id) || /^(Numpad)(\d)$/.exec(id);
+  if (m) return m[1] === 'Numpad' ? 'Num ' + m[2] : m[2];
+  return id;
+}
 
 /**
  * Show and hide menus.
@@ -114,25 +72,30 @@ function menu(menuIndex) {
 }
 
 /**
- * Controls Menu
+ * Controls Menu. Click a control, then press the key for it.
  */
-let newKey,
-  currCell,
-  tempKey,
+let DEFAULT_BINDS;
+let currCell,
   controls = document.getElementById('controls'),
   controlCells = controls.getElementsByTagName('td');
-// Give controls an event listener.
+
+function showBind(action) {
+  // Looked up in the table: the pause menu is also called "pause".
+  controls.querySelector('td#' + action).textContent = keyName(binds[action]);
+}
+function showBinds() {
+  for (let i = 0, len = controlCells.length; i < len; i++) showBind(controlCells[i].id);
+}
+// Stops waiting for a key; the control keeps the key it had.
+function cancelRebind() {
+  if (!currCell) return;
+  showBind(currCell.id);
+  currCell = null;
+}
 for (let i = 0, len = controlCells.length; i < len; i++) {
   controlCells[i].onclick = function() {
-    // First check if we're already waiting for an input.
-    if (currCell) {
-      // TODO DRY
-      // Make this into a function and call it when we press Esc.
-      binds[currCell.id] = tempKey;
-      currCell.innerHTML = key[tempKey];
-    }
-    tempKey = binds[this.id];
-    this.innerHTML = 'Press key';
+    cancelRebind();
+    this.textContent = 'Press key';
     currCell = this;
   };
 }
@@ -140,22 +103,20 @@ for (let i = 0, len = controlCells.length; i < len; i++) {
 addEventListener(
   'keyup',
   function(e) {
-    // if click outside of cell or press esc clear currCell
-    // reset binds button.
-    if (currCell) {
-      // Checks if key already in use, and unbinds it.
-      for (let i in binds) {
-        if (e.keyCode === binds[i]) {
-          binds[i] = void 0;
-          document.getElementById(i).innerHTML = binds[i];
-        }
+    if (!currCell) return;
+    const id = keyId(e);
+    if (!id) return;
+    // A key does one thing: whatever had it before is left unbound.
+    for (let i in binds) {
+      if (id === binds[i]) {
+        binds[i] = void 0;
+        showBind(i);
       }
-      // Binds the key and saves the data.
-      binds[currCell.id] = e.keyCode;
-      currCell.innerHTML = key[e.keyCode];
-      store.set('binds', binds);
-      currCell = 0;
     }
+    binds[currCell.id] = id;
+    showBind(currCell.id);
+    saveBinds();
+    currCell = null;
   },
   false,
 );
@@ -178,21 +139,22 @@ function settingsLoop() {
 }
 let s;
 let settingsArrow;
-// TODO DRY this.
-function arrowRelease() {
-  if (this && this.onpointerup) this.onpointerup = this.onpointerleave = this.onpointercancel = null;
-  resize();
+// Stops the repeat of a held settings arrow, ready for the next press.
+function stopArrowRepeat() {
   arrowReleased = true;
   arrowDelay = 0;
   clearTimeout(setLoop);
+}
+function arrowRelease() {
+  if (this && this.onpointerup) this.onpointerup = this.onpointerleave = this.onpointercancel = null;
+  resize();
+  stopArrowRepeat();
 }
 // Pointer events, so holding an arrow repeats with a mouse, a pen or a finger.
 function arrowPress(el, dir, e) {
   if (e.button > 0) return;
   e.preventDefault();
-  clearTimeout(setLoop);
-  arrowReleased = true;
-  arrowDelay = 0;
+  stopArrowRepeat();
   settingsArrow = dir;
   s = el.parentNode.id;
   el.onpointerup = el.onpointerleave = el.onpointercancel = arrowRelease;
@@ -222,6 +184,36 @@ function saveSetting(s) {
     LiveBackground.setTheme(themeName);
   }
 }
+// The saved data is only kept for a matching version (see loadLocalData).
+function saveBinds() {
+  store.set('version', version);
+  store.set('binds', binds);
+}
+
+/**
+ * Controls saved by older versions are keyCodes (numbers); they become key
+ *  ids. A keyCode with no id here falls back to the control's default key,
+ *  unless another control already has that key.
+ */
+function migrateBinds(saved) {
+  const out = {};
+  let changed = false;
+  for (const action in saved) {
+    let id = saved[action];
+    if (typeof id === 'number') {
+      id = KEYCODE_TO_CODE[id];
+      changed = true;
+    }
+    if (typeof id === 'string' && id) out[action] = id.replace(SIDED_KEYS, '$1');
+  }
+  for (const action in saved) {
+    if (out[action] || typeof saved[action] !== 'number') continue;
+    const fallback = DEFAULT_BINDS[action];
+    if (fallback && !Object.values(out).includes(fallback)) out[action] = fallback;
+  }
+  return { binds: out, changed };
+}
+
 function loadLocalData() {
   // Move data saved by older versions under the old, un-namespaced keys.
   if (localStorage.getItem('version') === version) {
@@ -236,11 +228,11 @@ function loadLocalData() {
   }
   const savedBinds = store.get('binds');
   if (savedBinds) {
-    binds = savedBinds;
-    for (let i = 0, len = controlCells.length; i < len; i++) {
-      controlCells[i].innerHTML = key[binds[controlCells[i].id]];
-    }
+    const migrated = migrateBinds(savedBinds);
+    binds = migrated.binds;
+    if (migrated.changed) saveBinds();
   }
+  showBinds();
   // Settings added since the save keep their defaults.
   settings = Object.assign({}, settings, store.get('settings', {}));
 }
@@ -250,6 +242,7 @@ function loadLocalData() {
  */
 function bootTetris() {
   store = GameKit.createStore('tetris');
+  DEFAULT_BINDS = Object.assign({}, binds);
   loadLocalData();
   for (let s in settings) {
     let div = document.createElement('div');
