@@ -12,8 +12,8 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 
 | Game | Based on | Author | Licence |
 | --- | --- | --- | --- |
-| 2048 | [gabrielecirulli/2048](https://github.com/gabrielecirulli/2048) | Gabriele Cirulli | MIT |
-| 2048 AI players (`js/players.wasm`, `model.bmp`) | n-tuple network after Szubert and Jaśkowski, [Temporal Difference Learning of N-Tuple Networks for the Game 2048](https://www.cs.put.poznan.pl/wjaskowski/pub/papers/Szubert2014_2048.pdf) (2014); strategies described in [ibra-kdbra/Cpp_Projects](https://github.com/ibra-kdbra/Cpp_Projects/tree/main/Atari-Games/2048_AI/strategies) | origin of the compiled build and the weights file is **unknown** | **unknown** |
+| 2048 | [qpwoeirut/2048](https://github.com/qpwoeirut/2048), itself based on [gabrielecirulli/2048](https://github.com/gabrielecirulli/2048) | Stanley Zhong; Gabriele Cirulli | MIT (notices in `2048/LICENSE`) |
+| 2048 AI players (`js/players.js`, `js/players.wasm`, `model.bmp`) | The strategies of [qpwoeirut/2048-solver](https://github.com/qpwoeirut/2048-solver) compiled to WebAssembly, and the weights of its temporal-difference n-tuple network (after Szubert and Jaśkowski, [Temporal Difference Learning of N-Tuple Networks for the Game 2048](https://www.cs.put.poznan.pl/wjaskowski/pub/papers/Szubert2014_2048.pdf), 2014). The wasm and weights are byte-identical to the files served by [qpwoeirut.github.io/2048](https://qpwoeirut.github.io/2048/) | Stanley Zhong | MIT |
 | Brainy Warrior 3D | Rules and levels follow the mobile game *Brainy Warrior* and the C++ terminal version in [susalulmumaO12/cppMiniPrograms](https://github.com/susalulmumaO12/cppMiniPrograms) (folder `Brainy_Warrior`) | susalulmumaO12 (C++ version) | **unknown** for the C++ version |
 | Gravity Wells | [Quinten/black-hole-square](https://github.com/Quinten/black-hole-square), a js13k 2021 entry | Quinten Clause | MIT |
 | Hangman | [abdoutech19/hangman-game](https://github.com/abdoutech19/hangman-game) | abdoutech19 | MIT |
