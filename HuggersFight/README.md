@@ -78,3 +78,11 @@ Good luck, have fun, and give space a hug for me.
 # Credits
 - Built on [LittleJS](https://github.com/KilledByAPixel/LittleJS) v0.74 by Frank Force (vendored in `engine/`), and derived from his JS13K game Space Huggers
 - Sounds by [ZzFX](https://github.com/KilledByAPixel/ZzFX)
+
+# Licence
+
+This folder is a modified version of *Space Huggers* ([KilledByAPixel/SpaceHuggers](https://github.com/KilledByAPixel/SpaceHuggers)) by Frank Force, a js13k 2021 entry licensed under the **GNU General Public License v3.0**. The game code in this folder, including the changes made for Game Lab, stays under that licence: see [`LICENSE`](LICENSE). The rest of the repository is MIT; this folder is the exception.
+
+The engine in `engine/` is [LittleJS](https://github.com/KilledByAPixel/LittleJS) v0.74 by Frank Force, under the MIT licence: see [`engine/LICENSE`](engine/LICENSE).
+
+Changes made here since 2025: on-screen touch controls, a title and pause menu, the furthest level saved, a sharper canvas on high-DPI screens and a readable HUD on phones.

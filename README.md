@@ -30,6 +30,7 @@
   - [The Games](#the-games)
   - [Art Lab](#art-lab)
   - [Why Plain JavaScript and the Canvas?](#why-plain-javascript-and-the-canvas)
+  - [Licence](#licence)
   - [Getting Started](#getting-started)
   - [Checks](#checks)
   - [Game Development Process](#game-development-process)
@@ -89,6 +90,15 @@ Franks Laboratory).
    code each game needs.
 3. **Complete control**: every system (loops, input, collisions, rendering, sound) is written
    for the game it serves, and can be tuned for it.
+
+## Licence
+
+The repository is under the [MIT licence](LICENSE), except two folders that keep the licence of the project they came from:
+
+- `PacMan/`: GPL-3.0 ([`PacMan/LICENSE`](PacMan/LICENSE))
+- `HuggersFight/`: GPL-3.0 ([`HuggersFight/LICENSE`](HuggersFight/LICENSE)); its engine in `HuggersFight/engine/` is LittleJS, MIT
+
+[CREDITS.md](CREDITS.md) lists the original author and licence of every forked game, model, sound, library and font.
 
 ## Getting Started
 
