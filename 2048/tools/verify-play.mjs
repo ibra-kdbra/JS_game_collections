@@ -8,7 +8,10 @@
  *    merged values; the game-over flag must match whether any move is left.
  * 2. Asks the AI for a hint (expectimax) and checks the suggestion is a legal move, then lets
  *    the AI play ("Watch AI") for at least 15 moves.
- * 3. The tiles on screen match the board, and no script errors.
+ * 3. Picks the Machine Learning strategy: its weights (model.gz, and never the old model.bmp)
+ *    download, the worker unpacks them, the wasm reports it parsed them, the page says the
+ *    model is ready, and that player then plays at least 40 moves.
+ * 4. The tiles on screen match the board, and no script errors.
  * Exits non-zero on any failure.
  */
 import { startCheck, waitFor, seededRandom } from '../../tools/play/harness.mjs';
@@ -149,6 +152,34 @@ await check.run(async () => {
     const after = await page.evaluate(readBoard);
     check.ok(played && after.rows.flat().every(isTile) && JSON.stringify(start) !== JSON.stringify(await page.evaluate(() => window.__gm.grid.serialize())),
       `Watch AI plays at least 15 moves on its own (score ${after.score})`);
+    await page.click('label[for="aiOff"]');
+
+    // The Machine Learning strategy downloads its weights (model.gz) when it is picked, and the
+    // worker unpacks them for the wasm, which still asks for model.bmp.
+    const requested = [];
+    page.context().on('request', (req) => requested.push(new URL(req.url()).pathname));
+    let parsed = false;  // players.wasm logs this once it has the weights
+    page.on('console', (msg) => { if (msg.text().includes('fetch succeeded')) parsed = true; });
+    await page.evaluate(() => { document.querySelector('.ai-drawer').open = true; });
+    await page.click('label[for="nTupleStrategy"]');
+    const loaded = await waitFor(page, () => {
+      const t = document.querySelector('#modelStatus span').textContent;
+      return /ready|fail|unpack/i.test(t) ? t : '';
+    }, null, { timeout: 60000 });
+    const progressMax = await page.evaluate(() => document.getElementById('modelProgress').max);
+    const models = requested.filter((p) => /model\.(gz|bmp)$/.test(p));
+    check.ok(loaded === 'AI model ready.' && models.join() === '/2048/model.gz' && parsed,
+      `Machine Learning: the weights download and unpack ("${loaded}"; requests ${JSON.stringify(models)}; ` +
+      `progress bar out of ${progressMax} bytes; ${parsed ? '' : 'no '}"fetch succeeded" from the wasm)`);
+    await page.evaluate(() => window.__gm.restart());
+    await page.click('label[for="aiOn"]');
+    const mlPlayed = await waitFor(page, () => {
+      const gm = window.__gm;
+      let sum = 0;
+      gm.grid.eachCell((x, y, t) => { if (t) sum += t.value; });
+      return gm.aiPlayed && sum >= 4 + 40 * 2 ? sum : 0;
+    }, null, { timeout: 30000 });
+    check.ok(mlPlayed, `the Machine Learning player plays at least 40 moves (tile sum ${mlPlayed})`);
     await page.click('label[for="aiOff"]');
   }
 

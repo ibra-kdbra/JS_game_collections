@@ -12,7 +12,7 @@ const bestText = document.getElementById('best');
 
 initShell({ slug: SLUG });
 const touch = createTouchControls({
-    dpad: { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' },
+    dpad: { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', slide: true },
     buttons: [
         { label: 'Jump', key: 'ArrowUp' },
         { label: 'Shoot', key: 'z' },
@@ -22,6 +22,14 @@ const touch = createTouchControls({
     ],
 });
 const hasTouch = !touch.el.hidden;
+
+// Aim assist (appObjects.js) is on while the on-screen controls are what the player uses.
+// A real key press or a mouse click turns it off again; so does a gamepad,
+// which the weapon checks itself. The touch controls send untrusted key events, so they
+// never count as the keyboard.
+touch.el.addEventListener('pointerdown', () => (touchAimAssist = 1));
+addEventListener('keydown', (e) => e.isTrusted && (touchAimAssist = 0), true);
+addEventListener('pointerdown', (e) => e.pointerType === 'mouse' && (touchAimAssist = 0), true);
 
 let state = 'title'; // title | playing | paused
 

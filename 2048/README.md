@@ -13,10 +13,11 @@ For more information on the strategies, check [this](https://github.com/ibra-kdb
 
 
 ## Notes
-[model.bmp](/model.bmp) is actually a binary data file (46 MB) for the Machine Learning strategy.
-It has a .bmp extension so that GitHub pages will compress it while serving it.
-The page shows download progress while it loads.
+The Machine Learning strategy needs the weights of its n-tuple network, which it downloads only when that strategy is picked in AI settings (or when the page opens with it saved as your choice). They ship as [model.gz](model.gz) (4.3 MB): the original 46 MB `model.bmp` with every weight rounded to a multiple of 16 (each moves by at most 8), packed and gzipped. The worker (`js/ai_controller.js`) downloads it with a progress bar, gunzips it with the browser's `DecompressionStream` (Chrome 80, Firefox 113, Safari 16.4 or newer), unpacks it with `js/td0_weights.js` and hands `players.wasm` the model file it asks for, so the wasm is unchanged. Over 1000 seeded games the rounded weights play as well as the original (average score 123812 against 123533; 2048 or better in 96.1% against 96.6%; 8192 in 73.0% against 71.7%). The figures are in `tools/weights-stats.json`.
+
+- `node 2048/tools/pack-weights.mjs <original model.bmp>` regenerates model.gz and measures it (the original is in git history: `git show 6a20afc:2048/model.bmp`).
+- `node 2048/tools/verify-weights.mjs` (run in CI) checks model.gz unpacks to the measured model and replays 30 seeded games with the real player; add `--original <file>` to compare every weight with the original.
 
 ## Credits
 
-This game is based on [qpwoeirut/2048](https://github.com/qpwoeirut/2048) by Stanley Zhong, a version of [Gabriele Cirulli's 2048](https://github.com/gabrielecirulli/2048) that plays itself. The AI strategies come from his [qpwoeirut/2048-solver](https://github.com/qpwoeirut/2048-solver), compiled to WebAssembly (`js/players.js`, `js/players.wasm`), and `model.bmp` holds the weights of its n-tuple network. All of it is under the MIT licence; the notices are in [`LICENSE`](LICENSE).
+This game is based on [qpwoeirut/2048](https://github.com/qpwoeirut/2048) by Stanley Zhong, a version of [Gabriele Cirulli's 2048](https://github.com/gabrielecirulli/2048) that plays itself. The AI strategies come from his [qpwoeirut/2048-solver](https://github.com/qpwoeirut/2048-solver), compiled to WebAssembly (`js/players.js`, `js/players.wasm`), and `model.gz` holds the weights of its n-tuple network (rounded and compressed from his original `model.bmp`). All of it is under the MIT licence; the notices are in [`LICENSE`](LICENSE).

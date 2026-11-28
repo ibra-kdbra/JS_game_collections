@@ -13,7 +13,7 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | Game | Based on | Author | Licence |
 | --- | --- | --- | --- |
 | 2048 | [qpwoeirut/2048](https://github.com/qpwoeirut/2048), itself based on [gabrielecirulli/2048](https://github.com/gabrielecirulli/2048) | Stanley Zhong; Gabriele Cirulli | MIT (notices in `2048/LICENSE`) |
-| 2048 AI players (`js/players.js`, `js/players.wasm`, `model.bmp`) | The strategies of [qpwoeirut/2048-solver](https://github.com/qpwoeirut/2048-solver) compiled to WebAssembly, and the weights of its temporal-difference n-tuple network (after Szubert and Jaśkowski, [Temporal Difference Learning of N-Tuple Networks for the Game 2048](https://www.cs.put.poznan.pl/wjaskowski/pub/papers/Szubert2014_2048.pdf), 2014). The wasm and weights are byte-identical to the files served by [qpwoeirut.github.io/2048](https://qpwoeirut.github.io/2048/) | Stanley Zhong | MIT |
+| 2048 AI players (`js/players.js`, `js/players.wasm`, `model.gz`) | The strategies of [qpwoeirut/2048-solver](https://github.com/qpwoeirut/2048-solver) compiled to WebAssembly, and the weights of its temporal-difference n-tuple network (after Szubert and Jaśkowski, [Temporal Difference Learning of N-Tuple Networks for the Game 2048](https://www.cs.put.poznan.pl/wjaskowski/pub/papers/Szubert2014_2048.pdf), 2014). The wasm is byte-identical to the file served by [qpwoeirut.github.io/2048](https://qpwoeirut.github.io/2048/). The weights are derived from his `model.bmp` (46 MB, the same file as `model_8-6_16_0.000150_1000.dat` in 2048-solver): every weight rounded to a multiple of 16, then stored packed and gzipped in `model.gz` (4.3 MB) by `2048/tools/pack-weights.mjs` | Stanley Zhong | MIT |
 | Brainy Warrior 3D | Rules and levels follow the mobile game *Brainy Warrior* and the C++ terminal version in [susalulmumaO12/cppMiniPrograms](https://github.com/susalulmumaO12/cppMiniPrograms) (folder `Brainy_Warrior`) | susalulmumaO12 (C++ version) | **unknown** for the C++ version |
 | Gravity Wells | [Quinten/black-hole-square](https://github.com/Quinten/black-hole-square), a js13k 2021 entry | Quinten Clause | MIT |
 | Hangman | [abdoutech19/hangman-game](https://github.com/abdoutech19/hangman-game) | abdoutech19 | MIT |
@@ -38,11 +38,10 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | --- | --- | --- | --- |
 | LSD | [collidingScopes/liquid-shape-distortions](https://github.com/collidingScopes/liquid-shape-distortions) | collidingScopes | MIT (stated in its README) |
 | Particular Drift | [collidingScopes/particular-drift](https://github.com/collidingScopes/particular-drift) | collidingScopes | MIT (stated in its README) |
-| Adaptive Fields | [ChevalMonsieur/AdaptiveFlowField](https://github.com/ChevalMonsieur/AdaptiveFlowField) (`script.js` is its `main.js` with changes; `font.otf` is the same file) | Justin Hurson (ChevalMonsieur) | **Permission needed.** Its README licence allows personal and commercial use but says "Do not resell or redistribute in any way without the consent of creator Justin HURSON aka @ChevalMonsieur" |
-| Experimental Math | [thatsKevinJain/flowfields](https://github.com/thatsKevinJain/flowfields) (confirmed: `script.js` is its `index.js` reworked, and both helper files match it apart from whitespace) | Kevin Jain | Sketch: no licence file in the repository. Helpers `microcan.window.js` and `vec.window.js` are [microcan](https://github.com/francisrstokes/microcan) and [vec-la](https://github.com/francisrstokes/vec) by Francis Stokes: MIT |
+| Adaptive Fields | Written for this collection; inspired by flow-field sketches such as [ChevalMonsieur/AdaptiveFlowField](https://github.com/ChevalMonsieur/AdaptiveFlowField) (no code from it is used) | ibra-kdbra | MIT (with the repository) |
+| Experimental Math | Written for this collection; the idea follows [thatsKevinJain/flowfields](https://github.com/thatsKevinJain/flowfields) (no code from it is used). Helpers: `microcan.window.js` and `vec.window.js` are [microcan](https://github.com/francisrstokes/microcan) and [vec-la](https://github.com/francisrstokes/vec) by Francis Stokes (MIT) | ibra-kdbra; helpers by Francis Stokes | MIT (with the repository); helpers MIT |
 | Flow Fields, Text Fields | Flow-field technique from Frank's Laboratory tutorials (likely) | **unknown** | **unknown** |
 | Blossoming Flowers | "CSS Blossoming Flowers at Magical Night", [codepen.io/fikkkhdyt/pen/GRGVmOo](https://codepen.io/fikkkhdyt/pen/GRGVmOo) (2022, also in [a gist by the same author](https://gist.github.com/fikkkhdyt/8d6e85fff6a608e990f547e5f8bca889); the same class names and structure) | fikkkhdyt | MIT: public CodePen pens are MIT-licensed unless the author says otherwise ([codepen.io/license/pen/GRGVmOo](https://codepen.io/license/pen/GRGVmOo)) |
-| Sprite Lab (`Sprites_Games/`: lessons 1-8 in `*_project`, the page in `index.html` and `lab/`) | The JavaScript game development tutorials by [Franks Laboratory](https://www.youtube.com/c/Frankslaboratory) and their sprite sheets; `lab/dog-run.webp` is the run row cut from lesson 1's `shadow_dog.png`. Phone layouts, touch controls and the lab page were added here | Franks Laboratory | code and art: **unknown** terms |
 
 ## Music and sound
 
@@ -54,7 +53,6 @@ Entries marked **unknown** could not be traced. Corrections are welcome.
 | `PacMan_Slasher/audio/*.mp3` | Pac-Man-style jingles and effects | Upstream project; original source **unknown** | **unknown** |
 | `MoonLDR/audio/*.mp3` | Thruster, alarm, crash, morse | Upstream project; original source **unknown** | **unknown** |
 | `TowerDefense/sounds/*.wav` | Weapon sounds | SoundBible and freesoundeffects.com, see [TowerDefense/sounds/README.md](TowerDefense/sounds/README.md) | CC BY 3.0, public domain, or site terms |
-| `Sprites_Games/*/audio/boom.wav` | Explosion | Frank's Laboratory tutorial assets | **unknown** |
 | Tron soundtrack | Generated in the browser (`Tron/js/audio.js`). The earlier `derezzed.mp3` (Daft Punk, *TRON: Legacy*) was removed from the game, but it is still in the git history | — | — |
 | Souls Bumper music | Generated with the Sonant-X player in `js/audio.js` | Marcus Geelnard (player) | zlib licence (in the file header) |
 | HuggersFight, ReWire sounds | Generated with [ZzFX](https://github.com/KilledByAPixel/ZzFX) | Frank Force | MIT |
@@ -109,4 +107,3 @@ its licence file.
 | Clear Sans (Intel) | `2048/style/fonts/`: Apache 2.0 |
 | Source Code Pro (Adobe) | `TowerDefense/fonts/`, `td-editor/fonts/` (no licence file shipped) |
 | Balsamiq Sans, Luckiest Guy | `Hangman/fonts/` |
-| `Art_Lab/Adaptive/font.otf` | **unknown** |

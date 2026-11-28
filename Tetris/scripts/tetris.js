@@ -234,7 +234,8 @@ var frame;
  *   5 Ultra: score as much as possible in 2 minutes.
  *   6 Zen: no gravity, no game over.
  *   7 Survival: garbage rises from the floor faster and faster; last as long as you can.
- *   8 Master: pieces fall instantly (20G) and lock sooner every level; 150 lines to finish.
+ *   8 Master: 20G from level 4 (faster and faster before that), the lock delay shrinks
+ *     every level and move resets are capped; 150 lines to finish.
  */
 var MODES = {
   0: { key: 'sprint', name: 'Sprint' },
@@ -254,6 +255,16 @@ var TSPIN_SCORES = [400, 800, 1200, 1600];
 var TSPIN_MINI_SCORES = [100, 200, 400];
 var ALL_CLEAR_SCORES = [0, 800, 1200, 1800, 2000];
 var MASTER_MAX_LEVEL = 15;
+// Master: gravity in G for the first levels, then 20G (see modeGravity), and the lock
+//  delay, which goes from MASTER_LOCK_START steps at level 1 to MASTER_LOCK_END at the last
+//  level. A move or rotation restarts the lock delay at most MASTER_LOCK_RESETS times per
+//  piece; the count starts over when the piece falls to a row lower than it has been.
+//  The numbers behind these are in the Master section of the README (measured with
+//  tools/playtest-master.mjs).
+var MASTER_GRAVITY = [1 / 4, 1, 5];
+var MASTER_LOCK_START = 30;
+var MASTER_LOCK_END = 15;
+var MASTER_LOCK_RESETS = 15;
 // Survival: a garbage row rises every SURVIVAL_RISE seconds at the start,
 //  down to SURVIVAL_RISE_MIN; the level (and gravity) goes up every SURVIVAL_LEVEL seconds.
 var SURVIVAL_RISE = 9;
@@ -818,11 +829,12 @@ function setupStatsForMode() {
 
 /**
  * Gravity for the current mode in G (rows per step), or null to use the
- *  Gravity setting. Marathon follows the guideline speed curve.
+ *  Gravity setting. Marathon follows the guideline speed curve; Master ramps up to 20G
+ *  over its first levels.
  */
 function modeGravity() {
   if (gametype === 6) return 0;
-  if (gametype === 8) return 20;
+  if (gametype === 8) return level <= MASTER_GRAVITY.length ? MASTER_GRAVITY[level - 1] : 20;
   if (gametype === 4 || gametype === 7) {
     var secondsPerRow = Math.pow(0.8 - (level - 1) * 0.007, level - 1);
     return 1 / (secondsPerRow * FPS);
@@ -832,10 +844,13 @@ function modeGravity() {
 
 /**
  * Lock delay in steps: the Lock Delay setting, except in Master, where it
- *  starts at half a second and shrinks every level.
+ *  starts at half a second and shrinks evenly to a quarter of a second at the last level.
  */
 function lockLimit() {
-  if (gametype === 8) return Math.max(10, Math.round(30 - (level - 1) * 1.5));
+  if (gametype === 8) {
+    var drop = ((MASTER_LOCK_START - MASTER_LOCK_END) * (level - 1)) / (MASTER_MAX_LEVEL - 1);
+    return Math.max(MASTER_LOCK_END, Math.round(MASTER_LOCK_START - drop));
+  }
   return handling['Lock Delay'];
 }
 

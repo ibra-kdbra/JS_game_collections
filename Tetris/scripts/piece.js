@@ -6,6 +6,8 @@ function Piece() {
   this.index;
   this.kickData;
   this.lockDelay = 0;
+  this.resets = 0; // Master: lock delay restarts used by this piece
+  this.lowest = 0; // Master: the lowest row the piece has reached
   this.shiftDelay = 0;
   this.shiftDir;
   this.shiftReleased;
@@ -32,6 +34,9 @@ Piece.prototype.new = function(index) {
   this.x = pieces[index].x;
   this.y = pieces[index].y;
   this.index = index;
+  this.resets = 0;
+  this.lowest = this.y;
+  if (gametype === 8) this.lockDelay = 0;
 
   // Check for blockout. Zen never ends: the board is cleared instead.
   if (!this.moveValid(0, 0, this.tetro)) {
@@ -87,6 +92,7 @@ Piece.prototype.rotate = function(direction) {
       this.lastRotate = true;
       this.lastKick = x;
       this.dirty = true;
+      this.moved();
       break;
     }
   }
@@ -178,12 +184,36 @@ Piece.prototype.shift = function(direction) {
     for (var i = 1; i < 10; i++) {
       if (!this.moveValid(i * direction, 0, this.tetro)) {
         this.x += i * direction - direction;
+        if (i > 1) this.moved();
         break;
       }
     }
   } else if (this.moveValid(direction, 0, this.tetro)) {
     this.x += direction;
     this.lastRotate = false;
+    this.moved();
+  }
+};
+/**
+ * After a successful move or rotation. In the other modes every valid move already
+ *  restarted the lock delay (moveValid does it, as in tetr.js), with no limit, so a piece
+ *  can be kept from locking for ever. Master restarts it only MASTER_LOCK_RESETS times per
+ *  piece (the guideline's move reset), counted again from the next lower row reached.
+ *  Several moves in one step (ARR 0, a 180) use one restart.
+ */
+Piece.prototype.moved = function() {
+  if (gametype === 8 && this.lockDelay > 0 && this.resets < MASTER_LOCK_RESETS) {
+    this.resets++;
+    this.lockDelay = 0;
+  }
+};
+/** Master: reaching a lower row than before restarts the lock delay and its resets. */
+Piece.prototype.checkLowest = function() {
+  var row = Math.floor(this.y);
+  if (gametype === 8 && row > this.lowest) {
+    this.lowest = row;
+    this.resets = 0;
+    this.lockDelay = 0;
   }
 };
 Piece.prototype.shiftDown = function() {
@@ -253,10 +283,12 @@ Piece.prototype.moveValid = function(cx, cy, tetro) {
       }
     }
   }
-  this.lockDelay = 0;
+  // Master restarts the lock delay in moved() and checkLowest() instead, with a limit.
+  if (gametype !== 8) this.lockDelay = 0;
   return true;
 };
 Piece.prototype.update = function() {
+  this.checkLowest(); // after a soft drop
   if (this.moveValid(0, 1, this.tetro)) {
     landed = false;
     var before = Math.floor(this.y);
@@ -272,6 +304,7 @@ Piece.prototype.update = function() {
       this.y += gravity;
     }
     if (Math.floor(this.y) !== before) this.lastRotate = false;
+    this.checkLowest();
   } else {
     landed = true;
     this.y = Math.floor(this.y);

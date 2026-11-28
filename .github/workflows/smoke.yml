@@ -46,6 +46,8 @@ jobs:
         run: node Souls-Bumper/tools/verify-levels.mjs
       - name: ReWire levels
         run: node ReWire/tools/verify-levels.mjs
+      - name: 2048 Machine Learning weights
+        run: node 2048/tools/verify-weights.mjs
 
   # The slower level checks, alongside the job above
   levels-slow:
@@ -100,7 +102,7 @@ jobs:
             run: node tools/play-checks.mjs
           - name: Tetris replays and Dig Race
             engine: chromium
-            run: node Tetris/tools/verify-replays.mjs && node Tetris/tools/verify-dig-race.mjs
+            run: node Tetris/tools/verify-replays.mjs && node Tetris/tools/verify-dig-race.mjs && node Tetris/tools/verify-master.mjs
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

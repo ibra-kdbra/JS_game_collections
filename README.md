@@ -38,7 +38,7 @@
 
 ## Overview
 
-A collection of 21 browser games and 8 visual experiments, written in plain **JavaScript**,
+A collection of 21 browser games and 7 visual experiments, written in plain **JavaScript**,
 **HTML5** and **CSS3**: no framework and no build step. Every page is a static file you can
 open from any web server. Every game works on phones (touch controls, phone-sized
 layouts) as well as with a keyboard and mouse.
@@ -79,8 +79,7 @@ loaded from a CDN and the site works the same everywhere.
 
 Visual experiments, on the hub's [Art Lab](https://jsgamelab.ibrakdbra.me/Art_Lab/index.html)
 page: Blossoming Flowers (pure CSS), Flow Fields, Text Fields, Experimental Math, Adaptive
-Fields, LSD, Particular Drift, and Sprite Lab (eight sprite and game-loop lessons from
-Franks Laboratory).
+Fields, LSD and Particular Drift.
 
 ## Why Plain JavaScript and the Canvas?
 
@@ -155,17 +154,25 @@ Every pull request and every push to `main` runs the checks in
 - **Tetris**: `node Tetris/tools/verify-replays.mjs` plays 19 seeded games across every mode and
   handling setting and checks each replay ends exactly like its game, and
   `node Tetris/tools/verify-dig-race.mjs` checks a Dig Race ends once its garbage is cleared, in any order.
+  `node Tetris/tools/verify-master.mjs` checks that at Master's top lock delay a piece can be
+  moved from spawn to both walls with the keyboard and with the on-screen buttons, and that the
+  move reset is capped.
 - **Tower Defense**: `node TowerDefense/tools/test-3d.mjs` checks the 3D view (load time, model
   size, draw-call budget, no stalls mid-battle, fallback to Flat), and
   `node TowerDefense/tools/aim-test.mjs` clicks towers during heavy explosions.
 - **Gameplay checks**: the other games are played by a script or bot, so a change that breaks
   the core loop fails. `node Tron/tools/verify.mjs` (no browser) plays the AI against itself on
-  every arena. `node tools/play-checks.mjs` runs the browser ones, each also runnable on its own
+  every arena. `node 2048/tools/verify-weights.mjs` (no browser) checks the 2048 Machine Learning
+  player's packed weights unpack to the measured model and replay 30 seeded games with the real
+  player. `node tools/play-checks.mjs` runs the browser ones, each also runnable on its own
   as `node <Game>/tools/verify-play.mjs`:
-  - 2048: 300 random moves checked against the slide-and-merge rules, an AI hint, Watch AI.
+  - 2048: 300 random moves checked against the slide-and-merge rules, an AI hint, Watch AI, and
+    the Machine Learning player downloading and unpacking its weights, then playing.
   - Hangman: wins a word and loses one with the built-in word list, offline.
   - HuggersFight: level 1's core loop: move, jump, shoot, kill an enemy, lose a life to a
-    grenade, Game Over and restart.
+    grenade, Game Over and restart; then on a phone-sized page with real touches, the touch aim
+    assist hits an enemy a little above the line (keyboard shots miss it), stays inside its cone,
+    and the D-pad follows a sliding thumb.
   - InterLaced: from the terminal into story mesh 1, crashes nodes until it goes offline.
   - MoonLDR: an autopilot lands on flat pads three rounds in a row; no input crashes.
   - PacMan: the maze loads, the ghosts move, a bot eats 120 dots without dying.

@@ -181,7 +181,10 @@ const Touch = {
       const a = acts[i];
       if (a === 'L' || a === 'R') {
         const dir = a === 'L' ? -1 : 1;
-        if (piece.moveValid(dir, 0, piece.tetro)) piece.x += dir;
+        if (piece.moveValid(dir, 0, piece.tetro)) {
+          piece.x += dir;
+          piece.moved();
+        }
       } else if (a === 'D') {
         if (piece.moveValid(0, 1, piece.tetro)) {
           piece.y = Math.floor(piece.y) + 1;

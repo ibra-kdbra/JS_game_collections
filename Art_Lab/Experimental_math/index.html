@@ -3,13 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <script src="../js/embed.js"></script>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <link rel="stylesheet" href="style.css">
   <link href="../../assets/icons/ornamental.svg" rel="icon" type="image/svg+xml" />
-  <title>Experimental</title>
+  <meta name="theme-color" content="#09090b">
+  <title>Experimental Math</title>
 </head>
 <body>
-  <canvas id="main"></canvas>
+  <canvas id="main" role="img" aria-label="Particles tracing a mathematical vector field. Tap or press Space for the next field."></canvas>
+  <p class="field-name" id="field-name" aria-live="polite"><span class="name"></span><span class="formula"></span></p>
   <script src="microcan.window.js"></script>
   <script src="vec.window.js"></script>
   <script src="script.js"></script>

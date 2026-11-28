@@ -1,18 +1,83 @@
 // this will be run in a web worker
 
-// Report download progress of the machine-learning model (fetched by the
-// WASM module with XHR) so the page can show it.
-const openRequest = XMLHttpRequest.prototype.open;
-XMLHttpRequest.prototype.open = function (method, url) {
-    if (String(url).endsWith("model.bmp")) {
-        this.addEventListener("progress", (e) => {
-            postMessage({ model: { loaded: e.loaded, total: e.lengthComputable ? e.total : 0 } });
-        });
-        this.addEventListener("loadend", () => {
-            postMessage({ model: { done: true, ok: this.status === 200 } });
-        });
+// The "Machine Learning" player (ExportedTD0 in players.wasm) fetches its weights itself, with
+// an XHR for ../model.bmp, as soon as that strategy is picked. That file was 46 MB; the
+// weights now ship rounded and packed as ../model.gz (about 4.3 MB, see td0_weights.js and
+// tools/pack-weights.mjs). So the wasm's request is caught here: model.gz is downloaded
+// (reporting progress to the page), gunzipped with the browser's DecompressionStream,
+// unpacked into the model.bmp layout, and the wasm's XHR is pointed at that, as a blob URL.
+// The wasm itself is unchanged.
+importScripts("td0_weights.js");
+
+const MODEL_URL = "../model.gz";
+const MODEL_BYTES = 4267976;  // size of model.gz, for servers that send no Content-Length
+let modelBlobUrl = null;  // one download per worker, even when the strategy is picked again
+
+function fetchModel() {
+    if (!modelBlobUrl) {
+        modelBlobUrl = (async () => {
+            if (typeof DecompressionStream === "undefined") {
+                // Chrome 80, Firefox 113 and Safari 16.4 have it.
+                throw Object.assign(new Error("no DecompressionStream"), {
+                    forPage: "This browser is too old to unpack the AI model",
+                });
+            }
+            const response = await fetch(MODEL_URL);
+            if (!response.ok) {
+                throw Object.assign(new Error(`HTTP ${response.status} for ${MODEL_URL}`), {
+                    forPage: `The AI model failed to download (HTTP ${response.status})`,
+                });
+            }
+            const total = Number(response.headers.get("content-length")) || MODEL_BYTES;
+            const reader = response.body.getReader();
+            const chunks = [];
+            let loaded = 0;
+            for (;;) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                chunks.push(value);
+                loaded += value.byteLength;
+                postMessage({ model: { loaded: loaded, total: Math.max(total, loaded) } });
+            }
+            let packed = new Blob(chunks);
+            const head = new Uint8Array(await packed.slice(0, 2).arrayBuffer());
+            // A server that labels .gz files Content-Encoding: gzip has had it gunzipped already.
+            if (head[0] === 0x1f && head[1] === 0x8b) {
+                packed = await new Response(packed.stream().pipeThrough(new DecompressionStream("gzip"))).blob();
+            }
+            const model = decodeTd0Weights(new Uint8Array(await packed.arrayBuffer()));
+            return URL.createObjectURL(new Blob([model]));
+        })();
+        modelBlobUrl.catch(() => { modelBlobUrl = null; });  // picking the strategy again retries
     }
+    return modelBlobUrl;
+}
+
+const openRequest = XMLHttpRequest.prototype.open;
+const sendRequest = XMLHttpRequest.prototype.send;
+XMLHttpRequest.prototype.open = function (method, url) {
+    this.isModel = String(url).endsWith("model.bmp");
     return openRequest.apply(this, arguments);
+};
+XMLHttpRequest.prototype.send = function () {
+    if (!this.isModel) return sendRequest.apply(this, arguments);
+    const xhr = this;
+    xhr.isModel = false;
+    fetchModel().then((url) => {
+        xhr.addEventListener("loadend", () => {
+            postMessage({ model: { done: true, ok: xhr.status === 200 } });
+        }, { once: true });
+        // Opening again keeps the handlers and responseType the wasm has set.
+        openRequest.call(xhr, "GET", url, true);
+        sendRequest.call(xhr);
+    }, (error) => {
+        console.error(error);
+        postMessage({ model: { done: true, ok: false, reason: error.forPage } });
+        // Fail the wasm's request as a finished one (readyState 4, status 0): Emscripten's
+        // fetch treats a request closed before it is done as aborted and reports it again.
+        Object.defineProperty(xhr, "readyState", { value: 4 });
+        if (xhr.onerror) xhr.onerror(new ProgressEvent("error"));
+    });
 };
 
 var Module = {  // using let will cause issues with redefinition of Module

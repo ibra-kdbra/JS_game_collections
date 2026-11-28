@@ -443,7 +443,8 @@ class Weapon extends EngineObject
                 this.localAngle = -rand(.2,.15);
                 this.recoilTimer.set(rand(.4,.3));
                 const bullet = new Bullet(this.pos, this.parent);
-                const direction = vec2(this.getMirrorSign(speed), 0);
+                const target = this.parent.isPlayer && !this.parent.playerIndex && touchAimAssist && !isUsingGamepad && aimAssistTarget(this);
+                const direction = target ? target.pos.subtract(this.pos).normalize(speed) : vec2(this.getMirrorSign(speed), 0);
                 bullet.velocity = direction.rotate(rand(spread,-spread));
 
                 this.shellEmitter.localAngle = -.8*this.getMirrorSign();
@@ -459,7 +460,42 @@ class Weapon extends EngineObject
     }
 }
 
-class Bullet extends EngineObject 
+// Touch aim assist. The game only fires straight ahead, which is hard to line up with
+// thumbs on a d-pad, so while the player is using the on-screen controls (appMenu.js sets
+// touchAimAssist) each shot turns towards the nearest enemy roughly in front: within
+// aimAssistCone of the facing direction, within bullet range, on screen and with no wall
+// in between. Keyboard, mouse and gamepad shots are unchanged.
+let touchAimAssist = 0;
+const aimAssistCone = 35 * PI / 180;
+const aimAssistRange = 8;
+
+function aimAssistTarget(weapon)
+{
+    const facing = weapon.getMirrorSign();
+    let best, bestScore = 1e9;
+    for (const o of engineCollideObjects)
+    {
+        if (!o.isCharacter || o.team != team_enemy || o.isDead())
+            continue;
+        const d = o.pos.subtract(weapon.pos);
+        const ahead = d.x * facing;
+        const distance = d.length();
+        if (ahead <= 0 || distance > aimAssistRange || Math.atan2(abs(d.y), ahead) > aimAssistCone)
+            continue;
+        if (!isOverlapping(o.pos, o.size, cameraPos, renderWindowSize.subtract(vec2(5))) || tileCollisionRaycast(weapon.pos, o.pos))
+            continue;
+        // prefer enemies close to the line of fire, then close by
+        const score = distance + 4 * abs(d.y) / distance;
+        if (score < bestScore)
+        {
+            bestScore = score;
+            best = o;
+        }
+    }
+    return best;
+}
+
+class Bullet extends EngineObject
 {
     constructor(pos, attacker) 
     { 

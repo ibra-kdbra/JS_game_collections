@@ -258,7 +258,7 @@ export const experiments = [
     engine: 'Canvas',
     input: 'Watch',
     rarity: 1,
-    controls: 'No input: the equations drift and redraw on their own.',
+    controls: 'Watch the fields change every 24 seconds, or tap, click or press Space for the next one.',
   },
   {
     slug: 'adaptive-fields',
@@ -266,10 +266,10 @@ export const experiments = [
     href: 'Art_Lab/Adaptive/index.html',
     blurb: 'Try multiple variations with adaptive flow fields that respond to your interaction.',
     tags: ['Interactive', 'Canvas'],
-    engine: 'p5.js',
+    engine: 'Canvas',
     input: 'Panel',
     rarity: 2,
-    controls: 'Pick colours, border rules and presets; type a value and press Enter to apply it.',
+    controls: 'Tune the field with the panel or pick a preset; drag on the canvas to stir it. Space pauses, H hides the panel.',
   },
   {
     slug: 'lsd',
@@ -292,17 +292,6 @@ export const experiments = [
     input: 'Keys',
     rarity: 3,
     controls: 'U upload your own image, R randomise, C colours, S save, V record.',
-  },
-  {
-    slug: 'sprite-lab',
-    title: 'Sprite Lab',
-    href: 'Sprites_Games/index.html',
-    blurb: 'Eight sprite and game loop lessons from Franks Laboratory: sprite sheets, parallax, enemy movement, collisions and a state machine.',
-    tags: ['Sprites', 'Lessons'],
-    engine: 'Canvas',
-    input: 'Panel',
-    rarity: 2,
-    controls: 'Pick a lesson; each opens on its own page. Tap, swipe, the arrow keys or an on-screen pad, as the lesson says.',
   },
 ];
 
