@@ -20,13 +20,21 @@ Preview.prototype.next = function() {
   return next;
 };
 /**
- * Creates a "grab bag" of the 7 tetrominos.
+ * Creates a "grab bag" of the 7 tetrominos, shuffled with the game's rng
+ *  (Fisher-Yates). Not with sort() and a random comparator: how many times
+ *  sort() calls the comparator is up to the browser, and can change while the
+ *  page runs, so the same seed would not always give the same pieces and
+ *  replays would get other pieces than their game.
  */
 Preview.prototype.gen = function() {
   var pieceList = [0, 1, 2, 3, 4, 5, 6];
-  return pieceList.sort(function() {
-    return 0.5 - rng.next();
-  });
+  for (var i = pieceList.length - 1; i > 0; i--) {
+    var j = ~~(rng.next() * (i + 1));
+    var temp = pieceList[i];
+    pieceList[i] = pieceList[j];
+    pieceList[j] = temp;
+  }
+  return pieceList;
 };
 /**
  * Draws the piece preview.

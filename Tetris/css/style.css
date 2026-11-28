@@ -183,6 +183,8 @@ h3 {
   line-height: 642px;
   margin: 0;
   z-index: 4;
+  /* Above the menus, but clicks go through to them (Retry, Watch Replay). */
+  pointer-events: none;
 }
 
 #d {
