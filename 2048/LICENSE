@@ -1,8 +1,9 @@
 This folder is based on qpwoeirut/2048 by Stanley Zhong, a version of
 gabrielecirulli/2048 by Gabriele Cirulli that plays itself with the strategies
 from qpwoeirut/2048-solver. The AI build (js/players.js, js/players.wasm) and
-its weights (model.bmp) are his. All three are under the MIT licence;
-their notices follow.
+its weights are his; model.gz holds those weights rounded and compressed from
+his original model.bmp. All three are under the MIT licence; their notices
+follow.
 
 https://github.com/qpwoeirut/2048
 https://github.com/qpwoeirut/2048-solver
