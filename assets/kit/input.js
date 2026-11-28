@@ -47,16 +47,38 @@ export function tapKey(key, target = document) {
 
 export const isTouchFirst = () => matchMedia('(pointer: coarse)').matches;
 
+// How many controls hold each key, per event target. Two controls can send the same key
+// (a d-pad Up and a Jump button, say): the key is released only when the last one lets go.
+const holders = new WeakMap();
+
+function press(key, target) {
+  if (!holders.has(target)) holders.set(target, new Map());
+  const held = holders.get(target);
+  held.set(key, (held.get(key) || 0) + 1);
+  sendKey('keydown', key, target);
+}
+
+function release(key, target) {
+  const held = holders.get(target);
+  const n = (held?.get(key) || 1) - 1;
+  if (n > 0) {
+    held.set(key, n);
+    return;
+  }
+  held?.delete(key);
+  sendKey('keyup', key, target);
+}
+
 function holdButton(el, key, target, repeatMs, repeatDelayMs = repeatMs) {
   let timer = 0;
   let pointer = null;
-  const release = () => {
+  const up = () => {
     if (pointer === null) return;
     pointer = null;
     clearTimeout(timer);
     clearInterval(timer);
     el.removeAttribute('data-pressed');
-    sendKey('keyup', key, target);
+    release(key, target);
   };
   el.addEventListener('pointerdown', (e) => {
     e.preventDefault();
@@ -64,7 +86,7 @@ function holdButton(el, key, target, repeatMs, repeatDelayMs = repeatMs) {
     pointer = e.pointerId;
     el.setPointerCapture(e.pointerId);
     el.setAttribute('data-pressed', '');
-    sendKey('keydown', key, target);
+    press(key, target);
     if (repeatMs) {
       // The first repeat waits repeatDelayMs, so a normal tap never sends two presses.
       timer = setTimeout(() => {
@@ -75,15 +97,74 @@ function holdButton(el, key, target, repeatMs, repeatDelayMs = repeatMs) {
     }
     navigator.vibrate?.(8);
   });
-  el.addEventListener('pointerup', release);
-  el.addEventListener('pointercancel', release);
-  el.addEventListener('lostpointercapture', release);
+  el.addEventListener('pointerup', up);
+  el.addEventListener('pointercancel', up);
+  el.addEventListener('lostpointercapture', up);
   el.addEventListener('contextmenu', (e) => e.preventDefault());
+}
+
+// Directions held for each of eight 45-degree sectors around the pad centre
+// (sector 0 points right, sector 2 down; screen y grows downwards).
+const SECTORS = {
+  0: ['right'], 1: ['right', 'down'], 2: ['down'], 3: ['down', 'left'], 4: ['left'], [-4]: ['left'],
+  [-3]: ['left', 'up'], [-2]: ['up'], [-1]: ['up', 'right'],
+};
+
+/**
+ * A d-pad a thumb can rock across: the whole pad takes the touch, and the direction follows
+ * the thumb from the pad's centre (eight ways, a diagonal holds two keys) until it lifts.
+ * A small dead zone in the middle holds nothing.
+ */
+function slidePad(pad, buttons, dpad, target) {
+  let pointer = null;
+  let current = new Set();
+  const hold = (dirs) => {
+    for (const dir of current) {
+      if (dirs.has(dir)) continue;
+      buttons[dir].removeAttribute('data-pressed');
+      release(dpad[dir], target);
+    }
+    for (const dir of dirs) {
+      if (current.has(dir)) continue;
+      buttons[dir].setAttribute('data-pressed', '');
+      press(dpad[dir], target);
+    }
+    current = dirs;
+  };
+  const follow = (e) => {
+    const r = pad.getBoundingClientRect();
+    const dx = e.clientX - (r.left + r.width / 2);
+    const dy = e.clientY - (r.top + r.height / 2);
+    const dirs = new Set();
+    if (Math.hypot(dx, dy) > Math.min(r.width, r.height) * 0.12) {
+      for (const dir of SECTORS[Math.round(Math.atan2(dy, dx) / (Math.PI / 4))]) if (dpad[dir]) dirs.add(dir);
+    }
+    hold(dirs);
+  };
+  const end = (e) => {
+    if (e.pointerId !== pointer) return;
+    pointer = null;
+    hold(new Set());
+  };
+  pad.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (pointer !== null) return;
+    pointer = e.pointerId;
+    pad.setPointerCapture(e.pointerId);
+    follow(e);
+    navigator.vibrate?.(8);
+  });
+  pad.addEventListener('pointermove', (e) => e.pointerId === pointer && follow(e));
+  pad.addEventListener('pointerup', end);
+  pad.addEventListener('pointercancel', end);
+  pad.addEventListener('lostpointercapture', end);
+  pad.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 
 /**
  * @param {object} options
- * @param {{up?:string,down?:string,left?:string,right?:string}} [options.dpad]
+ * @param {{up?:string,down?:string,left?:string,right?:string,slide?:boolean}} [options.dpad]
+ *   With `slide: true` the pad follows a thumb rocked across it, diagonals included (no repeat).
  * @param {{label:string,key:string,small?:boolean,repeatMs?:number,repeatDelayMs?:number}[]} [options.buttons]
  * @param {'touch'|'always'} [options.show='touch']
  * @param {number} [options.repeatMs=0]  Auto-repeat keydown while held (for menus); 0 = hold only.
@@ -100,7 +181,8 @@ export function createTouchControls({ dpad, buttons = [], show = 'touch', repeat
 
   if (dpad) {
     const pad = document.createElement('div');
-    pad.className = 'gk-dpad';
+    pad.className = dpad.slide ? 'gk-dpad gk-dpad--slide' : 'gk-dpad';
+    const padButtons = {};
     for (const dir of ['up', 'left', 'right', 'down']) {
       if (!dpad[dir]) continue;
       const b = document.createElement('button');
@@ -108,9 +190,11 @@ export function createTouchControls({ dpad, buttons = [], show = 'touch', repeat
       b.tabIndex = -1;
       b.className = `gk-dpad-${dir}`;
       b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6l7 10H5z"/></svg>';
-      holdButton(b, dpad[dir], target, repeatMs, repeatDelayMs ?? repeatMs);
+      if (!dpad.slide) holdButton(b, dpad[dir], target, repeatMs, repeatDelayMs ?? repeatMs);
+      padButtons[dir] = b;
       pad.append(b);
     }
+    if (dpad.slide) slidePad(pad, padButtons, dpad, target);
     root.append(pad);
   }
 

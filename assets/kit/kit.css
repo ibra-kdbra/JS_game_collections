@@ -54,6 +54,16 @@
   gap: 4px;
 }
 
+/* A sliding pad takes the touch itself, gaps and corners included. */
+.gk-dpad--slide {
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.gk-dpad--slide button {
+  pointer-events: none;
+}
+
 .gk-dpad button {
   display: grid;
   place-items: center;
