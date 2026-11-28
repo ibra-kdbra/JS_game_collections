@@ -44,9 +44,22 @@
     // boolean states of each key
     var keyStates = {};
 
+    // keys are identified by KeyboardEvent.code (the physical key, whatever the layout);
+    // left/right modifier keys and the keypad Enter count as one key, as they did before
+    var KEY_ALIASES = {
+        ShiftRight: "ShiftLeft",
+        ControlRight: "ControlLeft",
+        AltRight: "AltLeft",
+        NumpadEnter: "Enter",
+    };
+    var getKey = function(e) {
+        e = e||window.event;
+        return KEY_ALIASES[e.code] || e.code;
+    };
+
     // hook my key listeners to the window's listeners
     window.addEventListener("keydown", function(e) {
-        var key = (e||window.event).keyCode;
+        var key = getKey(e);
 
         // only execute at first press event
         if (!keyStates[key]) {
@@ -55,7 +68,7 @@
         }
     });
     window.addEventListener("keyup",function(e) {
-        var key = (e||window.event).keyCode;
+        var key = getKey(e);
 
         keyStates[key] = false;
         keyUpListeners.exec(key, e);
@@ -64,42 +77,42 @@
 
     // key enumerations
 
-    var KEY_ENTER = 13;
-    var KEY_ESC = 27;
+    var KEY_ENTER = "Enter";
+    var KEY_ESC = "Escape";
 
-    var KEY_LEFT = 37;
-    var KEY_RIGHT = 39;
-    var KEY_UP = 38;
-    var KEY_DOWN = 40;
+    var KEY_LEFT = "ArrowLeft";
+    var KEY_RIGHT = "ArrowRight";
+    var KEY_UP = "ArrowUp";
+    var KEY_DOWN = "ArrowDown";
 
-    var KEY_SHIFT = 16;
-    var KEY_CTRL = 17;
-    var KEY_ALT = 18;
+    var KEY_SHIFT = "ShiftLeft";
+    var KEY_CTRL = "ControlLeft";
+    var KEY_ALT = "AltLeft";
 
-    var KEY_SPACE = 32;
+    var KEY_SPACE = "Space";
 
-    var KEY_M = 77;
-    var KEY_N = 78;
-    var KEY_Q = 81;
-    var KEY_W = 87;
-    var KEY_E = 69;
-    var KEY_R = 82;
-    var KEY_T = 84;
+    var KEY_M = "KeyM";
+    var KEY_N = "KeyN";
+    var KEY_Q = "KeyQ";
+    var KEY_W = "KeyW";
+    var KEY_E = "KeyE";
+    var KEY_R = "KeyR";
+    var KEY_T = "KeyT";
 
-    var KEY_A = 65;
-    var KEY_S = 83;
-    var KEY_D = 68;
-    var KEY_F = 70;
-    var KEY_G = 71;
+    var KEY_A = "KeyA";
+    var KEY_S = "KeyS";
+    var KEY_D = "KeyD";
+    var KEY_F = "KeyF";
+    var KEY_G = "KeyG";
 
-    var KEY_I = 73;
-    var KEY_O = 79;
-    var KEY_P = 80;
+    var KEY_I = "KeyI";
+    var KEY_O = "KeyO";
+    var KEY_P = "KeyP";
 
-    var KEY_1 = 49;
-    var KEY_2 = 50;
+    var KEY_1 = "Digit1";
+    var KEY_2 = "Digit2";
 
-    var KEY_END = 35;
+    var KEY_END = "End";
 
     // Custom Key Listeners
 

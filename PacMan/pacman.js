@@ -36,54 +36,138 @@ var DEBUG = false;
 
 var audio = new preloadAudio();
 
+/**
+ * Each sound is downloaded once with fetch, decoded, and played through Web
+ * Audio. The <audio> elements this replaced were only partly preloaded by the
+ * browser: on a slow phone connection most of the 15 requests were aborted
+ * after the first few kilobytes and the rest was fetched when the sound first
+ * played, so effects came in late. The interface below (play, startLoop,
+ * stopLoop, isPlaying, isPaused) is the one the game already uses.
+ */
 function audioTrack(url, volume) {
-    var audio = new Audio(url);
-    if (volume) audio.volume = volume;
-    audio.load();
+    var ctx = sharedAudioContext();
+    var buffer = null;   // decoded sound, once loaded
+    var source = null;   // the node playing now
+    var gain = null;
+    var offset = 0;      // where playback resumes, in seconds
+    var startedAt = 0;   // context time that matches position 0
+    var playing = false;
     var looping = false;
+    var pending = false; // asked to play before the sound had loaded
+
+    if (ctx) {
+        gain = ctx.createGain();
+        gain.gain.value = volume || 1;
+        gain.connect(ctx.destination);
+        fetch(url)
+            .then(function(response) { return response.arrayBuffer(); })
+            .then(function(data) {
+                return new Promise(function(resolve, reject) { ctx.decodeAudioData(data, resolve, reject); });
+            })
+            .then(function(decoded) {
+                buffer = decoded;
+                if (pending) {
+                    pending = false;
+                    start();
+                }
+            })
+            .catch(function() {});
+    }
+
+    function position() {
+        if (!playing || !buffer) return offset;
+        var t = ctx.currentTime - startedAt;
+        return looping ? t % buffer.duration : Math.min(t, buffer.duration);
+    }
+    function stopSource() {
+        if (!source) return;
+        source.onended = null;
+        try { source.stop(); } catch (e) {}
+        source = null;
+    }
+    function start() {
+        playing = true;
+        if (!buffer) {
+            pending = Boolean(ctx);
+            if (!ctx) playing = false;
+            return;
+        }
+        stopSource();
+        if (offset >= buffer.duration) offset = 0;
+        var src = ctx.createBufferSource();
+        src.buffer = buffer;
+        src.loop = looping;
+        src.connect(gain);
+        src.onended = function() {
+            // A sound that played to its end starts from the top next time, like a media element.
+            if (source !== src) return;
+            source = null;
+            playing = false;
+            offset = 0;
+        };
+        src.start(0, offset);
+        startedAt = ctx.currentTime - offset;
+        source = src;
+    }
+    function pause() {
+        offset = position();
+        stopSource();
+        playing = false;
+        pending = false;
+    }
+
     this.play = function(noResetTime) {
-        playSound(noResetTime);
+        // for really rapid sound repeat set noResetTime
+        if (playing) {
+            pause();
+            if (!noResetTime) offset = 0;
+        }
+        start();
     };
     this.startLoop = function(noResetTime) {
         if (looping) return;
-        audio.addEventListener('ended', audioLoop);
-        audioLoop(noResetTime);
         looping = true;
+        if (playing) {
+            pause();
+            if (!noResetTime) offset = 0;
+        }
+        start();
     };
     this.stopLoop = function(noResetTime) {
-        // Ghost sounds are stopped every frame; skip the media calls (a pause and a
-        // seek) when the track is already stopped and rewound.
-        if (!looping && audio.paused && (noResetTime || audio.currentTime === 0)) return;
-        try{ audio.removeEventListener('ended', audioLoop) } catch (e) {};
-        audio.pause();
-        if (!noResetTime) audio.currentTime = 0;
+        // Ghost sounds are stopped every frame; do nothing when already stopped and rewound.
+        if (!looping && !playing && (noResetTime || offset === 0)) return;
+        pause();
+        if (!noResetTime) offset = 0;
         looping = false;
     };
     this.isPlaying = function() {
-        return !audio.paused;
+        return playing;
     };
     this.isPaused = function() {
-        return audio.paused;
-    }; 
+        return !playing;
+    };
     this.stop = this.stopLoop;
+}
 
-    function audioLoop(noResetTime) {
-        playSound(noResetTime);
+/**
+ * One audio context for every track, resumed by the first tap, click or key
+ * press. A function declaration, so it exists when the tracks are created at
+ * the top of this file.
+ */
+function sharedAudioContext() {
+    if (sharedAudioContext.ctx !== undefined) return sharedAudioContext.ctx;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    var ctx = AC ? new AC() : null;
+    sharedAudioContext.ctx = ctx;
+    if (ctx) {
+        var resume = function() {
+            if (ctx.state !== 'running') ctx.resume();
+        };
+        ['pointerdown', 'touchend', 'mousedown', 'keydown'].forEach(function(type) {
+            window.addEventListener(type, resume, true);
+        });
     }
-    function playSound(noResetTime) {
-        // for really rapid sound repeat set noResetTime
-        if(!audio.paused) {
-            audio.pause();
-            if (!noResetTime ) audio.currentTime = 0;
-        }
-        try{
-            var playPromise = audio.play();
-            if(playPromise) {
-                playPromise.then(function(){}).catch(function(err){});
-            }
-        } 
-        catch(err){ console.error(err) }
-    }
+    return ctx;
 }
 
 
@@ -11252,9 +11336,22 @@ var overState = (function() {
     // boolean states of each key
     var keyStates = {};
 
+    // keys are identified by KeyboardEvent.code (the physical key, whatever the layout);
+    // left/right modifier keys and the keypad Enter count as one key, as they did before
+    var KEY_ALIASES = {
+        ShiftRight: "ShiftLeft",
+        ControlRight: "ControlLeft",
+        AltRight: "AltLeft",
+        NumpadEnter: "Enter",
+    };
+    var getKey = function(e) {
+        e = e||window.event;
+        return KEY_ALIASES[e.code] || e.code;
+    };
+
     // hook my key listeners to the window's listeners
     window.addEventListener("keydown", function(e) {
-        var key = (e||window.event).keyCode;
+        var key = getKey(e);
 
         // only execute at first press event
         if (!keyStates[key]) {
@@ -11263,7 +11360,7 @@ var overState = (function() {
         }
     });
     window.addEventListener("keyup",function(e) {
-        var key = (e||window.event).keyCode;
+        var key = getKey(e);
 
         keyStates[key] = false;
         keyUpListeners.exec(key, e);
@@ -11272,42 +11369,42 @@ var overState = (function() {
 
     // key enumerations
 
-    var KEY_ENTER = 13;
-    var KEY_ESC = 27;
+    var KEY_ENTER = "Enter";
+    var KEY_ESC = "Escape";
 
-    var KEY_LEFT = 37;
-    var KEY_RIGHT = 39;
-    var KEY_UP = 38;
-    var KEY_DOWN = 40;
+    var KEY_LEFT = "ArrowLeft";
+    var KEY_RIGHT = "ArrowRight";
+    var KEY_UP = "ArrowUp";
+    var KEY_DOWN = "ArrowDown";
 
-    var KEY_SHIFT = 16;
-    var KEY_CTRL = 17;
-    var KEY_ALT = 18;
+    var KEY_SHIFT = "ShiftLeft";
+    var KEY_CTRL = "ControlLeft";
+    var KEY_ALT = "AltLeft";
 
-    var KEY_SPACE = 32;
+    var KEY_SPACE = "Space";
 
-    var KEY_M = 77;
-    var KEY_N = 78;
-    var KEY_Q = 81;
-    var KEY_W = 87;
-    var KEY_E = 69;
-    var KEY_R = 82;
-    var KEY_T = 84;
+    var KEY_M = "KeyM";
+    var KEY_N = "KeyN";
+    var KEY_Q = "KeyQ";
+    var KEY_W = "KeyW";
+    var KEY_E = "KeyE";
+    var KEY_R = "KeyR";
+    var KEY_T = "KeyT";
 
-    var KEY_A = 65;
-    var KEY_S = 83;
-    var KEY_D = 68;
-    var KEY_F = 70;
-    var KEY_G = 71;
+    var KEY_A = "KeyA";
+    var KEY_S = "KeyS";
+    var KEY_D = "KeyD";
+    var KEY_F = "KeyF";
+    var KEY_G = "KeyG";
 
-    var KEY_I = 73;
-    var KEY_O = 79;
-    var KEY_P = 80;
+    var KEY_I = "KeyI";
+    var KEY_O = "KeyO";
+    var KEY_P = "KeyP";
 
-    var KEY_1 = 49;
-    var KEY_2 = 50;
+    var KEY_1 = "Digit1";
+    var KEY_2 = "Digit2";
 
-    var KEY_END = 35;
+    var KEY_END = "End";
 
     // Custom Key Listeners
 

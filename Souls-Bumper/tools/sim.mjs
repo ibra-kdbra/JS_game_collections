@@ -11,8 +11,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FILES = ["camera", "particle", "keys", "sound", "entity", "hero", "enums",
   "tile", "utility", "level", "levels", "cart", "game"];
 
-// Key codes used by an input run: L R J (jump) E (rewind soul) X (reset level).
-export const KEYS = { L: 37, R: 39, J: 32, E: 69 };
+// Keys (KeyboardEvent.code) used by an input run: L R J (jump) E (rewind soul) X (reset level).
+export const KEYS = { L: "ArrowLeft", R: "ArrowRight", J: "Space", E: "KeyE" };
 
 const noop = () => {};
 const ctx2d = {};

@@ -11,7 +11,9 @@
  * It also checks the registry itself: every local path in data.js (pages and thumbnails)
  * must exist; external URLs are only listed.
  *
- * Usage: node tools/smoke.mjs [--only <slug,...>] [--viewport phone|desktop]
+ * Usage: node tools/smoke.mjs [--only <slug,...>] [--viewport phone|desktop] [--engine chromium|webkit]
+ *        (--engine webkit runs the pages in Safari's engine; pages listed in
+ *        WEBKIT_SKIP below are left out there, each with the reason)
  *        (--only sprite-lab also runs its eight lessons, sprite-lab-1 to sprite-lab-8)
  *
  * Environment:
@@ -163,11 +165,16 @@ async function loadPlaywright() {
   throw new Error('Playwright not found. Run `npm i --no-save playwright` or set PLAYWRIGHT_MODULE.');
 }
 
-const { chromium } = await loadPlaywright();
-const browser = await chromium.launch({
-  executablePath: process.env.CHROMIUM_PATH || undefined,
-  args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--autoplay-policy=no-user-gesture-required'],
-});
+const ENGINE = argValue('--engine') || 'chromium';
+const playwright = await loadPlaywright();
+if (!playwright[ENGINE]) throw new Error(`Unknown --engine ${ENGINE}; use chromium or webkit.`);
+const browser =
+  ENGINE === 'chromium'
+    ? await playwright.chromium.launch({
+        executablePath: process.env.CHROMIUM_PATH || undefined,
+        args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--autoplay-policy=no-user-gesture-required'],
+      })
+    : await playwright[ENGINE].launch();
 
 const VIEWPORTS = {
   phone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true },
