@@ -66,6 +66,8 @@ jobs:
         run: node Gravity_Wells/tools/verify-puzzles.mjs
       - name: Snake
         run: node Snake/tools/verify.mjs
+      - name: Tron (AI against AI)
+        run: node Tron/tools/verify.mjs
 
   # Browser checks, each in its own job so they run at the same time
   browser:
@@ -93,6 +95,9 @@ jobs:
           - name: Tower Defense 3D view
             engine: chromium
             run: node TowerDefense/tools/test-3d.mjs
+          - name: Gameplay checks (2048, Hangman, HuggersFight, InterLaced, MoonLDR, PacMan, PacMan Slasher, Tetris, Wahdatio)
+            engine: chromium
+            run: node tools/play-checks.mjs
           - name: Tetris replays and Dig Race
             engine: chromium
             run: node Tetris/tools/verify-replays.mjs && node Tetris/tools/verify-dig-race.mjs
