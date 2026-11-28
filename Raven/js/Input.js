@@ -5,18 +5,20 @@
 class Input {
     constructor(handlers) {
         // Map keys to in-game inputs
-        this.map = [];
-        this.map[87] = 'up';       // W
-        this.map[83] = 'down';     // S
-        this.map[65] = 'left';     // A
-        this.map[68] = 'right';    // D
-        this.map[38] = 'up';       // UpArrow
-        this.map[40] = 'down';     // DownArrow
-        this.map[37] = 'left';     // LeftArrow
-        this.map[39] = 'right';    // RightArrow
-        this.map[32] = 'toggle';   // Space
-        this.map[13] = 'toggle';   // Enter
-        this.map[27] = 'escape';   // Escape
+        // Keyed by KeyboardEvent.code (the physical key), so WASD stays put on any layout
+        this.map = {};
+        this.map.KeyW = 'up';
+        this.map.KeyS = 'down';
+        this.map.KeyA = 'left';
+        this.map.KeyD = 'right';
+        this.map.ArrowUp = 'up';
+        this.map.ArrowDown = 'down';
+        this.map.ArrowLeft = 'left';
+        this.map.ArrowRight = 'right';
+        this.map.Space = 'toggle';
+        this.map.Enter = 'toggle';
+        this.map.NumpadEnter = 'toggle';
+        this.map.Escape = 'escape';
 
         // Key press handlers
         this.handlers = handlers;
@@ -24,7 +26,7 @@ class Input {
 
     init() {
         document.addEventListener('keydown', event => {
-            let k = this.map[event.keyCode];
+            let k = this.map[event.code];
 
             if (k) {
                 // Some keys are "stateful" (we evaluate each frame whether they are still
@@ -45,7 +47,7 @@ class Input {
         });
 
         document.addEventListener('keyup', event => {
-            let k = this.map[event.keyCode];
+            let k = this.map[event.code];
 
             if (k) {
                 this[k] = undefined;

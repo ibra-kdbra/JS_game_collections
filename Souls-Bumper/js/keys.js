@@ -1,25 +1,25 @@
 'use strict';
 
-// KEYS
-var LEFT = 37;
-var RIGHT = 39;
-var UP = 38;
-var DOWN = 40;
-var W = 87;
-var A = 65;
-var S = 83;
-var D = 68;
-var M = 77;
+// KEYS (KeyboardEvent.code values: the physical key, whatever the keyboard layout)
+var LEFT = "ArrowLeft";
+var RIGHT = "ArrowRight";
+var UP = "ArrowUp";
+var DOWN = "ArrowDown";
+var W = "KeyW";
+var A = "KeyA";
+var S = "KeyS";
+var D = "KeyD";
+var M = "KeyM";
 var LMB = 0;
 var RMB = 2;
-var SPACE = 32;
-var E = 69;
-var ONE = 49;
-var TWO = 50;
-var THREE = 51;
-var FOUR = 52;
-var R = 82;
-var T = 84;
+var SPACE = "Space";
+var E = "KeyE";
+var ONE = "Digit1";
+var TWO = "Digit2";
+var THREE = "Digit3";
+var FOUR = "Digit4";
+var R = "KeyR";
+var T = "KeyT";
 // NOISES
 var NOISEFX=0;
 var COINFX=1;

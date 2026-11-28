@@ -1096,14 +1096,14 @@ function Mesh({
       self.releaseKeys();
     }
     self.releaseKeys = pushKeys(function(event) {
-      const key = event.keyCode;
-      if (key === 37) { // Left Arrow
+      const key = event.key;
+      if (key === 'ArrowLeft') {
         viewbox[0] += 10;
-      } else if (key === 38) { // Up Arrow
+      } else if (key === 'ArrowUp') {
         viewbox[1] += 10;
-      } else if (key === 39) { // Right Arrow
+      } else if (key === 'ArrowRight') {
         viewbox[0] -= 10;
-      } else if (key === 40) { // Down Arrow
+      } else if (key === 'ArrowDown') {
         viewbox[1] -= 10;
       } else if (event.key === '0' && event.ctrlKey) { // CTRL-0 reset
         zoom = 1;
@@ -2538,9 +2538,9 @@ function Interlaced() {
 
         touchbar.ask(submit);
         releaseInput = pushKeys(function(event) {
-          if (event.keyCode === 13) { // Enter
+          if (event.key === 'Enter') {
             submit(cmd);
-          } else if (event.keyCode === 8 || event.keyCode === 127) { // Backspace / Delete
+          } else if (event.key === 'Backspace') {
             if (cmd.length) {
               cmd = cmd.substring(0, cmd.length - 1);
               $('input').innerHTML = cmd;
@@ -2562,7 +2562,7 @@ function Interlaced() {
           next();
         };
         releasePause = pushKeys(function(event) {
-          if (event.keyCode === 13) { // Enter pressed
+          if (event.key === 'Enter') {
             proceed();
           }
         });
