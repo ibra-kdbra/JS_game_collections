@@ -15,6 +15,32 @@ canvas#main {
     display: block;
     width: 100%;
     height: 100%;
-    background-color: black;
+    background-color: #09090b;
+    cursor: pointer;
+}
+
+.field-name {
+    position: fixed;
+    left: max(16px, env(safe-area-inset-left));
+    bottom: max(16px, env(safe-area-inset-bottom));
+    right: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    color: rgba(255, 255, 255, 0.75);
+    font: 500 12px/1.4 ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    pointer-events: none;
+    text-shadow: 0 1px 2px #000;
+}
+
+.field-name .name {
+    color: #facc15;
+    font: 700 13px/1.3 system-ui, -apple-system, 'Segoe UI', sans-serif;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+html.is-embed .field-name {
+    display: none;
 }
 
