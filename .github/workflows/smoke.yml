@@ -46,6 +46,8 @@ jobs:
         run: node Souls-Bumper/tools/verify-levels.mjs
       - name: ReWire levels
         run: node ReWire/tools/verify-levels.mjs
+      - name: 2048 Machine Learning weights
+        run: node 2048/tools/verify-weights.mjs
 
   # The slower level checks, alongside the job above
   levels-slow:

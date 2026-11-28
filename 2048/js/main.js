@@ -14,7 +14,7 @@ const LEGACY_SETTINGS = {
 
 // The WASM players work on a 64-bit bitboard, so they only understand 4x4.
 const AI_SIZE = 4
-const MODEL_BYTES = 45946360
+const MODEL_BYTES = 4267976  // size of model.gz (the packed weights of the Machine Learning player)
 const MOVE_NAMES = ["↑ up", "→ right", "↓ down", "← left"]
 
 function main(gameManager, playerWorker) {
@@ -156,7 +156,7 @@ function main(gameManager, playerWorker) {
             modelStatus.hidden = false;
             modelStatus.querySelector("span").textContent = model.ok
                 ? "AI model ready."
-                : "The AI model failed to download; random moves are played instead.";
+                : `${model.reason || "The AI model failed to download"}; random moves are played instead.`;
             modelProgress.hidden = true;
             if (model.ok) setTimeout(() => { modelStatus.hidden = true; }, 4000);
             return;

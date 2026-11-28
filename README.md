@@ -160,9 +160,12 @@ Every pull request and every push to `main` runs the checks in
   `node TowerDefense/tools/aim-test.mjs` clicks towers during heavy explosions.
 - **Gameplay checks**: the other games are played by a script or bot, so a change that breaks
   the core loop fails. `node Tron/tools/verify.mjs` (no browser) plays the AI against itself on
-  every arena. `node tools/play-checks.mjs` runs the browser ones, each also runnable on its own
+  every arena. `node 2048/tools/verify-weights.mjs` (no browser) checks the 2048 Machine Learning
+  player's packed weights unpack to the measured model and replay 30 seeded games with the real
+  player. `node tools/play-checks.mjs` runs the browser ones, each also runnable on its own
   as `node <Game>/tools/verify-play.mjs`:
-  - 2048: 300 random moves checked against the slide-and-merge rules, an AI hint, Watch AI.
+  - 2048: 300 random moves checked against the slide-and-merge rules, an AI hint, Watch AI, and
+    the Machine Learning player downloading and unpacking its weights, then playing.
   - Hangman: wins a word and loses one with the built-in word list, offline.
   - HuggersFight: level 1's core loop: move, jump, shoot, kill an enemy, lose a life to a
     grenade, Game Over and restart.
