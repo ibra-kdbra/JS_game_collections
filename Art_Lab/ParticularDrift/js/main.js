@@ -242,8 +242,12 @@ function setupEventListeners() {
     
   });
 
-  // Cleanup on page unload
-  window.addEventListener('unload', cleanup);
+  // Clean up when the page goes away. 'unload' is deprecated (Chrome now
+  // reports it as a permissions-policy violation); 'pagehide' replaces it, and a
+  // page kept in the back/forward cache (persisted) is left running.
+  window.addEventListener('pagehide', (event) => {
+    if (!event.persisted) cleanup();
+  });
 }
 
 function updateConfig(key, value) {
