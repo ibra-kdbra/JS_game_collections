@@ -168,6 +168,51 @@ const HangmanSounds = (() => {
 	// (0.1 for the winch, 0.2 for the drop, and so on) still land at sensible levels.
 	const LEVEL = { correct: 0.5, wrong: 5, win: 0.6, lose: 2.2, rotate: 4, pullup: 5, hang: 3 };
 
+	// How long each sound runs, in seconds (what it schedules, plus its tail).
+	const LENGTH = { correct: 0.45, wrong: 0.2, win: 1.3, lose: 2.5, rotate: 2.5, pullup: 2.55, hang: 1.5 };
+	const RATE = 44100;
+
+	// Each sound is rendered once, offline, into a buffer, and then played from it.
+	// Building the graphs live costs real audio-thread time: a lost round stacks five
+	// winch and rope sounds, a few hundred nodes and filters, which a slow phone (or a
+	// busy machine) can't keep up with, and the high-priority audio thread then
+	// starves the page. A buffer is one node however busy the round gets.
+	const baked = {};
+	const pending = {};
+	const bake = (name) => {
+		if (pending[name]) return pending[name];
+		if (typeof OfflineAudioContext === "undefined") return (pending[name] = Promise.resolve(null));
+		pending[name] = (async () => {
+			const off = new OfflineAudioContext(1, Math.ceil((LENGTH[name] + 0.15) * RATE), RATE);
+			const saved = [ctx, noiseBuffer];
+			ctx = off;
+			noiseBuffer = null;
+			try {
+				SOUNDS[name](off.destination, 0.01);
+			} finally {
+				[ctx, noiseBuffer] = saved;
+			}
+			const buffer = await off.startRendering();
+			baked[name] = buffer;
+			return buffer;
+		})().catch(() => null);
+		return pending[name];
+	};
+	// Render them all once the page has settled, so they are ready by the first guess.
+	const bakeAll = () => Object.keys(SOUNDS).forEach(bake);
+	if (window.requestIdleCallback) requestIdleCallback(bakeAll, { timeout: 2000 });
+	else setTimeout(bakeAll, 500);
+
+	const release = (name, entry) => {
+		if (playing[name] === entry) delete playing[name];
+		try {
+			if (entry.source) entry.source.stop();
+		} catch (e) {
+			/* already stopped */
+		}
+		entry.gain.disconnect();
+	};
+
 	const stop = (name) => {
 		const p = playing[name];
 		if (!p) return;
@@ -176,7 +221,7 @@ const HangmanSounds = (() => {
 		p.gain.gain.cancelScheduledValues(now);
 		p.gain.gain.setValueAtTime(p.gain.gain.value, now);
 		p.gain.gain.linearRampToValueAtTime(0, now + 0.05);
-		setTimeout(() => p.gain.disconnect(), 120);
+		setTimeout(() => release(name, p), 120);
 	};
 
 	const play = (name, volume = 1) => {
@@ -188,37 +233,48 @@ const HangmanSounds = (() => {
 		const gain = c.createGain();
 		gain.gain.value = Math.min(1, LEVEL[name] * volume);
 		gain.connect(master);
-		const length = SOUNDS[name](gain, c.currentTime + 0.01);
-		const entry = { gain };
+		const entry = { gain, source: null };
 		playing[name] = entry;
-		setTimeout(() => {
-			if (playing[name] === entry) {
-				delete playing[name];
-				gain.disconnect();
+		const start = (buffer) => {
+			if (playing[name] !== entry) return; // stopped before it was ready
+			if (buffer) {
+				const source = c.createBufferSource();
+				source.buffer = buffer;
+				source.connect(gain);
+				source.onended = () => release(name, entry);
+				source.start();
+				entry.source = source;
+			} else {
+				// No offline rendering in this browser: build the sound live.
+				SOUNDS[name](gain, c.currentTime + 0.01);
+				setTimeout(() => release(name, entry), (LENGTH[name] + 0.3) * 1000);
 			}
-		}, (length + 0.3) * 1000);
+		};
+		if (baked[name]) start(baked[name]);
+		else bake(name).then(start);
 	};
 
 	const stopAll = () => Object.keys(playing).forEach(stop);
 
-	// Renders one sound offline (no speakers) and resolves to its samples, for checks.
+	// Plays one sound offline (no speakers) through the same level and compressor
+	// as the game, and resolves to its samples, for checks.
 	const render = async (name, volume = 1) => {
-		const saved = [ctx, master, noiseBuffer];
-		const off = new OfflineAudioContext(1, 44100 * 3, 44100);
-		ctx = off;
-		noiseBuffer = null;
-		master = off.createDynamicsCompressor();
-		master.threshold.value = -14;
-		master.ratio.value = 4;
-		master.connect(off.destination);
+		const buffer = await bake(name);
+		const off = new OfflineAudioContext(1, RATE * 3, RATE);
+		const comp = off.createDynamicsCompressor();
+		comp.threshold.value = -14;
+		comp.ratio.value = 4;
+		comp.connect(off.destination);
 		const gain = off.createGain();
 		gain.gain.value = Math.min(1, LEVEL[name] * volume);
-		gain.connect(master);
-		const length = SOUNDS[name](gain, 0.01);
-		[ctx, master, noiseBuffer] = saved;
-		const buffer = await off.startRendering();
-		return { length, samples: buffer.getChannelData(0) };
+		gain.connect(comp);
+		const source = off.createBufferSource();
+		source.buffer = buffer;
+		source.connect(gain);
+		source.start(0);
+		const out = await off.startRendering();
+		return { length: LENGTH[name], samples: out.getChannelData(0) };
 	};
 
-	return { play, stop, stopAll, render, names: Object.keys(SOUNDS) };
+	return { play, stop, stopAll, render, ready: () => Object.keys(baked).length, names: Object.keys(SOUNDS) };
 })();
