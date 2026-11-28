@@ -96,6 +96,7 @@ jobs:
             engine: chromium
             run: node TowerDefense/tools/test-3d.mjs
           - name: Gameplay checks (2048, Hangman, HuggersFight, InterLaced, MoonLDR, PacMan, PacMan Slasher, Tetris, Wahdatio)
+            engine: chromium
             run: node tools/play-checks.mjs
     steps:
       - uses: actions/checkout@v4

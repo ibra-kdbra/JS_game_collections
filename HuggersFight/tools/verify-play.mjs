@@ -44,11 +44,14 @@ await check.run(async () => {
   await page.evaluate(() => {
     paused = 1;
     const H = window.__huggers;
+    // Key numbers as the game asks for them (keyIsDown(38) and so on), and the
+    // physical key a browser reports for each in KeyboardEvent.code.
     const CODES = { left: 37, up: 38, right: 39, down: 40, shoot: 90, grenade: 67, z: 90 };
+    const KEYS = { 37: ['ArrowLeft', 'ArrowLeft'], 38: ['ArrowUp', 'ArrowUp'], 39: ['ArrowRight', 'ArrowRight'],
+      40: ['ArrowDown', 'ArrowDown'], 90: ['KeyZ', 'z'], 67: ['KeyC', 'c'] };
     const send = (code, down) => {
-      const e = new KeyboardEvent(down ? 'keydown' : 'keyup', { bubbles: true });
-      Object.defineProperty(e, 'keyCode', { value: code });
-      window.dispatchEvent(e);
+      const [physical, key] = KEYS[code];
+      window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { bubbles: true, code: physical, key }));
     };
     // Make the held keys match `want` (a set of names), then run one engine step.
     H.frame = (want) => {
