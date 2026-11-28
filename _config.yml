@@ -16,4 +16,5 @@ exclude:
   - Volt_Flip/tools
   - Souls-Bumper/tools
   - TowerDefense/tools
+  - Tetris/tools
   - PacMan/src
