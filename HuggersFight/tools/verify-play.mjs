@@ -11,19 +11,22 @@
  *    it comes back at the checkpoint.
  * 5. Doing that until no lives are left gives Game Over; Z then starts a new game on level 1
  *    with full lives.
- * All input is key events on the window, read by the engine's own handlers. The engine's
+ * 6. Keyboard shots fly straight: an enemy level with the player is hit, one a little above
+ *    it is not.
+ * 7. Touch, on a phone-sized page with the on-screen controls: real touches (through the
+ *    DevTools protocol) on Shoot hit that same enemy a little above, thanks to the aim
+ *    assist; an enemy well above the cone or behind the player is not hit; after a real key
+ *    press the assist is off again. The d-pad follows a sliding thumb (Left to Right, a
+ *    diagonal), and tapping Jump while holding Up keeps Up held.
+ * Steps 1-6 use key events on the window, read by the engine's own handlers. The engine's
  * real-time loop is held and its update steps are run from here (much faster than real
  * time); the step functions are reached by wrapping engineInit in the served copy of
  * engine/engine.js (the repository file is not changed). Exits non-zero on any failure.
  */
 import { startCheck, waitFor, seededRandom } from '../../tools/play/harness.mjs';
 
-const check = await startCheck('HuggersFight: level 1 core loop (move, shoot, kill, get hurt, game over, restart)');
-await check.run(async () => {
-  const page = await check.open('HuggersFight/index.html', {
-    init: seededRandom(21),
-    intercept: {
-      'HuggersFight/engine/engine.js': (src) => src + `
+const exposeEngine = {
+  'HuggersFight/engine/engine.js': (src) => src + `
 ;(() => {
   const realInit = engineInit;
   engineInit = function (appInit, appUpdate, appUpdatePost, appRender, appRenderPost) {
@@ -31,8 +34,61 @@ await check.run(async () => {
     return realInit.apply(this, arguments);
   };
 })();`,
-    },
-  });
+};
+
+// An aiming range high in the empty sky: the player and one enemy, both held in place, the
+// enemy unarmed and too tough to die. aimRun steps the engine and reports the damage the
+// enemy took, so a hit or a miss is certain whatever the bullet spread rolls.
+function installAimRange() {
+  const H = window.__huggers;
+  H.step = () => {
+    H.appUpdate();
+    engineUpdateObjects();
+    H.appUpdatePost();
+    for (const device of inputData) device.map((k) => (k.r = k.p = 0));
+  };
+  H.aimSetup = (dx, dy) => {
+    H.target && H.target.destroy();
+    const me = players[0];
+    H.spot = vec2((levelSize.x / 2 | 0) + .5, levelSize.y - 40);
+    me.pos = H.spot.copy();
+    me.velocity = vec2();
+    me.mirror = 0; // facing right
+    const enemy = H.target = new Enemy(H.spot.add(vec2(dx, dy)));
+    enemy.health = enemy.healthMax = 1e3;
+    enemy.weapon.update = () => {}; // never fires
+    H.enemyAt = enemy.pos.copy();
+    const pin = () => {
+      me.pos = H.spot.copy();
+      me.velocity = vec2();
+      enemy.pos = H.enemyAt.copy();
+      enemy.velocity = vec2();
+    };
+    H.pin = pin;
+    for (let i = 0; i < 60 * 3; i++) {
+      // let the camera settle on the new spot
+      H.step();
+      pin();
+    }
+    return { clear: !tileCollisionRaycast(me.pos, enemy.pos), alive: !me.isDead() };
+  };
+  H.aimRun = (frames, keys) => {
+    const before = H.target.health;
+    for (let i = 0; i < frames; i++) {
+      keys ? H.frame(new Set(keys)) : H.step();
+      H.pin();
+    }
+    for (let i = 0; i < 30; i++) {
+      H.step(); // let bullets in flight land
+      H.pin();
+    }
+    return before - H.target.health;
+  };
+}
+
+const check = await startCheck('HuggersFight: level 1 core loop (move, shoot, kill, get hurt, game over, restart)');
+await check.run(async () => {
+  const page = await check.open('HuggersFight/index.html', { init: seededRandom(21), intercept: exposeEngine });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'load' });
   await page.waitForSelector('#start', { state: 'visible', timeout: 15000 });
@@ -218,5 +274,101 @@ await check.run(async () => {
   });
   check.ok(restarted.level === 1 && !restarted.dead && restarted.lives === start.lives && restarted.enemies > 0,
     `Z starts a new game: level ${restarted.level}, ${restarted.lives} lives, ${restarted.enemies} enemies`);
+
+  // 6. Keyboard shots are not aimed.
+  await page.evaluate(installAimRange);
+  const keyboardAim = await page.evaluate(() => {
+    const H = window.__huggers;
+    const level = H.aimSetup(5, 0);
+    const levelHit = H.aimRun(40, ['shoot']);
+    const above = H.aimSetup(5, 1.6);
+    const aboveHit = H.aimRun(40, ['shoot']);
+    H.target.destroy();
+    return { ok: level.clear && above.clear && level.alive, levelHit, aboveHit };
+  });
+  check.ok(keyboardAim.ok && keyboardAim.levelHit > 0 && keyboardAim.aboveHit === 0,
+    `keyboard shots fly straight: a level enemy takes ${keyboardAim.levelHit} hit(s), one 1.6 tiles above takes ${keyboardAim.aboveHit}`);
   check.noErrors(page);
+
+  // 7. Touch: aim assist and the d-pad, with real touches on a phone-sized page.
+  const phone = await check.open('HuggersFight/index.html', {
+    init: seededRandom(21), intercept: exposeEngine, touch: true, viewport: { width: 915, height: 412 },
+  });
+  await phone.waitForSelector('#start', { state: 'visible', timeout: 15000 });
+  await waitFor(phone, () => typeof players !== 'undefined' && players[0] && levelTimer.get() > 2);
+  await phone.tap('#start');
+  await phone.waitForTimeout(200);
+  const where = await phone.evaluate(() => {
+    paused = 1;
+    const centre = (el) => {
+      const r = el.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    };
+    const pad = document.querySelector('.gk-dpad');
+    const button = (label) => centre([...document.querySelectorAll('.gk-btn')].find((b) => b.textContent === label));
+    return {
+      shown: !document.querySelector('.gk-touch').hidden,
+      left: centre(pad.querySelector('.gk-dpad-left')), right: centre(pad.querySelector('.gk-dpad-right')),
+      up: centre(pad.querySelector('.gk-dpad-up')), jump: button('Jump'), shoot: button('Shoot'),
+    };
+  });
+  check.ok(where.shown, 'a touch phone shows the on-screen controls');
+  await phone.evaluate(installAimRange);
+  const cdp = await phone.context().newCDPSession(phone);
+  const touches = (type, points) => cdp.send('Input.dispatchTouchEvent', {
+    type, touchPoints: points.map(([p, id]) => ({ x: p.x, y: p.y, id })),
+  });
+  // Hold Shoot with a real touch for `frames` engine steps.
+  const touchShoot = async (frames) => {
+    const before = await phone.evaluate(() => window.__huggers.target.health);
+    await touches('touchStart', [[where.shoot, 0]]);
+    await phone.evaluate((n) => window.__huggers.aimRun(n), frames);
+    await touches('touchEnd', []);
+    return before - await phone.evaluate(() => window.__huggers.target.health);
+  };
+  const aimAt = async (dx, dy) => {
+    const at = await phone.evaluate(([x, y]) => window.__huggers.aimSetup(x, y), [dx, dy]);
+    return { ...at, damage: await touchShoot(40) };
+  };
+  const above = await aimAt(5, 1.6); // about 18 degrees up
+  const steep = await aimAt(4, 4.5); // about 48 degrees up, outside the cone
+  const behind = await aimAt(-5, 1); // behind the player
+  check.ok(above.clear && above.alive && above.damage > 0,
+    `touch aim assist: a touch shot hits the enemy 1.6 tiles above the line (${above.damage} hit(s))`);
+  check.ok(steep.clear && steep.damage === 0 && behind.damage === 0,
+    `the assist stays in its cone: an enemy at 48 degrees takes ${steep.damage} hit(s), one behind takes ${behind.damage}`);
+  // The same shot from a real keyboard (trusted key events) on the same phone is not aimed.
+  await phone.evaluate(() => window.__huggers.aimSetup(5, 1.6));
+  const before = await phone.evaluate(() => window.__huggers.target.health);
+  await phone.keyboard.down('z');
+  await phone.evaluate(() => window.__huggers.aimRun(40));
+  await phone.keyboard.up('z');
+  const keyDamage = before - await phone.evaluate(() => window.__huggers.target.health);
+  check.ok(keyDamage === 0, `a real Z key on the same phone fires straight: the enemy above takes ${keyDamage} hit(s)`);
+  await phone.evaluate(() => window.__huggers.target.destroy());
+
+  // Keys the game sees as held. Touch moves reach the page with the next frame, so wait two.
+  const keys = () => phone.evaluate(async () => {
+    for (let i = 0; i < 2; i++) await new Promise((r) => requestAnimationFrame(r));
+    return ['L', 'U', 'R'].filter((k, i) => keyIsDown([37, 38, 39][i])).join('') || '-';
+  });
+  await touches('touchStart', [[where.left, 0]]);
+  const slideFrom = await keys();
+  for (let i = 1; i <= 6; i++) {
+    await touches('touchMove', [[{ x: where.left.x + (where.right.x - where.left.x) * i / 6, y: where.left.y }, 0]]);
+  }
+  const slideTo = await keys();
+  await touches('touchMove', [[{ x: where.right.x, y: where.up.y }, 0]]);
+  const diagonal = await keys();
+  await touches('touchEnd', []);
+  check.ok(slideFrom === 'L' && slideTo === 'R' && diagonal === 'UR',
+    `the d-pad follows a sliding thumb: ${slideFrom} -> ${slideTo}, up-right corner ${diagonal}`);
+  await touches('touchStart', [[where.up, 0]]);
+  await touches('touchStart', [[where.up, 0], [where.jump, 1]]);
+  await touches('touchEnd', [[where.up, 0]]);
+  const upHeld = await keys();
+  await touches('touchEnd', []);
+  const upReleased = await keys();
+  check.ok(upHeld === 'U' && upReleased === '-', `tapping Jump while holding Up keeps Up held (${upHeld}, then ${upReleased} once lifted)`);
+  check.noErrors(phone);
 });
