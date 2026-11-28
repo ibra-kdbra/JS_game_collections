@@ -16,5 +16,15 @@ exclude:
   - Volt_Flip/tools
   - Souls-Bumper/tools
   - TowerDefense/tools
+  - 2048/tools
+  - Hangman/tools
+  - HuggersFight/tools
+  - InterLaced/tools
+  - MoonLDR/tools
+  - PacMan/tools
+  - PacMan_Slasher/tools
+  - Tetris/tools
+  - Tron/tools
+  - Wahdatio/tools
   - PacMan/src
   - Wahdatio/src

@@ -143,6 +143,20 @@ Every pull request and every push to `main` runs the checks in
 - **Tower Defense**: `node TowerDefense/tools/test-3d.mjs` checks the 3D view (load time, model
   size, draw-call budget, no stalls mid-battle, fallback to Flat), and
   `node TowerDefense/tools/aim-test.mjs` clicks towers during heavy explosions.
+- **Gameplay checks**: the other games are played by a script or bot, so a change that breaks
+  the core loop fails. `node Tron/tools/verify.mjs` (no browser) plays the AI against itself on
+  every arena. `node tools/play-checks.mjs` runs the browser ones, each also runnable on its own
+  as `node <Game>/tools/verify-play.mjs`:
+  - 2048: 300 random moves checked against the slide-and-merge rules, an AI hint, Watch AI.
+  - Hangman: wins a word and loses one with the built-in word list, offline.
+  - HuggersFight: level 1's core loop: move, jump, shoot, kill an enemy, lose a life to a
+    grenade, Game Over and restart.
+  - InterLaced: from the terminal into story mesh 1, crashes nodes until it goes offline.
+  - MoonLDR: an autopilot lands on flat pads three rounds in a row; no input crashes.
+  - PacMan: the maze loads, the ghosts move, a bot eats 120 dots without dying.
+  - PacMan Slasher: every symbol drawn with the mouse is recognised; a bot clears wave 1.
+  - Tetris: a seeded Sprint played with the keyboard clears 40 lines.
+  - Wahdatio: a mouse-driven bot wins level 1 and EASY.
 
 The browser checks need Playwright (`npm install --no-save playwright`, then
 `npx playwright install chromium`). The workflow file lists the command for every check, to run
