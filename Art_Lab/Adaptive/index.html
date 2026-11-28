@@ -1,106 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <script src="../js/embed.js"></script>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
-    <link href="../../assets/icons/ornamental_floral.svg" rel="icon" type="image/svg+xml" />
-
-    <title>Adaptive</title>
+  <meta charset="UTF-8">
+  <script src="../js/embed.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#09090b">
+  <meta name="description" content="A noise-driven flow field of particles. Tune the field, the trails and the colours, and stir it with your finger or mouse.">
+  <title>Adaptive Fields</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="../../assets/icons/ornamental_floral.svg" type="image/svg+xml">
 </head>
-
 <body>
-    <script src="../../assets/vendor/p5/p5-1.11.2.min.js"></script>
-    <script src="script.js"></script>
+  <canvas id="field" aria-label="Flow field animation. Drag on it to stir the particles." role="img"></canvas>
 
-    <div class="contenu">
-        <h1 class="titre">flow fields visualisation :</h1>
+  <div class="hud" id="hud">
+    <button type="button" class="chip" id="btn-play" aria-pressed="false" title="Pause or play (Space)">Pause</button>
+    <button type="button" class="chip" id="btn-panel" aria-expanded="true" aria-controls="panel" title="Show or hide the controls (H)">Controls</button>
+  </div>
 
-        <div style="display: flex;">
-            <main id="main" class="visu">
-                <p onclick=" let x = random(10000); noiseSeed(x); console.log(x); reset();" class="bouton boutonAbsolu">New seed</p>
-                <p class="bouton boutonFixed" onclick="saveCanvas('FlowFieldCanvas', 'png');" title="don't be impatient&#013it might take a while">Save canvas</p>
-            </main>
+  <aside class="panel" id="panel" aria-label="Flow field controls">
+    <header class="panel-head">
+      <h1>Adaptive Fields</h1>
+      <p class="fps" id="fps" aria-live="off"></p>
+    </header>
 
-            <div class="sideBar">
-                <div id="setterCanvaHeight">
-                    <div>
-                        <h3>Colors :</h3>
+    <div class="panel-body">
+      <section class="group" aria-label="Presets">
+        <h2>Presets</h2>
+        <div class="row-buttons" id="presets"></div>
+      </section>
 
-                        <div class="liste">
-                            <p onclick="inputColor(color(0, 255, 200, opacity))" class="bouton" id="turquoise">turquoise</p>
-                            <p onclick="inputColor(color(255, 0, 0, opacity))" class="bouton" id="red">red</p>
-                            <p onclick="inputColor(color(225, 170, 10, opacity))" class="bouton" id="saffron">saffron</p>
-                            <p onclick="inputColor(color(210, 210, 210, opacity))" class="bouton" id="titanium">titanium</p>
-                        </div>
-                    </div>
+      <section class="group" aria-label="Particles">
+        <h2>Particles</h2>
+        <label class="slider">
+          <span>Count <output for="count" id="count-out"></output></span>
+          <input type="range" id="count" min="200" max="12000" step="100">
+        </label>
+        <label class="slider">
+          <span>Speed <output for="speed" id="speed-out"></output></span>
+          <input type="range" id="speed" min="0.2" max="6" step="0.1">
+        </label>
+        <label class="slider">
+          <span>Size <output for="size" id="size-out"></output></span>
+          <input type="range" id="size" min="0.5" max="4" step="0.1">
+        </label>
+        <label class="slider">
+          <span>Opacity <output for="opacity" id="opacity-out"></output></span>
+          <input type="range" id="opacity" min="0.02" max="1" step="0.01">
+        </label>
+      </section>
 
-                    <div>
-                        <h3>Border rule :</h3>
+      <section class="group" aria-label="Field">
+        <h2>Field</h2>
+        <label class="slider">
+          <span>Noise scale <output for="scale" id="scale-out"></output></span>
+          <input type="range" id="scale" min="40" max="1200" step="10">
+        </label>
+        <label class="slider">
+          <span>Curl <output for="curl" id="curl-out"></output></span>
+          <input type="range" id="curl" min="0.25" max="8" step="0.05">
+        </label>
+        <label class="slider">
+          <span>Drift <output for="drift" id="drift-out"></output></span>
+          <input type="range" id="drift" min="0" max="1" step="0.01">
+        </label>
+        <label class="slider">
+          <span>Trail fade <output for="fade" id="fade-out"></output></span>
+          <input type="range" id="fade" min="0" max="0.3" step="0.005">
+        </label>
+        <fieldset class="seg" aria-label="At the edge">
+          <legend>At the edge</legend>
+          <label><input type="radio" name="edge" value="wrap"><span>Wrap</span></label>
+          <label><input type="radio" name="edge" value="respawn"><span>Respawn</span></label>
+        </fieldset>
+      </section>
 
-                        <div class="liste">
-                            <p onclick="inputBorderRule('randomTeleport')" class="bouton">random teleport</p>
-                            <p onclick="inputBorderRule('linkedTeleport')" class="bouton">linked teleport</p>
-                            <p onclick="inputBorderRule('none')" class="bouton">none</p>
-                        </div>
-                    </div>
-
-                    <div>
-                        <h3>Values :</h3>
-
-                        <div class="valueWithName" title="usual values : 500 - 3000&#013(performance reasons)">
-                            <p class="valueName">particle amount : </p>
-                            <input id="nbPoints" class="value" value="2000" onkeydown="inputNbParticle(event);"><br>
-                        </div>
-                        <div class="valueWithName" title="usual values : 0.1 - 100">
-                            <p class="valueName">speed : </p>
-                            <input id="speed" class="value" value="0.5" onkeydown="inputSpeed(event)">
-                        </div>
-                        <div class="valueWithName" title="usual values : 0.5 - 2.5">
-                            <p class="valueName">particle size : </p>
-                            <input id="size" class="value" value="1" onkeydown="inputSize(event)">
-                        </div>
-                        <div class="valueWithName" title="usual values : 20 - 1000">
-                            <p class="valueName">position scale : </p>
-                            <input id="positionScale" class="value" value="200" onkeydown="inputPositionScale(event)">
-                        </div>
-                        <div class="valueWithName" title="usual values : 0.5 - 100">
-                            <p class="valueName">rotation scale : </p>
-                            <input id="rotationScale" class="value" value="1" onkeydown="inputRotationScale(event)">
-                        </div>
-                        <div class="valueWithName" title="min value : 0&#013max value : 255">
-                            <p class="valueName">particle opacity : </p>
-                            <input id="opacity" class="value" value="20" onkeydown="inputOpacity(event)">
-                        </div>
-                        <div class="valueWithName" title="min value : 0&#013max value : 255">
-                            <p class="valueName">fade : </p>
-                            <input id="fadeSpeed" class="value" value="0" onkeydown="inputFade(event)">
-                        </div>
-                    </div>
-                    <br><p onclick="applyAllInputs(null, null)" class="bouton">apply values</p>
-                </div>
-            </div>
+      <section class="group" aria-label="Colours">
+        <h2>Colours</h2>
+        <div class="colours">
+          <label class="swatch"><input type="color" id="color-a"><span>Ink</span></label>
+          <label class="swatch"><input type="color" id="color-b"><span>Second</span></label>
+          <label class="swatch"><input type="color" id="color-bg"><span>Ground</span></label>
         </div>
+        <label class="toggle"><input type="checkbox" id="two-tone"><span>Use the second colour</span></label>
+      </section>
 
-        <h3> Presets :</h3>
-        <div class="presets">
-            <p onclick="presetSandStream();" class="bouton first" id="sandStream">sandStream</p>
-            <p onclick="presetHighway()" class="bouton" id="highway">highway</p>
-            <p onclick="presetGenerativeMap()" class="bouton" id="generativeMap">generative map</p>
-            <p onclick="presetGlitch()" class="bouton" id="glitch">glitch</p>
-            <p onclick="presetDuoTone()" class="bouton" id="duoTone">duoColor</p>
-        </div>
+      <section class="group actions" aria-label="Actions">
+        <button type="button" class="btn btn-primary" id="btn-random" title="Randomise (R)">Randomise</button>
+        <button type="button" class="btn" id="btn-seed" title="New noise seed (N)">New seed</button>
+        <button type="button" class="btn" id="btn-clear" title="Clear the canvas (C)">Clear</button>
+        <button type="button" class="btn" id="btn-reset">Reset</button>
+        <button type="button" class="btn" id="btn-save">Save PNG</button>
+      </section>
+      <p class="hint">Drag on the canvas to stir the field.</p>
     </div>
+  </aside>
 
-    <footer>
-        <div class="footer">
-            <a href="https://www.linkedin.com/in/" target="_blank" title="contact me on Linkedin"><img class="imageFooter" src="images/logoLinkedin.png" alt="Logo Linkedin"></a>
-            <a href="https://github.com/ibra-kdbra/JS_game_collections/tree/main/Flow_fields/Adaptive" target="_blank" title="see the Github repository&#013of my project"><img class="imageFooter" src="images/logoGithub.png" alt="logo Github"></a>
-        </div>
-    </footer>
+  <script src="script.js"></script>
 </body>
-
 </html>
